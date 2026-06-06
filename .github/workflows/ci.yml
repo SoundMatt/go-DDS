@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  # ── Pure-Go (mock) build and test ─────────────────────────────────────────
+  test-mock:
+    name: Test (mock, ${{ matrix.os }}, Go ${{ matrix.go }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        go: ["1.22", "1.23"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go test (mock, -race)
+        run: go test -race -count=1 -coverprofile=coverage.out ./...
+
+      - name: Upload coverage
+        if: matrix.os == 'ubuntu-latest' && matrix.go == '1.22'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-mock
+          path: coverage.out
+
+  # ── CycloneDDS CGo build (Linux only — requires system library) ───────────
+  test-cyclone:
+    name: Test (cyclone CGo, ubuntu-latest)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Install CycloneDDS
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y libcyclonedds-dev
+
+      - name: go vet (cyclone)
+        run: go vet -tags cyclone ./...
+
+      - name: go build (cyclone)
+        run: go build -tags cyclone ./...
+
+      # The cyclone integration test starts a real DDS participant on domain 99.
+      # It writes one sample and reads it back via the C polling loop.
+      - name: go test (cyclone, -race)
+        run: go test -race -count=1 -tags cyclone -v ./cyclone/...
+
+  # ── go generate (placeholder, expands when IDL toolchain is added) ────────
+  generate:
+    name: go generate check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: go generate
+        run: go generate ./...
+      - name: Diff check (generated files must be committed)
+        run: git diff --exit-code
+
+  # ── Lint ──────────────────────────────────────────────────────────────────
+  lint:
+    name: golangci-lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout=5m

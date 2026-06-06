@@ -1,0 +1,30 @@
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+    - gosimple
+    - ineffassign
+    - typecheck
+    - gofmt
+    - misspell
+    - bodyclose
+    - noctx
+    - exportloopref
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+  govet:
+    enable-all: true
+
+issues:
+  exclude-rules:
+    # CGo files have patterns that confuse some linters.
+    - path: cyclone/cyclone\.go
+      linters: [govet]
