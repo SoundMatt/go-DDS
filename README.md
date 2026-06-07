@@ -1,14 +1,20 @@
 # go-DDS
 
-A Go library for DDS (Data Distribution Service) publish/subscribe, designed for vehicle signal transport.
+A generic Go library for [DDS](https://www.omg.org/omg-dds-portal/) (Data Distribution Service) publish/subscribe. Works in any domain — IoT, robotics, industrial control, vehicle networks, simulation, and more.
 
-The API is defined as a stable Go interface. Implementations are swappable:
+The API is a stable Go interface. Implementations are swappable without changing application code:
 
 | Package | Description | Requires |
 |---|---|---|
-| `mock` | In-process, pure Go. Default for development and testing. | Nothing |
-| `cyclone` | CycloneDDS via CGo. Real DDS domain (multi-process, multi-host). | `libcyclonedds-dev` + `-tags cyclone` |
-| `rtps` _(planned)_ | Pure-Go RTPS wire protocol. Zero native dependencies, real DDS. | Nothing |
+| `mock` | In-process, pure Go. Zero dependencies. Default for development and testing. | Nothing |
+| `cyclone` | [CycloneDDS](https://cyclonedds.io) via CGo. Real multi-process, multi-host DDS. | `libcyclonedds-dev` + `-tags cyclone` |
+| `rtps` _(planned)_ | Pure-Go RTPS/UDP wire protocol. Real DDS, zero native dependencies. | Nothing |
+
+## Install
+
+```bash
+go get github.com/SoundMatt/go-DDS
+```
 
 ## Quick start
 
@@ -21,51 +27,95 @@ import (
 p, _ := mock.New(dds.Domain(0))
 defer p.Close()
 
-pub, _ := p.NewPublisher("/VIN001/Vehicle", dds.DefaultQoS)
-sub, _ := p.NewSubscriber("/VIN001/Vehicle", dds.DefaultQoS)
+sub, _ := p.NewSubscriber("sensors/temperature", dds.DefaultQoS)
+pub, _ := p.NewPublisher("sensors/temperature", dds.DefaultQoS)
 
-pub.Write([]byte(`{"replyTopic":"client/123","request":{"action":"get","path":"Vehicle.Speed"}}`))
+pub.Write([]byte(`{"value": 21.5, "unit": "celsius"}`))
 
 sample := <-sub.C()
-fmt.Println(string(sample.Payload))
+fmt.Println(string(sample.Payload)) // {"value": 21.5, "unit": "celsius"}
 ```
+
+## Switching implementations
+
+Application code only ever references the `dds` interface package. Swap implementations at the call site:
+
+```go
+// Development / tests — no system library needed:
+import "github.com/SoundMatt/go-DDS/mock"
+p, err := mock.New(dds.Domain(0))
+
+// Production — real DDS domain, multi-host:
+// (rebuild with: go build -tags cyclone ./...)
+import "github.com/SoundMatt/go-DDS/cyclone"
+p, err := cyclone.New(dds.Domain(0))
+
+// Advanced — custom poll interval:
+p, err := cyclone.NewWithOptions(dds.Domain(0), cyclone.Options{
+    PollInterval: 1 * time.Millisecond,
+})
+```
+
+## QoS
+
+```go
+// Live data — best-effort, volatile (default)
+pub, _ := p.NewPublisher("robot/joint/angles", dds.DefaultQoS)
+
+// Commands — reliable delivery, late joiners see current state
+cmd, _ := p.NewPublisher("robot/joint/target", dds.ReliableQoS)
+```
+
+## Example use cases
+
+| Domain | Topic example | QoS |
+|---|---|---|
+| Robotics | `robot/arm/joint_states` | BestEffort (100 Hz sensor) |
+| Industrial | `plc/conveyor/speed` | Reliable (actuator command) |
+| Vehicle networks | `vehicle/speed` | BestEffort |
+| Simulation | `sim/entity/pose` | BestEffort |
+| IoT | `building/floor3/temp` | Reliable + TransientLocal |
+
+## Wire format
+
+Each DDS sample payload is raw bytes. The application chooses the encoding — JSON, Protobuf, MessagePack, plain text, or anything else. go-DDS does not impose a schema.
+
+The CycloneDDS implementation uses a single opaque byte-array DDS type (`RawMessage`) on the wire. This avoids IDL compiler dependency while remaining interoperable with any DDS participant that uses the same type descriptor.
 
 ## Using CycloneDDS (production)
 
 ```bash
-# Install CycloneDDS
-apt-get install -y libcyclonedds-dev    # Debian/Ubuntu
-brew install cyclonedds                 # macOS
+# Linux
+apt-get install -y libcyclonedds-dev
 
-# Build with real DDS
+# macOS
+brew install cyclonedds
+
+# Build
 go build -tags cyclone ./...
+go test -tags cyclone ./cyclone/...
 ```
 
-```go
-import (
-    dds "github.com/SoundMatt/go-DDS"
-    "github.com/SoundMatt/go-DDS/cyclone"
-)
+## CI status
 
-p, err := cyclone.New(dds.Domain(0))
-```
+[![CI](https://github.com/SoundMatt/go-DDS/actions/workflows/ci.yml/badge.svg)](https://github.com/SoundMatt/go-DDS/actions/workflows/ci.yml)
 
-## Wire protocol (VISS over DDS)
-
-The topic naming convention mirrors VISS over MQTT:
-
-- **Request topic**: `/<VIN>/Vehicle` — the vehicle subscribes here
-- **Payload**: `{"replyTopic":"<unique>","request":{...VISS JSON...}}`  
-- **Reply topic**: `<unique>` — the client subscribes here for the response
-
-This envelope is identical to the MQTT protocol so the server-side routing
-logic in `vissv2server/mqttMgr` and `vissv2server/ddsMgr` is symmetric.
+- Mock suite: ubuntu, macOS, Windows × Go 1.22, 1.23 (race detector on)
+- CycloneDDS suite: ubuntu with `libcyclonedds-dev` (-tags cyclone)
+- Lint: golangci-lint
 
 ## Roadmap
 
-- [x] Go interface definition (`dds.Participant`, `Publisher`, `Subscriber`)
-- [x] In-process mock (development and testing)
-- [x] CycloneDDS CGo implementation (production, multi-host)
-- [ ] Pure-Go RTPS/UDP implementation (phase 2 — no CGo, any platform)
-- [ ] Reliable QoS with retransmission
+- [x] Go interface (`Participant`, `Publisher`, `Subscriber`, `QoS`)
+- [x] In-process mock — 100% statement coverage
+- [x] CycloneDDS CGo implementation (`-tags cyclone`)
+- [x] Configurable poll interval (`cyclone.Options`)
+- [ ] Pure-Go RTPS/UDP (phase 2 — no CGo, any platform)
+- [ ] Reliable QoS retransmission
+- [ ] Waitset-based subscriber (sub-millisecond latency, replaces polling)
 - [ ] DDS-Security (DTLS / auth plugins)
+
+## License
+
+Mozilla Public License v2.0 — see [LICENSE](LICENSE).  
+Copyright (c) 2026 Matt Jones.

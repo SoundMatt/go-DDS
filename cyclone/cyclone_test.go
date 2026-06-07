@@ -28,6 +28,40 @@ func newParticipant(t *testing.T) dds.Participant {
 	return p
 }
 
+func TestCyclone_NewWithOptions(t *testing.T) {
+	p, err := cyclone.NewWithOptions(testDomain, cyclone.Options{
+		PollInterval: 2 * time.Millisecond,
+	})
+	if err != nil {
+		t.Skipf("CycloneDDS unavailable: %v", err)
+	}
+	defer p.Close()
+
+	sub, err := p.NewSubscriber("opts/test", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	pub, err := p.NewPublisher("opts/test", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	time.Sleep(100 * time.Millisecond)
+	pub.Write([]byte(`{"sensor":"gyro","value":1.23}`))
+
+	select {
+	case s := <-sub.C():
+		if string(s.Payload) != `{"sensor":"gyro","value":1.23}` {
+			t.Errorf("unexpected payload: %q", s.Payload)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout waiting for sample")
+	}
+}
+
 func TestCyclone_PubSub_RoundTrip(t *testing.T) {
 	p := newParticipant(t)
 

@@ -7,8 +7,8 @@
 
 // Package cyclone provides a CycloneDDS-backed implementation of the dds
 // interfaces via CGo. This stub is compiled when the cyclone build tag is
-// absent; it returns an error at runtime so that callers can fall back to
-// the mock implementation.
+// absent; both constructors return a descriptive error so callers can fall
+// back gracefully to the mock implementation.
 //
 // To build the real CGo implementation:
 //
@@ -19,12 +19,26 @@ package cyclone
 
 import (
 	"fmt"
+	"time"
 
 	dds "github.com/SoundMatt/go-DDS"
 )
 
-// New returns an error when the cyclone build tag is absent. Import the
-// mock package instead, or rebuild with -tags cyclone and CycloneDDS installed.
+// Options configures a CycloneDDS participant. Defined here so that code
+// referencing cyclone.Options compiles regardless of build tags.
+type Options struct {
+	PollInterval time.Duration
+}
+
+const errMsg = "cyclone: not built; rebuild with -tags cyclone and CycloneDDS installed " +
+	"(apt install libcyclonedds-dev / brew install cyclonedds)"
+
+// New returns an error when the cyclone build tag is absent.
 func New(_ dds.Domain) (dds.Participant, error) {
-	return nil, fmt.Errorf("cyclone: not built; rebuild with -tags cyclone and CycloneDDS installed (apt install libcyclonedds-dev / brew install cyclonedds)")
+	return nil, fmt.Errorf(errMsg)
+}
+
+// NewWithOptions returns an error when the cyclone build tag is absent.
+func NewWithOptions(_ dds.Domain, _ Options) (dds.Participant, error) {
+	return nil, fmt.Errorf(errMsg)
 }
