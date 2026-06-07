@@ -481,6 +481,157 @@ func TestRecvTracker_Duplicate(t *testing.T) {
 	}
 }
 
+// ── GUID / EntityId / GuidPrefix String methods ───────────────────────────────
+
+func TestGUID_String(t *testing.T) {
+	p := GuidPrefix{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
+	e := EntityId{0xAA, 0xBB, 0xCC, 0x03}
+	g := GUID{Prefix: p, Entity: e}
+
+	if got := p.String(); got != "0102030405060708090a0b0c" {
+		t.Errorf("GuidPrefix.String: got %q", got)
+	}
+	if got := e.String(); got != "aabbcc03" {
+		t.Errorf("EntityId.String: got %q", got)
+	}
+	want := "0102030405060708090a0b0c/aabbcc03"
+	if got := g.String(); got != want {
+		t.Errorf("GUID.String: got %q, want %q", got, want)
+	}
+}
+
+// ── Locator edge cases ────────────────────────────────────────────────────────
+
+func TestLocator_UDPAddr_Invalid(t *testing.T) {
+	l := Locator{Kind: LocatorKindInvalid, Port: 7410}
+	if addr := l.udpAddr(); addr != nil {
+		t.Errorf("udpAddr for invalid locator should return nil, got %v", addr)
+	}
+}
+
+func TestLocator_IPv6_RoundTrip(t *testing.T) {
+	ip6 := net.ParseIP("2001:db8::1")
+	addr := &net.UDPAddr{IP: ip6, Port: 7411}
+	l := locatorFromUDPv6(addr, 7411)
+
+	if l.Kind != LocatorKindUDPv6 {
+		t.Errorf("kind: got %d, want LocatorKindUDPv6 (%d)", l.Kind, LocatorKindUDPv6)
+	}
+	if l.Port != 7411 {
+		t.Errorf("port: got %d, want 7411", l.Port)
+	}
+	got := l.udpAddr()
+	if got == nil {
+		t.Fatal("udpAddr returned nil for UDPv6 locator")
+	}
+	if !got.IP.Equal(ip6) {
+		t.Errorf("IP: got %v, want %v", got.IP, ip6)
+	}
+	if got.Port != 7411 {
+		t.Errorf("port: got %d, want 7411", got.Port)
+	}
+}
+
+func TestLocator_FromUDP_IPv4inIPv6(t *testing.T) {
+	// net.ParseIP("192.168.1.1") returns a 16-byte IPv4-in-IPv6 form,
+	// but .To4() is non-nil — should produce a UDPv4 locator.
+	addr := &net.UDPAddr{IP: net.ParseIP("192.168.1.1"), Port: 9000}
+	l := locatorFromUDP(addr, 9000)
+	if l.Kind != LocatorKindUDPv4 {
+		t.Errorf("expected UDPv4 locator for IPv4 address, got kind %d", l.Kind)
+	}
+}
+
+// ── recvTracker.nextAckCount ──────────────────────────────────────────────────
+
+func TestRecvTracker_NextAckCount(t *testing.T) {
+	rt := &recvTracker{}
+	first := rt.nextAckCount()
+	second := rt.nextAckCount()
+	if second != first+1 {
+		t.Errorf("nextAckCount: %d then %d — expected monotone increment", first, second)
+	}
+}
+
+// ── rtpsReader internal helpers ───────────────────────────────────────────────
+
+func TestRtpsReader_AddSourceAndAccept(t *testing.T) {
+	p := &participant{guidPrefix: newGuidPrefix()}
+	r := &rtpsReader{p: p, topic: "t", eid: entityIdForReader(1)}
+
+	// No explicit sources: accepts only from same participant prefix.
+	sameGUID := GUID{Prefix: p.guidPrefix, Entity: entityIdForWriter(1)}
+	if !r.acceptsSource(sameGUID) {
+		t.Error("acceptsSource should accept same-participant GUID when no sources registered")
+	}
+	foreign := GUID{Prefix: newGuidPrefix(), Entity: entityIdForWriter(2)}
+	if r.acceptsSource(foreign) {
+		t.Error("acceptsSource should reject unregistered foreign GUID")
+	}
+
+	// After addSourceGUID, foreign GUID should be accepted.
+	r.addSourceGUID(foreign)
+	if !r.acceptsSource(foreign) {
+		t.Error("acceptsSource should accept explicitly registered GUID")
+	}
+}
+
+func TestRtpsReader_TrackerFor_Stable(t *testing.T) {
+	p := &participant{guidPrefix: newGuidPrefix()}
+	r := &rtpsReader{p: p, topic: "t", eid: entityIdForReader(1)}
+
+	g := GUID{Prefix: newGuidPrefix(), Entity: entityIdForWriter(1)}
+	t1 := r.trackerFor(g)
+	if t1 == nil {
+		t.Fatal("trackerFor returned nil on first call")
+	}
+	t2 := r.trackerFor(g)
+	if t1 != t2 {
+		t.Error("trackerFor should return the same tracker on repeated calls")
+	}
+}
+
+// ── participant internal helpers ──────────────────────────────────────────────
+
+func TestParticipant_ReaderByEID(t *testing.T) {
+	p := &participant{
+		guidPrefix: newGuidPrefix(),
+		readers:    make(map[EntityId]*rtpsReader),
+	}
+	eid := entityIdForReader(1)
+	r := &rtpsReader{p: p, topic: "t", eid: eid}
+	p.readers[eid] = r
+
+	called := false
+	p.readerByEID(eid, func(found *rtpsReader) {
+		called = true
+		if found != r {
+			t.Error("readerByEID: wrong reader returned")
+		}
+	})
+	if !called {
+		t.Error("readerByEID: fn not called for known eid")
+	}
+
+	// Unknown eid must not call fn.
+	p.readerByEID(entityIdForReader(99), func(*rtpsReader) {
+		t.Error("readerByEID: fn called for unknown eid")
+	})
+}
+
+func TestParticipant_AddWriterLocator(t *testing.T) {
+	p := &participant{
+		guidPrefix:     newGuidPrefix(),
+		writerLocators: make(map[GUID]Locator),
+	}
+	g := GUID{Prefix: newGuidPrefix(), Entity: entityIdForWriter(1)}
+	l := Locator{Kind: LocatorKindUDPv4, Port: 9999}
+	p.addWriterLocator(g, l)
+	if got, ok := p.writerLocators[g]; !ok || got != l {
+		t.Error("addWriterLocator: locator not stored correctly")
+	}
+}
+
 // ── GUID prefix generation ────────────────────────────────────────────────────
 
 func TestNewGuidPrefix_Unique(t *testing.T) {

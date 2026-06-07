@@ -25,7 +25,11 @@ const (
 
 // locatorFromUDP builds a Locator from a net.UDPAddr.
 // IPv4 addresses are encoded in bytes 12–15 of the 16-byte address field.
+// IPv6 addresses occupy the full 16-byte field.
 func locatorFromUDP(addr *net.UDPAddr, port int) Locator {
+	if ip6 := addr.IP.To16(); ip6 != nil && addr.IP.To4() == nil {
+		return locatorFromUDPv6(addr, port)
+	}
 	l := Locator{Kind: LocatorKindUDPv4, Port: uint32(port)}
 	ip4 := addr.IP.To4()
 	if ip4 == nil {
@@ -35,14 +39,34 @@ func locatorFromUDP(addr *net.UDPAddr, port int) Locator {
 	return l
 }
 
-// udpAddr converts a Locator to a *net.UDPAddr. Returns nil for non-UDPv4.
-func (l Locator) udpAddr() *net.UDPAddr {
-	if l.Kind != LocatorKindUDPv4 {
-		return nil
+// locatorFromUDPv6 builds a UDPv6 Locator. The full 16-byte IPv6 address
+// is stored directly in the Address field (RTPS 2.3 §9.3.2).
+func locatorFromUDPv6(addr *net.UDPAddr, port int) Locator {
+	l := Locator{Kind: LocatorKindUDPv6, Port: uint32(port)}
+	ip6 := addr.IP.To16()
+	if ip6 == nil {
+		ip6 = net.IPv6zero
 	}
-	return &net.UDPAddr{
-		IP:   net.IP(l.Address[12:16]),
-		Port: int(l.Port),
+	copy(l.Address[:], ip6)
+	return l
+}
+
+// udpAddr converts a Locator to a *net.UDPAddr.
+// Returns nil for locators with an unsupported or invalid kind.
+func (l Locator) udpAddr() *net.UDPAddr {
+	switch l.Kind {
+	case LocatorKindUDPv4:
+		return &net.UDPAddr{
+			IP:   net.IP(append([]byte(nil), l.Address[12:16]...)),
+			Port: int(l.Port),
+		}
+	case LocatorKindUDPv6:
+		return &net.UDPAddr{
+			IP:   net.IP(append([]byte(nil), l.Address[:]...)),
+			Port: int(l.Port),
+		}
+	default:
+		return nil
 	}
 }
 
@@ -67,8 +91,11 @@ func unmarshalLocator(b []byte) (Locator, bool) {
 	return l, true
 }
 
-// spdpMulticastAddr is the standard RTPS discovery multicast group.
+// spdpMulticastAddr is the standard RTPS IPv4 discovery multicast group.
 var spdpMulticastAddr = net.ParseIP("239.255.0.1")
+
+// spdpMulticastAddrV6 is the RTPS IPv6 discovery multicast group (site-local).
+var spdpMulticastAddrV6 = net.ParseIP("FF03::1")
 
 // portBase constants from the RTPS port mapping formula (§9.6.1).
 const (

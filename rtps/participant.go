@@ -46,6 +46,14 @@ func WithSecurity(plugin SecurityPlugin) Option {
 	return func(p *participant) { p.security = plugin }
 }
 
+// WithIPv6 enables the IPv6 multicast transport. When set, the participant
+// binds an additional pair of IPv6 UDP sockets and joins the RTPS IPv6
+// discovery group (FF03::1). IPv4 sockets are still created so the participant
+// is reachable from both IPv4 and IPv6 peers.
+func WithIPv6() Option {
+	return func(p *participant) { p.ipv6 = true }
+}
+
 // ── Participant ───────────────────────────────────────────────────────────────
 
 // participant implements dds.Participant over real RTPS/UDP.
@@ -53,10 +61,18 @@ type participant struct {
 	domain     dds.Domain
 	guidPrefix GuidPrefix
 
-	// Sockets.
+	// IPv6 flag set by WithIPv6() option.
+	ipv6 bool
+
+	// Sockets (IPv4).
 	mcastSock *udpSocket // SPDP multicast receive
 	metaSock  *udpSocket // SPDP send + SEDP send/receive (unicast)
 	dataSock  *udpSocket // User DATA / HEARTBEAT / ACKNACK
+
+	// Sockets (IPv6, non-nil only when ipv6 == true).
+	mcastSockV6 *udpSocket // SPDP IPv6 multicast receive
+	metaSockV6  *udpSocket // SEDP IPv6 meta unicast
+	dataSockV6  *udpSocket // User data IPv6 unicast
 
 	// Discovery services.
 	spdp *spdpService
@@ -72,6 +88,10 @@ type participant struct {
 	readers        map[EntityId]*rtpsReader
 	writerLocators map[GUID]Locator
 	entityCounter  uint32
+	// TransientLocal last-value cache: topic (string) → *dds.Sample.
+	// Uses sync.Map to avoid lock-ordering issues: Write holds w.mu and must
+	// not also acquire p.mu (which Close holds while iterating writers).
+	lastSample sync.Map
 }
 
 // New creates an RTPS participant joined to the given DDS domain.
@@ -125,6 +145,20 @@ func newParticipant(domain dds.Domain, opts ...Option) (*participant, error) {
 	}
 	for _, o := range opts {
 		o(p)
+	}
+
+	// Optional IPv6 sockets. Failures are soft: if the OS has no IPv6 support
+	// the participant continues with IPv4 only.
+	if p.ipv6 {
+		if mcastV6, err := newMulticastReceiveSocketV6(spdpMulticastAddrV6, metaMulticastPort(d)); err == nil {
+			p.mcastSockV6 = mcastV6
+		}
+		if metaV6, err := newUnicastSocketV6(metaUnicastPort(d, participantIdx)); err == nil {
+			p.metaSockV6 = metaV6
+		}
+		if dataV6, err := newUnicastSocketV6(userUnicastPort(d, participantIdx)); err == nil {
+			p.dataSockV6 = dataV6
+		}
 	}
 
 	p.spdp = newSPDPService(p)
@@ -181,20 +215,39 @@ func (p *participant) NewSubscriber(topic string, qos dds.QoS) (dds.Subscriber, 
 	}
 	p.readers[eid] = r
 	p.sedp.registerReader(eid, topic, r)
+	// TransientLocal: deliver the last published sample to the new subscriber.
+	if qos.Durability == dds.TransientLocal {
+		if v, ok := p.lastSample.Load(topic); ok {
+			if last, ok2 := v.(*dds.Sample); ok2 {
+				select {
+				case r.ch <- *last:
+				default:
+				}
+			}
+		}
+	}
 	return r, nil
 }
 
 func (p *participant) Close() error {
 	p.mu.Lock()
-	defer p.mu.Unlock()
 	if p.closed {
+		p.mu.Unlock()
 		return nil
 	}
 	p.closed = true
-	// Stop heartbeat loops before closing sockets; delegate to w.Close() so
-	// the w.closed guard prevents double-close if the caller already closed
-	// individual writers.
+	// Snapshot writers so we can call w.Close() without holding p.mu.
+	// Write holds w.mu while calling dispatchToReaders (which acquires p.mu);
+	// holding p.mu here while calling w.Close() (which acquires w.mu) would
+	// invert that order and deadlock. p.closed=true prevents any new writers
+	// from being registered after we release the lock.
+	ws := make([]*rtpsWriter, 0, len(p.writers))
 	for _, w := range p.writers {
+		ws = append(ws, w)
+	}
+	p.mu.Unlock()
+
+	for _, w := range ws {
 		_ = w.Close()
 	}
 	p.spdp.close()
@@ -202,14 +255,41 @@ func (p *participant) Close() error {
 	p.mcastSock.close()
 	p.metaSock.close()
 	p.dataSock.close()
+	if p.mcastSockV6 != nil {
+		p.mcastSockV6.close()
+	}
+	if p.metaSockV6 != nil {
+		p.metaSockV6.close()
+	}
+	if p.dataSockV6 != nil {
+		p.dataSockV6.close()
+	}
 	return nil
 }
 
 // ── Receive loop ──────────────────────────────────────────────────────────────
 
 func (p *participant) dataReceiveLoop() {
-	for pkt := range p.dataSock.recv {
-		p.handleDataPacket(pkt.data, pkt.from)
+	if p.dataSockV6 == nil {
+		for pkt := range p.dataSock.recv {
+			p.handleDataPacket(pkt.data, pkt.from)
+		}
+		return
+	}
+	// Multiplex IPv4 and IPv6 receive channels.
+	for {
+		select {
+		case pkt, ok := <-p.dataSock.recv:
+			if !ok {
+				return
+			}
+			p.handleDataPacket(pkt.data, pkt.from)
+		case pkt, ok := <-p.dataSockV6.recv:
+			if !ok {
+				return
+			}
+			p.handleDataPacket(pkt.data, pkt.from)
+		}
 	}
 }
 
@@ -463,6 +543,10 @@ func (w *rtpsWriter) Write(payload []byte) error {
 	// the already-queued sample.
 	localCopy := make([]byte, len(payload))
 	copy(localCopy, payload)
+	// Record for TransientLocal late-joiner delivery. sync.Map is safe here
+	// without holding p.mu (avoids w.mu → p.mu lock inversion with Close).
+	sample := dds.Sample{Topic: w.topic, Payload: localCopy}
+	w.p.lastSample.Store(w.topic, &sample)
 	w.p.dispatchToReaders(GUID{Prefix: w.p.guidPrefix, Entity: w.eid}, w.topic, localCopy)
 
 	// Send to all known remote peers.

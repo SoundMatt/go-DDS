@@ -153,7 +153,7 @@ go test -tags cyclone ./cyclone/...
 |---|---|---|
 | `test-mock` | ubuntu, macOS, Windows × Go 1.22/1.23 | race detector, full coverage |
 | `test-rtps` | ubuntu | `-short` (skips 2.2 s two-participant test) |
-| `test-cyclone` | ubuntu-22.04 | `continue-on-error` — `libcyclonedds-dev` may be absent |
+| `test-cyclone` | ubuntu-22.04 | probe-and-flag — skips cleanly if `libcyclonedds-dev` is absent |
 | `benchmark-smoke` | ubuntu | 1 iteration each, catches panics/deadlocks |
 | `fuzz-short` | ubuntu | 10 s per fuzz target |
 | `lint` | ubuntu | golangci-lint |
@@ -169,9 +169,17 @@ go test -tags cyclone ./cyclone/...
 - [x] Reliable QoS retransmission (HEARTBEAT / ACKNACK)
 - [x] WaitSet — sub-millisecond multi-topic blocking receive
 - [x] DDS-Security plugin interface (NullPlugin, HMAC-SHA-256, AES-256-GCM)
-- [ ] RTPS interop testing with CycloneDDS
-- [ ] TransientLocal durability (last-value cache for late joiners)
-- [ ] IPv6 multicast transport
+- [x] TransientLocal durability (last-value cache for late joiners)
+- [x] IPv6 multicast transport (`WithIPv6()` option, `LocatorKindUDPv6`)
+- [ ] RTPS interop testing with CycloneDDS (Docker Compose + CycloneDDS peer)
+- [ ] Typed sentinel errors (`errors.Is` / `errors.As` support)
+- [ ] Unicast-only / no-multicast discovery mode (Docker, container, NAT environments)
+- [ ] Content-filtered subscriptions (server-side predicate before channel delivery)
+- [ ] Deadline QoS (configurable missed-deadline callback)
+- [ ] Large payload fragmentation (RTPS DATA_FRAG submessage)
+- [ ] Topic wildcards (`sensors/#`, `vehicle/*/speed`)
+- [ ] Metrics / statistics API (publish count, drop count, latency histogram)
+- [ ] RTPS persistent history (disk-backed TransientLocal for crash recovery)
 
 ## Contributing
 

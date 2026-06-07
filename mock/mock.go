@@ -22,18 +22,35 @@ import (
 )
 
 // globalBroker is the process-wide in-memory pub/sub hub.
-var globalBroker = &broker{subs: make(map[string][]chan dds.Sample)}
-
-type broker struct {
-	mu   sync.RWMutex
-	subs map[string][]chan dds.Sample
+var globalBroker = &broker{
+	subs:       make(map[string][]chan dds.Sample),
+	lastSample: make(map[string]*dds.Sample),
 }
 
-func (b *broker) subscribe(topic string) chan dds.Sample {
+// broker is the central in-memory routing hub. It tracks live subscribers and
+// the most-recently published sample per topic (for TransientLocal delivery).
+type broker struct {
+	mu         sync.RWMutex
+	subs       map[string][]chan dds.Sample
+	lastSample map[string]*dds.Sample // nil entry means no sample published yet
+}
+
+func (b *broker) subscribe(topic string, qos dds.QoS) chan dds.Sample {
 	ch := make(chan dds.Sample, 64)
 	b.mu.Lock()
 	b.subs[topic] = append(b.subs[topic], ch)
+	// TransientLocal: deliver the last sample to the new subscriber if present.
+	var last *dds.Sample
+	if qos.Durability == dds.TransientLocal {
+		last = b.lastSample[topic]
+	}
 	b.mu.Unlock()
+	if last != nil {
+		select {
+		case ch <- *last:
+		default:
+		}
+	}
 	return ch
 }
 
@@ -50,14 +67,19 @@ func (b *broker) unsubscribe(topic string, ch chan dds.Sample) {
 	}
 }
 
-func (b *broker) publish(topic string, payload []byte) {
+func (b *broker) publish(topic string, payload []byte, qos dds.QoS) {
 	cp := make([]byte, len(payload))
 	copy(cp, payload)
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-	for _, ch := range b.subs[topic] {
+	sample := dds.Sample{Topic: topic, Payload: cp}
+	b.mu.Lock()
+	if qos.Durability == dds.TransientLocal {
+		b.lastSample[topic] = &sample
+	}
+	chans := b.subs[topic]
+	b.mu.Unlock()
+	for _, ch := range chans {
 		select {
-		case ch <- dds.Sample{Topic: topic, Payload: cp}:
+		case ch <- sample:
 		default:
 			// Subscriber is not reading; drop rather than block the publisher.
 		}
@@ -77,22 +99,22 @@ type participant struct {
 	closed bool
 }
 
-func (p *participant) NewPublisher(topic string, _ dds.QoS) (dds.Publisher, error) {
+func (p *participant) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.closed {
 		return nil, fmt.Errorf("mock: participant closed")
 	}
-	return &publisher{topic: topic}, nil
+	return &publisher{topic: topic, qos: qos}, nil
 }
 
-func (p *participant) NewSubscriber(topic string, _ dds.QoS) (dds.Subscriber, error) {
+func (p *participant) NewSubscriber(topic string, qos dds.QoS) (dds.Subscriber, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.closed {
 		return nil, fmt.Errorf("mock: participant closed")
 	}
-	return &subscriber{topic: topic, ch: globalBroker.subscribe(topic)}, nil
+	return &subscriber{topic: topic, ch: globalBroker.subscribe(topic, qos)}, nil
 }
 
 func (p *participant) Close() error {
@@ -105,6 +127,7 @@ func (p *participant) Close() error {
 // publisher implements dds.Publisher.
 type publisher struct {
 	topic  string
+	qos    dds.QoS
 	mu     sync.Mutex
 	closed bool
 }
@@ -115,7 +138,7 @@ func (pub *publisher) Write(payload []byte) error {
 	if pub.closed {
 		return fmt.Errorf("mock: publisher closed")
 	}
-	globalBroker.publish(pub.topic, payload)
+	globalBroker.publish(pub.topic, payload, pub.qos)
 	return nil
 }
 

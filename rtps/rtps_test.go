@@ -397,6 +397,88 @@ func TestWaitSet_ClosedSubscriber(t *testing.T) {
 	// No assertion on error — just must not hang.
 }
 
+// ── TransientLocal durability ─────────────────────────────────────────────────
+
+// TestRTPS_TransientLocal verifies that a subscriber created after a publish
+// receives the last sample immediately when Durability == TransientLocal.
+func TestRTPS_TransientLocal(t *testing.T) {
+	p := newTestParticipant(t)
+
+	pub, err := p.NewPublisher("transient/last", dds.ReliableQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	want := []byte(`{"state":"last"}`)
+	if werr := pub.Write(want); werr != nil {
+		t.Fatalf("Write: %v", werr)
+	}
+
+	// Subscribe AFTER the publish — should receive the last sample.
+	sub, err := p.NewSubscriber("transient/last", dds.ReliableQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	select {
+	case s := <-sub.C():
+		if !bytes.Equal(s.Payload, want) {
+			t.Errorf("TransientLocal payload: got %q, want %q", s.Payload, want)
+		}
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("timeout: TransientLocal late-joiner did not receive last sample")
+	}
+}
+
+// TestRTPS_TransientLocal_NoSample verifies that a TransientLocal subscriber
+// created before any publish does not receive a phantom sample.
+func TestRTPS_TransientLocal_NoSample(t *testing.T) {
+	p := newTestParticipant(t)
+
+	sub, err := p.NewSubscriber("transient/empty", dds.ReliableQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	select {
+	case s := <-sub.C():
+		t.Errorf("unexpected sample before any publish: %q", s.Payload)
+	case <-time.After(50 * time.Millisecond):
+		// correct: nothing delivered
+	}
+}
+
+// ── WaitSet — all-closed path ─────────────────────────────────────────────────
+
+// TestWaitSet_AllChannelsClosed verifies that Wait returns promptly rather than
+// blocking until the context deadline when all subscriber channels are closed.
+func TestWaitSet_AllChannelsClosed(t *testing.T) {
+	p := newTestParticipant(t)
+
+	sub, _ := p.NewSubscriber("ws/all-closed", dds.DefaultQoS)
+	sub.Close() // channel is now closed
+
+	ws := dds.NewWaitSet(sub)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_, _, _ = ws.Wait(ctx)
+	}()
+
+	select {
+	case <-done:
+		// correct: returned promptly
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("WaitSet.Wait should return promptly when all subscriber channels are closed")
+	}
+}
+
 // ── Reliable QoS (intra-process, happy path) ──────────────────────────────────
 
 func TestRTPS_Reliable_IntraProcess(t *testing.T) {
@@ -429,6 +511,43 @@ func TestRTPS_Reliable_IntraProcess(t *testing.T) {
 		case <-time.After(2 * time.Second):
 			t.Fatalf("timeout waiting for sample %d", i)
 		}
+	}
+}
+
+// ── IPv6 transport ────────────────────────────────────────────────────────────
+
+// TestRTPS_WithIPv6_StartsCleanly verifies that WithIPv6() does not prevent
+// participant creation; IPv6 socket failures are soft (IPv4 still works).
+func TestRTPS_WithIPv6_StartsCleanly(t *testing.T) {
+	p, err := rtps.New(testDomain, rtps.WithIPv6())
+	if err != nil {
+		t.Skipf("rtps.New with IPv6: %v", err)
+	}
+	t.Cleanup(func() { _ = p.Close() })
+
+	sub, err := p.NewSubscriber("ipv6/test", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	pub, err := p.NewPublisher("ipv6/test", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	want := []byte("ipv6-ok")
+	if err := pub.Write(want); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	select {
+	case s := <-sub.C():
+		if !bytes.Equal(s.Payload, want) {
+			t.Errorf("payload: got %q, want %q", s.Payload, want)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for intra-process sample over IPv6 participant")
 	}
 }
 
