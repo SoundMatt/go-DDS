@@ -194,8 +194,8 @@ func TestMaxSampleSize_EnforcedInShmem(t *testing.T) {
 	defer pub.Close()
 
 	// Exactly at the limit — must succeed.
-	if err := pub.Write([]byte("0123456789")); err != nil {
-		t.Fatalf("Write at limit: %v", err)
+	if writeErr := pub.Write([]byte("0123456789")); writeErr != nil {
+		t.Fatalf("Write at limit: %v", writeErr)
 	}
 
 	// One byte over the limit — must return ErrPayloadTooLarge.

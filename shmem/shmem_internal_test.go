@@ -230,8 +230,8 @@ func TestReadData_OversizeRejected(t *testing.T) {
 	var hdr [4]byte
 	binary.LittleEndian.PutUint32(hdr[:], maxPayload+1)
 	_, _ = f.Write(hdr[:])
-	f.Close()
-	defer os.Remove(path)
+	_ = f.Close()
+	defer func() { _ = os.Remove(path) }()
 
 	l := &shmListener{topic: topic}
 	_, err = l.readData()
@@ -259,8 +259,8 @@ func TestReadData_TruncatedBody(t *testing.T) {
 	binary.LittleEndian.PutUint32(hdr[:], 100)
 	_, _ = f.Write(hdr[:])
 	_, _ = f.Write(make([]byte, 10)) // only 10 bytes
-	f.Close()
-	defer os.Remove(path)
+	_ = f.Close()
+	defer func() { _ = os.Remove(path) }()
 
 	l := &shmListener{topic: topic}
 	_, err = l.readData()

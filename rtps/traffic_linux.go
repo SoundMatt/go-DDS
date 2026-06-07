@@ -44,7 +44,7 @@ func withFd(conn *net.UDPConn, fn func(fd int) error) error {
 		return err
 	}
 	var fnErr error
-	rawConn.Control(func(fd uintptr) {
+	_ = rawConn.Control(func(fd uintptr) {
 		fnErr = fn(int(fd))
 	})
 	return fnErr

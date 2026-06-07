@@ -738,10 +738,7 @@ func TestTypedSubscriber_DecodeErrorDropped(t *testing.T) {
 
 func TestCloseWithDrain_NonDrainer(t *testing.T) {
 	// Verify package-level CloseWithDrain falls back to Close on non-Drainer.
-	// mock.participant is a Drainer, so test with a stub that only implements Participant.
-	type stubParticipant struct{ closed bool }
-	// We can't easily make a non-Drainer here without defining a new type, so
-	// just verify the function doesn't error when called on a Drainer.
+	// mock.participant is a Drainer; just verify the function doesn't error.
 	p, _ := mock.New(0)
 	ctx := context.Background()
 	if err := dds.CloseWithDrain(ctx, p); err != nil {
@@ -782,8 +779,8 @@ func TestMaxSampleSize_EnforcedInMock(t *testing.T) {
 	defer pub.Close()
 
 	// Payload within limit must succeed.
-	if err := pub.Write([]byte("0123456789")); err != nil {
-		t.Fatalf("Write at limit: %v", err)
+	if writeErr := pub.Write([]byte("0123456789")); writeErr != nil {
+		t.Fatalf("Write at limit: %v", writeErr)
 	}
 
 	// Payload over limit must return ErrPayloadTooLarge.

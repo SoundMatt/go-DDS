@@ -143,8 +143,8 @@ type participant struct {
 
 	// TSN options.
 	tsnConfig    *tsn.StreamConfig
-	spdpInterval time.Duration // 0 = use spdpAnnouncePeriod (2 s)
-	spdpJitter   time.Duration // 0 = no jitter
+	spdpInterval time.Duration        // 0 = use spdpAnnouncePeriod (2 s)
+	spdpJitter   time.Duration        // 0 = no jitter
 	tsnSocks     map[uint8]*udpSocket // per-PCP traffic-class sockets; keyed by PCP (0–7)
 	tsnMu        sync.Mutex
 
@@ -838,15 +838,15 @@ type rtpsWriter struct {
 	closed        bool
 	seqHi         int32
 	seqLo         uint32
-	ackedLo       uint32        // highest sequence number fully acknowledged by all readers
+	ackedLo       uint32 // highest sequence number fully acknowledged by all readers
 	reliable      bool
 	history       *sendHistory  // non-nil when reliable == true
-	hbDone        chan struct{}  // closed to stop the heartbeat goroutine
-	drainCh       chan struct{}  // closed when ackedLo >= seqLo (all ACKs in)
+	hbDone        chan struct{} // closed to stop the heartbeat goroutine
+	drainCh       chan struct{} // closed when ackedLo >= seqLo (all ACKs in)
 	deadlineTimer *time.Timer   // non-nil when QoS.Deadline > 0
 	// TSN fields — nil when not a TSN writer.
-	tsnStream *tsn.Stream  // matching stream descriptor
-	tsnSock   *udpSocket   // priority-marked socket (nil = use dataSock)
+	tsnStream *tsn.Stream // matching stream descriptor
+	tsnSock   *udpSocket  // priority-marked socket (nil = use dataSock)
 }
 
 // fragmentSize returns the per-fragment payload cap for this writer.

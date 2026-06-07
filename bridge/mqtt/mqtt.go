@@ -233,7 +233,6 @@ func NewBridge(p dds.Participant, client MQTTClient, opts Options) (*Bridge, err
 
 	// Subscribe to MQTT topics and forward to DDS.
 	for _, mqttTopic := range opts.MQTTTopics {
-		mqttTopic := mqttTopic // capture
 		tok := client.Subscribe(mqttTopic, 1, func(topic string, payload []byte) {
 			b.fromMQTT(topic, payload)
 		})

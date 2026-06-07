@@ -20,15 +20,15 @@ import (
 // stubToken is a synchronous Token that always succeeds.
 type stubToken struct{}
 
-func (stubToken) Wait() bool  { return true }
+func (stubToken) Wait() bool   { return true }
 func (stubToken) Error() error { return nil }
 
 // stubMQTTClient is an in-process fake MQTT broker for testing.
 type stubMQTTClient struct {
-	mu          sync.RWMutex
-	handlers    map[string]mqttbridge.MessageHandler
-	published   []stubMsg
-	connected   bool
+	mu        sync.RWMutex
+	handlers  map[string]mqttbridge.MessageHandler
+	published []stubMsg
+	connected bool
 }
 
 type stubMsg struct {

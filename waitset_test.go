@@ -174,11 +174,6 @@ func TestCloseWithDrain_WithDrainer(t *testing.T) {
 }
 
 func TestCloseWithDrain_WithoutDrainer(t *testing.T) {
-	// stubNonDrainer implements Participant but not Drainer.
-	type stubParticipant struct {
-		dds.Participant
-		closed bool
-	}
 	// Use a real mock participant but wrap it — the wrapper doesn't implement Drainer.
 	p := newMockParticipant(t)
 	_ = p // still cleaned up by t.Cleanup; double-close is safe for mock
@@ -306,8 +301,8 @@ func TestJSONCodec_Unmarshal_InvalidJSON(t *testing.T) {
 // errCodec is a stub Codec that always fails to Marshal.
 type errCodec[T any] struct{}
 
-func (errCodec[T]) Marshal(T) ([]byte, error)          { return nil, errors.New("forced marshal error") }
-func (errCodec[T]) Unmarshal([]byte) (T, error)        { var z T; return z, nil }
+func (errCodec[T]) Marshal(T) ([]byte, error)   { return nil, errors.New("forced marshal error") }
+func (errCodec[T]) Unmarshal([]byte) (T, error) { var z T; return z, nil }
 
 func TestTypedPublisher_MarshalError_Propagated(t *testing.T) {
 	p := newMockParticipant(t)

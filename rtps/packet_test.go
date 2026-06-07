@@ -1205,7 +1205,7 @@ func TestPersistLoad_OversizePayload_Rejected(t *testing.T) {
 	var hdr [4]byte
 	binary.LittleEndian.PutUint32(hdr[:], 64*1024*1024+1) // one byte over the cap
 	_, _ = f.Write(hdr[:])
-	f.Close()
+	_ = f.Close()
 
 	_, loadErr := persistLoad(dir, "big/topic")
 	if loadErr == nil {
@@ -1227,8 +1227,8 @@ func TestWithPersistentHistory_LateJoinerGetsPersistedSample(t *testing.T) {
 	}
 	defer pub.Close()
 
-	if err := pub.Write([]byte("persisted-value")); err != nil {
-		t.Fatalf("Write: %v", err)
+	if writeErr := pub.Write([]byte("persisted-value")); writeErr != nil {
+		t.Fatalf("Write: %v", writeErr)
 	}
 
 	// Late subscriber: should receive the persisted last sample from disk.
@@ -1541,8 +1541,6 @@ func TestWithLogger_AcceptedAndUsed(t *testing.T) {
 }
 
 func TestWithTracer_AcceptedAndUsed(t *testing.T) {
-	type recordingSpan struct{ dds.Span }
-	type recordingTracer struct{ started int }
 	// Use a simple custom tracer to verify it's called.
 	rt := &struct {
 		count int
