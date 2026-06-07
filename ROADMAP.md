@@ -37,6 +37,26 @@ API parity does not.
 
 ---
 
+## Release Plan
+
+| Version | Milestones | Theme |
+|---|---|---|
+| v0.1 – v0.5 | Released | Foundation through TSN |
+| v0.6 | 1, 4 | Production Runtime + Observability |
+| v0.7 | 2, 7 | Developer Experience + Deterministic Networking |
+| v0.8 | 3, 5, 6 | Verification, Edge Performance, Safety |
+| v0.9 | 8, 9, 10 | Enterprise Security, Dynamic Data, Services |
+
+### Released — v0.1 – v0.5
+
+- **v0.1** — Core interfaces, mock runtime, CycloneDDS CGo, pure-Go RTPS/UDP
+- **v0.2** — TransientLocal durability, IPv6, interop testing, RTPS protocol completeness
+- **v0.3** — Sentinel errors, unicast discovery, content filters, deadline QoS, fragmentation, wildcards, metrics, persistent history, web monitor
+- **v0.4** — Back-pressure policies, structured logging, liveliness callbacks, graceful drain, multicast data, shared memory, timestamps, MQTT bridge, typed generics, tracing
+- **v0.5** — TSN QoS fields, stream model, PCP/DSCP marking, SO_TXTIME, CLOCK_TAI, per-PCP sockets, SPDP jitter, TSN fragmentation bounds, JSON stream config
+
+---
+
 ## Current State
 
 ### Core DDS
@@ -76,7 +96,7 @@ API parity does not.
 
 ---
 
-## Milestone 1 — Production Runtime
+## Milestone 1 — Production Runtime `v0.6`
 
 Goal:
 Deliver a production-grade DDS runtime.
@@ -114,7 +134,7 @@ A deployment can be operated and debugged without custom tooling.
 
 ---
 
-## Milestone 2 — Developer Experience
+## Milestone 2 — Developer Experience `v0.7`
 
 Goal:
 Make go-DDS the easiest DDS implementation to develop against.
@@ -155,7 +175,7 @@ A developer can go from interface definition to running system in minutes.
 
 ---
 
-## Milestone 3 — Verification and Validation
+## Milestone 3 — Verification and Validation `v0.8`
 
 Goal:
 Support the complete software lifecycle from unit testing through system validation.
@@ -197,7 +217,7 @@ DDS deployments become fully testable and reproducible.
 
 ---
 
-## Milestone 4 — Observability
+## Milestone 4 — Observability `v0.6`
 
 Goal:
 Provide first-class visibility into distributed systems.
@@ -231,7 +251,7 @@ Engineers can understand system behavior without packet captures.
 
 ---
 
-## Milestone 5 — Edge Performance
+## Milestone 5 — Edge Performance `v0.8`
 
 Goal:
 Support high-performance embedded and edge deployments.
@@ -263,7 +283,7 @@ High-volume data can be distributed efficiently on constrained hardware.
 
 ---
 
-## Milestone 6 — Safety Communication
+## Milestone 6 — Safety Communication `v0.8`
 
 Goal:
 Support safety-oriented communication architectures.
@@ -300,30 +320,30 @@ Applications can build black-channel safety architectures using go-DDS.
 
 ---
 
-## Milestone 7 — Deterministic Networking
+## Milestone 7 — Deterministic Networking `v0.7`
 
 Goal:
 Become the easiest DDS implementation to deploy on TSN networks.
 
 ### TSN Foundations
 
-- VLAN support
-- PCP support
-- DSCP support
-- QoS mapping
+- VLAN support ✅
+- PCP support ✅
+- DSCP support ✅
+- QoS mapping ✅
 
 ### TSN Streams
 
-- Stream descriptors
-- Topic mapping
-- Configuration validation
+- Stream descriptors ✅
+- Topic mapping ✅
+- Configuration validation ✅
 
 ### TSN Scheduling
 
-- SO_TXTIME
-- CLOCK_TAI
-- gPTP awareness
-- ETF integration
+- SO_TXTIME ✅
+- CLOCK_TAI ✅
+- gPTP awareness ✅
+- ETF integration ✅
 - TAPRIO integration
 
 ### TSN Diagnostics
@@ -337,7 +357,7 @@ DDS topics map directly to deterministic TSN streams.
 
 ---
 
-## Milestone 8 — Enterprise Security
+## Milestone 8 — Enterprise Security `v0.9`
 
 Goal:
 Provide secure communication for enterprise and automotive deployments.
@@ -354,8 +374,8 @@ Provide secure communication for enterprise and automotive deployments.
 
 ### Protection
 
-- Encryption
-- Signing
+- Encryption ✅
+- Signing ✅
 - Replay protection
 
 ### Secure Discovery
@@ -368,7 +388,7 @@ Deployments can securely operate across untrusted networks.
 
 ---
 
-## Milestone 9 — Dynamic Data
+## Milestone 9 — Dynamic Data `v0.9`
 
 Goal:
 Support evolving distributed systems.
@@ -394,7 +414,7 @@ Systems can evolve without lock-step software updates.
 
 ---
 
-## Milestone 10 — Enterprise Services
+## Milestone 10 — Enterprise Services `v0.9`
 
 Goal:
 Provide operational services around the middleware.

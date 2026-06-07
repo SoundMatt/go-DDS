@@ -236,12 +236,16 @@ See [ROADMAP.md](ROADMAP.md) for per-item context, release notes, and implementa
 - [x] Fragmentation bounds for TSN streams (`MaxSampleSize` guard, `splitIntoFragmentsN`)
 - [x] External TSN configuration (JSON file, `tsn.LoadConfig`, `WithTSNConfig`)
 
-**Future — [10-milestone roadmap](ROADMAP.md)**
+**Future — [10-milestone roadmap](ROADMAP.md) targeting v0.9**
 
-Milestones: Production Runtime, Developer Experience, Verification and Validation,
-Observability, Edge Performance, Safety Communication, Deterministic Networking,
-Enterprise Security, Dynamic Data, and Enterprise Services. See [ROADMAP.md](ROADMAP.md)
-for goals, sub-items, and success criteria.
+| Version | Theme |
+|---|---|
+| v0.6 | Production Runtime + Observability |
+| v0.7 | Developer Experience + Deterministic Networking |
+| v0.8 | Verification, Edge Performance, Safety |
+| v0.9 | Enterprise Security, Dynamic Data, Services |
+
+See [ROADMAP.md](ROADMAP.md) for goals, sub-items, and success criteria per milestone.
 
 ## Contributing
 
