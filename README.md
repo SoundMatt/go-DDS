@@ -202,6 +202,12 @@ See [ROADMAP.md](ROADMAP.md) for per-item context, release notes, and implementa
 - [x] IPv6 multicast transport (`WithIPv6()` option, `LocatorKindUDPv6`)
 - [x] RTPS interop testing with CycloneDDS (Docker Compose + CycloneDDS peer)
 
+**Known protocol bugs (fix before new features)**
+
+- [ ] `matchedReaderLocators` ignores topic — sends data to all peers (`participant.go:497`)
+- [ ] SPDP lease duration advertised but never enforced — stale peers never evicted
+- [ ] RTPS GAP submessage not sent — reliable subscribers stall after history eviction
+
 **Planned — core**
 
 - [ ] Typed sentinel errors (`errors.Is` / `errors.As` support)
@@ -213,6 +219,25 @@ See [ROADMAP.md](ROADMAP.md) for per-item context, release notes, and implementa
 - [ ] Metrics / statistics API (publish count, drop count, latency histogram)
 - [ ] RTPS persistent history (disk-backed TransientLocal for crash recovery)
 - [ ] Real-time web monitor (`monitor/` sub-package, SSE, no external dependencies)
+
+**Planned — operational**
+
+- [ ] Configurable subscriber channel depth and back-pressure policy (drop-newest / drop-oldest / block)
+- [ ] Structured logging (`WithLogger(*slog.Logger)` option, zero-cost when unused)
+- [ ] Participant liveliness detection and callback (`LivelinessGained` / `LivelinessLost`)
+- [ ] Graceful shutdown with reliable-ACK drain (`CloseWithDrain(ctx)`)
+
+**Planned — transport**
+
+- [ ] Multicast data delivery (topic-specific multicast group, one packet per write)
+- [ ] Shared memory transport (`shmem/` sub-package, cross-process same-host, zero UDP copies)
+- [ ] INFO_TS submessage — source timestamps in `Sample.SourceTimestamp`
+
+**Planned — integration**
+
+- [ ] MQTT bridge (`bridge/mqtt/` — DDS ↔ MQTT bidirectional, QoS mapping)
+- [ ] IDL / protobuf schema binding (`TypedPublisher[T]` / `TypedSubscriber[T]` generics, `go generate`)
+- [ ] OpenTelemetry tracing (`WithOTelTracer`, per-write and per-deliver spans)
 
 **Planned — TSN (Time-Sensitive Networking)**
 

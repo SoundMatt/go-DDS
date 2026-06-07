@@ -178,6 +178,64 @@ per-test deadline.
 
 ---
 
+## Known Protocol Bugs
+
+These are correctness defects in the current implementation — not missing
+features. They affect wire behaviour today and should be fixed before the items
+in the Planned sections below.
+
+---
+
+**`matchedReaderLocators` ignores topic (`participant.go:497`)**
+
+`rtpsWriter.Write` calls `p.matchedReaderLocators(w.topic)` to get the UDP
+addresses to send data packets to, but the function body contains `_ =
+topicName` and returns the `defaultUnicast` locator of *every* known SPDP
+peer regardless of whether they have a subscriber for that topic. With a single
+topic this is harmless; with multiple topics and multiple remote participants
+every write is sent to every peer, wasting bandwidth and delivering unsolicited
+packets. The fix is for SEDP to maintain a `topicReaders map[string][]GUID`
+index (updated in `registerReader` / `onNewPeer` in `sedp.go`) and for
+`matchedReaderLocators` to look up only the participants that have an active
+reader for the requested topic. The `_ = topicName` blank assignment is the
+marker to search for when starting this fix.
+
+---
+
+**SPDP lease duration advertised but never enforced**
+
+`spdp.go:buildParticipantData` writes `pidParticipantLeaseDuration = 10
+seconds` into every SPDP announcement, but nothing in the codebase ever checks
+whether a peer's lease has expired. A remote participant that crashes or loses
+network connectivity stays in the `spdpService.peers` map and in
+`matchedReaderLocators` output forever. Subsequent reliable writes will
+keep retransmitting to the dead address until `sendHistory` overflows.
+The fix is a background goroutine in `spdp.go` that scans `peers` once per
+second and evicts entries whose last-seen timestamp is older than their
+advertised lease duration (store `lastSeen time.Time` alongside each
+`participantProxy`). Eviction must also notify SEDP so local reader
+source-lists can be pruned. This is a prerequisite for the participant
+liveliness callback item in the Operational section below.
+
+---
+
+**RTPS GAP submessage not sent**
+
+When a reliable writer's `sendHistory` evicts old samples (the ring is capped
+at `maxHistoryDepth = 256`), a reader that was offline and returns later will
+send ACKNACKs requesting those evicted sequence numbers. The writer has no way
+to respond other than to ignore the request, leaving the reader stalled. The
+RTPS 2.3 §8.3.7.4 GAP submessage tells a reader "sequence numbers X–Y are
+permanently unavailable; treat them as received." In `participant.go:handleAckNack`,
+after iterating the NACK bitmap, any sequence numbers in the bitmap that are
+older than `sendHistory.firstLast().first` should trigger a GAP response
+rather than silence. `marshalGAP` needs to be added to `message.go`
+alongside the existing `marshalHeartbeat` / `marshalAckNack`. Until this is
+fixed, a reliable subscriber that reconnects after a gap in history will stall
+indefinitely if the requested samples have been evicted.
+
+---
+
 ## Planned
 
 ---
@@ -315,6 +373,192 @@ entry is delivered just like the in-memory cache today. The log format can be
 a simple length-prefixed binary file (4-byte little-endian length + payload
 bytes). The mock backend would also benefit from this for integration tests
 but it is lower priority there since the mock is primarily a testing vehicle.
+
+---
+
+## Planned — Operational
+
+---
+
+**Configurable subscriber channel depth and back-pressure policy**
+
+Both `mock/mock.go:39` and `rtps/participant.go:213` create subscriber channels
+with a hardcoded depth of 64 samples. When a slow consumer fills the buffer the
+sample is silently dropped (the `default` branch in the dispatch `select`).
+The fix is a `WithChannelDepth(n int)` `NewSubscriber` option and a
+`WithBackPressure(policy BackPressurePolicy)` option where `policy` is either
+`DropNewest` (current behaviour), `DropOldest` (evict the head of the channel
+to make room), or `Block` (block the publisher goroutine until the subscriber
+drains — only safe when the publisher controls its own goroutine). The option
+is stored on `rtpsReader` and `mock.subscriber`; the dispatch path reads it
+before the `select`. The metrics item below depends on this change because drop
+counts are only useful if the drop policy is observable and configurable.
+
+---
+
+**Structured logging (`slog.Logger` injection)**
+
+The library is completely silent. Dropped packets, SPDP failures, SEDP errors,
+and ACKNACK timeouts leave no trace in production. A `WithLogger(l *slog.Logger)`
+participant option (available on both `mock.New` and `rtps.New`) would route
+internal log lines through the standard-library `log/slog` interface introduced
+in Go 1.21. Log sites to add at minimum: SPDP peer discovered/evicted, SEDP
+endpoint matched, packet dropped (with reason), HEARTBEAT sent/received,
+ACKNACK sent/received, GAP sent, security seal/open errors, socket send errors.
+All log calls must be guarded by `l != nil` so the zero-value behaviour (no
+logging) is preserved. The logger should be stored on `participant` and
+threaded through to `spdpService` and `sedpService` at construction time.
+Because `slog` is in the standard library since Go 1.21, this adds no new
+module dependencies.
+
+---
+
+**Participant liveliness detection and callback**
+
+Related to the SPDP lease expiry bug above. Once lease expiry is enforced, the
+application needs a way to react to it. A `WithLivelinessCallback(fn
+func(guid dds.GUID, event LivelinessEvent))` participant option registers a
+function called when a remote participant is first discovered
+(`LivelinessGained`) or when its lease expires (`LivelinessLost`). The DDS
+spec calls this the LIVELINESS QoS policy; go-DDS can implement the
+participant-level subset without the full per-DataWriter granularity initially.
+`dds.GUID` should be added to the root package as an opaque `[16]byte` type so
+the callback signature does not leak the internal `rtps.GUID` type through the
+public API. This is the application-facing complement to the SPDP lease expiry
+fix and the structured logging item — both are prerequisites.
+
+---
+
+**Graceful shutdown with reliable-ACK drain**
+
+`participant.Close()` immediately closes sockets. Any reliable `Write` calls
+that have not yet been acknowledged (samples still in `sendHistory`) are
+abandoned without notifying the application. For command/control topics this
+is data loss. A `CloseWithDrain(ctx context.Context) error` method on
+`dds.Participant` would block until: (a) all outstanding reliable ACKs have
+been received or (b) the context is cancelled. Implementation: track a
+`pendingAcks atomic.Int64` counter on each `rtpsWriter` (incremented on each
+reliable write, decremented when an ACKNACK confirms the sample), add a
+`drained chan struct{}` that is closed when the counter reaches zero, and have
+`CloseWithDrain` wait on all writer drain channels before closing sockets.
+The mock implementation can provide an equivalent no-op (all mock writes are
+synchronous) so the interface is uniform across backends.
+
+---
+
+## Planned — Transport
+
+---
+
+**Multicast data delivery**
+
+All user-data packets are currently sent unicast to each matched peer
+individually (one UDP write per remote participant). For a topic with N remote
+subscribers this means N copies of every payload on the wire. RTPS 2.3
+supports topic-specific multicast groups for the data plane: the writer sends
+one packet to a multicast address and the NIC/switch replicates it. The SEDP
+endpoint announcement (`sedp.go:registerWriter`) already builds a
+`pidMulticastLocator` parameter; the receiver side (`sedp.go:onRemoteWriter`)
+already parses it but it is not used in routing. The fix is: assign each RTPS
+writer a multicast group address from the 239.255.x.x range (derived from
+domain + topic hash), advertise it in the SEDP publication data, and have
+remote subscribers join that group when they match the writer in SEDP. Writers
+can then call `dataSock.send(multicastAddr, msg)` instead of iterating
+`matchedReaderLocators`. Note: this requires the `matchedReaderLocators` topic-
+filtering bug to be fixed first so that unicast fallback is also correct.
+
+---
+
+**Shared memory transport (`shmem/` sub-package)**
+
+For same-host inter-process pub/sub, UDP loopback adds a kernel round-trip and
+two copies (write buffer → kernel → read buffer) per sample. A shared memory
+transport eliminates both: writer maps a ring buffer into both processes, writes
+the payload once, and signals the reader via a futex or a `sync.Mutex`+channel
+combination via a named pipe. The transport would live in `shmem/` and
+implement `dds.Participant` using `golang.org/x/sys/unix` for `mmap` and
+`syscall.Flock` for the initial handshake. Discovery would use a well-known
+file path under `/tmp/godds/<domain>/` rather than UDP multicast. The mock
+backend is already effectively shared-memory for in-process use; the gap this
+fills is cross-process same-host communication without UDP overhead.
+Platform support: Linux and macOS. Windows would fall back to named pipes
+(`\\.\pipe\godds-<domain>-<topic>`).
+
+---
+
+**INFO_TS submessage (source timestamps)**
+
+The constant `submsgINFO_TS = 0x09` is defined in `message.go` but never
+parsed or emitted. An INFO_TS submessage prepended to a DATA submessage carries
+the writer's clock at the time of the write; the receiver uses it as
+`Sample.SourceTimestamp` rather than the arrival time. This matters for
+time-series topics (sensor data with late delivery should carry the original
+measurement time), for TSN latency accounting (end-to-end latency =
+receive_time − source_timestamp), and for TransientLocal disambiguation (if
+two samples arrive out of order, the one with the earlier INFO_TS was written
+first). Implementation: add a `Timestamp time.Time` field to `dds.Sample`;
+add `marshalInfoTS(t time.Time) []byte` to `message.go`; prepend it before
+each `marshalDataSubmessage` call in `rtpsWriter.Write`; parse it in
+`handleDataPacket` and pass it through `dispatchToReaders`. The RTPS timestamp
+format is two uint32s: seconds since epoch (NTP epoch, i.e. 1 Jan 1900) and
+32-bit fraction. Use `CLOCK_TAI` on Linux when the TSN integration is active.
+
+---
+
+## Planned — Integration
+
+---
+
+**MQTT bridge (`bridge/mqtt/`)**
+
+An `mqtt.Bridge` that connects a `dds.Participant` to an MQTT broker,
+bidirectionally mapping DDS topics to MQTT topics. DDS → MQTT: subscribe to a
+list of DDS topics and forward each sample as an MQTT `PUBLISH` to the
+corresponding MQTT topic path. MQTT → DDS: subscribe to MQTT topics and publish
+each received message as a DDS sample. The bridge lives in `bridge/mqtt/` and
+uses `github.com/eclipse/paho.mqtt.golang` (or `paho.golang` for v5). QoS
+mapping: DDS Reliable → MQTT QoS 1 (at-least-once); DDS BestEffort → MQTT QoS
+0 (fire-and-forget). Topic name mapping should be configurable (e.g. strip or
+add a prefix) so DDS topics like `vehicle/speed` map cleanly to MQTT paths.
+The bridge is a natural integration point for VISS gateways, which are
+MQTT-native; however the VISS-specific topic schema and signal tree binding
+belong in the VISSR package, not here.
+
+---
+
+**IDL / protobuf schema binding and `go generate`**
+
+The library is currently schema-free: `Publisher.Write` accepts raw `[]byte`
+and `Sample.Payload` is `[]byte`. The CI `generate` job already runs `go
+generate ./...` but no source file contains a `//go:generate` directive, so
+it is a no-op. Two complementary code-gen paths are worth adding:
+(1) Protobuf: a `//go:generate protoc --go_out=.` directive in a `schema/`
+sub-package that produces typed marshal/unmarshal functions and thin
+`TypedPublisher[T proto.Message]` / `TypedSubscriber[T proto.Message]` generic
+wrappers defined in `dds.go`; (2) a lightweight standalone IDL tool (`tools/
+ddstypes/`) that reads a minimal `.idl` file (field name + primitive type only,
+no unions or inheritance) and emits a Go struct plus `Marshal() []byte` and
+`Unmarshal([]byte) error` methods. The generics wrappers should be the stable
+API; the IDL tool is optional sugar. Go 1.21 generics are sufficient for
+`TypedPublisher[T]`; no new language features are required.
+
+---
+
+**OpenTelemetry tracing**
+
+The planned Metrics API covers aggregate counters. OpenTelemetry spans cover
+per-operation latency and distributed causality — a single DDS write can be
+traced through the transport layer and into the receiving participant, linking
+producer and consumer spans with a propagated trace context. A `WithOTelTracer(
+t trace.Tracer)` participant option (from `go.opentelemetry.io/otel`) would
+create a span in `rtpsWriter.Write` (named `dds.write`, with topic and
+sequence number as attributes) and a matching span in `dispatchToReaders`
+(named `dds.deliver`). Propagating the trace context across the wire requires
+embedding a W3C `traceparent` header in the CDR payload or in a custom RTPS
+vendor-specific parameter list entry; the former is simpler but adds bytes to
+every sample. The OTel SDK is a compile-time dependency only when the option
+is used; importing `go.opentelemetry.io/otel` with a no-op tracer at the
+module level adds ~200 KB to the binary but zero runtime cost.
 
 ---
 
