@@ -277,14 +277,11 @@ func TestTypedSubscriber_ClosedRawSub(t *testing.T) {
 	// Close the raw subscriber — its channel closes, pump sees !ok and exits.
 	rawSub.Close()
 
-	// The typed channel will be closed by the pump goroutine.
+	// Drain the typed channel until it closes (pump exits on !ok from rawSub).
 	select {
-	case _, ok := <-ts.C():
-		if ok {
-			// drain any delivered samples before close
-		}
+	case <-ts.C():
 	case <-time.After(500 * time.Millisecond):
-		// pump may have already exited
+		// pump may have already exited without sending
 	}
 	// ts.Close() must not block since the pump is done.
 	if err := ts.Close(); err != nil {
