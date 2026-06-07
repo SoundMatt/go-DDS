@@ -1,5 +1,10 @@
 //go:build !cyclone
 
+// Copyright (c) 2026 Matt Jones. All rights reserved.
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 // Package cyclone provides a CycloneDDS-backed implementation of the dds
 // interfaces via CGo. This stub is compiled when the cyclone build tag is
 // absent; it returns an error at runtime so that callers can fall back to
