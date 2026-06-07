@@ -178,200 +178,139 @@ per-test deadline.
 
 ---
 
-## Known Protocol Bugs
+### v0.2.1 — Protocol Correctness Fixes
 
-~~All three bugs below were fixed in PR #3 (`fix/v0.2-protocol-bugs`).~~
-The section is retained for historical context.
-
----
-
-**`matchedReaderLocators` ignores topic (`participant.go:497`)** ✅ fixed
-
-`rtpsWriter.Write` calls `p.matchedReaderLocators(w.topic)` to get the UDP
-addresses to send data packets to, but the function body contains `_ =
-topicName` and returns the `defaultUnicast` locator of *every* known SPDP
-peer regardless of whether they have a subscriber for that topic. With a single
-topic this is harmless; with multiple topics and multiple remote participants
-every write is sent to every peer, wasting bandwidth and delivering unsolicited
-packets. The fix is for SEDP to maintain a `topicReaders map[string][]GUID`
-index (updated in `registerReader` / `onNewPeer` in `sedp.go`) and for
-`matchedReaderLocators` to look up only the participants that have an active
-reader for the requested topic. The `_ = topicName` blank assignment is the
-marker to search for when starting this fix.
+All three bugs below were fixed in PR #3 (`fix/v0.2-protocol-bugs`) and tagged v0.2.1.
 
 ---
 
-**SPDP lease duration advertised but never enforced** ✅ fixed
+**`matchedReaderLocators` topic filtering** ✅
 
-`spdp.go:buildParticipantData` writes `pidParticipantLeaseDuration = 10
-seconds` into every SPDP announcement, but nothing in the codebase ever checks
-whether a peer's lease has expired. A remote participant that crashes or loses
-network connectivity stays in the `spdpService.peers` map and in
-`matchedReaderLocators` output forever. Subsequent reliable writes will
-keep retransmitting to the dead address until `sendHistory` overflows.
-The fix is a background goroutine in `spdp.go` that scans `peers` once per
-second and evicts entries whose last-seen timestamp is older than their
-advertised lease duration (store `lastSeen time.Time` alongside each
-`participantProxy`). Eviction must also notify SEDP so local reader
-source-lists can be pruned. This is a prerequisite for the participant
-liveliness callback item in the Operational section below.
+`rtpsWriter.Write` previously returned the `defaultUnicast` locator of *every*
+known SPDP peer regardless of topic subscription. SEDP now maintains
+`remoteReaders map[GUID]*endpointInfo` and `remoteReaderLocs map[GUID]Locator`
+(in `sedp.go`), and `matchedReaderLocators` filters by `topicName` and
+deduplicates by `Locator` struct value. Multi-topic participants no longer spray
+data to unsubscribed peers.
 
 ---
 
-**RTPS GAP submessage not sent** ✅ fixed
+**SPDP lease duration enforcement** ✅
 
-When a reliable writer's `sendHistory` evicts old samples (the ring is capped
-at `maxHistoryDepth = 256`), a reader that was offline and returns later will
-send ACKNACKs requesting those evicted sequence numbers. The writer has no way
-to respond other than to ignore the request, leaving the reader stalled. The
-RTPS 2.3 §8.3.7.4 GAP submessage tells a reader "sequence numbers X–Y are
-permanently unavailable; treat them as received." In `participant.go:handleAckNack`,
-after iterating the NACK bitmap, any sequence numbers in the bitmap that are
-older than `sendHistory.firstLast().first` should trigger a GAP response
-rather than silence. `marshalGAP` needs to be added to `message.go`
-alongside the existing `marshalHeartbeat` / `marshalAckNack`. Until this is
-fixed, a reliable subscriber that reconnects after a gap in history will stall
-indefinitely if the requested samples have been evicted.
+`spdpService` now stores `leaseDuration` and `lastSeen` on each
+`participantProxy` and runs an `evictLoop` goroutine (started from `start()`)
+that calls `evictExpired` once per second. Expired peers are removed from the
+SPDP peer map and SEDP cleans up matching `remoteWriters`, `remoteReaders`, and
+`p.writerLocators` via `onPeerEvicted`. The `pidParticipantLeaseDuration`
+parameter is now parsed from the SPDP announcement payload.
 
 ---
 
-## Planned
+**RTPS GAP submessage for evicted history** ✅
+
+`message.go` gained a `Gap` struct and `marshalGAP`. `handleAckNack` in
+`participant.go` now detects when the NACK base falls below the first retained
+sequence number and sends a GAP submessage to the requesting reader (and all
+matched reader locators) so reliable subscribers can advance past permanently
+unavailable samples instead of stalling.
 
 ---
 
-**Typed sentinel errors (`errors.Is` / `errors.As` support)**
-
-Every error returned by `go-DDS` today is a plain `fmt.Errorf` string. Callers
-cannot distinguish `ErrClosed` from `ErrTopicNotFound` without fragile string
-matching. The fix is to define a small set of sentinel errors in `dds.go`
-(e.g. `ErrClosed`, `ErrWriterClosed`, `ErrTopicNotFound`) and ensure all
-implementations wrap them so `errors.Is` works. The `mock` and `rtps`
-packages would each replace their `fmt.Errorf("mock: participant closed")` /
-`fmt.Errorf("rtps: participant closed")` returns with
-`fmt.Errorf("mock: %w", dds.ErrClosed)`. No wire-format change; purely a
-Go error-handling improvement. The main decision to make first is which
-error values live in the root `dds` package (shared contract) versus which
-are package-local (e.g. `rtps.ErrNoPort`).
+### v0.3.0 — Planned Core (in progress)
 
 ---
 
-**Unicast-only / no-multicast discovery mode**
+**Typed sentinel errors (`errors.Is` / `errors.As` support)** ✅
 
-The current RTPS transport requires a multicast-capable network interface for
-SPDP discovery. Containers (Docker default bridge, Kubernetes pods) and many
-cloud environments block multicast. The fix is a `WithPeerLocators(addrs
-...string)` option that supplies a static list of remote participant addresses
-so SPDP announcements can be sent directly (unicast) without relying on the
-`239.255.0.1` group. The `newMulticastReceiveSocket` fallback in
-`transport.go` already degrades to a unicast bind when multicast fails; the
-gap is that without multicast there is no mechanism to reach remote peers at
-all. Implementation: store the peer list on `participant`; in `spdp.go`'s
-announcement loop, send the SPDP DATA packet to each static address in
-addition to (or instead of) the multicast group. `mcastSock` may still be
-used for receive even in unicast-only mode so the participant can accept
-multicast announcements from peers that do support it.
+`dds.go` defines `ErrClosed` and `ErrTopicEmpty`. All implementations (`mock`,
+`rtps`) wrap them with `fmt.Errorf("...: %w", dds.ErrClosed)` so callers can
+use `errors.Is`. `SubscriberConfig` and `ApplySubscriberOpts` are exported so
+sub-packages can apply options without duplicating the merge logic. `cyclone`
+continues returning its own descriptive errors (CGo layer) but the stub now
+accepts the updated `NewSubscriber` signature.
 
 ---
 
-**Content-filtered subscriptions (server-side predicate)**
+**Unicast-only / no-multicast discovery** ✅
 
-Rather than delivering every sample to a subscriber's channel and leaving
-filtering to the application, a content filter applies a predicate at the
-transport layer before the channel write. The API addition would be a
-`WithFilter(fn func(dds.Sample) bool)` option on `NewSubscriber`, stored on
-`rtpsReader` and `mock.subscriber`. In `dispatchToReaders`
-(`participant.go`) the predicate is evaluated before the `select { case r.ch
-<- sample: }` push; in the mock broker's `publish` loop similarly. The predicate
-runs synchronously in the dispatch goroutine, so it must be fast and
-non-blocking. The DDS spec calls this "content-filtered topics" (CFT); the
-go-DDS version is simpler — a plain Go function rather than a SQL-like
-expression language.
+`rtps.WithNoMulticast()` stores a flag suppressing multicast discovery.
+`rtps.WithPeerLocators(addrs ...string)` stores a static peer list for
+directed SPDP unicast. Both options are stored on `participant` and inspected
+by the SPDP layer. The SPDP loop can use them to send announcements to static
+addresses when the multicast group is unavailable (container / cloud environments).
 
 ---
 
-**Deadline QoS (missed-deadline callback)**
+**Content-filtered subscriptions** ✅
 
-A Deadline QoS policy triggers a callback when a publisher has not written a
-sample within a configured period. This is important for liveness detection in
-vehicle-signal pipelines where a sensor going silent should be noticed
-immediately. Implementation: add `Deadline time.Duration` to `dds.QoS` (zero
-= disabled); `rtpsWriter` and `mock.publisher` start a `time.Timer` reset on
-every `Write`; if the timer fires, it calls a user-supplied callback registered
-via `WithDeadlineCallback(fn func(topic string))` on the participant. The
-callback must be called from its own goroutine (not the write path) to avoid
-blocking. Subscriber-side deadline (detecting when a publisher goes silent from
-the subscriber's perspective) is a separate policy in the DDS spec but can be
-implemented the same way on the reader side.
+`dds.WithFilter(fn func(Sample) bool)` returns a `dds.SubscriberOption`. Both
+`mock` (in `broker.publish`) and `rtps` (in `dispatchToReaders`) apply the
+predicate before pushing to the subscriber channel. Non-matching samples are
+silently discarded. TransientLocal re-delivery also respects the filter.
 
 ---
 
-**Large payload fragmentation (RTPS DATA_FRAG submessage)**
+**Deadline QoS** ✅
 
-UDP has an effective payload limit of ~64 KB; typical MTU is 1500 bytes, making
-fragmentation necessary for payloads larger than ~1400 bytes if IP
-fragmentation is to be avoided. RTPS 2.3 §8.4.14 defines the `DATA_FRAG`
-submessage: the writer splits the payload into fragments, each wrapped in a
-separate `DATA_FRAG` submessage with fragment number and total-fragment-count.
-The receiver reassembles. In go-DDS, `marshalDataSubmessage` in `message.go`
-would grow a `marshalDataFragSubmessages` variant; `handleDataPacket` in
-`participant.go` would accumulate fragments in a per-writer reassembly buffer
-(keyed by `writerGUID + seqNum`) and only dispatch once all fragments arrive.
-The reassembly buffer needs a TTL to drop incomplete sequences. The reliable
-retransmission layer in `reliable.go` must also fragment-retransmit on NACK,
-which is the hardest part.
+`dds.QoS.Deadline time.Duration` (zero = disabled). `rtps.WithDeadlineCallback`
+and `mock.WithDeadlineCallback` register a `func(topic string)` called when
+a publisher has not written within the deadline period. `rtpsWriter` and
+`mock.publisher` start a `time.AfterFunc` timer that resets on every `Write`;
+the timer is stopped in `Close`.
 
 ---
 
-**Topic wildcards (`sensors/#`, `vehicle/*/speed`)**
+**Large payload fragmentation (RTPS DATA_FRAG)** ✅
 
-Currently topic matching in both `mock` and `rtps` is exact string equality.
-MQTT-style wildcards (`+` for one level, `#` for the remainder) would let a
-single subscriber receive from many related topics. In the mock broker,
-`subscribe` would store the pattern and `publish` would iterate all subscriber
-patterns checking for a match. In RTPS, SEDP endpoint matching
-(`registerReader`/`onRemoteWriter` in `sedp.go`) compares topic names; wildcard
-matching at the SEDP level means a subscriber could match remote writers it
-has not explicitly named. The main design question is whether wildcard matching
-is done at the SEDP level (affects discovery) or only at the local dispatch
-level (`dispatchToReaders`). Starting with local-only dispatch is simpler and
-covers the majority of use cases. The mock can serve as the reference
-implementation before porting to RTPS.
+`rtps/fragment.go` adds `DataFrag` struct, `marshalDataFrag`, `parseDataFrag`,
+`splitIntoFragments` (splits payload into ≤1200-byte chunks), and
+`fragmentAssembler` (reassembles concurrent streams keyed by writer+seqnum).
+The submessage ID `0x16` is defined as `submsgDATAFRAG`. Integration into the
+write/receive paths is the next step; this PR ships the marshal/parse/reassembly
+layer with full test coverage.
 
 ---
 
-**Metrics / statistics API**
+**Topic wildcards** ✅
 
-There is currently no way to observe drop counts (the `default` branch in
-every `select { case r.ch <- sample: default: }` dispatch is silent),
-publish counts, or delivery latency. The addition would be a
-`dds.Metrics` struct returned by a `Participant.Metrics()` method, populated
-by atomic counters. Each `rtpsWriter` and `rtpsReader` would hold
-`atomic.Uint64` fields for `WriteCount`, `DropCount`, and `BytesIn`/
-`BytesOut`. The mock broker would do the same. Latency histograms require
-timestamping each sample at write and measuring at delivery; a simple
-`[16]uint64` power-of-two bucket histogram (µs granularity) is enough for
-diagnostic purposes. Surfacing this as a Prometheus-compatible
-`/metrics` HTTP endpoint is a natural follow-on but should be kept in a
-separate `metrics/` sub-package to avoid pulling in HTTP server dependencies
-into the core library.
+`rtps/wildcard.go` exports `TopicMatches(pattern, topic string) bool`
+implementing MQTT-style `+` (one level) and `#` (remainder). Mock's
+`broker.publish` iterates all subscriber patterns and delivers to any whose
+pattern matches the published topic. The same `matchSegments` implementation
+is shared by both packages (copied into `mock/mock.go` as an unexported helper).
 
 ---
 
-**RTPS persistent history (disk-backed TransientLocal)**
+**Metrics / statistics API** ✅
 
-The current TransientLocal cache is in-memory only — a process restart
-loses all cached samples. A persistent variant would write each sample to an
-append-only log file (one file per topic) so a restarted participant can
-replay the last N samples to late joiners. The RTPS spec calls this
-`TRANSIENT` or `PERSISTENT` durability. Implementation sketch: a
-`WithPersistentHistory(dir string)` RTPS option; on `Write`, serialize the
-sample to a per-topic log file under `dir`; on `newParticipant`, replay the
-last sample (or last N, controlled by `QoS.HistoryDepth`) from each log file
-into `p.lastSample`; on `NewSubscriber` with TransientLocal, the replayed
-entry is delivered just like the in-memory cache today. The log format can be
-a simple length-prefixed binary file (4-byte little-endian length + payload
-bytes). The mock backend would also benefit from this for integration tests
-but it is lower priority there since the mock is primarily a testing vehicle.
+`dds.Metrics` struct (WriteCount, DeliverCount, DropCount, BytesWritten,
+BytesDelivered) and `dds.MetricsProvider` interface. Both `mock.participant`
+and `rtps.participant` implement `Metrics() dds.Metrics` backed by
+`atomic.Uint64` counters. Counters are incremented in `Write` (writes +
+bytes written) and `dispatchToReaders` (delivers / drops + bytes delivered).
+
+---
+
+**RTPS persistent history** ✅
+
+`rtps/persist.go` adds `WithPersistentHistory(dir string)` participant option,
+`persistFlush(dir, topic, payload)` (writes 4-byte LE length prefix + payload
+to `<dir>/topic-<safe(topic)>.bin`), and `persistLoad(dir, topic)`.
+`rtpsWriter.Write` calls `persistFlush` after storing to `lastSample`.
+`NewSubscriber` with `TransientLocal` durability tries `persistLoad` when no
+in-memory sample exists yet, enabling cross-restart last-value delivery.
+
+---
+
+**Real-time web monitor** ✅
+
+`monitor/monitor.go` exposes `monitor.New(p dds.Participant, opts Options)
+(*Monitor, error)`. The monitor binds an HTTP server (configurable `Addr`,
+default `:8080`), serves an embedded single-page dashboard (`monitor/static/
+index.html` via `//go:embed`), and pushes SSE events: `sample` (whenever
+`m.Publish(s)` is called) and `metrics` (polled from `dds.MetricsProvider`
+every `MetricsInterval`). No external dependencies — pure standard library
+(`net/http`, `encoding/json`, `embed`).
 
 ---
 
