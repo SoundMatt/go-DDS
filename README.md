@@ -236,13 +236,12 @@ See [ROADMAP.md](ROADMAP.md) for per-item context, release notes, and implementa
 - [x] Fragmentation bounds for TSN streams (`MaxSampleSize` guard, `splitIntoFragmentsN`)
 - [x] External TSN configuration (JSON file, `tsn.LoadConfig`, `WithTSNConfig`)
 
-**Future — [17-phase vision](ROADMAP.md)**
+**Future — [10-milestone roadmap](ROADMAP.md)**
 
-Phases cover: DDS API completeness, types/serialisation, discovery, transport framework,
-performance, security (DDS Security spec), observability, recording/replay,
-routing/bridging, safety/E2E protection, TSN enhancements, unified configuration,
-platform support, automotive/V2X integration, testing infrastructure,
-enterprise readiness, and safety evidence. See [ROADMAP.md](ROADMAP.md) for full detail.
+Milestones: Production Runtime, Developer Experience, Verification and Validation,
+Observability, Edge Performance, Safety Communication, Deterministic Networking,
+Enterprise Security, Dynamic Data, and Enterprise Services. See [ROADMAP.md](ROADMAP.md)
+for goals, sub-items, and success criteria.
 
 ## Contributing
 
