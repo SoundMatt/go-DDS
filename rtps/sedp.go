@@ -264,15 +264,6 @@ func (s *sedpService) onRemoteWriter(info *endpointInfo, dataLocator Locator) {
 			})
 		}
 	}
-	// Match against local writers — notify them to include this subscriber's locator.
-	for _, lw := range s.localWriters {
-		if lw.topicName == info.topicName {
-			// Writers with the same topic as a remote reader: the data direction
-			// is remote-writer → local-reader; do nothing for local-writer → remote.
-			// (That matching is done in onRemoteReader, if we implement it.)
-			_ = lw
-		}
-	}
 	s.mu.Unlock()
 }
 

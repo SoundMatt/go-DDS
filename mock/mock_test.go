@@ -235,6 +235,100 @@ func TestWaitSet_MultipleWaits(t *testing.T) {
 	}
 }
 
+// ── TransientLocal durability ─────────────────────────────────────────────────
+
+func TestTransientLocal_LateJoiner(t *testing.T) {
+	p := newParticipant(t)
+
+	pub, err := p.NewPublisher("transient/state", dds.ReliableQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	want := []byte(`{"value":42}`)
+	if werr := pub.Write(want); werr != nil {
+		t.Fatalf("Write: %v", werr)
+	}
+
+	// Subscribe after publish; should receive the last sample immediately.
+	sub, err := p.NewSubscriber("transient/state", dds.ReliableQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	select {
+	case s := <-sub.C():
+		if string(s.Payload) != string(want) {
+			t.Errorf("TransientLocal: got %q, want %q", s.Payload, want)
+		}
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("timeout: TransientLocal late-joiner did not receive last sample")
+	}
+}
+
+func TestTransientLocal_NoSample(t *testing.T) {
+	// Subscribe before any publish; no phantom sample should be delivered.
+	p := newParticipant(t)
+	sub, err := p.NewSubscriber("transient/empty", dds.ReliableQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	select {
+	case s := <-sub.C():
+		t.Errorf("unexpected phantom sample: %q", s.Payload)
+	case <-time.After(30 * time.Millisecond):
+		// correct
+	}
+}
+
+func TestTransientLocal_VolatileNotDelivered(t *testing.T) {
+	// Volatile QoS must not deliver last sample to late joiners.
+	p := newParticipant(t)
+
+	pub, _ := p.NewPublisher("transient/volatile", dds.DefaultQoS)
+	defer pub.Close()
+	_ = pub.Write([]byte("volatile-value"))
+
+	sub, _ := p.NewSubscriber("transient/volatile", dds.DefaultQoS)
+	defer sub.Close()
+
+	select {
+	case s := <-sub.C():
+		t.Errorf("Volatile subscriber should not receive historical sample: %q", s.Payload)
+	case <-time.After(30 * time.Millisecond):
+		// correct
+	}
+}
+
+// ── WaitSet — all-closed path ─────────────────────────────────────────────────
+
+func TestWaitSet_AllChannelsClosed(t *testing.T) {
+	p := newParticipant(t)
+	sub, _ := p.NewSubscriber("ws/all-closed", dds.DefaultQoS)
+	sub.Close() // channel is now closed before we start waiting
+
+	ws := dds.NewWaitSet(sub)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_, _, _ = ws.Wait(ctx)
+	}()
+
+	select {
+	case <-done:
+		// correct: returned promptly, did not block until context deadline
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("WaitSet.Wait should return promptly when all channels are closed")
+	}
+}
+
 func TestMultipleDomains_ShareBroker(t *testing.T) {
 	// Mock ignores domain; all participants share the global broker.
 	p1, _ := mock.New(0)

@@ -1,0 +1,40 @@
+# Interop test environment: go-DDS (host) ↔ CycloneDDS (container)
+#
+# Usage:
+#   docker compose up -d cyclone-peer
+#   go test -tags interop -v ./interop/...
+#   docker compose down
+
+services:
+  # CycloneDDS peer — publishes and subscribes on the DDS_DOMAIN.
+  cyclone-peer:
+    image: eclipse-cyclonedds/cyclonedds:latest
+    network_mode: host            # shares the host network stack for multicast
+    environment:
+      - DDS_DOMAIN=0
+    command: >
+      sh -c "
+        ddsperf -D 0 pub T:interop/go-dds-ping Qos:r:1k:e:1 z:8 n:10 &
+        ddsperf -D 0 sub T:interop/go-dds-pong Qos:r:1k:e:1 &
+        wait
+      "
+    restart: unless-stopped
+
+  # Minimal CycloneDDS subscriber that prints received samples to stdout.
+  # Used by the interop test to verify that our RTPS writer is compatible.
+  cyclone-sub:
+    image: eclipse-cyclonedds/cyclonedds:latest
+    network_mode: host
+    environment:
+      - DDS_DOMAIN=0
+    command: ddsperf -D 0 sub T:interop/go-dds-ping Qos:r:1k:e:1 -n 5
+    profiles: [sub]
+
+  # Minimal CycloneDDS publisher for the go-DDS subscriber to receive from.
+  cyclone-pub:
+    image: eclipse-cyclonedds/cyclonedds:latest
+    network_mode: host
+    environment:
+      - DDS_DOMAIN=0
+    command: ddsperf -D 0 pub T:interop/go-dds-pong Qos:r:1k:e:1 z:16 n:10
+    profiles: [pub]

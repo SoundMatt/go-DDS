@@ -172,6 +172,44 @@ jobs:
           -run=^$
           ./cyclone/...
 
+  # ── RTPS interop against CycloneDDS (optional, service-gated) ───────────────
+  # Starts a CycloneDDS container, waits for SPDP discovery, then runs the
+  # bidirectional echo test. The job is skipped if the cyclonedds Docker image
+  # is unavailable in the runner's registry.
+  test-interop:
+    name: RTPS interop (CycloneDDS, ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Probe Docker and CycloneDDS image
+        id: probe
+        run: |
+          if docker pull eclipse-cyclonedds/cyclonedds:latest 2>/dev/null; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::CycloneDDS Docker image not available — skipping interop tests"
+          fi
+
+      - name: Start CycloneDDS peer
+        if: steps.probe.outputs.available == 'true'
+        run: docker compose -f interop/docker-compose.yml up -d cyclone-peer
+
+      - name: go test (interop, -tags interop)
+        if: steps.probe.outputs.available == 'true'
+        run: go test -tags interop -v -timeout 60s ./interop/...
+        env:
+          INTEROP_TIMEOUT: "15s"
+
+      - name: Stop CycloneDDS peer
+        if: steps.probe.outputs.available == 'true'
+        run: docker compose -f interop/docker-compose.yml down
+
   # ── go generate (placeholder, expands when IDL toolchain is added) ────────
   generate:
     name: go generate check

@@ -23,12 +23,12 @@
 //
 // Discovery uses the multicast group 239.255.0.1.
 //
-// # Limitations (Phase 2)
+// # Current limitations
 //
-//   - BestEffort QoS only (no HEARTBEAT/ACKNACK retransmission).
-//   - IPv4 only.
 //   - Remote subscription announcement (SEDP outbound reader) is not yet sent;
 //     remote writers will not push data to local readers across process boundaries
-//     without both sides also having local writers/readers for the same topic.
+//     unless both sides declare matching writers/readers for the same topic.
 //     Intra-process pub/sub works without SEDP matching.
+//   - IPv6 transport is supported via [WithIPv6] but has had limited interop testing.
+//   - Large payloads are not fragmented (RTPS DATA_FRAG not implemented).
 package rtps
