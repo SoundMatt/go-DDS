@@ -11,6 +11,7 @@ package rtps
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"io"
 	"log/slog"
 	"net"
@@ -19,6 +20,7 @@ import (
 	"time"
 
 	dds "github.com/SoundMatt/go-DDS"
+	"github.com/SoundMatt/go-DDS/tsn"
 )
 
 // testPart creates a minimal participant, skipping the test if sockets cannot
@@ -1540,5 +1542,298 @@ func TestUserMulticastPort(t *testing.T) {
 	}
 	if userMulticastPort(1) != 7651 {
 		t.Errorf("userMulticastPort(1) = %d, want 7651", userMulticastPort(1))
+	}
+}
+
+// ── v0.5 TSN tests ────────────────────────────────────────────────────────────
+
+func TestMaxSampleSize_Rejects_OversizePayload(t *testing.T) {
+	p := testPart(t)
+	qos := dds.DefaultQoS
+	qos.MaxSampleSize = 10
+	pub, err := p.NewPublisher("tsn/size", qos)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+	err = pub.Write(make([]byte, 11))
+	if !errors.Is(err, dds.ErrPayloadTooLarge) {
+		t.Errorf("want ErrPayloadTooLarge, got %v", err)
+	}
+}
+
+func TestMaxSampleSize_Accepts_ExactLimit(t *testing.T) {
+	p := testPart(t)
+	qos := dds.DefaultQoS
+	qos.MaxSampleSize = 5
+	pub, err := p.NewPublisher("tsn/exact", qos)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+	if err := pub.Write(make([]byte, 5)); err != nil {
+		t.Errorf("Write at exact limit failed: %v", err)
+	}
+}
+
+func TestMaxSampleSize_ZeroMeansUnlimited(t *testing.T) {
+	p := testPart(t)
+	pub, err := p.NewPublisher("tsn/unlimited", dds.DefaultQoS) // MaxSampleSize=0
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+	// Large but should not be rejected by MaxSampleSize=0.
+	if err := pub.Write(make([]byte, 4096)); err != nil && errors.Is(err, dds.ErrPayloadTooLarge) {
+		t.Errorf("MaxSampleSize=0 should not reject: %v", err)
+	}
+}
+
+func TestSplitIntoFragmentsN_CustomSize(t *testing.T) {
+	payload := make([]byte, 300)
+	for i := range payload {
+		payload[i] = byte(i % 251)
+	}
+	eid := entityIdForWriter(1)
+	frags := splitIntoFragmentsN(eid, SequenceNumber{Low: 1}, payload, 100)
+	// ceil(300/100) = 3 fragments
+	if len(frags) != 3 {
+		t.Fatalf("want 3 fragments for 300 bytes at size 100, got %d", len(frags))
+	}
+	// Reconstruct and verify.
+	var got []byte
+	for _, f := range frags {
+		got = append(got, f.Payload...)
+	}
+	if string(got) != string(payload) {
+		t.Error("reassembled payload mismatch")
+	}
+	for i, f := range frags {
+		if f.FragmentStartingNum != uint32(i+1) {
+			t.Errorf("frag[%d].FragmentStartingNum=%d, want %d", i, f.FragmentStartingNum, i+1)
+		}
+	}
+}
+
+func TestSplitIntoFragmentsN_ZeroSizeFallback(t *testing.T) {
+	payload := make([]byte, 10)
+	eid := entityIdForWriter(1)
+	frags := splitIntoFragmentsN(eid, SequenceNumber{Low: 1}, payload, 0)
+	// 0 size → defaults to maxFragmentPayload; small payload = 1 fragment.
+	if len(frags) != 1 {
+		t.Fatalf("want 1 fragment for small payload with size=0, got %d", len(frags))
+	}
+}
+
+func TestWriter_FragmentSize_NoTSNStream(t *testing.T) {
+	p := testPart(t)
+	pub, _ := p.NewPublisher("fsize/default", dds.DefaultQoS)
+	defer pub.Close()
+	w := pub.(*rtpsWriter)
+	if w.fragmentSize() != maxFragmentPayload {
+		t.Errorf("fragmentSize() without TSN stream: got %d, want %d", w.fragmentSize(), maxFragmentPayload)
+	}
+}
+
+func TestWriter_SendSock_NoTSN_IsDataSock(t *testing.T) {
+	p := testPart(t)
+	pub, _ := p.NewPublisher("ssock/default", dds.DefaultQoS)
+	defer pub.Close()
+	w := pub.(*rtpsWriter)
+	if w.sendSock() != p.dataSock {
+		t.Error("sendSock() without TSN should return p.dataSock")
+	}
+}
+
+func TestWithSPDPInterval_Stored(t *testing.T) {
+	p, err := newParticipant(dds.Domain(85), WithNoMulticast(), WithSPDPInterval(10*time.Second))
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	defer p.Close()
+	if p.spdpInterval != 10*time.Second {
+		t.Errorf("spdpInterval: got %v, want 10s", p.spdpInterval)
+	}
+}
+
+func TestWithSPDPJitter_Stored(t *testing.T) {
+	p, err := newParticipant(dds.Domain(84), WithNoMulticast(), WithSPDPJitter(500*time.Millisecond))
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	defer p.Close()
+	if p.spdpJitter != 500*time.Millisecond {
+		t.Errorf("spdpJitter: got %v, want 500ms", p.spdpJitter)
+	}
+}
+
+func TestWithStaticPeers_SameAsPeerLocators(t *testing.T) {
+	p, err := newParticipant(dds.Domain(83), WithNoMulticast(), WithStaticPeers("127.0.0.1:7400"))
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	defer p.Close()
+	if len(p.peerLocators) != 1 || p.peerLocators[0] != "127.0.0.1:7400" {
+		t.Errorf("peerLocators: got %v", p.peerLocators)
+	}
+}
+
+func TestWithTSNConfig_MatchesTopic(t *testing.T) {
+	cfg, err := tsn.ParseConfig([]byte(`{
+		"streams":[
+			{"topic":"tsn/cfg","pcp":5,"dscp":46,"max_frame_size":1500}
+		]
+	}`))
+	if err != nil {
+		t.Fatalf("ParseConfig: %v", err)
+	}
+	p, err := newParticipant(dds.Domain(82), WithNoMulticast(), WithTSNConfig(cfg))
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	defer p.Close()
+
+	pub, err := p.NewPublisher("tsn/cfg", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	w := pub.(*rtpsWriter)
+	if w.tsnStream == nil {
+		t.Fatal("tsnStream should be set for topic 'tsn/cfg'")
+	}
+	if w.tsnStream.PCP != 5 {
+		t.Errorf("tsnStream.PCP = %d, want 5", w.tsnStream.PCP)
+	}
+	if w.tsnSock == nil {
+		t.Error("tsnSock should be non-nil for TSN publisher")
+	}
+	// sendSock() should return the TSN socket, not dataSock.
+	if w.sendSock() == p.dataSock {
+		t.Error("sendSock() for TSN writer should not return dataSock")
+	}
+}
+
+func TestWithTSNConfig_NonMatchingTopic_NoTSN(t *testing.T) {
+	cfg, err := tsn.ParseConfig([]byte(`{
+		"streams":[{"topic":"tsn/other","pcp":3}]
+	}`))
+	if err != nil {
+		t.Fatalf("ParseConfig: %v", err)
+	}
+	p, err := newParticipant(dds.Domain(81), WithNoMulticast(), WithTSNConfig(cfg))
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	defer p.Close()
+
+	pub, err := p.NewPublisher("not/tsn/topic", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	w := pub.(*rtpsWriter)
+	if w.tsnStream != nil {
+		t.Error("tsnStream should be nil for non-matching topic")
+	}
+	if w.tsnSock != nil {
+		t.Error("tsnSock should be nil for non-matching topic")
+	}
+}
+
+func TestTransportPriority_QoS_CreatesTSNSock(t *testing.T) {
+	p := testPart(t)
+	qos := dds.DefaultQoS
+	qos.TransportPriority = 3
+	pub, err := p.NewPublisher("tp/qos", qos)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+	w := pub.(*rtpsWriter)
+	if w.tsnSock == nil {
+		t.Error("tsnSock should be allocated when TransportPriority > 0")
+	}
+}
+
+func TestTransportPriority_Zero_NoTSNSock(t *testing.T) {
+	p := testPart(t)
+	pub, err := p.NewPublisher("tp/zero", dds.DefaultQoS) // TransportPriority=0
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+	w := pub.(*rtpsWriter)
+	if w.tsnSock != nil {
+		t.Error("tsnSock should be nil when TransportPriority = 0 and no tsn config")
+	}
+}
+
+func TestClockTAINow_ReturnsPlausibleTime(t *testing.T) {
+	now := time.Now()
+	taiNow, err := clockTAINow()
+	if err != nil {
+		t.Skipf("CLOCK_TAI unavailable: %v", err)
+	}
+	// TAI should be within a few hours of wall time (TAI is ahead by ~37s currently).
+	diff := taiNow.Sub(now)
+	if diff < 0 {
+		diff = -diff
+	}
+	if diff > time.Hour {
+		t.Errorf("clockTAINow() %v differs from time.Now() %v by %v (>1h), unexpected", taiNow, now, diff)
+	}
+}
+
+func TestTSNConfig_FragSizePropagated(t *testing.T) {
+	// MaxFrameSize=200 → MaxFragPayload()=152; fragmentSize() should return 152.
+	cfg, err := tsn.ParseConfig([]byte(`{
+		"streams":[{"topic":"frag/tsn","pcp":1,"max_frame_size":200}]
+	}`))
+	if err != nil {
+		t.Fatalf("ParseConfig: %v", err)
+	}
+	p, err := newParticipant(dds.Domain(80), WithNoMulticast(), WithTSNConfig(cfg))
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	defer p.Close()
+
+	pub, _ := p.NewPublisher("frag/tsn", dds.DefaultQoS)
+	defer pub.Close()
+	w := pub.(*rtpsWriter)
+	if w.tsnStream == nil {
+		t.Fatal("tsnStream nil")
+	}
+	want := cfg.Streams[0].MaxFragPayload()
+	if w.fragmentSize() != want {
+		t.Errorf("fragmentSize() = %d, want %d (from MaxFrameSize=200)", w.fragmentSize(), want)
+	}
+}
+
+func TestWrite_FragmentedPath_LargePayload(t *testing.T) {
+	// Verify that a payload larger than maxFragmentPayload is written without error.
+	p := testPart(t)
+	sub, _ := p.NewSubscriber("frag/large", dds.DefaultQoS)
+	defer sub.Close()
+	pub, _ := p.NewPublisher("frag/large", dds.DefaultQoS)
+	defer pub.Close()
+
+	large := make([]byte, maxFragmentPayload+100)
+	for i := range large {
+		large[i] = byte(i % 251)
+	}
+	if err := pub.Write(large); err != nil {
+		t.Fatalf("Write large payload: %v", err)
+	}
+	select {
+	case s := <-sub.C():
+		if string(s.Payload) != string(large) {
+			t.Error("large payload received does not match original")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for large payload")
 	}
 }

@@ -37,6 +37,10 @@ var ErrClosed = errors.New("dds: entity is closed")
 // ErrTopicEmpty is returned when an empty topic string is passed.
 var ErrTopicEmpty = errors.New("dds: topic name must not be empty")
 
+// ErrPayloadTooLarge is returned when Write is called with a payload that
+// exceeds the MaxSampleSize set in the publisher's QoS.
+var ErrPayloadTooLarge = errors.New("dds: payload exceeds QoS MaxSampleSize")
+
 // ── Domain ────────────────────────────────────────────────────────────────────
 
 // Domain is a DDS domain identifier (0–232 inclusive per the DDS spec).
@@ -77,6 +81,26 @@ type QoS struct {
 	Durability   DurabilityKind
 	HistoryDepth int           // 0 means implementation default (typically 1)
 	Deadline     time.Duration // 0 = disabled; publisher fires DeadlineCallback if no Write within this period
+
+	// TSN v0.5 extensions — only used when a TSN-capable transport is active.
+
+	// TransportPriority sets the network-level priority (maps to VLAN PCP /
+	// SO_PRIORITY on Linux). 0 = normal, 1–7 = elevated; 7 is highest.
+	TransportPriority int
+	// LatencyBudget is the acceptable end-to-end delivery latency for this
+	// endpoint. 0 = unspecified. Informational in v0.5; future releases may
+	// enforce it via qdisc admission control.
+	LatencyBudget time.Duration
+	// Lifespan is the sample time-to-live measured from the write timestamp.
+	// Samples older than Lifespan are dropped before delivery. 0 = infinite.
+	Lifespan time.Duration
+	// PublishPeriod is the periodic publish rate for TSN streams. 0 = aperiodic.
+	// The application is responsible for calling Write at this rate; the value
+	// is used by TSN stream reservation and scheduling.
+	PublishPeriod time.Duration
+	// MaxSampleSize is the maximum Write payload size in bytes. Write returns
+	// ErrPayloadTooLarge if the payload exceeds this limit. 0 = unlimited.
+	MaxSampleSize int
 }
 
 // DefaultQoS is BestEffort + Volatile with implementation-default history.
