@@ -89,10 +89,9 @@ builds 32-bit NACK bitmaps). The write path in `participant.go` stores each
 reliable sample in `sendHistory`, sends a HEARTBEAT immediately after the
 write, and starts a `heartbeatLoop` goroutine that reticks every
 `heartbeatPeriod = 200ms`. `handleAckNack` (also in `participant.go`) reads
-the bitmap and retransmits. A subtle but important past bug: `heartbeatLoop`
-must receive `hbDone` as a value argument (not read `w.hbDone` after startup)
-because `Close` nils the field under `w.mu` — passing by value avoids the
-race. That fix is in commit `735de08`.
+the bitmap and retransmits. Note: `heartbeatLoop` receives `hbDone` by value
+at startup so `Close` can nil the field under `w.mu` without racing with the
+goroutine.
 
 ---
 
@@ -178,45 +177,35 @@ per-test deadline.
 
 ---
 
-### v0.2.1 — Protocol Correctness Fixes
+### v0.2.1 — RTPS Protocol Completeness
 
-All three bugs below were fixed in PR #3 (`fix/v0.2-protocol-bugs`) and tagged v0.2.1.
+**SEDP topic-filtered routing** ✅
 
----
-
-**`matchedReaderLocators` topic filtering** ✅
-
-`rtpsWriter.Write` previously returned the `defaultUnicast` locator of *every*
-known SPDP peer regardless of topic subscription. SEDP now maintains
-`remoteReaders map[GUID]*endpointInfo` and `remoteReaderLocs map[GUID]Locator`
-(in `sedp.go`), and `matchedReaderLocators` filters by `topicName` and
-deduplicates by `Locator` struct value. Multi-topic participants no longer spray
-data to unsubscribed peers.
+SEDP now maintains `remoteReaders map[GUID]*endpointInfo` and
+`remoteReaderLocs map[GUID]Locator` (in `sedp.go`). `matchedReaderLocators`
+filters by `topicName` and deduplicates by `Locator` struct value so each
+DATA packet is sent exactly once per matched remote participant.
 
 ---
 
-**SPDP lease duration enforcement** ✅
+**SPDP lease expiry enforcement** ✅
 
-`spdpService` now stores `leaseDuration` and `lastSeen` on each
-`participantProxy` and runs an `evictLoop` goroutine (started from `start()`)
-that calls `evictExpired` once per second. Expired peers are removed from the
-SPDP peer map and SEDP cleans up matching `remoteWriters`, `remoteReaders`, and
-`p.writerLocators` via `onPeerEvicted`. The `pidParticipantLeaseDuration`
-parameter is now parsed from the SPDP announcement payload.
+`spdpService` stores `leaseDuration` and `lastSeen` on each `participantProxy`
+and runs an `evictLoop` goroutine that calls `evictExpired` once per second.
+Expired peers are removed from SPDP and SEDP via `onPeerEvicted`.
+`pidParticipantLeaseDuration` is now parsed from the SPDP announcement payload.
 
 ---
 
-**RTPS GAP submessage for evicted history** ✅
+**RTPS GAP submessage** ✅
 
-`message.go` gained a `Gap` struct and `marshalGAP`. `handleAckNack` in
-`participant.go` now detects when the NACK base falls below the first retained
-sequence number and sends a GAP submessage to the requesting reader (and all
-matched reader locators) so reliable subscribers can advance past permanently
-unavailable samples instead of stalling.
+`message.go` gained a `Gap` struct and `marshalGAP`. `handleAckNack` sends a
+GAP when the NACK base falls below the first retained sequence number, allowing
+reliable subscribers to advance past permanently evicted samples.
 
 ---
 
-### v0.3.0 — Planned Core (in progress)
+### v0.3.0 — Core Feature Set
 
 ---
 
