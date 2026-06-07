@@ -104,12 +104,12 @@ import (
 key := security.NewRandomKey(32)
 
 // AES-256-GCM: full encryption + authentication
-plugin, _ := security.NewAESGCMPlugin(key)
-p, _ := rtps.New(dds.Domain(0), rtps.WithSecurity(plugin))
+aesPlugin, _ := security.NewAESGCMPlugin(key)
+p, _ := rtps.New(dds.Domain(0), rtps.WithSecurity(aesPlugin))
 
 // HMAC-SHA-256: integrity + authentication, no encryption
-plugin = security.NewHMACPlugin(key)
-p, _ = rtps.New(dds.Domain(0), rtps.WithSecurity(plugin))
+hmacPlugin := security.NewHMACPlugin(key)
+p, _ = rtps.New(dds.Domain(0), rtps.WithSecurity(hmacPlugin))
 ```
 
 All peers communicating on a topic must use the same plugin and key.
@@ -122,7 +122,7 @@ All peers communicating on a topic must use the same plugin and key.
 | Industrial | `plc/conveyor/speed` | Reliable (actuator command) |
 | Vehicle networks | `vehicle/speed` | BestEffort |
 | Simulation | `sim/entity/pose` | BestEffort |
-| IoT | `building/floor3/temp` | Reliable + TransientLocal |
+| IoT | `building/floor3/temp` | Reliable |
 
 ## Wire format
 

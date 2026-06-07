@@ -519,7 +519,9 @@ func (w *rtpsWriter) Close() error {
 	w.closed = true
 	if w.hbDone != nil {
 		close(w.hbDone)
-		w.hbDone = nil
+		// Do not nil hbDone: heartbeatLoop reads the field outside the lock
+		// (inside a reflect.Select / select statement) so assigning nil here
+		// would race with that read.
 	}
 	return nil
 }

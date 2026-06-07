@@ -179,6 +179,10 @@ func (ws *WaitSet) Wait(ctx context.Context) (Sample, Subscriber, error) {
 			}
 			continue
 		}
-		return recv.Interface().(Sample), ws.subs[chosen-1], nil
+		s, ok2 := recv.Interface().(Sample)
+		if !ok2 {
+			continue
+		}
+		return s, ws.subs[chosen-1], nil
 	}
 }

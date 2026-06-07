@@ -66,7 +66,7 @@ func TestPublishSubscribe_DifferentTopic(t *testing.T) {
 	pub, _ := p.NewPublisher("topic/B", dds.DefaultQoS)
 	defer pub.Close()
 
-	pub.Write([]byte("should not arrive"))
+	_ = pub.Write([]byte("should not arrive"))
 
 	select {
 	case s := <-sub.C():
@@ -88,7 +88,7 @@ func TestPublishSubscribe_MultipleSubscribers(t *testing.T) {
 	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
 	defer pub.Close()
 
-	pub.Write([]byte("broadcast"))
+	_ = pub.Write([]byte("broadcast"))
 
 	recv := func(sub dds.Subscriber, name string) {
 		select {
@@ -112,7 +112,7 @@ func TestPayloadIsolation(t *testing.T) {
 	defer pub.Close()
 
 	orig := []byte("mutable")
-	pub.Write(orig)
+	_ = pub.Write(orig)
 	orig[0] = 'X' // mutate after Write
 
 	select {
