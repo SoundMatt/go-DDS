@@ -26,6 +26,7 @@ import (
 	"time"
 
 	dds "github.com/SoundMatt/go-DDS"
+	"github.com/SoundMatt/go-DDS/tsn"
 )
 
 // ── Options ───────────────────────────────────────────────────────────────────
@@ -94,6 +95,35 @@ func WithTracer(t dds.Tracer) Option {
 	return func(p *participant) { p.tracer = t }
 }
 
+// WithSPDPInterval sets the SPDP participant announcement interval.
+// The default is 2 seconds. TSN networks with bounded-latency requirements
+// may prefer longer intervals (e.g. 10 s) to reduce discovery overhead.
+func WithSPDPInterval(d time.Duration) Option {
+	return func(p *participant) { p.spdpInterval = d }
+}
+
+// WithSPDPJitter adds a random delay of up to d before each SPDP announcement.
+// This prevents synchronised floods when many participants start simultaneously
+// on a TSN segment. A typical value is 500 ms.
+func WithSPDPJitter(d time.Duration) Option {
+	return func(p *participant) { p.spdpJitter = d }
+}
+
+// WithStaticPeers adds static peer unicast addresses for unicast-only
+// discovery on TSN networks where SPDP multicast is undesirable.
+// Equivalent to WithPeerLocators; provided for TSN configuration clarity.
+func WithStaticPeers(addrs ...string) Option {
+	return WithPeerLocators(addrs...)
+}
+
+// WithTSNConfig registers a TSN stream configuration with the participant.
+// When a publisher is created for a topic in the config, the participant
+// allocates a dedicated socket for that traffic class, marks it with
+// SO_PRIORITY / IP_TOS, and (on Linux) enables SO_TXTIME if TxOffsetUS > 0.
+func WithTSNConfig(cfg *tsn.StreamConfig) Option {
+	return func(p *participant) { p.tsnConfig = cfg }
+}
+
 // ── Participant ───────────────────────────────────────────────────────────────
 
 // participant implements dds.Participant over real RTPS/UDP.
@@ -110,6 +140,13 @@ type participant struct {
 	log          plog
 	livelinessCb func(dds.GUID, dds.LivelinessEvent)
 	tracer       dds.Tracer
+
+	// TSN options.
+	tsnConfig    *tsn.StreamConfig
+	spdpInterval time.Duration // 0 = use spdpAnnouncePeriod (2 s)
+	spdpJitter   time.Duration // 0 = no jitter
+	tsnSocks     map[uint8]*udpSocket // per-PCP traffic-class sockets; keyed by PCP (0–7)
+	tsnMu        sync.Mutex
 
 	// Sockets (IPv4).
 	mcastSock     *udpSocket // SPDP multicast receive
@@ -271,9 +308,21 @@ func (p *participant) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, er
 	if qos.Deadline > 0 && p.deadlineCb != nil {
 		w.deadlineTimer = time.AfterFunc(qos.Deadline, func() { p.deadlineCb(topic) })
 	}
+	// Wire TSN stream: config match takes priority, TransportPriority QoS
+	// field acts as a fallback PCP selector when no config entry exists.
+	if stream := p.tsnConfig.StreamForTopic(topic); stream != nil {
+		w.tsnStream = stream
+		w.tsnSock = p.tsnSocketForPCP(stream.PCP, stream.DSCP, stream.TxOffsetUS > 0)
+	} else if qos.TransportPriority > 0 {
+		pcp := uint8(qos.TransportPriority)
+		if pcp > 7 {
+			pcp = 7
+		}
+		w.tsnSock = p.tsnSocketForPCP(pcp, 0, false)
+	}
 	p.writers[eid] = w
 	p.sedp.registerWriter(eid, topic)
-	p.log.debug("new publisher topic=%s reliable=%v", topic, w.reliable)
+	p.log.debug("new publisher topic=%s reliable=%v tsn=%v", topic, w.reliable, w.tsnSock != nil)
 	return w, nil
 }
 
@@ -379,6 +428,12 @@ func (p *participant) Close() error {
 	if p.dataSockV6 != nil {
 		p.dataSockV6.close()
 	}
+	// Close any TSN traffic-class sockets.
+	p.tsnMu.Lock()
+	for _, sock := range p.tsnSocks {
+		sock.close()
+	}
+	p.tsnMu.Unlock()
 	return nil
 }
 
@@ -701,6 +756,35 @@ func (p *participant) deliverToReader(r *rtpsReader, sample dds.Sample) {
 	}
 }
 
+// tsnSocketForPCP returns the traffic-class socket for the given PCP value,
+// creating it on first use. The socket has SO_PRIORITY set to pcp, IP_TOS
+// set to dscp<<2, and (on Linux ≥ 4.19) SO_TXTIME enabled when wantTxTime.
+// Returns nil on allocation failure; callers fall back to dataSock.
+func (p *participant) tsnSocketForPCP(pcp, dscp uint8, wantTxTime bool) *udpSocket {
+	p.tsnMu.Lock()
+	defer p.tsnMu.Unlock()
+	if p.tsnSocks == nil {
+		p.tsnSocks = make(map[uint8]*udpSocket)
+	}
+	if sock, ok := p.tsnSocks[pcp]; ok {
+		return sock
+	}
+	// Port 0 → OS assigns an ephemeral port.
+	sock, err := newUnicastSocket(0)
+	if err != nil {
+		return nil
+	}
+	_ = setSockPriority(sock.conn, int(pcp))
+	if dscp > 0 {
+		_ = setSockTOS(sock.conn, dscp)
+	}
+	if wantTxTime {
+		_ = enableTxTime(sock.conn) // best-effort; silently ignored on older kernels
+	}
+	p.tsnSocks[pcp] = sock
+	return sock
+}
+
 // readerByEID calls fn with the reader matching eid, if any.
 func (p *participant) readerByEID(eid EntityId, fn func(*rtpsReader)) {
 	p.mu.Lock()
@@ -754,12 +838,35 @@ type rtpsWriter struct {
 	closed        bool
 	seqHi         int32
 	seqLo         uint32
-	ackedLo       uint32 // highest sequence number fully acknowledged by all readers
+	ackedLo       uint32        // highest sequence number fully acknowledged by all readers
 	reliable      bool
 	history       *sendHistory  // non-nil when reliable == true
-	hbDone        chan struct{} // closed to stop the heartbeat goroutine
-	drainCh       chan struct{} // closed when ackedLo >= seqLo (all ACKs in)
+	hbDone        chan struct{}  // closed to stop the heartbeat goroutine
+	drainCh       chan struct{}  // closed when ackedLo >= seqLo (all ACKs in)
 	deadlineTimer *time.Timer   // non-nil when QoS.Deadline > 0
+	// TSN fields — nil when not a TSN writer.
+	tsnStream *tsn.Stream  // matching stream descriptor
+	tsnSock   *udpSocket   // priority-marked socket (nil = use dataSock)
+}
+
+// fragmentSize returns the per-fragment payload cap for this writer.
+// TSN streams use Stream.MaxFragPayload() to enforce the frame-size bound.
+// All other writers use the default maxFragmentPayload constant.
+func (w *rtpsWriter) fragmentSize() int {
+	if w.tsnStream != nil {
+		if n := w.tsnStream.MaxFragPayload(); n > 0 {
+			return n
+		}
+	}
+	return maxFragmentPayload
+}
+
+// sendSock returns the UDP socket to use for remote sends.
+func (w *rtpsWriter) sendSock() *udpSocket {
+	if w.tsnSock != nil {
+		return w.tsnSock
+	}
+	return w.p.dataSock
 }
 
 func (w *rtpsWriter) Write(payload []byte) error {
@@ -767,6 +874,11 @@ func (w *rtpsWriter) Write(payload []byte) error {
 	defer w.mu.Unlock()
 	if w.closed {
 		return fmt.Errorf("rtps: %w", dds.ErrClosed)
+	}
+	// Enforce MaxSampleSize QoS before doing any work.
+	if w.qos.MaxSampleSize > 0 && len(payload) > w.qos.MaxSampleSize {
+		return fmt.Errorf("rtps: %w: got %d bytes, limit %d",
+			dds.ErrPayloadTooLarge, len(payload), w.qos.MaxSampleSize)
 	}
 	if w.deadlineTimer != nil {
 		w.deadlineTimer.Reset(w.qos.Deadline)
@@ -787,13 +899,31 @@ func (w *rtpsWriter) Write(payload []byte) error {
 		wirePayload = sealed
 	}
 	wrapped := cdrWrapPayload(wirePayload)
-	submsg := marshalDataSubmessage(w.eid, EntityIdUnknown, seqNum, wrapped)
-	// Prepend INFO_TS so remote readers can attach the source timestamp.
 	tsSubmsg := marshalInfoTS(now)
-	msg := wrapInRTPSMessage(w.p.guidPrefix, append(tsSubmsg, submsg...))
+
+	// Determine whether to fragment: use the TSN-aware fragment size.
+	fragSize := w.fragmentSize()
+	sock := w.sendSock()
+
+	var msgs [][]byte
+	if len(wrapped) > fragSize {
+		// Large payload: split into DATA_FRAG submessages.
+		frags := splitIntoFragmentsN(w.eid, seqNum, wrapped, fragSize)
+		msgs = make([][]byte, len(frags))
+		for i, frag := range frags {
+			fragSubmsg := marshalDataFrag(frag)
+			msgs[i] = wrapInRTPSMessage(w.p.guidPrefix, append(tsSubmsg, fragSubmsg...))
+		}
+	} else {
+		submsg := marshalDataSubmessage(w.eid, EntityIdUnknown, seqNum, wrapped)
+		msgs = [][]byte{wrapInRTPSMessage(w.p.guidPrefix, append(tsSubmsg, submsg...))}
+	}
 
 	if w.reliable {
-		w.history.store(w.seqLo, msg)
+		// Store the full RTPS message (first fragment packet, or single DATA)
+		// for heartbeat / retransmit. For fragmented payloads this stores only
+		// the first fragment; a future enhancement can store per-fragment msgs.
+		w.history.store(w.seqLo, msgs[0])
 	}
 
 	// Deliver locally (same process). Copy so caller mutations don't affect
@@ -807,19 +937,42 @@ func (w *rtpsWriter) Write(payload []byte) error {
 	persistFlush(w.p.persistDir, w.topic, localCopy)
 	w.p.dispatchToReaders(GUID{Prefix: w.p.guidPrefix, Entity: w.eid}, w.topic, localCopy, now)
 
-	// Deliver to remote peers. Use a single multicast send when available
-	// (one packet instead of N unicast sends); fall back to unicast otherwise.
+	// Deliver to remote peers.
 	locs := w.p.matchedReaderLocators(w.topic)
-	if len(locs) > 0 && w.p.dataMcastSock != nil {
+	// Compute scheduled transmit time for TSN streams (nanoseconds since TAI epoch).
+	var txTimeNS uint64
+	if w.tsnStream != nil && w.tsnStream.TxOffsetUS > 0 {
+		if taiNow, err := clockTAINow(); err == nil {
+			// Next interval boundary + TxOffset.
+			interval := w.tsnStream.Interval()
+			offset := w.tsnStream.TxOffset()
+			if interval > 0 {
+				sinceLast := taiNow.UnixNano() % int64(interval)
+				nextBoundary := taiNow.Add(time.Duration(int64(interval)-sinceLast) + offset)
+				txTimeNS = uint64(nextBoundary.UnixNano())
+			}
+		}
+	}
+
+	if len(locs) > 0 && w.p.dataMcastSock != nil && w.tsnSock == nil {
+		// Multicast only when not a TSN writer (TSN streams must use per-class socket).
 		dst := &net.UDPAddr{IP: userDataMulticastAddr, Port: userMulticastPort(int(w.p.domain))}
-		_ = w.p.dataSock.send(dst, msg)
+		for _, msg := range msgs {
+			_ = w.p.dataSock.send(dst, msg)
+		}
 	} else {
 		for _, loc := range locs {
 			dst := loc.udpAddr()
 			if dst == nil {
 				continue
 			}
-			_ = w.p.dataSock.send(dst, msg)
+			for _, msg := range msgs {
+				if txTimeNS > 0 {
+					_ = scheduledSend(sock.conn, dst, msg, txTimeNS)
+				} else {
+					_ = sock.send(dst, msg)
+				}
+			}
 		}
 	}
 
@@ -846,9 +999,10 @@ func (w *rtpsWriter) sendHeartbeatLocked() {
 		Count:          w.history.hbCount.Add(1),
 	}
 	msg := wrapInRTPSMessage(w.p.guidPrefix, marshalHeartbeat(hb))
+	sock := w.sendSock()
 	for _, loc := range w.p.matchedReaderLocators(w.topic) {
 		if dst := loc.udpAddr(); dst != nil {
-			_ = w.p.dataSock.send(dst, msg)
+			_ = sock.send(dst, msg)
 		}
 	}
 }

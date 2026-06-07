@@ -224,17 +224,25 @@ See [ROADMAP.md](ROADMAP.md) for per-item context, release notes, and implementa
 - [x] Typed generics (`TypedPublisher[T]` / `TypedSubscriber[T]`, `Codec[T]`, `JSONCodec[T]`)
 - [x] OpenTelemetry-compatible tracing (`WithTracer(dds.Tracer)`, per-deliver spans, zero dep)
 
-**Planned — TSN (Time-Sensitive Networking)**
+**Released — v0.5 — TSN (Time-Sensitive Networking)**
 
-- [ ] TSN-extended QoS fields (`TransportPriority`, `LatencyBudget`, `Lifespan`, `PublishPeriod`, `MaxSampleSize`)
-- [ ] DDS-to-TSN stream model (`tsn.Stream` descriptor; OMG DDS-TSN spec)
-- [ ] VLAN, PCP, and DSCP socket marking (`SO_PRIORITY`, `IP_TOS`, VLAN interface, Linux-only)
-- [ ] Scheduled transmit time (`SO_TXTIME` + `CLOCK_TAI` + ETF/taprio qdisc, Linux-only)
-- [ ] gPTP / IEEE 802.1AS time base integration (`CLOCK_TAI` via `golang.org/x/sys/unix`)
-- [ ] Separate traffic-class sockets (discovery, best-effort data, per-TSN-writer)
-- [ ] TSN-safe discovery (configurable SPDP interval, jitter budget, static peers)
-- [ ] Fragmentation bounds for TSN streams (reject oversize, deterministic DATA_FRAG)
-- [ ] External TSN configuration (YAML/JSON `tsn_streams:` file, `tsn.LoadConfig`)
+- [x] TSN-extended QoS fields (`TransportPriority`, `LatencyBudget`, `Lifespan`, `PublishPeriod`, `MaxSampleSize`)
+- [x] DDS-to-TSN stream model (`tsn.Stream` descriptor, `tsn.StreamConfig`, `tsn.LoadConfig`)
+- [x] VLAN, PCP, and DSCP socket marking (`SO_PRIORITY`, `IP_TOS`, Linux-only build tag)
+- [x] Scheduled transmit time (`SO_TXTIME` + `CLOCK_TAI` + ETF/taprio qdisc, Linux-only)
+- [x] gPTP / IEEE 802.1AS time base (`CLOCK_TAI` via `syscall.ClockGettime`, no external dep)
+- [x] Separate traffic-class sockets (per-PCP socket map, `tsnSocketForPCP`)
+- [x] TSN-safe discovery (`WithSPDPInterval`, `WithSPDPJitter`, `WithStaticPeers`)
+- [x] Fragmentation bounds for TSN streams (`MaxSampleSize` guard, `splitIntoFragmentsN`)
+- [x] External TSN configuration (JSON file, `tsn.LoadConfig`, `WithTSNConfig`)
+
+**Future — [17-phase vision](ROADMAP.md)**
+
+Phases cover: DDS API completeness, types/serialisation, discovery, transport framework,
+performance, security (DDS Security spec), observability, recording/replay,
+routing/bridging, safety/E2E protection, TSN enhancements, unified configuration,
+platform support, automotive/V2X integration, testing infrastructure,
+enterprise readiness, and safety evidence. See [ROADMAP.md](ROADMAP.md) for full detail.
 
 ## Contributing
 

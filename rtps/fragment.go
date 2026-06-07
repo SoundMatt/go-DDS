@@ -157,10 +157,20 @@ func (fa *fragmentAssembler) receive(f DataFrag) []byte {
 	return nil
 }
 
-// splitIntoFragments breaks payload into DataFrag slices ready to send.
-// writerEID and seqNum identify the writer and sequence number.
+// splitIntoFragments breaks payload into DataFrag slices using the default
+// maxFragmentPayload size. writerEID and seqNum identify the writer.
 func splitIntoFragments(writerEID EntityId, seqNum SequenceNumber, payload []byte) []DataFrag {
-	size := uint16(maxFragmentPayload)
+	return splitIntoFragmentsN(writerEID, seqNum, payload, maxFragmentPayload)
+}
+
+// splitIntoFragmentsN breaks payload into DataFrag slices with at most
+// maxPayloadSize bytes per fragment. Use maxFragmentPayload for the default.
+// For TSN streams, pass Stream.MaxFragPayload() to honour the frame-size bound.
+func splitIntoFragmentsN(writerEID EntityId, seqNum SequenceNumber, payload []byte, maxPayloadSize int) []DataFrag {
+	if maxPayloadSize <= 0 {
+		maxPayloadSize = maxFragmentPayload
+	}
+	size := uint16(maxPayloadSize)
 	total := len(payload)
 	numFrags := uint32((total + int(size) - 1) / int(size))
 	frags := make([]DataFrag, 0, numFrags)

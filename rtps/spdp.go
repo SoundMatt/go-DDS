@@ -14,6 +14,7 @@ package rtps
 
 import (
 	"encoding/binary"
+	"math/rand"
 	"net"
 	"sync"
 	"time"
@@ -76,13 +77,23 @@ func (s *spdpService) allPeers() []*participantProxy {
 
 func (s *spdpService) announceLoop() {
 	s.sendAnnouncement()
-	ticker := time.NewTicker(spdpAnnouncePeriod)
+	interval := s.p.spdpInterval
+	if interval <= 0 {
+		interval = spdpAnnouncePeriod
+	}
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-s.stop:
 			return
 		case <-ticker.C:
+			// Add random jitter before each announcement to avoid synchronised
+			// floods when many TSN participants start simultaneously.
+			if s.p.spdpJitter > 0 {
+				jitter := time.Duration(rand.Int63n(int64(s.p.spdpJitter)))
+				time.Sleep(jitter)
+			}
 			s.sendAnnouncement()
 		}
 	}
