@@ -97,6 +97,18 @@ var spdpMulticastAddr = net.ParseIP("239.255.0.1")
 // spdpMulticastAddrV6 is the RTPS IPv6 discovery multicast group (site-local).
 var spdpMulticastAddrV6 = net.ParseIP("FF03::1")
 
+// userDataMulticastAddr is the go-DDS user-data multicast group (domain-scoped).
+// One multicast packet from a writer reaches all subscribers in the same domain
+// without N separate unicast sends.
+var userDataMulticastAddr = net.ParseIP("239.255.0.2")
+
+// userMulticastPort returns the user-data multicast receive port for a domain.
+// This is port_base + domain_gain*domain + 1, i.e., the standard RTPS
+// user-data multicast port (§9.6.1, Pb + DG*d + d_port_user_multicast).
+func userMulticastPort(domain int) int {
+	return portBase + domainGain*domain + 1
+}
+
 // portBase constants from the RTPS port mapping formula (§9.6.1).
 const (
 	portBase        = 7400

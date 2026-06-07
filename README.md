@@ -188,7 +188,7 @@ go test -tags cyclone ./cyclone/...
 
 See [ROADMAP.md](ROADMAP.md) for per-item context, release notes, and implementation guidance.
 
-**Released**
+**Released — v0.1 – v0.3**
 
 - [x] Go interface (`Participant`, `Publisher`, `Subscriber`, `QoS`)
 - [x] In-process mock — 100% statement coverage
@@ -201,43 +201,28 @@ See [ROADMAP.md](ROADMAP.md) for per-item context, release notes, and implementa
 - [x] TransientLocal durability (last-value cache for late joiners)
 - [x] IPv6 multicast transport (`WithIPv6()` option, `LocatorKindUDPv6`)
 - [x] RTPS interop testing with CycloneDDS (Docker Compose + CycloneDDS peer)
+- [x] Typed sentinel errors (`ErrClosed`, `ErrTopicEmpty` — `errors.Is` support)
+- [x] Unicast-only / no-multicast discovery mode (`WithNoMulticast`, `WithPeerLocators`)
+- [x] Content-filtered subscriptions (`WithFilter`)
+- [x] Deadline QoS (`WithDeadlineCallback`)
+- [x] Large payload fragmentation (RTPS DATA_FRAG submessage)
+- [x] Topic wildcards (`sensors/#`, `vehicle/+/speed`)
+- [x] Metrics / statistics API (`Metrics()` / `MetricsProvider`)
+- [x] RTPS persistent history (`WithPersistentHistory`)
+- [x] Real-time web monitor (`monitor/` sub-package, SSE, no external dependencies)
 
-**Known protocol bugs** *(all fixed in v0.2.1)*
+**Released — v0.4**
 
-- [x] `matchedReaderLocators` ignores topic — sends data to all peers (`participant.go:497`)
-- [x] SPDP lease duration advertised but never enforced — stale peers never evicted
-- [x] RTPS GAP submessage not sent — reliable subscribers stall after history eviction
-
-**Planned — core**
-
-- [ ] Typed sentinel errors (`errors.Is` / `errors.As` support)
-- [ ] Unicast-only / no-multicast discovery mode (Docker, container, NAT environments)
-- [ ] Content-filtered subscriptions (server-side predicate before channel delivery)
-- [ ] Deadline QoS (configurable missed-deadline callback)
-- [ ] Large payload fragmentation (RTPS DATA_FRAG submessage)
-- [ ] Topic wildcards (`sensors/#`, `vehicle/*/speed`)
-- [ ] Metrics / statistics API (publish count, drop count, latency histogram)
-- [ ] RTPS persistent history (disk-backed TransientLocal for crash recovery)
-- [ ] Real-time web monitor (`monitor/` sub-package, SSE, no external dependencies)
-
-**Planned — operational**
-
-- [ ] Configurable subscriber channel depth and back-pressure policy (drop-newest / drop-oldest / block)
-- [ ] Structured logging (`WithLogger(*slog.Logger)` option, zero-cost when unused)
-- [ ] Participant liveliness detection and callback (`LivelinessGained` / `LivelinessLost`)
-- [ ] Graceful shutdown with reliable-ACK drain (`CloseWithDrain(ctx)`)
-
-**Planned — transport**
-
-- [ ] Multicast data delivery (topic-specific multicast group, one packet per write)
-- [ ] Shared memory transport (`shmem/` sub-package, cross-process same-host, zero UDP copies)
-- [ ] INFO_TS submessage — source timestamps in `Sample.SourceTimestamp`
-
-**Planned — integration**
-
-- [ ] MQTT bridge (`bridge/mqtt/` — DDS ↔ MQTT bidirectional, QoS mapping)
-- [ ] IDL / protobuf schema binding (`TypedPublisher[T]` / `TypedSubscriber[T]` generics, `go generate`)
-- [ ] OpenTelemetry tracing (`WithOTelTracer`, per-write and per-deliver spans)
+- [x] Configurable subscriber channel depth (`WithChannelDepth`) and back-pressure policy (`DropNewest` / `DropOldest` / `Block`)
+- [x] Structured logging (`WithLogger(*slog.Logger)`, zero-cost when unused)
+- [x] Participant liveliness detection and callback (`WithLivelinessCallback`, `LivelinessGained` / `LivelinessLost`)
+- [x] Graceful shutdown with reliable-ACK drain (`CloseWithDrain(ctx)`, `Drainer` interface)
+- [x] Multicast data delivery (domain-scoped multicast group, one packet per write)
+- [x] Shared memory transport (`shmem/` sub-package, cross-process same-host)
+- [x] INFO_TS submessage — source timestamps in `Sample.Timestamp`
+- [x] MQTT bridge (`bridge/mqtt/` — DDS ↔ MQTT bidirectional, QoS and topic mapping, no external dep)
+- [x] Typed generics (`TypedPublisher[T]` / `TypedSubscriber[T]`, `Codec[T]`, `JSONCodec[T]`)
+- [x] OpenTelemetry-compatible tracing (`WithTracer(dds.Tracer)`, per-deliver spans, zero dep)
 
 **Planned — TSN (Time-Sensitive Networking)**
 

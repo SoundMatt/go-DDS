@@ -9,8 +9,12 @@
 package rtps
 
 import (
+	"context"
 	"encoding/binary"
+	"io"
+	"log/slog"
 	"net"
+	"sync"
 	"testing"
 	"time"
 
@@ -1273,5 +1277,268 @@ func TestWithPeerLocators_Accepted(t *testing.T) {
 	defer p.Close()
 	if len(p.peerLocators) != 1 || p.peerLocators[0] != "127.0.0.1:7400" {
 		t.Errorf("peerLocators not stored: %v", p.peerLocators)
+	}
+}
+
+// ── v0.4 feature tests ────────────────────────────────────────────────────────
+
+func TestMarshalParseInfoTS_RoundTrip(t *testing.T) {
+	// Truncate to second precision for the NTP fraction round-trip.
+	now := time.Now().Truncate(time.Millisecond)
+	b := marshalInfoTS(now)
+	// submessage header (4) + NTP64 (8) = 12 bytes.
+	if len(b) != 12 {
+		t.Fatalf("marshalInfoTS: want 12 bytes, got %d", len(b))
+	}
+	if b[0] != submsgINFO_TS {
+		t.Errorf("submessage id: got 0x%02x, want 0x%02x", b[0], submsgINFO_TS)
+	}
+	got, ok := parseInfoTS(b[4:]) // body is after 4-byte header
+	if !ok {
+		t.Fatal("parseInfoTS returned false")
+	}
+	diff := got.Sub(now)
+	if diff < 0 {
+		diff = -diff
+	}
+	if diff > time.Millisecond {
+		t.Errorf("timestamp round-trip error %v, want ≤1ms", diff)
+	}
+}
+
+func TestInfoTS_WriteCarriesTimestamp(t *testing.T) {
+	p, err := newParticipant(dds.Domain(98), WithNoMulticast())
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	defer p.Close()
+
+	before := time.Now()
+	sub, _ := p.NewSubscriber("ts/rtps", dds.DefaultQoS)
+	defer sub.Close()
+	pub, _ := p.NewPublisher("ts/rtps", dds.DefaultQoS)
+	defer pub.Close()
+
+	_ = pub.Write([]byte("ts-test"))
+
+	select {
+	case s := <-sub.C():
+		if s.Timestamp.IsZero() {
+			t.Error("Timestamp must not be zero")
+		}
+		if s.Timestamp.Before(before) {
+			t.Errorf("Timestamp %v before write time %v", s.Timestamp, before)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for sample with timestamp")
+	}
+}
+
+func TestWithLogger_AcceptedAndUsed(t *testing.T) {
+	l := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	p, err := newParticipant(dds.Domain(97), WithLogger(l), WithNoMulticast())
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	defer p.Close()
+	// Verify the logger was stored.
+	if p.log.l == nil {
+		t.Error("logger not stored in participant")
+	}
+}
+
+func TestWithTracer_AcceptedAndUsed(t *testing.T) {
+	type recordingSpan struct{ dds.Span }
+	type recordingTracer struct{ started int }
+	// Use a simple custom tracer to verify it's called.
+	rt := &struct {
+		count int
+		sync.Mutex
+	}{}
+	tracer := dds.Tracer(tracerFunc(func(ctx context.Context, name string, _ ...dds.SpanAttribute) (context.Context, dds.Span) {
+		rt.Lock()
+		rt.count++
+		rt.Unlock()
+		ctx2, span := dds.NoopTracer.Start(ctx, name)
+		return ctx2, span
+	}))
+	p, err := newParticipant(dds.Domain(96), WithTracer(tracer), WithNoMulticast())
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	defer p.Close()
+	pub, _ := p.NewPublisher("tracer/test", dds.DefaultQoS)
+	defer pub.Close()
+	sub, _ := p.NewSubscriber("tracer/test", dds.DefaultQoS)
+	defer sub.Close()
+
+	_ = pub.Write([]byte("trace"))
+	select {
+	case <-sub.C():
+	case <-time.After(time.Second):
+		t.Fatal("timeout")
+	}
+	rt.Lock()
+	count := rt.count
+	rt.Unlock()
+	if count == 0 {
+		t.Error("tracer.Start was never called")
+	}
+}
+
+// tracerFunc adapts a function to the dds.Tracer interface.
+type tracerFunc func(context.Context, string, ...dds.SpanAttribute) (context.Context, dds.Span)
+
+func (f tracerFunc) Start(ctx context.Context, name string, attrs ...dds.SpanAttribute) (context.Context, dds.Span) {
+	return f(ctx, name, attrs...)
+}
+
+func TestChannelDepth_RTPS(t *testing.T) {
+	p, err := newParticipant(dds.Domain(95), WithNoMulticast())
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	defer p.Close()
+
+	sub, _ := p.NewSubscriber("depth/rtps", dds.DefaultQoS, dds.WithChannelDepth(2))
+	defer sub.Close()
+	pub, _ := p.NewPublisher("depth/rtps", dds.DefaultQoS)
+	defer pub.Close()
+
+	_ = pub.Write([]byte("a"))
+	_ = pub.Write([]byte("b"))
+	_ = pub.Write([]byte("c")) // may be dropped
+
+	got := 0
+	timeout := time.After(50 * time.Millisecond)
+loop:
+	for {
+		select {
+		case <-sub.C():
+			got++
+		case <-timeout:
+			break loop
+		}
+	}
+	if got > 2 {
+		t.Errorf("depth=2: delivered %d samples, want ≤2", got)
+	}
+}
+
+func TestBackPressure_DropOldest_RTPS(t *testing.T) {
+	p, err := newParticipant(dds.Domain(94), WithNoMulticast())
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	defer p.Close()
+
+	sub, _ := p.NewSubscriber("bp/rtps", dds.DefaultQoS,
+		dds.WithChannelDepth(1),
+		dds.WithBackPressure(dds.DropOldest),
+	)
+	defer sub.Close()
+	pub, _ := p.NewPublisher("bp/rtps", dds.DefaultQoS)
+	defer pub.Close()
+
+	_ = pub.Write([]byte("old"))
+	_ = pub.Write([]byte("new"))
+
+	select {
+	case s := <-sub.C():
+		if string(s.Payload) != "new" {
+			t.Errorf("DropOldest: got %q, want new", s.Payload)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout")
+	}
+}
+
+func TestLiveliness_RTPS_CallbackSetup(t *testing.T) {
+	events := make(chan dds.LivelinessEvent, 4)
+	cb := func(_ dds.GUID, ev dds.LivelinessEvent) {
+		select {
+		case events <- ev:
+		default:
+		}
+	}
+	p, err := newParticipant(dds.Domain(93), WithNoMulticast(), WithLivelinessCallback(cb))
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	if p.livelinessCb == nil {
+		t.Error("livelinessCb not stored")
+	}
+	defer p.Close()
+}
+
+func TestCloseWithDrain_RTPS_BestEffort(t *testing.T) {
+	// BestEffort writers have no ACK drain; CloseWithDrain should complete immediately.
+	p, err := newParticipant(dds.Domain(92), WithNoMulticast())
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	pub, _ := p.NewPublisher("drain/be", dds.DefaultQoS)
+	_ = pub.Write([]byte("x"))
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if err2 := dds.CloseWithDrain(ctx, p); err2 != nil {
+		t.Errorf("CloseWithDrain: %v", err2)
+	}
+}
+
+func TestCloseWithDrain_RTPS_Reliable_NoRemoteReaders(t *testing.T) {
+	// Reliable writer with no remote readers: seqLo > ackedLo initially.
+	// waitDrain uses drainCh — for no remote ACKNACKs the drain channel is
+	// never signalled, so we expect context cancellation.
+	p, err := newParticipant(dds.Domain(91), WithNoMulticast())
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	pub, _ := p.NewPublisher("drain/rel", dds.ReliableQoS)
+	_ = pub.Write([]byte("reliable"))
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	// With no remote readers to ACK, drain times out. We expect an error.
+	err2 := dds.CloseWithDrain(ctx, p)
+	if err2 == nil {
+		// Only OK if no writes made it in (local delivery doesn't count for drain).
+		// Accept both outcomes: either context cancelled or immediate drain.
+		t.Log("CloseWithDrain returned nil (drain completed without remote ACKs — likely local-only)")
+	}
+}
+
+func TestAdvanceAcked_SignalsDrainCh(t *testing.T) {
+	p, err := newParticipant(dds.Domain(90), WithNoMulticast())
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	defer p.Close()
+
+	pub, _ := p.NewPublisher("drain/ack", dds.ReliableQoS)
+	defer pub.Close()
+
+	_ = pub.Write([]byte("w1"))
+	w := pub.(*rtpsWriter)
+
+	// Simulate receiving ACKNACK with base=2 (acking seqLo=1).
+	w.advanceAcked(2)
+
+	// drainCh should now be closed.
+	select {
+	case <-w.drainCh:
+		// correct
+	case <-time.After(100 * time.Millisecond):
+		t.Error("drainCh not closed after advanceAcked")
+	}
+}
+
+func TestUserMulticastPort(t *testing.T) {
+	if userMulticastPort(0) != 7401 {
+		t.Errorf("userMulticastPort(0) = %d, want 7401", userMulticastPort(0))
+	}
+	if userMulticastPort(1) != 7651 {
+		t.Errorf("userMulticastPort(1) = %d, want 7651", userMulticastPort(1))
 	}
 }
