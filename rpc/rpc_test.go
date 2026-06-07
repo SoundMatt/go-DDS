@@ -74,7 +74,6 @@ func TestRPC_MultipleInFlight(t *testing.T) {
 
 	go func() {
 		for r := range replier.Requests() {
-			r := r
 			go func() {
 				_ = replier.Reply(context.Background(), r, addRep{Sum: r.Value.A + r.Value.B})
 			}()
@@ -204,7 +203,6 @@ func TestRPC_CorrelationIsolation(t *testing.T) {
 
 	go func() {
 		for r := range replier.Requests() {
-			r := r
 			go func() {
 				_ = replier.Reply(context.Background(), r, addRep{Sum: r.Value.A + r.Value.B})
 			}()

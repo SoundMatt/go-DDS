@@ -1317,10 +1317,10 @@ type rtpsReader struct {
 	reliable      bool
 	filter        func(dds.Sample) bool // nil = no filter
 	backPressure  dds.BackPressurePolicy
-	unsubOnce     sync.Once // guards deregistration from the participant
-	closeOnce     sync.Once // guards channel close
-	resetDeadline func()         // nil if no deadline configured
-	deadlineTimer *time.Timer    // non-nil when QoS.Deadline > 0 and callback set
+	unsubOnce     sync.Once   // guards deregistration from the participant
+	closeOnce     sync.Once   // guards channel close
+	resetDeadline func()      // nil if no deadline configured
+	deadlineTimer *time.Timer // non-nil when QoS.Deadline > 0 and callback set
 }
 
 func (r *rtpsReader) addSourceGUID(g GUID) {
