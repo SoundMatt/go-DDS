@@ -147,6 +147,7 @@ go test -tags cyclone ./cyclone/...
 ## CI status
 
 [![CI](https://github.com/SoundMatt/go-DDS/actions/workflows/ci.yml/badge.svg)](https://github.com/SoundMatt/go-DDS/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/SoundMatt/go-DDS.svg)](https://pkg.go.dev/github.com/SoundMatt/go-DDS)
 
 | Job | Platforms | Notes |
 |---|---|---|
