@@ -34,8 +34,10 @@ type SequenceNumber struct {
 
 // submessage IDs (§9.4.5).
 const (
-	submsgDATA    = byte(0x15)
-	submsgINFO_TS = byte(0x09)
+	submsgDATA      = byte(0x15)
+	submsgHEARTBEAT = byte(0x07)
+	submsgACKNACK   = byte(0x06)
+	submsgINFO_TS   = byte(0x09)
 )
 
 // flag bits for DATA submessage (§9.4.5.3).
@@ -145,6 +147,103 @@ func parseDataSubmessage(flags byte, body []byte) (DataSubmessage, bool) {
 		ds.Payload = payload
 	}
 	return ds, true
+}
+
+// ── HEARTBEAT submessage (§9.4.5.5) ──────────────────────────────────────────
+
+// Heartbeat holds the parsed fields of a HEARTBEAT submessage.
+type Heartbeat struct {
+	ReaderEntityId EntityId
+	WriterEntityId EntityId
+	FirstSN        SequenceNumber // lowest SN still in the writer's history
+	LastSN         SequenceNumber // highest SN sent so far
+	Count          int32          // monotonically increasing per writer
+}
+
+// marshalHeartbeat builds a HEARTBEAT submessage.
+// Body layout: readerEID(4) + writerEID(4) + firstSN(8) + lastSN(8) + count(4) = 28 bytes.
+func marshalHeartbeat(hb Heartbeat) []byte {
+	body := make([]byte, 28)
+	copy(body[0:4], hb.ReaderEntityId[:])
+	copy(body[4:8], hb.WriterEntityId[:])
+	binary.LittleEndian.PutUint32(body[8:], uint32(hb.FirstSN.High))
+	binary.LittleEndian.PutUint32(body[12:], hb.FirstSN.Low)
+	binary.LittleEndian.PutUint32(body[16:], uint32(hb.LastSN.High))
+	binary.LittleEndian.PutUint32(body[20:], hb.LastSN.Low)
+	binary.LittleEndian.PutUint32(body[24:], uint32(hb.Count))
+	hdr := make([]byte, 4)
+	hdr[0] = submsgHEARTBEAT
+	hdr[1] = flagEndianness
+	binary.LittleEndian.PutUint16(hdr[2:], uint16(len(body)))
+	return append(hdr, body...)
+}
+
+// parseHeartbeat extracts a Heartbeat from a HEARTBEAT submessage body.
+func parseHeartbeat(body []byte) (Heartbeat, bool) {
+	if len(body) < 28 {
+		return Heartbeat{}, false
+	}
+	var hb Heartbeat
+	copy(hb.ReaderEntityId[:], body[0:4])
+	copy(hb.WriterEntityId[:], body[4:8])
+	hb.FirstSN = SequenceNumber{
+		High: int32(binary.LittleEndian.Uint32(body[8:])),
+		Low:  binary.LittleEndian.Uint32(body[12:]),
+	}
+	hb.LastSN = SequenceNumber{
+		High: int32(binary.LittleEndian.Uint32(body[16:])),
+		Low:  binary.LittleEndian.Uint32(body[20:]),
+	}
+	hb.Count = int32(binary.LittleEndian.Uint32(body[24:]))
+	return hb, true
+}
+
+// ── ACKNACK submessage (§9.4.5.1) ────────────────────────────────────────────
+
+// AckNack holds the parsed fields of an ACKNACK submessage.
+// We use a fixed 32-bit bitmap (NumBits always 32, one bitmap word).
+type AckNack struct {
+	ReaderEntityId EntityId
+	WriterEntityId EntityId
+	Base           SequenceNumber // first missing sequence number
+	Bitmap         uint32         // bit N set → Base+N is missing
+	Count          int32
+}
+
+// marshalAckNack builds an ACKNACK submessage.
+// Body layout: readerEID(4) + writerEID(4) + base(8) + numBits(4) + bitmap(4) + count(4) = 28 bytes.
+func marshalAckNack(an AckNack) []byte {
+	body := make([]byte, 28)
+	copy(body[0:4], an.ReaderEntityId[:])
+	copy(body[4:8], an.WriterEntityId[:])
+	binary.LittleEndian.PutUint32(body[8:], uint32(an.Base.High))
+	binary.LittleEndian.PutUint32(body[12:], an.Base.Low)
+	binary.LittleEndian.PutUint32(body[16:], 32) // numBits
+	binary.LittleEndian.PutUint32(body[20:], an.Bitmap)
+	binary.LittleEndian.PutUint32(body[24:], uint32(an.Count))
+	hdr := make([]byte, 4)
+	hdr[0] = submsgACKNACK
+	hdr[1] = flagEndianness
+	binary.LittleEndian.PutUint16(hdr[2:], uint16(len(body)))
+	return append(hdr, body...)
+}
+
+// parseAckNack extracts an AckNack from an ACKNACK submessage body.
+func parseAckNack(body []byte) (AckNack, bool) {
+	if len(body) < 28 {
+		return AckNack{}, false
+	}
+	var an AckNack
+	copy(an.ReaderEntityId[:], body[0:4])
+	copy(an.WriterEntityId[:], body[4:8])
+	an.Base = SequenceNumber{
+		High: int32(binary.LittleEndian.Uint32(body[8:])),
+		Low:  binary.LittleEndian.Uint32(body[12:]),
+	}
+	// body[16:20] = numBits (we ignore, always treat as 32)
+	an.Bitmap = binary.LittleEndian.Uint32(body[20:])
+	an.Count = int32(binary.LittleEndian.Uint32(body[24:]))
+	return an, true
 }
 
 // wrapInRTPSMessage wraps submessage bytes in an RTPS Header.

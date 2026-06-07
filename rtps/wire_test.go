@@ -337,6 +337,150 @@ func TestRTPS_FullMessageRoundTrip(t *testing.T) {
 	}
 }
 
+// ── HEARTBEAT submessage ──────────────────────────────────────────────────────
+
+func TestRTPS_HeartbeatRoundTrip(t *testing.T) {
+	want := Heartbeat{
+		ReaderEntityId: EntityIdUnknown,
+		WriterEntityId: entityIdForWriter(3),
+		FirstSN:        SequenceNumber{High: 0, Low: 1},
+		LastSN:         SequenceNumber{High: 0, Low: 7},
+		Count:          42,
+	}
+	msg := marshalHeartbeat(want)
+	if msg[0] != submsgHEARTBEAT {
+		t.Fatalf("submsgID: got 0x%02X, want 0x%02X", msg[0], submsgHEARTBEAT)
+	}
+	body := msg[4:]
+	got, ok := parseHeartbeat(body)
+	if !ok {
+		t.Fatal("parseHeartbeat failed")
+	}
+	if got != want {
+		t.Errorf("Heartbeat mismatch:\n  got  %+v\n  want %+v", got, want)
+	}
+}
+
+func TestRTPS_Heartbeat_TooShort(t *testing.T) {
+	_, ok := parseHeartbeat(make([]byte, 10))
+	if ok {
+		t.Error("parseHeartbeat should fail on short body")
+	}
+}
+
+// ── ACKNACK submessage ────────────────────────────────────────────────────────
+
+func TestRTPS_AckNackRoundTrip(t *testing.T) {
+	want := AckNack{
+		ReaderEntityId: entityIdForReader(2),
+		WriterEntityId: entityIdForWriter(1),
+		Base:           SequenceNumber{High: 0, Low: 5},
+		Bitmap:         0b1010, // missing sequence numbers 5 and 7
+		Count:          1,
+	}
+	msg := marshalAckNack(want)
+	if msg[0] != submsgACKNACK {
+		t.Fatalf("submsgID: got 0x%02X, want 0x%02X", msg[0], submsgACKNACK)
+	}
+	body := msg[4:]
+	got, ok := parseAckNack(body)
+	if !ok {
+		t.Fatal("parseAckNack failed")
+	}
+	if got != want {
+		t.Errorf("AckNack mismatch:\n  got  %+v\n  want %+v", got, want)
+	}
+}
+
+func TestRTPS_AckNack_TooShort(t *testing.T) {
+	_, ok := parseAckNack(make([]byte, 10))
+	if ok {
+		t.Error("parseAckNack should fail on short body")
+	}
+}
+
+// ── sendHistory ───────────────────────────────────────────────────────────────
+
+func TestSendHistory_StoreGet(t *testing.T) {
+	h := newSendHistory()
+	msg := []byte("test-message")
+	h.store(1, msg)
+	got := h.get(1)
+	if string(got) != string(msg) {
+		t.Errorf("get(1): got %q, want %q", got, msg)
+	}
+	if h.get(99) != nil {
+		t.Error("get(99) should return nil for unknown seqLo")
+	}
+}
+
+func TestSendHistory_FirstLast(t *testing.T) {
+	h := newSendHistory()
+	_, _, ok := h.firstLast()
+	if ok {
+		t.Error("empty history should return ok=false")
+	}
+	h.store(3, []byte("a"))
+	h.store(1, []byte("b"))
+	h.store(5, []byte("c"))
+	first, last, ok := h.firstLast()
+	if !ok {
+		t.Fatal("non-empty history returned ok=false")
+	}
+	if first != 1 || last != 5 {
+		t.Errorf("firstLast: got (%d, %d), want (1, 5)", first, last)
+	}
+}
+
+func TestSendHistory_PayloadIsolation(t *testing.T) {
+	h := newSendHistory()
+	msg := []byte("original")
+	h.store(1, msg)
+	msg[0] = 'X' // mutate after store
+	got := h.get(1)
+	if got[0] == 'X' {
+		t.Error("sendHistory.store should copy the message")
+	}
+}
+
+// ── recvTracker ───────────────────────────────────────────────────────────────
+
+func TestRecvTracker_Sequential(t *testing.T) {
+	rt := &recvTracker{}
+	for _, sn := range []uint32{1, 2, 3, 4, 5} {
+		_, _, needAck := rt.receive(sn)
+		if needAck {
+			t.Errorf("sn=%d: unexpected ACKNACK", sn)
+		}
+	}
+}
+
+func TestRecvTracker_Gap(t *testing.T) {
+	rt := &recvTracker{}
+	rt.receive(1)                          // expected becomes 2
+	base, bitmap, needAck := rt.receive(4) // gap: 2 and 3 missing
+	if !needAck {
+		t.Fatal("expected needAck for gap")
+	}
+	if base != 2 {
+		t.Errorf("base: got %d, want 2", base)
+	}
+	// bits 0 and 1 set (sn 2 and 3 missing)
+	if bitmap&0b11 != 0b11 {
+		t.Errorf("bitmap: got 0b%b, want low 2 bits set", bitmap)
+	}
+}
+
+func TestRecvTracker_Duplicate(t *testing.T) {
+	rt := &recvTracker{}
+	rt.receive(1)
+	rt.receive(2)
+	_, _, needAck := rt.receive(1) // duplicate
+	if needAck {
+		t.Error("duplicate sample should not trigger ACKNACK")
+	}
+}
+
 // ── GUID prefix generation ────────────────────────────────────────────────────
 
 func TestNewGuidPrefix_Unique(t *testing.T) {

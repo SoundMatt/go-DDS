@@ -10,12 +10,14 @@ package rtps_test
 
 import (
 	"bytes"
+	"context"
 	"runtime"
 	"testing"
 	"time"
 
 	dds "github.com/SoundMatt/go-DDS"
 	"github.com/SoundMatt/go-DDS/rtps"
+	"github.com/SoundMatt/go-DDS/security"
 )
 
 // domain 99 avoids port conflicts with any real DDS deployment.
@@ -297,5 +299,222 @@ func TestRTPS_TwoParticipants_SameHost(t *testing.T) {
 		}
 	case <-time.After(3 * time.Second):
 		t.Fatal("timeout: cross-participant sample not received")
+	}
+}
+
+// ── WaitSet ───────────────────────────────────────────────────────────────────
+
+func TestWaitSet_ReceiveFromFirst(t *testing.T) {
+	p := newTestParticipant(t)
+
+	subA, _ := p.NewSubscriber("waitset/a", dds.DefaultQoS)
+	subB, _ := p.NewSubscriber("waitset/b", dds.DefaultQoS)
+	defer subA.Close()
+	defer subB.Close()
+
+	pubA, _ := p.NewPublisher("waitset/a", dds.DefaultQoS)
+	defer pubA.Close()
+
+	ws := dds.NewWaitSet(subA, subB)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	if err := pubA.Write([]byte("ping")); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	s, sub, err := ws.Wait(ctx)
+	if err != nil {
+		t.Fatalf("Wait: %v", err)
+	}
+	if sub != subA {
+		t.Error("expected sample from subA")
+	}
+	if string(s.Payload) != "ping" {
+		t.Errorf("payload: got %q", s.Payload)
+	}
+}
+
+func TestWaitSet_ReceiveFromSecond(t *testing.T) {
+	p := newTestParticipant(t)
+
+	subA, _ := p.NewSubscriber("waitset/only-b/a", dds.DefaultQoS)
+	subB, _ := p.NewSubscriber("waitset/only-b/b", dds.DefaultQoS)
+	defer subA.Close()
+	defer subB.Close()
+
+	pubB, _ := p.NewPublisher("waitset/only-b/b", dds.DefaultQoS)
+	defer pubB.Close()
+
+	ws := dds.NewWaitSet(subA, subB)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	if err := pubB.Write([]byte("from-b")); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	s, sub, err := ws.Wait(ctx)
+	if err != nil {
+		t.Fatalf("Wait: %v", err)
+	}
+	if sub != subB {
+		t.Error("expected sample from subB")
+	}
+	if string(s.Payload) != "from-b" {
+		t.Errorf("payload: got %q", s.Payload)
+	}
+}
+
+func TestWaitSet_ContextCancellation(t *testing.T) {
+	p := newTestParticipant(t)
+
+	sub, _ := p.NewSubscriber("waitset/cancel", dds.DefaultQoS)
+	defer sub.Close()
+
+	ws := dds.NewWaitSet(sub)
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	_, _, err := ws.Wait(ctx)
+	if err == nil {
+		t.Error("expected context error when no sample arrives")
+	}
+}
+
+func TestWaitSet_ClosedSubscriber(t *testing.T) {
+	p := newTestParticipant(t)
+
+	sub, _ := p.NewSubscriber("waitset/closed", dds.DefaultQoS)
+	ws := dds.NewWaitSet(sub)
+
+	// Close the subscriber so its channel is closed.
+	sub.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	// Wait should return (not spin) when all channels are closed.
+	_, _, _ = ws.Wait(ctx)
+	// No assertion on error — just must not hang.
+}
+
+// ── Reliable QoS (intra-process, happy path) ──────────────────────────────────
+
+func TestRTPS_Reliable_IntraProcess(t *testing.T) {
+	p := newTestParticipant(t)
+
+	sub, err := p.NewSubscriber("reliable/intra", dds.ReliableQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	pub, err := p.NewPublisher("reliable/intra", dds.ReliableQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	const n = 10
+	for i := 0; i < n; i++ {
+		if err := pub.Write([]byte{byte(i)}); err != nil {
+			t.Fatalf("Write(%d): %v", i, err)
+		}
+	}
+	for i := 0; i < n; i++ {
+		select {
+		case s := <-sub.C():
+			if s.Payload[0] != byte(i) {
+				t.Errorf("sample %d: got %d", i, s.Payload[0])
+			}
+		case <-time.After(2 * time.Second):
+			t.Fatalf("timeout waiting for sample %d", i)
+		}
+	}
+}
+
+// ── Security ──────────────────────────────────────────────────────────────────
+
+func TestRTPS_Security_NullPlugin(t *testing.T) {
+	p, err := rtps.New(testDomain, rtps.WithSecurity(security.NullPlugin{}))
+	if err != nil {
+		t.Skipf("rtps.New: %v", err)
+	}
+	t.Cleanup(func() { p.Close() })
+
+	sub, _ := p.NewSubscriber("security/null", dds.DefaultQoS)
+	pub, _ := p.NewPublisher("security/null", dds.DefaultQoS)
+	defer sub.Close()
+	defer pub.Close()
+
+	want := []byte("secured-null")
+	if err := pub.Write(want); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	select {
+	case s := <-sub.C():
+		if !bytes.Equal(s.Payload, want) {
+			t.Errorf("payload: got %q, want %q", s.Payload, want)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout")
+	}
+}
+
+func TestRTPS_Security_HMAC(t *testing.T) {
+	key := security.NewRandomKey(32)
+	plugin := security.NewHMACPlugin(key)
+	p, err := rtps.New(testDomain, rtps.WithSecurity(plugin))
+	if err != nil {
+		t.Skipf("rtps.New: %v", err)
+	}
+	t.Cleanup(func() { p.Close() })
+
+	sub, _ := p.NewSubscriber("security/hmac", dds.DefaultQoS)
+	pub, _ := p.NewPublisher("security/hmac", dds.DefaultQoS)
+	defer sub.Close()
+	defer pub.Close()
+
+	want := []byte("integrity-protected")
+	if err := pub.Write(want); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	select {
+	case s := <-sub.C():
+		if !bytes.Equal(s.Payload, want) {
+			t.Errorf("payload: got %q, want %q", s.Payload, want)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout")
+	}
+}
+
+func TestRTPS_Security_AESGCM(t *testing.T) {
+	key := security.NewRandomKey(32)
+	plugin, err := security.NewAESGCMPlugin(key)
+	if err != nil {
+		t.Fatalf("NewAESGCMPlugin: %v", err)
+	}
+	p, err := rtps.New(testDomain, rtps.WithSecurity(plugin))
+	if err != nil {
+		t.Skipf("rtps.New: %v", err)
+	}
+	t.Cleanup(func() { p.Close() })
+
+	sub, _ := p.NewSubscriber("security/aesgcm", dds.DefaultQoS)
+	pub, _ := p.NewPublisher("security/aesgcm", dds.DefaultQoS)
+	defer sub.Close()
+	defer pub.Close()
+
+	want := []byte(`{"encrypted":true,"value":42}`)
+	if err := pub.Write(want); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	select {
+	case s := <-sub.C():
+		if !bytes.Equal(s.Payload, want) {
+			t.Errorf("payload: got %q, want %q", s.Payload, want)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout")
 	}
 }

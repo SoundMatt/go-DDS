@@ -6,6 +6,7 @@
 package mock_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -162,6 +163,75 @@ func TestParticipantClose_BlocksNewEndpoints(t *testing.T) {
 	}
 	if _, err := p.NewSubscriber("t", dds.DefaultQoS); err == nil {
 		t.Error("expected error from closed participant NewSubscriber")
+	}
+}
+
+// ── WaitSet ───────────────────────────────────────────────────────────────────
+
+func TestWaitSet_DeliversSample(t *testing.T) {
+	p := newParticipant(t)
+
+	subA, _ := p.NewSubscriber("waitset/a", dds.DefaultQoS)
+	subB, _ := p.NewSubscriber("waitset/b", dds.DefaultQoS)
+	defer subA.Close()
+	defer subB.Close()
+
+	pubB, _ := p.NewPublisher("waitset/b", dds.DefaultQoS)
+	defer pubB.Close()
+
+	ws := dds.NewWaitSet(subA, subB)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	if err := pubB.Write([]byte("ws-hello")); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	sample, got, err := ws.Wait(ctx)
+	if err != nil {
+		t.Fatalf("Wait: %v", err)
+	}
+	if got != subB {
+		t.Error("expected sample from subB")
+	}
+	if string(sample.Payload) != "ws-hello" {
+		t.Errorf("payload: got %q", sample.Payload)
+	}
+}
+
+func TestWaitSet_Timeout(t *testing.T) {
+	p := newParticipant(t)
+	sub, _ := p.NewSubscriber("waitset/timeout", dds.DefaultQoS)
+	defer sub.Close()
+
+	ws := dds.NewWaitSet(sub)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
+	defer cancel()
+
+	_, _, err := ws.Wait(ctx)
+	if err == nil {
+		t.Error("expected context error")
+	}
+}
+
+func TestWaitSet_MultipleWaits(t *testing.T) {
+	p := newParticipant(t)
+	sub, _ := p.NewSubscriber("waitset/multi", dds.DefaultQoS)
+	pub, _ := p.NewPublisher("waitset/multi", dds.DefaultQoS)
+	defer sub.Close()
+	defer pub.Close()
+
+	ws := dds.NewWaitSet(sub)
+	ctx := context.Background()
+
+	for i := 0; i < 5; i++ {
+		pub.Write([]byte{byte(i)})
+		s, _, err := ws.Wait(ctx)
+		if err != nil {
+			t.Fatalf("Wait %d: %v", i, err)
+		}
+		if s.Payload[0] != byte(i) {
+			t.Errorf("Wait %d: got %d", i, s.Payload[0])
+		}
 	}
 }
 

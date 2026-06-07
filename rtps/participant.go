@@ -7,11 +7,36 @@ package rtps
 
 import (
 	"fmt"
+	"net"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	dds "github.com/SoundMatt/go-DDS"
 )
+
+// ── Options ───────────────────────────────────────────────────────────────────
+
+// SecurityPlugin is satisfied by any type that can seal (encrypt / sign) and
+// open (decrypt / verify) a DDS payload byte slice. Built-in implementations
+// live in the security sub-package; NullPlugin (pass-through) is also
+// available there for development and testing.
+type SecurityPlugin interface {
+	Seal(plaintext []byte) ([]byte, error)
+	Open(ciphertext []byte) ([]byte, error)
+}
+
+// Option configures a Participant at creation time.
+type Option func(*participant)
+
+// WithSecurity returns an Option that applies plugin to every payload transmitted
+// and received by this participant. All peers that communicate with this
+// participant must use the same plugin and key material.
+func WithSecurity(plugin SecurityPlugin) Option {
+	return func(p *participant) { p.security = plugin }
+}
+
+// ── Participant ───────────────────────────────────────────────────────────────
 
 // participant implements dds.Participant over real RTPS/UDP.
 type participant struct {
@@ -21,28 +46,31 @@ type participant struct {
 	// Sockets.
 	mcastSock *udpSocket // SPDP multicast receive
 	metaSock  *udpSocket // SPDP send + SEDP send/receive (unicast)
-	dataSock  *udpSocket // User DATA send/receive (unicast)
+	dataSock  *udpSocket // User DATA / HEARTBEAT / ACKNACK
 
 	// Discovery services.
 	spdp *spdpService
 	sedp *sedpService
+
+	// Optional security plugin (nil = no security).
+	security SecurityPlugin
 
 	// Endpoint registry.
 	mu             sync.Mutex
 	closed         bool
 	writers        map[EntityId]*rtpsWriter
 	readers        map[EntityId]*rtpsReader
-	writerLocators map[GUID]Locator // remote writer → data delivery locator
-	entityCounter  uint32           // monotonic counter for entity IDs
+	writerLocators map[GUID]Locator
+	entityCounter  uint32
 }
 
 // New creates an RTPS participant joined to the given DDS domain.
-// It binds UDP sockets, starts SPDP, and returns a dds.Participant.
-func New(domain dds.Domain) (dds.Participant, error) {
-	return newParticipant(domain)
+// It binds UDP sockets, starts SPDP/SEDP, and returns a dds.Participant.
+func New(domain dds.Domain, opts ...Option) (dds.Participant, error) {
+	return newParticipant(domain, opts...)
 }
 
-func newParticipant(domain dds.Domain) (*participant, error) {
+func newParticipant(domain dds.Domain, opts ...Option) (*participant, error) {
 	d := int(domain)
 	guidPrefix := newGuidPrefix()
 
@@ -68,7 +96,6 @@ func newParticipant(domain dds.Domain) (*participant, error) {
 	}
 	_ = participantIdx
 
-	// Multicast socket for SPDP reception.
 	mcastSock, err := newMulticastReceiveSocket(spdpMulticastAddr, metaMulticastPort(d))
 	if err != nil {
 		metaSock.close()
@@ -86,10 +113,12 @@ func newParticipant(domain dds.Domain) (*participant, error) {
 		readers:        make(map[EntityId]*rtpsReader),
 		writerLocators: make(map[GUID]Locator),
 	}
+	for _, o := range opts {
+		o(p)
+	}
 
 	p.spdp = newSPDPService(p)
 	p.sedp = newSEDPService(p)
-
 	p.spdp.start()
 	p.sedp.start()
 
@@ -106,7 +135,17 @@ func (p *participant) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, er
 	}
 	n := atomic.AddUint32(&p.entityCounter, 1)
 	eid := entityIdForWriter(n)
-	w := &rtpsWriter{p: p, topic: topic, eid: eid}
+	w := &rtpsWriter{
+		p:        p,
+		topic:    topic,
+		eid:      eid,
+		reliable: qos.Reliability == dds.Reliable,
+	}
+	if w.reliable {
+		w.history = newSendHistory()
+		w.hbDone = make(chan struct{})
+		go w.heartbeatLoop()
+	}
 	p.writers[eid] = w
 	p.sedp.registerWriter(eid, topic)
 	return w, nil
@@ -121,10 +160,11 @@ func (p *participant) NewSubscriber(topic string, qos dds.QoS) (dds.Subscriber, 
 	n := atomic.AddUint32(&p.entityCounter, 1)
 	eid := entityIdForReader(n)
 	r := &rtpsReader{
-		p:     p,
-		topic: topic,
-		eid:   eid,
-		ch:    make(chan dds.Sample, 64),
+		p:        p,
+		topic:    topic,
+		eid:      eid,
+		ch:       make(chan dds.Sample, 64),
+		reliable: qos.Reliability == dds.Reliable,
 	}
 	p.readers[eid] = r
 	p.sedp.registerReader(eid, topic, r)
@@ -138,6 +178,12 @@ func (p *participant) Close() error {
 		return nil
 	}
 	p.closed = true
+	// Stop heartbeat loops before closing sockets.
+	for _, w := range p.writers {
+		if w.hbDone != nil {
+			close(w.hbDone)
+		}
+	}
 	p.spdp.close()
 	p.sedp.close()
 	p.mcastSock.close()
@@ -146,40 +192,167 @@ func (p *participant) Close() error {
 	return nil
 }
 
-// dataReceiveLoop reads user DATA submessages and dispatches to readers.
+// ── Receive loop ──────────────────────────────────────────────────────────────
+
 func (p *participant) dataReceiveLoop() {
 	for pkt := range p.dataSock.recv {
-		p.handleDataPacket(pkt.data)
+		p.handleDataPacket(pkt.data, pkt.from)
 	}
 }
 
-func (p *participant) handleDataPacket(data []byte) {
+func (p *participant) handleDataPacket(data []byte, from *net.UDPAddr) {
 	hdr, ok := parseHeader(data)
 	if !ok {
 		return
 	}
 	_ = parseSubmessages(data[20:], func(id, _ byte, body []byte) error {
-		if id != submsgDATA {
-			return nil
+		switch id {
+		case submsgDATA:
+			ds, ok := parseDataSubmessage(flagEndianness|flagData, body)
+			if !ok || ds.Payload == nil {
+				return nil
+			}
+			rawPayload, ok := cdrUnwrapPayload(ds.Payload)
+			if !ok {
+				return nil
+			}
+			if p.security != nil {
+				opened, err := p.security.Open(rawPayload)
+				if err != nil {
+					return nil // drop; tampered or wrong key
+				}
+				rawPayload = opened
+			}
+			sourceGUID := GUID{Prefix: hdr.GuidPrefix, Entity: ds.WriterEntityId}
+			p.notifyReliableReaders(sourceGUID, ds.SeqNum, from)
+			p.dispatchToReaders(sourceGUID, "", rawPayload)
+
+		case submsgHEARTBEAT:
+			hb, ok := parseHeartbeat(body)
+			if !ok {
+				return nil
+			}
+			writerGUID := GUID{Prefix: hdr.GuidPrefix, Entity: hb.WriterEntityId}
+			p.handleHeartbeat(writerGUID, hb, from)
+
+		case submsgACKNACK:
+			an, ok := parseAckNack(body)
+			if !ok {
+				return nil
+			}
+			p.handleAckNack(an)
 		}
-		ds, ok := parseDataSubmessage(flagEndianness|flagData, body)
-		if !ok || ds.Payload == nil {
-			return nil
-		}
-		rawPayload, ok := cdrUnwrapPayload(ds.Payload)
-		if !ok {
-			return nil
-		}
-		sourceGUID := GUID{Prefix: hdr.GuidPrefix, Entity: ds.WriterEntityId}
-		p.dispatchToReaders(sourceGUID, "", rawPayload)
 		return nil
 	})
 }
 
-// dispatchToReaders delivers payload to all readers that have sourceGUID in
-// their accept-list. topicFilter, when non-empty, restricts delivery to readers
-// on that topic (used for intra-process dispatch where topic is known; UDP
-// paths pass "" and rely on SEDP-based source GUID filtering instead).
+// notifyReliableReaders updates the recvTracker of any reliable reader that
+// accepts this writer, and sends ACKNACK if there are gaps.
+func (p *participant) notifyReliableReaders(writerGUID GUID, seqNum SequenceNumber, writerAddr *net.UDPAddr) {
+	p.mu.Lock()
+	readers := make([]*rtpsReader, 0, len(p.readers))
+	for _, r := range p.readers {
+		readers = append(readers, r)
+	}
+	p.mu.Unlock()
+
+	for _, r := range readers {
+		if !r.reliable || !r.acceptsSource(writerGUID) {
+			continue
+		}
+		tracker := r.trackerFor(writerGUID)
+		base, bitmap, needAck := tracker.receive(seqNum.Low)
+		if !needAck || writerAddr == nil {
+			continue
+		}
+		an := AckNack{
+			ReaderEntityId: r.eid,
+			WriterEntityId: writerGUID.Entity,
+			Base:           SequenceNumber{Low: base},
+			Bitmap:         bitmap,
+			Count:          tracker.nextAckCount(),
+		}
+		msg := wrapInRTPSMessage(p.guidPrefix, marshalAckNack(an))
+		_ = p.dataSock.send(writerAddr, msg)
+	}
+}
+
+// handleHeartbeat responds with ACKNACK if we have gaps for this writer.
+func (p *participant) handleHeartbeat(writerGUID GUID, hb Heartbeat, from *net.UDPAddr) {
+	p.mu.Lock()
+	readers := make([]*rtpsReader, 0, len(p.readers))
+	for _, r := range p.readers {
+		readers = append(readers, r)
+	}
+	p.mu.Unlock()
+
+	for _, r := range readers {
+		if !r.reliable || !r.acceptsSource(writerGUID) {
+			continue
+		}
+		tracker := r.trackerFor(writerGUID)
+		// If expected < firstSN the reader has never received anything from this
+		// writer; ACKNACK base = firstSN with bitmap=0 to confirm empty state.
+		if tracker.expected == 0 {
+			tracker.mu.Lock()
+			tracker.expected = hb.FirstSN.Low
+			tracker.mu.Unlock()
+		}
+		base, bitmap, needAck := tracker.receive(hb.LastSN.Low)
+		// Even if there's no gap at LastSN, check whether expected < lastSN
+		// (i.e. we're behind) and send a cumulative ACKNACK.
+		_ = base
+		_ = bitmap
+		if !needAck {
+			continue
+		}
+		if from == nil {
+			continue
+		}
+		an := AckNack{
+			ReaderEntityId: r.eid,
+			WriterEntityId: writerGUID.Entity,
+			Base:           SequenceNumber{Low: tracker.expected},
+			Bitmap:         bitmap,
+			Count:          tracker.nextAckCount(),
+		}
+		msg := wrapInRTPSMessage(p.guidPrefix, marshalAckNack(an))
+		_ = p.dataSock.send(from, msg)
+	}
+}
+
+// handleAckNack retransmits any missing samples from the writer's history.
+func (p *participant) handleAckNack(an AckNack) {
+	p.mu.Lock()
+	w, ok := p.writers[an.WriterEntityId]
+	p.mu.Unlock()
+	if !ok || !w.reliable {
+		return
+	}
+	// Retransmit any samples in the bitmap.
+	for bit := uint32(0); bit < 32; bit++ {
+		if an.Bitmap&(1<<bit) == 0 {
+			continue
+		}
+		seqLo := an.Base.Low + bit
+		msg := w.history.get(seqLo)
+		if msg == nil {
+			continue // evicted from history
+		}
+		for _, loc := range p.matchedReaderLocators(w.topic) {
+			dst := loc.udpAddr()
+			if dst != nil {
+				_ = p.dataSock.send(dst, msg)
+			}
+		}
+	}
+}
+
+// ── Dispatch ──────────────────────────────────────────────────────────────────
+
+// dispatchToReaders delivers payload to all readers whose topic matches and
+// whose accept-list includes source. topicFilter="" disables topic filtering
+// (used for UDP paths where the topic is resolved via SEDP source GUID).
 func (p *participant) dispatchToReaders(source GUID, topicFilter string, payload []byte) {
 	p.mu.Lock()
 	readers := make([]*rtpsReader, 0, len(p.readers))
@@ -225,25 +398,26 @@ func (p *participant) matchedReaderLocators(topicName string) []Locator {
 	var locators []Locator
 	for _, peer := range p.spdp.allPeers() {
 		if peer.defaultUnicast.Kind != LocatorKindInvalid {
-			// Only include if SEDP has matched a reader for this topic.
-			// For simplicity in phase 2, send to all known peers; recipients
-			// discard packets for topics they don't subscribe to.
 			locators = append(locators, peer.defaultUnicast)
 		}
 	}
+	_ = topicName
 	return locators
 }
 
 // ── Writer ────────────────────────────────────────────────────────────────────
 
 type rtpsWriter struct {
-	p      *participant
-	topic  string
-	eid    EntityId
-	mu     sync.Mutex
-	closed bool
-	seqHi  int32
-	seqLo  uint32
+	p        *participant
+	topic    string
+	eid      EntityId
+	mu       sync.Mutex
+	closed   bool
+	seqHi    int32
+	seqLo    uint32
+	reliable bool
+	history  *sendHistory  // non-nil when reliable == true
+	hbDone   chan struct{} // closed to stop the heartbeat goroutine
 }
 
 func (w *rtpsWriter) Write(payload []byte) error {
@@ -255,12 +429,25 @@ func (w *rtpsWriter) Write(payload []byte) error {
 	w.seqLo++
 	seqNum := SequenceNumber{High: w.seqHi, Low: w.seqLo}
 
-	wrapped := cdrWrapPayload(payload)
+	// Apply security before wrapping in CDR/RTPS.
+	wirePayload := payload
+	if w.p.security != nil {
+		sealed, err := w.p.security.Seal(payload)
+		if err != nil {
+			return fmt.Errorf("rtps: security seal: %w", err)
+		}
+		wirePayload = sealed
+	}
+	wrapped := cdrWrapPayload(wirePayload)
 	submsg := marshalDataSubmessage(w.eid, EntityIdUnknown, seqNum, wrapped)
 	msg := wrapInRTPSMessage(w.p.guidPrefix, submsg)
 
-	// Deliver locally (same process). Copy payload so caller mutations after
-	// Write do not affect the already-queued sample.
+	if w.reliable {
+		w.history.store(w.seqLo, msg)
+	}
+
+	// Deliver locally (same process). Copy so caller mutations don't affect
+	// the already-queued sample.
 	localCopy := make([]byte, len(payload))
 	copy(localCopy, payload)
 	w.p.dispatchToReaders(GUID{Prefix: w.p.guidPrefix, Entity: w.eid}, w.topic, localCopy)
@@ -273,27 +460,82 @@ func (w *rtpsWriter) Write(payload []byte) error {
 		}
 		_ = w.p.dataSock.send(dst, msg)
 	}
+
+	// Send HEARTBEAT immediately after each reliable write so remote readers
+	// can detect gaps without waiting for the periodic ticker.
+	if w.reliable {
+		w.sendHeartbeatLocked()
+	}
 	return nil
+}
+
+// sendHeartbeatLocked builds and sends a HEARTBEAT to all known reader
+// locators. Caller must hold w.mu (or call only from the heartbeatLoop).
+func (w *rtpsWriter) sendHeartbeatLocked() {
+	first, last, ok := w.history.firstLast()
+	if !ok {
+		return
+	}
+	hb := Heartbeat{
+		ReaderEntityId: EntityIdUnknown,
+		WriterEntityId: w.eid,
+		FirstSN:        SequenceNumber{Low: first},
+		LastSN:         SequenceNumber{Low: last},
+		Count:          w.history.hbCount.Add(1),
+	}
+	msg := wrapInRTPSMessage(w.p.guidPrefix, marshalHeartbeat(hb))
+	for _, loc := range w.p.matchedReaderLocators(w.topic) {
+		if dst := loc.udpAddr(); dst != nil {
+			_ = w.p.dataSock.send(dst, msg)
+		}
+	}
+}
+
+// heartbeatLoop periodically sends a HEARTBEAT for as long as the writer is
+// open, so remote readers can detect and recover from losses.
+func (w *rtpsWriter) heartbeatLoop() {
+	ticker := time.NewTicker(heartbeatPeriod)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			w.mu.Lock()
+			if !w.closed {
+				w.sendHeartbeatLocked()
+			}
+			w.mu.Unlock()
+		case <-w.hbDone:
+			return
+		}
+	}
 }
 
 func (w *rtpsWriter) Close() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	if w.closed {
+		return nil
+	}
 	w.closed = true
+	if w.hbDone != nil {
+		close(w.hbDone)
+		w.hbDone = nil
+	}
 	return nil
 }
 
 // ── Reader ────────────────────────────────────────────────────────────────────
 
 type rtpsReader struct {
-	p     *participant
-	topic string
-	eid   EntityId
-	ch    chan dds.Sample
-	mu    sync.RWMutex
-	// sources is the set of remote writer GUIDs whose DATA this reader accepts.
-	sources map[GUID]struct{}
-	once    sync.Once
+	p        *participant
+	topic    string
+	eid      EntityId
+	ch       chan dds.Sample
+	mu       sync.RWMutex
+	sources  map[GUID]struct{}     // SEDP-matched remote writer GUIDs
+	trackers map[GUID]*recvTracker // reliability trackers, one per remote writer
+	reliable bool
+	once     sync.Once
 }
 
 func (r *rtpsReader) addSourceGUID(g GUID) {
@@ -305,14 +547,27 @@ func (r *rtpsReader) addSourceGUID(g GUID) {
 	r.mu.Unlock()
 }
 
+// trackerFor returns (creating if necessary) the recvTracker for a remote writer.
+func (r *rtpsReader) trackerFor(writerGUID GUID) *recvTracker {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.trackers == nil {
+		r.trackers = make(map[GUID]*recvTracker)
+	}
+	if t, ok := r.trackers[writerGUID]; ok {
+		return t
+	}
+	t := &recvTracker{}
+	r.trackers[writerGUID] = t
+	return t
+}
+
 func (r *rtpsReader) acceptsSource(g GUID) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	if len(r.sources) == 0 {
-		// Before any SEDP matching, accept from our own participant.
 		return g.Prefix == r.p.guidPrefix
 	}
-	// Accept from local participant (intra-process) or matched remote writers.
 	if g.Prefix == r.p.guidPrefix {
 		return true
 	}

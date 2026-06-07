@@ -116,11 +116,11 @@ jobs:
         with:
           go-version: "1.22"
 
-      - name: go vet (rtps)
-        run: go vet ./rtps/...
+      - name: go vet (rtps + security)
+        run: go vet ./rtps/... ./security/...
 
       - name: go test (rtps wire + intra-process, -race)
-        run: go test -race -count=1 -short -v ./rtps/...
+        run: go test -race -count=1 -short -v ./rtps/... ./security/...
 
   # ── CycloneDDS CGo build (Linux only — requires system library) ───────────
   # libcyclonedds-dev is not in the Ubuntu 24.04 (Noble) apt repo; this job
