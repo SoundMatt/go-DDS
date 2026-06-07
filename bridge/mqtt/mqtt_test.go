@@ -113,7 +113,7 @@ func TestNewBridge_ConnectedClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewBridge: %v", err)
 	}
-	defer b.Close()
+	defer func() { _ = b.Close() }()
 }
 
 func TestNewBridge_DisconnectedClient_Errors(t *testing.T) {
@@ -135,7 +135,7 @@ func TestBridge_DDSToMQTT(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewBridge: %v", err)
 	}
-	defer b.Close()
+	defer func() { _ = b.Close() }()
 
 	pub, _ := p.NewPublisher("vehicle/speed", dds.DefaultQoS)
 	defer pub.Close()
@@ -161,7 +161,7 @@ func TestBridge_MQTTToDDS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewBridge: %v", err)
 	}
-	defer b.Close()
+	defer func() { _ = b.Close() }()
 
 	sub, _ := p.NewSubscriber("sensor/temp", dds.DefaultQoS)
 	defer sub.Close()
@@ -262,7 +262,7 @@ func TestBridge_FromMQTT_NoTopicMatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewBridge: %v", err)
 	}
-	defer b.Close()
+	defer func() { _ = b.Close() }()
 
 	sub, _ := p.NewSubscriber("signals/rpm", dds.DefaultQoS)
 	defer sub.Close()

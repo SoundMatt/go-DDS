@@ -103,7 +103,7 @@ func BenchmarkPublish_FanOut(b *testing.B) {
 			}
 			defer func() {
 				for _, s := range subs {
-					s.Close()
+					_ = s.Close()
 				}
 			}()
 			pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
@@ -266,8 +266,8 @@ func BenchmarkPublish_ManyTopics(b *testing.B) {
 	}
 	defer func() {
 		for i := range subs {
-			subs[i].Close()
-			pubs[i].Close()
+			_ = subs[i].Close()
+			_ = pubs[i].Close()
 		}
 	}()
 

@@ -211,7 +211,7 @@ func FuzzNoRouting(f *testing.F) {
 		defer p.Close()
 
 		subB, _ := p.NewSubscriber(topicB, dds.DefaultQoS)
-		defer subB.Close()
+		defer func() { _ = subB.Close() }()
 
 		pub, _ := p.NewPublisher(topicA, dds.DefaultQoS)
 		defer pub.Close()

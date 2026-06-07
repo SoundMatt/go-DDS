@@ -23,11 +23,11 @@ func ExampleNewWaitSet() {
 
 	subTemp, _ := p.NewSubscriber("sensors/temp", dds.DefaultQoS)
 	subSpeed, _ := p.NewSubscriber("vehicle/speed", dds.DefaultQoS)
-	defer subTemp.Close()
-	defer subSpeed.Close()
+	defer func() { _ = subTemp.Close() }()
+	defer func() { _ = subSpeed.Close() }()
 
 	pubTemp, _ := p.NewPublisher("sensors/temp", dds.DefaultQoS)
-	defer pubTemp.Close()
+	defer func() { _ = pubTemp.Close() }()
 
 	_ = pubTemp.Write([]byte("21.5"))
 

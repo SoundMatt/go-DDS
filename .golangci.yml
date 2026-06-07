@@ -28,6 +28,11 @@ linters:
     rules:
       - path: cyclone/cyclone\.go
         linters: [govet]
+      # Deferred Close() calls in tests need not check the error;
+      # the resource is being cleaned up and the error is unactionable.
+      - path: _test\.go
+        text: "Close.*is not checked"
+        linters: [errcheck]
 
 formatters:
   enable:
