@@ -47,7 +47,9 @@ func BenchmarkPublish_RoundTrip(b *testing.B) {
 			b.ResetTimer()
 
 			for i := 0; i < b.N; i++ {
-				pub.Write(payload)
+				if err := pub.Write(payload); err != nil {
+					b.Fatal(err)
+				}
 				<-sub.C()
 			}
 		})
@@ -80,7 +82,7 @@ func BenchmarkPublish_FireAndForget(b *testing.B) {
 			b.ResetTimer()
 
 			for i := 0; i < b.N; i++ {
-				pub.Write(payload)
+				_ = pub.Write(payload)
 			}
 		})
 	}
@@ -116,7 +118,9 @@ func BenchmarkPublish_FanOut(b *testing.B) {
 			b.ResetTimer()
 
 			for i := 0; i < b.N; i++ {
-				pub.Write(payload)
+				if err := pub.Write(payload); err != nil {
+					b.Fatal(err)
+				}
 				for _, s := range subs {
 					<-s.C()
 				}
@@ -143,7 +147,7 @@ func BenchmarkPublish_Parallel(b *testing.B) {
 		pub, _ := p.NewPublisher("bench/parallel", dds.DefaultQoS)
 		defer pub.Close()
 		for pb.Next() {
-			pub.Write(payload)
+			_ = pub.Write(payload)
 		}
 	})
 }
@@ -162,7 +166,9 @@ func BenchmarkSubscribe_Parallel(b *testing.B) {
 		for pb.Next() {
 			sub, _ := p.NewSubscriber("bench/sub-parallel", dds.DefaultQoS)
 			pub, _ := p.NewPublisher("bench/sub-parallel", dds.DefaultQoS)
-			pub.Write(payload)
+			if err := pub.Write(payload); err != nil {
+				b.Fatal(err)
+			}
 			<-sub.C()
 			pub.Close()
 			sub.Close()
@@ -222,7 +228,7 @@ func BenchmarkBroker_DroppedSamples(b *testing.B) {
 	payload := []byte("x")
 	// Pre-fill the 64-slot buffer so every subsequent Write hits the drop path.
 	for i := 0; i < 64; i++ {
-		pub.Write(payload)
+		_ = pub.Write(payload)
 	}
 
 	b.SetBytes(int64(len(payload)))
@@ -230,7 +236,7 @@ func BenchmarkBroker_DroppedSamples(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		pub.Write(payload) // buffer full → drop
+		_ = pub.Write(payload) // buffer full → drop
 	}
 }
 
@@ -275,7 +281,9 @@ func BenchmarkPublish_ManyTopics(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		idx := i % numTopics
-		pubs[idx].Write(payload)
+		if err := pubs[idx].Write(payload); err != nil {
+			b.Fatal(err)
+		}
 		<-subs[idx].C()
 	}
 }

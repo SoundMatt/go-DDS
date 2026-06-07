@@ -18,7 +18,7 @@
 package cyclone
 
 import (
-	"fmt"
+	"errors"
 	"time"
 
 	dds "github.com/SoundMatt/go-DDS"
@@ -35,10 +35,10 @@ const errMsg = "cyclone: not built; rebuild with -tags cyclone and CycloneDDS in
 
 // New returns an error when the cyclone build tag is absent.
 func New(_ dds.Domain) (dds.Participant, error) {
-	return nil, fmt.Errorf(errMsg)
+	return nil, errors.New(errMsg)
 }
 
 // NewWithOptions returns an error when the cyclone build tag is absent.
 func NewWithOptions(_ dds.Domain, _ Options) (dds.Participant, error) {
-	return nil, fmt.Errorf(errMsg)
+	return nil, errors.New(errMsg)
 }

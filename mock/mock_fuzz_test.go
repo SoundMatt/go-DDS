@@ -36,7 +36,7 @@ func FuzzPublish(f *testing.F) {
 	f.Add([]byte{0x00})
 	f.Add([]byte{0xFF, 0xFE, 0x00, 0x01})
 	f.Add([]byte{0x00, 0x00, 0x00, 0x00})
-	f.Add(make([]byte, 1024))           // 1 KB zeros
+	f.Add(make([]byte, 1024))               // 1 KB zeros
 	f.Add(bytes.Repeat([]byte{0xAB}, 4096)) // 4 KB repeated byte
 
 	f.Fuzz(func(t *testing.T, payload []byte) {
