@@ -348,3 +348,190 @@ func TestMultipleDomains_ShareBroker(t *testing.T) {
 		t.Fatal("cross-domain delivery failed in mock")
 	}
 }
+
+func TestContentFilter_DeliverMatchingOnly(t *testing.T) {
+	p := newParticipant(t)
+
+	sub, err := p.NewSubscriber("filter/mock", dds.DefaultQoS,
+		dds.WithFilter(func(s dds.Sample) bool { return string(s.Payload) == "pass" }),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+	pub, _ := p.NewPublisher("filter/mock", dds.DefaultQoS)
+	defer pub.Close()
+
+	_ = pub.Write([]byte("drop"))
+	_ = pub.Write([]byte("pass"))
+
+	select {
+	case s := <-sub.C():
+		if string(s.Payload) != "pass" {
+			t.Errorf("got %q, want pass", s.Payload)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout: filtered sample not delivered")
+	}
+	select {
+	case s := <-sub.C():
+		t.Errorf("unexpected sample: %q", s.Payload)
+	default:
+	}
+}
+
+func TestWildcard_SingleLevel(t *testing.T) {
+	p := newParticipant(t)
+
+	sub, err := p.NewSubscriber("wild/+/data", dds.DefaultQoS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+	pub, _ := p.NewPublisher("wild/sensor1/data", dds.DefaultQoS)
+	defer pub.Close()
+
+	_ = pub.Write([]byte("42"))
+	select {
+	case s := <-sub.C():
+		if string(s.Payload) != "42" {
+			t.Errorf("got %q, want 42", s.Payload)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("wildcard sample not delivered")
+	}
+}
+
+func TestWildcard_MultiLevel(t *testing.T) {
+	p := newParticipant(t)
+
+	sub, err := p.NewSubscriber("sensors/#", dds.DefaultQoS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+	pub, _ := p.NewPublisher("sensors/temp/room1", dds.DefaultQoS)
+	defer pub.Close()
+
+	_ = pub.Write([]byte("23"))
+	select {
+	case <-sub.C():
+	case <-time.After(time.Second):
+		t.Fatal("# wildcard sample not delivered")
+	}
+}
+
+func TestSentinelErrors_EmptyTopic(t *testing.T) {
+	p := newParticipant(t)
+	if _, err := p.NewPublisher("", dds.DefaultQoS); err == nil {
+		t.Error("expected error for empty publisher topic")
+	}
+	if _, err := p.NewSubscriber("", dds.DefaultQoS); err == nil {
+		t.Error("expected error for empty subscriber topic")
+	}
+}
+
+func TestSentinelErrors_ClosedParticipant(t *testing.T) {
+	p, _ := mock.New(0)
+	p.Close()
+	if _, err := p.NewPublisher("x", dds.DefaultQoS); err == nil {
+		t.Error("expected error from closed participant publisher")
+	}
+	if _, err := p.NewSubscriber("x", dds.DefaultQoS); err == nil {
+		t.Error("expected error from closed participant subscriber")
+	}
+}
+
+func TestDeadlineCallback_Fires(t *testing.T) {
+	fired := make(chan string, 1)
+	p, err := mock.New(0, mock.WithDeadlineCallback(func(topic string) {
+		select {
+		case fired <- topic:
+		default:
+		}
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+
+	qos := dds.DefaultQoS
+	qos.Deadline = 50 * time.Millisecond
+	pub, err := p.NewPublisher("mock/deadline", qos)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pub.Close()
+
+	select {
+	case topic := <-fired:
+		if topic != "mock/deadline" {
+			t.Errorf("expected mock/deadline, got %q", topic)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("deadline callback did not fire")
+	}
+}
+
+func TestDeadlineCallback_ResetOnWrite(t *testing.T) {
+	fired := make(chan struct{}, 1)
+	p, err := mock.New(0, mock.WithDeadlineCallback(func(_ string) {
+		select {
+		case fired <- struct{}{}:
+		default:
+		}
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+
+	qos := dds.DefaultQoS
+	qos.Deadline = 100 * time.Millisecond
+	pub, err := p.NewPublisher("mock/nodeadline", qos)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pub.Close()
+
+	// Keep writing to prevent deadline.
+	_ = pub.Write([]byte("a"))
+	time.Sleep(60 * time.Millisecond)
+	_ = pub.Write([]byte("b"))
+	time.Sleep(60 * time.Millisecond)
+	_ = pub.Write([]byte("c"))
+
+	select {
+	case <-fired:
+		t.Error("deadline callback should not fire when writes are timely")
+	case <-time.After(50 * time.Millisecond):
+		// Good.
+	}
+}
+
+func TestMetrics_MockParticipant(t *testing.T) {
+	p := newParticipant(t)
+	mp, ok := p.(dds.MetricsProvider)
+	if !ok {
+		t.Skip("mock does not implement MetricsProvider")
+	}
+
+	pub, _ := p.NewPublisher("metrics/mock", dds.DefaultQoS)
+	sub, _ := p.NewSubscriber("metrics/mock", dds.DefaultQoS)
+	defer sub.Close()
+
+	_ = pub.Write([]byte("x"))
+	select {
+	case <-sub.C():
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for sample")
+	}
+
+	m := mp.Metrics()
+	if m.WriteCount == 0 {
+		t.Error("WriteCount should be > 0")
+	}
+	if m.DeliverCount == 0 {
+		t.Error("DeliverCount should be > 0")
+	}
+}

@@ -177,7 +177,7 @@ func (p *participant) NewPublisher(topic string, _ dds.QoS) (dds.Publisher, erro
 	return &publisher{topic: topic, wid: wid}, nil
 }
 
-func (p *participant) NewSubscriber(topic string, _ dds.QoS) (dds.Subscriber, error) {
+func (p *participant) NewSubscriber(topic string, _ dds.QoS, _ ...dds.SubscriberOption) (dds.Subscriber, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.closed {

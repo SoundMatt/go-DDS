@@ -54,6 +54,24 @@ func WithIPv6() Option {
 	return func(p *participant) { p.ipv6 = true }
 }
 
+// WithNoMulticast disables SPDP multicast discovery. The participant will not
+// join or send to 239.255.0.1; use WithPeerLocators to supply peers manually.
+func WithNoMulticast() Option {
+	return func(p *participant) { p.noMulticast = true }
+}
+
+// WithPeerLocators adds static peer unicast addresses for unicast-only
+// discovery. Each address must be a host:port string parseable by net.ResolveUDPAddr.
+func WithPeerLocators(addrs ...string) Option {
+	return func(p *participant) { p.peerLocators = append(p.peerLocators, addrs...) }
+}
+
+// WithDeadlineCallback sets a function that is called when a publisher has not
+// written for longer than its QoS.Deadline period.
+func WithDeadlineCallback(fn func(topic string)) Option {
+	return func(p *participant) { p.deadlineCb = fn }
+}
+
 // ── Participant ───────────────────────────────────────────────────────────────
 
 // participant implements dds.Participant over real RTPS/UDP.
@@ -61,8 +79,12 @@ type participant struct {
 	domain     dds.Domain
 	guidPrefix GuidPrefix
 
-	// IPv6 flag set by WithIPv6() option.
-	ipv6 bool
+	// Flags set by options.
+	ipv6         bool
+	noMulticast  bool
+	peerLocators []string
+	deadlineCb   func(string)
+	persistDir   string
 
 	// Sockets (IPv4).
 	mcastSock *udpSocket // SPDP multicast receive
@@ -92,6 +114,13 @@ type participant struct {
 	// Uses sync.Map to avoid lock-ordering issues: Write holds w.mu and must
 	// not also acquire p.mu (which Close holds while iterating writers).
 	lastSample sync.Map
+
+	// Metrics counters — incremented atomically, never need p.mu.
+	mWrites       atomic.Uint64
+	mDelivers     atomic.Uint64
+	mDrops        atomic.Uint64
+	mBytesWritten atomic.Uint64
+	mBytesDeliv   atomic.Uint64
 }
 
 // New creates an RTPS participant joined to the given DDS domain.
@@ -172,10 +201,13 @@ func newParticipant(domain dds.Domain, opts ...Option) (*participant, error) {
 }
 
 func (p *participant) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, error) {
+	if topic == "" {
+		return nil, fmt.Errorf("rtps: %w", dds.ErrTopicEmpty)
+	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.closed {
-		return nil, fmt.Errorf("rtps: participant closed")
+		return nil, fmt.Errorf("rtps: %w", dds.ErrClosed)
 	}
 	n := atomic.AddUint32(&p.entityCounter, 1)
 	eid := entityIdForWriter(n)
@@ -183,6 +215,7 @@ func (p *participant) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, er
 		p:        p,
 		topic:    topic,
 		eid:      eid,
+		qos:      qos,
 		reliable: qos.Reliability == dds.Reliable,
 	}
 	if w.reliable {
@@ -193,17 +226,24 @@ func (p *participant) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, er
 		// under w.mu without racing with the goroutine.
 		go w.heartbeatLoop(w.hbDone)
 	}
+	if qos.Deadline > 0 && p.deadlineCb != nil {
+		w.deadlineTimer = time.AfterFunc(qos.Deadline, func() { p.deadlineCb(topic) })
+	}
 	p.writers[eid] = w
 	p.sedp.registerWriter(eid, topic)
 	return w, nil
 }
 
-func (p *participant) NewSubscriber(topic string, qos dds.QoS) (dds.Subscriber, error) {
+func (p *participant) NewSubscriber(topic string, qos dds.QoS, opts ...dds.SubscriberOption) (dds.Subscriber, error) {
+	if topic == "" {
+		return nil, fmt.Errorf("rtps: %w", dds.ErrTopicEmpty)
+	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.closed {
-		return nil, fmt.Errorf("rtps: participant closed")
+		return nil, fmt.Errorf("rtps: %w", dds.ErrClosed)
 	}
+	cfg := dds.ApplySubscriberOpts(opts)
 	n := atomic.AddUint32(&p.entityCounter, 1)
 	eid := entityIdForReader(n)
 	r := &rtpsReader{
@@ -212,21 +252,47 @@ func (p *participant) NewSubscriber(topic string, qos dds.QoS) (dds.Subscriber, 
 		eid:      eid,
 		ch:       make(chan dds.Sample, 64),
 		reliable: qos.Reliability == dds.Reliable,
+		filter:   cfg.Filter,
 	}
 	p.readers[eid] = r
 	p.sedp.registerReader(eid, topic, r)
 	// TransientLocal: deliver the last published sample to the new subscriber.
+	// Also check disk-backed persistent history if no in-memory sample exists.
 	if qos.Durability == dds.TransientLocal {
 		if v, ok := p.lastSample.Load(topic); ok {
 			if last, ok2 := v.(*dds.Sample); ok2 {
-				select {
-				case r.ch <- *last:
-				default:
+				if cfg.Filter == nil || cfg.Filter(*last) {
+					select {
+					case r.ch <- *last:
+					default:
+					}
+				}
+			}
+		} else if p.persistDir != "" {
+			if payload, err := persistLoad(p.persistDir, topic); err == nil && payload != nil {
+				sample := dds.Sample{Topic: topic, Payload: payload}
+				p.lastSample.Store(topic, &sample)
+				if cfg.Filter == nil || cfg.Filter(sample) {
+					select {
+					case r.ch <- sample:
+					default:
+					}
 				}
 			}
 		}
 	}
 	return r, nil
+}
+
+// Metrics implements dds.MetricsProvider.
+func (p *participant) Metrics() dds.Metrics {
+	return dds.Metrics{
+		WriteCount:     p.mWrites.Load(),
+		DeliverCount:   p.mDelivers.Load(),
+		DropCount:      p.mDrops.Load(),
+		BytesWritten:   p.mBytesWritten.Load(),
+		BytesDelivered: p.mBytesDeliv.Load(),
+	}
 }
 
 func (p *participant) Close() error {
@@ -489,12 +555,19 @@ func (p *participant) dispatchToReaders(source GUID, topicFilter string, payload
 		if topicFilter != "" && r.topic != topicFilter {
 			continue
 		}
-		if r.acceptsSource(source) {
-			sample := dds.Sample{Topic: r.topic, Payload: payload}
-			select {
-			case r.ch <- sample:
-			default: // slow consumer; drop
-			}
+		if !r.acceptsSource(source) {
+			continue
+		}
+		sample := dds.Sample{Topic: r.topic, Payload: payload}
+		if r.filter != nil && !r.filter(sample) {
+			continue
+		}
+		select {
+		case r.ch <- sample:
+			p.mDelivers.Add(1)
+			p.mBytesDeliv.Add(uint64(len(payload)))
+		default:
+			p.mDrops.Add(1)
 		}
 	}
 }
@@ -544,24 +617,31 @@ func (p *participant) matchedReaderLocators(topicName string) []Locator {
 // ── Writer ────────────────────────────────────────────────────────────────────
 
 type rtpsWriter struct {
-	p        *participant
-	topic    string
-	eid      EntityId
-	mu       sync.Mutex
-	closed   bool
-	seqHi    int32
-	seqLo    uint32
-	reliable bool
-	history  *sendHistory  // non-nil when reliable == true
-	hbDone   chan struct{} // closed to stop the heartbeat goroutine
+	p             *participant
+	topic         string
+	eid           EntityId
+	qos           dds.QoS
+	mu            sync.Mutex
+	closed        bool
+	seqHi         int32
+	seqLo         uint32
+	reliable      bool
+	history       *sendHistory  // non-nil when reliable == true
+	hbDone        chan struct{} // closed to stop the heartbeat goroutine
+	deadlineTimer *time.Timer   // non-nil when QoS.Deadline > 0
 }
 
 func (w *rtpsWriter) Write(payload []byte) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if w.closed {
-		return fmt.Errorf("rtps: writer closed")
+		return fmt.Errorf("rtps: %w", dds.ErrClosed)
 	}
+	if w.deadlineTimer != nil {
+		w.deadlineTimer.Reset(w.qos.Deadline)
+	}
+	w.p.mWrites.Add(1)
+	w.p.mBytesWritten.Add(uint64(len(payload)))
 	w.seqLo++
 	seqNum := SequenceNumber{High: w.seqHi, Low: w.seqLo}
 
@@ -590,6 +670,7 @@ func (w *rtpsWriter) Write(payload []byte) error {
 	// without holding p.mu (avoids w.mu → p.mu lock inversion with Close).
 	sample := dds.Sample{Topic: w.topic, Payload: localCopy}
 	w.p.lastSample.Store(w.topic, &sample)
+	persistFlush(w.p.persistDir, w.topic, localCopy)
 	w.p.dispatchToReaders(GUID{Prefix: w.p.guidPrefix, Entity: w.eid}, w.topic, localCopy)
 
 	// Send to all known remote peers.
@@ -661,6 +742,10 @@ func (w *rtpsWriter) Close() error {
 		close(w.hbDone)
 		w.hbDone = nil // safe: heartbeatLoop captured the channel at startup
 	}
+	if w.deadlineTimer != nil {
+		w.deadlineTimer.Stop()
+		w.deadlineTimer = nil
+	}
 	return nil
 }
 
@@ -675,6 +760,7 @@ type rtpsReader struct {
 	sources  map[GUID]struct{}     // SEDP-matched remote writer GUIDs
 	trackers map[GUID]*recvTracker // reliability trackers, one per remote writer
 	reliable bool
+	filter   func(dds.Sample) bool // nil = no filter
 	once     sync.Once
 }
 

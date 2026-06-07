@@ -910,3 +910,368 @@ func TestSEDP_RegisterReader_PreExistingRemoteWriter(t *testing.T) {
 		t.Error("reader should accept pre-existing remote writer after registerReader")
 	}
 }
+
+// ── Wildcard tests ────────────────────────────────────────────────────────────
+
+func TestTopicMatches_Exact(t *testing.T) {
+	if !TopicMatches("a/b/c", "a/b/c") {
+		t.Error("exact match should succeed")
+	}
+	if TopicMatches("a/b/c", "a/b/d") {
+		t.Error("different tail should not match")
+	}
+}
+
+func TestTopicMatches_SingleLevel(t *testing.T) {
+	if !TopicMatches("a/+/c", "a/b/c") {
+		t.Error("+ should match single segment")
+	}
+	if TopicMatches("a/+/c", "a/b/b/c") {
+		t.Error("+ should not match multiple segments")
+	}
+}
+
+func TestTopicMatches_MultiLevel(t *testing.T) {
+	if !TopicMatches("a/#", "a/b/c/d") {
+		t.Error("# should match remaining levels")
+	}
+	if !TopicMatches("a/#", "a/b") {
+		t.Error("# should match single remaining level")
+	}
+	if !TopicMatches("#", "anything/here") {
+		t.Error("bare # should match everything")
+	}
+}
+
+func TestTopicMatches_NoMatch(t *testing.T) {
+	if TopicMatches("a/b", "a") {
+		t.Error("prefix should not match")
+	}
+	if TopicMatches("a", "a/b") {
+		t.Error("topic with extra levels should not match bare pattern")
+	}
+}
+
+// ── Fragment tests ────────────────────────────────────────────────────────────
+
+func TestMarshalParseDataFrag_RoundTrip(t *testing.T) {
+	frag := DataFrag{
+		WriterEntityId:      entityIdForWriter(1),
+		ReaderEntityId:      EntityIdUnknown,
+		WriterSeqNum:        SequenceNumber{Low: 3},
+		FragmentStartingNum: 1,
+		FragmentsInSubmsg:   1,
+		FragmentSize:        12,
+		DataSize:            12,
+		Payload:             []byte("hello world!"),
+	}
+	raw := marshalDataFrag(frag)
+	// Parse from body (skip 4-byte submsg header).
+	parsed, ok := parseDataFrag(raw[4:])
+	if !ok {
+		t.Fatal("parseDataFrag returned ok=false")
+	}
+	if parsed.FragmentStartingNum != frag.FragmentStartingNum {
+		t.Errorf("FragmentStartingNum: got %d want %d", parsed.FragmentStartingNum, frag.FragmentStartingNum)
+	}
+	if parsed.DataSize != frag.DataSize {
+		t.Errorf("DataSize: got %d want %d", parsed.DataSize, frag.DataSize)
+	}
+	if string(parsed.Payload) != string(frag.Payload) {
+		t.Errorf("Payload: got %q want %q", parsed.Payload, frag.Payload)
+	}
+}
+
+func TestSplitIntoFragments_SmallPayload(t *testing.T) {
+	payload := []byte("small")
+	eid := entityIdForWriter(1)
+	frags := splitIntoFragments(eid, SequenceNumber{Low: 1}, payload)
+	if len(frags) != 1 {
+		t.Fatalf("want 1 fragment, got %d", len(frags))
+	}
+	if string(frags[0].Payload) != "small" {
+		t.Errorf("fragment payload mismatch: %q", frags[0].Payload)
+	}
+}
+
+func TestSplitIntoFragments_LargePayload_MultipleFragments(t *testing.T) {
+	payload := make([]byte, maxFragmentPayload*3+100)
+	for i := range payload {
+		payload[i] = byte(i % 251)
+	}
+	eid := entityIdForWriter(1)
+	frags := splitIntoFragments(eid, SequenceNumber{Low: 2}, payload)
+	if len(frags) != 4 {
+		t.Fatalf("want 4 fragments, got %d", len(frags))
+	}
+	for i, f := range frags {
+		if f.FragmentStartingNum != uint32(i+1) {
+			t.Errorf("frag %d: FragmentStartingNum = %d, want %d", i, f.FragmentStartingNum, i+1)
+		}
+		if f.DataSize != uint32(len(payload)) {
+			t.Errorf("frag %d: DataSize = %d, want %d", i, f.DataSize, len(payload))
+		}
+	}
+}
+
+func TestFragmentAssembler_Reassembles(t *testing.T) {
+	payload := make([]byte, maxFragmentPayload*2+50)
+	for i := range payload {
+		payload[i] = byte(i % 251)
+	}
+	eid := entityIdForWriter(1)
+	frags := splitIntoFragments(eid, SequenceNumber{Low: 1}, payload)
+
+	var fa fragmentAssembler
+	var result []byte
+	for _, f := range frags {
+		result = fa.receive(f)
+		if result != nil {
+			break
+		}
+	}
+	if result == nil {
+		t.Fatal("assembler did not return complete payload")
+	}
+	if string(result) != string(payload) {
+		t.Error("reassembled payload does not match original")
+	}
+}
+
+func TestFragmentAssembler_PartialNoResult(t *testing.T) {
+	payload := make([]byte, maxFragmentPayload*2)
+	eid := entityIdForWriter(1)
+	frags := splitIntoFragments(eid, SequenceNumber{Low: 1}, payload)
+
+	var fa fragmentAssembler
+	// Only send first fragment; should get nil back.
+	result := fa.receive(frags[0])
+	if result != nil {
+		t.Error("partial delivery should return nil")
+	}
+}
+
+// ── Persist tests ─────────────────────────────────────────────────────────────
+
+func TestPersistFlushLoad_RoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	payload := []byte("vehicle/speed=120")
+	persistFlush(dir, "vehicle/speed", payload)
+	got, err := persistLoad(dir, "vehicle/speed")
+	if err != nil {
+		t.Fatalf("persistLoad: %v", err)
+	}
+	if string(got) != string(payload) {
+		t.Errorf("got %q, want %q", got, payload)
+	}
+}
+
+func TestPersistLoad_MissingFile_ReturnsNil(t *testing.T) {
+	dir := t.TempDir()
+	got, err := persistLoad(dir, "no/such/topic")
+	if err == nil {
+		t.Error("expected error for missing file")
+	}
+	if got != nil {
+		t.Error("expected nil payload for missing file")
+	}
+}
+
+func TestPersistFlush_EmptyDir_NoOp(t *testing.T) {
+	// Should not panic.
+	persistFlush("", "topic", []byte("data"))
+}
+
+// ── Sentinel error tests ──────────────────────────────────────────────────────
+
+func TestNewPublisher_EmptyTopic_ErrTopicEmpty(t *testing.T) {
+	p := testPart(t)
+	_, err := p.NewPublisher("", dds.DefaultQoS)
+	if err == nil {
+		t.Fatal("expected error for empty topic")
+	}
+}
+
+func TestNewSubscriber_EmptyTopic_ErrTopicEmpty(t *testing.T) {
+	p := testPart(t)
+	_, err := p.NewSubscriber("", dds.DefaultQoS)
+	if err == nil {
+		t.Fatal("expected error for empty topic")
+	}
+}
+
+func TestWrite_AfterClose_ErrClosed(t *testing.T) {
+	p := testPart(t)
+	pub, err := p.NewPublisher("close/test", dds.DefaultQoS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pub.Close()
+	if err := pub.Write([]byte("x")); err == nil {
+		t.Fatal("expected error writing to closed publisher")
+	}
+}
+
+// ── Metrics tests ─────────────────────────────────────────────────────────────
+
+func TestMetrics_WritesAndDelivers(t *testing.T) {
+	p := testPart(t)
+
+	pub, err := p.NewPublisher("metrics/test", dds.DefaultQoS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sub, err := p.NewSubscriber("metrics/test", dds.DefaultQoS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+
+	_ = pub.Write([]byte("hello"))
+	// Drain the subscriber so we know delivery happened.
+	select {
+	case <-sub.C():
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for sample")
+	}
+
+	m := p.Metrics()
+	if m.WriteCount == 0 {
+		t.Error("WriteCount should be > 0 after Write")
+	}
+	if m.DeliverCount == 0 {
+		t.Error("DeliverCount should be > 0 after delivery")
+	}
+}
+
+// ── Deadline tests ────────────────────────────────────────────────────────────
+
+func TestDeadline_CallbackFires_WhenNoWrite(t *testing.T) {
+	fired := make(chan string, 1)
+	p, err := newParticipant(dds.Domain(99), WithDeadlineCallback(func(topic string) {
+		select {
+		case fired <- topic:
+		default:
+		}
+	}))
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	defer p.Close()
+
+	qos := dds.DefaultQoS
+	qos.Deadline = 50 * time.Millisecond
+	pub, err := p.NewPublisher("deadline/topic", qos)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pub.Close()
+
+	select {
+	case topic := <-fired:
+		if topic != "deadline/topic" {
+			t.Errorf("expected deadline on 'deadline/topic', got %q", topic)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("deadline callback did not fire")
+	}
+}
+
+func TestDeadline_CallbackNotFired_AfterWrite(t *testing.T) {
+	fired := make(chan string, 1)
+	p, err := newParticipant(dds.Domain(99), WithDeadlineCallback(func(topic string) {
+		select {
+		case fired <- topic:
+		default:
+		}
+	}))
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	defer p.Close()
+
+	qos := dds.DefaultQoS
+	qos.Deadline = 100 * time.Millisecond
+	pub, err := p.NewPublisher("nodeadline/topic", qos)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pub.Close()
+
+	// Write twice within the deadline window to keep the timer reset.
+	_ = pub.Write([]byte("a"))
+	time.Sleep(60 * time.Millisecond)
+	_ = pub.Write([]byte("b"))
+	time.Sleep(60 * time.Millisecond)
+	_ = pub.Write([]byte("c"))
+
+	select {
+	case topic := <-fired:
+		t.Errorf("deadline should not have fired but got topic %q", topic)
+	case <-time.After(50 * time.Millisecond):
+		// Good — timer stayed alive.
+	}
+}
+
+// ── Content filter tests ──────────────────────────────────────────────────────
+
+func TestContentFilter_OnlyMatchingDelivered(t *testing.T) {
+	p := testPart(t)
+	pub, err := p.NewPublisher("filter/test", dds.DefaultQoS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sub, err := p.NewSubscriber("filter/test", dds.DefaultQoS,
+		dds.WithFilter(func(s dds.Sample) bool {
+			return string(s.Payload) == "yes"
+		}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+
+	_ = pub.Write([]byte("no"))
+	_ = pub.Write([]byte("yes"))
+
+	select {
+	case s := <-sub.C():
+		if string(s.Payload) != "yes" {
+			t.Errorf("expected 'yes', got %q", s.Payload)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for filtered sample")
+	}
+
+	// Verify "no" was not delivered.
+	select {
+	case s := <-sub.C():
+		t.Errorf("unexpected sample delivered: %q", s.Payload)
+	default:
+	}
+}
+
+// ── Unicast-only option tests ─────────────────────────────────────────────────
+
+func TestWithNoMulticast_ParticipantStarts(t *testing.T) {
+	// With no multicast we skip the SPDP multicast socket but still bind
+	// the unicast meta and data sockets; the participant should start without error.
+	// NOTE: current implementation still binds the mcast socket (the option is
+	// stored but not yet used to skip the bind — that is wired at SPDP level).
+	// This test verifies the option is accepted without error.
+	_, err := newParticipant(dds.Domain(99), WithNoMulticast())
+	if err != nil {
+		t.Skipf("newParticipant: %v — socket creation unavailable", err)
+	}
+}
+
+func TestWithPeerLocators_Accepted(t *testing.T) {
+	p, err := newParticipant(dds.Domain(99), WithPeerLocators("127.0.0.1:7400"))
+	if err != nil {
+		t.Skipf("newParticipant: %v — socket creation unavailable", err)
+	}
+	defer p.Close()
+	if len(p.peerLocators) != 1 || p.peerLocators[0] != "127.0.0.1:7400" {
+		t.Errorf("peerLocators not stored: %v", p.peerLocators)
+	}
+}

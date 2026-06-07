@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>go-DDS Monitor</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: monospace; background: #0d0d0d; color: #e0e0e0; padding: 1rem; }
+h1 { font-size: 1.2rem; color: #7ec8e3; margin-bottom: 0.8rem; }
+#status { font-size: 0.8rem; color: #888; margin-bottom: 1rem; }
+#metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px,1fr)); gap: 0.5rem; margin-bottom: 1.2rem; }
+.metric { background: #1a1a2e; border: 1px solid #333; border-radius: 4px; padding: 0.6rem 0.8rem; }
+.metric-label { font-size: 0.7rem; color: #888; text-transform: uppercase; }
+.metric-value { font-size: 1.4rem; color: #7ec8e3; }
+#events { border: 1px solid #333; border-radius: 4px; height: 60vh; overflow-y: auto; }
+.event { padding: 0.35rem 0.6rem; border-bottom: 1px solid #1a1a1a; font-size: 0.8rem; }
+.event:hover { background: #1a1a2e; }
+.topic { color: #f7c59f; }
+.payload { color: #a8d8a8; word-break: break-all; }
+.ts { color: #555; font-size: 0.7rem; margin-right: 0.5rem; }
+</style>
+</head>
+<body>
+<h1>go-DDS Monitor</h1>
+<div id="status">connecting…</div>
+<div id="metrics">
+  <div class="metric"><div class="metric-label">Writes</div><div class="metric-value" id="m-writes">0</div></div>
+  <div class="metric"><div class="metric-label">Delivers</div><div class="metric-value" id="m-delivers">0</div></div>
+  <div class="metric"><div class="metric-label">Drops</div><div class="metric-value" id="m-drops">0</div></div>
+  <div class="metric"><div class="metric-label">Bytes Written</div><div class="metric-value" id="m-bw">0</div></div>
+  <div class="metric"><div class="metric-label">Bytes Delivered</div><div class="metric-value" id="m-bd">0</div></div>
+</div>
+<div id="events"></div>
+<script>
+const es = new EventSource('/events');
+const maxRows = 200;
+es.onopen = () => { document.getElementById('status').textContent = 'connected'; };
+es.onerror = () => { document.getElementById('status').textContent = 'disconnected — retrying…'; };
+es.addEventListener('sample', e => {
+  const d = JSON.parse(e.data);
+  const row = document.createElement('div');
+  row.className = 'event';
+  const ts = new Date().toISOString().substring(11,23);
+  row.innerHTML = `<span class="ts">${ts}</span><span class="topic">${d.topic}</span> <span class="payload">${d.payload}</span>`;
+  const box = document.getElementById('events');
+  box.prepend(row);
+  while (box.children.length > maxRows) box.removeChild(box.lastChild);
+});
+es.addEventListener('metrics', e => {
+  const m = JSON.parse(e.data);
+  document.getElementById('m-writes').textContent   = m.write_count;
+  document.getElementById('m-delivers').textContent = m.deliver_count;
+  document.getElementById('m-drops').textContent    = m.drop_count;
+  document.getElementById('m-bw').textContent       = fmtBytes(m.bytes_written);
+  document.getElementById('m-bd').textContent       = fmtBytes(m.bytes_delivered);
+});
+function fmtBytes(n) {
+  if (n < 1024) return n + ' B';
+  if (n < 1048576) return (n/1024).toFixed(1) + ' KB';
+  return (n/1048576).toFixed(1) + ' MB';
+}
+</script>
+</body>
+</html>
