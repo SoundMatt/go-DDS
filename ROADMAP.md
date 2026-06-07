@@ -47,6 +47,7 @@ API parity does not.
 | v0.8 | 3, 5, 6 | Verification, Edge Performance, Safety ✅ |
 | v0.9 | 8, 9, 10 | Enterprise Security, Dynamic Data, Services ✅ |
 | v0.10 | — | Routing, Context API, Secure Discovery |
+| v0.11 | — | Docker Quickstart |
 
 ### Released — v0.1 – v0.8
 
@@ -444,6 +445,38 @@ Provide operational services around the middleware.
 
 Success Criteria:
 Large deployments can be operated without custom infrastructure.
+
+---
+
+## Milestone 11 — Docker Quickstart `v0.11`
+
+Goal:
+Let a developer experience working multi-process DDS in under two minutes with no Go toolchain required.
+
+### Containers
+
+- Publisher container — runs `ddstool pub` on a configurable topic and payload
+- Subscriber container — runs `ddstool sub`, prints arriving samples
+- Monitor container — serves the web dashboard on a known port
+
+### Networking
+
+- Docker bridge network with static peer addresses (`WithStaticPeers`) for reliability across macOS/Windows Docker Desktop
+- Optional `--network host` mode documented for Linux deployments
+
+### Quickstart surface
+
+- Single `docker compose up` launches all three containers
+- Browser URL printed to stdout for the monitor dashboard
+- `README` section with copy-paste commands
+
+### Distribution
+
+- Multi-arch images (linux/amd64, linux/arm64)
+- Images published to GitHub Container Registry (`ghcr.io/soundmatt/go-dds`)
+
+Success Criteria:
+A developer can see DDS samples flowing in a browser within two minutes of cloning the repo.
 
 ---
 
