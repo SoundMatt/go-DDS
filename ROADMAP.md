@@ -478,6 +478,26 @@ Let a developer experience working multi-process DDS in under two minutes with n
 Success Criteria:
 A developer can see DDS samples flowing in a browser within two minutes of cloning the repo.
 
+### Dev Container
+
+- `.devcontainer/devcontainer.json` with Go toolchain, golangci-lint, and recommended VS Code extensions pre-installed
+- Works in GitHub Codespaces and VS Code Dev Containers with zero local setup
+- Same container image re-used for CI to guarantee dev/CI parity
+
+### Examples
+
+- `examples/` directory with self-contained, runnable programs
+- `examples/sensor-pipeline/` — periodic publisher + aggregating subscriber (temperature telemetry pattern)
+- `examples/command-response/` — request/reply over two topics (RPC-over-DDS pattern)
+- `examples/secure-topic/` — HMAC discovery + AES topic encryption end-to-end
+- Each example has its own `README.md` with a `go run .` quickstart
+
+### Interop Scene
+
+- `compose.interop.yml` adds a FastDDS or CycloneDDS container to the quickstart compose file
+- Proves wire compatibility: go-DDS publisher, third-party subscriber (and vice-versa) exchange samples on the same topic
+- Documents any QoS or transport constraints required for cross-implementation discovery
+
 ---
 
 ## Explicit Non-Goals
