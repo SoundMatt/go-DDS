@@ -180,13 +180,12 @@ per-test deadline.
 
 ## Known Protocol Bugs
 
-These are correctness defects in the current implementation — not missing
-features. They affect wire behaviour today and should be fixed before the items
-in the Planned sections below.
+~~All three bugs below were fixed in PR #3 (`fix/v0.2-protocol-bugs`).~~
+The section is retained for historical context.
 
 ---
 
-**`matchedReaderLocators` ignores topic (`participant.go:497`)**
+**`matchedReaderLocators` ignores topic (`participant.go:497`)** ✅ fixed
 
 `rtpsWriter.Write` calls `p.matchedReaderLocators(w.topic)` to get the UDP
 addresses to send data packets to, but the function body contains `_ =
@@ -202,7 +201,7 @@ marker to search for when starting this fix.
 
 ---
 
-**SPDP lease duration advertised but never enforced**
+**SPDP lease duration advertised but never enforced** ✅ fixed
 
 `spdp.go:buildParticipantData` writes `pidParticipantLeaseDuration = 10
 seconds` into every SPDP announcement, but nothing in the codebase ever checks
@@ -219,7 +218,7 @@ liveliness callback item in the Operational section below.
 
 ---
 
-**RTPS GAP submessage not sent**
+**RTPS GAP submessage not sent** ✅ fixed
 
 When a reliable writer's `sendHistory` evicts old samples (the ring is capped
 at `maxHistoryDepth = 256`), a reader that was offline and returns later will

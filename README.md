@@ -202,11 +202,11 @@ See [ROADMAP.md](ROADMAP.md) for per-item context, release notes, and implementa
 - [x] IPv6 multicast transport (`WithIPv6()` option, `LocatorKindUDPv6`)
 - [x] RTPS interop testing with CycloneDDS (Docker Compose + CycloneDDS peer)
 
-**Known protocol bugs (fix before new features)**
+**Known protocol bugs** *(all fixed in v0.2.1)*
 
-- [ ] `matchedReaderLocators` ignores topic — sends data to all peers (`participant.go:497`)
-- [ ] SPDP lease duration advertised but never enforced — stale peers never evicted
-- [ ] RTPS GAP submessage not sent — reliable subscribers stall after history eviction
+- [x] `matchedReaderLocators` ignores topic — sends data to all peers (`participant.go:497`)
+- [x] SPDP lease duration advertised but never enforced — stale peers never evicted
+- [x] RTPS GAP submessage not sent — reliable subscribers stall after history eviction
 
 **Planned — core**
 

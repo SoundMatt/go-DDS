@@ -35,6 +35,7 @@ type SequenceNumber struct {
 // submessage IDs (§9.4.5).
 const (
 	submsgDATA      = byte(0x15)
+	submsgGAP       = byte(0x08)
 	submsgHEARTBEAT = byte(0x07)
 	submsgACKNACK   = byte(0x06)
 	submsgINFO_TS   = byte(0x09)
@@ -244,6 +245,39 @@ func parseAckNack(body []byte) (AckNack, bool) {
 	an.Bitmap = binary.LittleEndian.Uint32(body[20:])
 	an.Count = int32(binary.LittleEndian.Uint32(body[24:]))
 	return an, true
+}
+
+// ── GAP submessage (§9.4.5.4) ────────────────────────────────────────────────
+
+// Gap indicates a contiguous range of sequence numbers that are permanently
+// unavailable from this writer (evicted from history). Receiving a GAP tells
+// the reader to advance its expected-SN pointer past the covered range.
+type Gap struct {
+	ReaderEntityId EntityId
+	WriterEntityId EntityId
+	GapStart       SequenceNumber // first irrelevant SN (inclusive)
+	GapEnd         SequenceNumber // last irrelevant SN (inclusive)
+}
+
+// marshalGAP builds a GAP submessage covering [g.GapStart, g.GapEnd] inclusive.
+// Body layout: readerEID(4) + writerEID(4) + gapStart(8) + gapList(8+4) = 28 bytes.
+// The gapList bitmapBase is set to GapEnd.Low+1 with numBits=0 (no extra bitmap),
+// so the contiguous gap [gapStart, gapList.base-1] = [gapStart, gapEnd] is declared.
+func marshalGAP(g Gap) []byte {
+	body := make([]byte, 28)
+	copy(body[0:4], g.ReaderEntityId[:])
+	copy(body[4:8], g.WriterEntityId[:])
+	binary.LittleEndian.PutUint32(body[8:], uint32(g.GapStart.High))
+	binary.LittleEndian.PutUint32(body[12:], g.GapStart.Low)
+	// gapList.bitmapBase = first SN *after* the gap = GapEnd.Low + 1.
+	binary.LittleEndian.PutUint32(body[16:], uint32(g.GapEnd.High))
+	binary.LittleEndian.PutUint32(body[20:], g.GapEnd.Low+1)
+	binary.LittleEndian.PutUint32(body[24:], 0) // numBits = 0, no bitmap words
+	hdr := make([]byte, 4)
+	hdr[0] = submsgGAP
+	hdr[1] = flagEndianness
+	binary.LittleEndian.PutUint16(hdr[2:], uint16(len(body)))
+	return append(hdr, body...)
 }
 
 // wrapInRTPSMessage wraps submessage bytes in an RTPS Header.

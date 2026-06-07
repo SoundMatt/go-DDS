@@ -33,17 +33,21 @@ type sedpService struct {
 	localWriters map[EntityId]*endpointInfo
 	localReaders map[EntityId]*endpointInfo
 	// Remote endpoints discovered from peers.
-	remoteWriters map[GUID]*endpointInfo
-	stop          chan struct{}
+	remoteWriters    map[GUID]*endpointInfo
+	remoteReaders    map[GUID]*endpointInfo // remote subscriptions, keyed by reader GUID
+	remoteReaderLocs map[GUID]Locator       // data-unicast locator for each remote reader
+	stop             chan struct{}
 }
 
 func newSEDPService(p *participant) *sedpService {
 	return &sedpService{
-		p:             p,
-		localWriters:  make(map[EntityId]*endpointInfo),
-		localReaders:  make(map[EntityId]*endpointInfo),
-		remoteWriters: make(map[GUID]*endpointInfo),
-		stop:          make(chan struct{}),
+		p:                p,
+		localWriters:     make(map[EntityId]*endpointInfo),
+		localReaders:     make(map[EntityId]*endpointInfo),
+		remoteWriters:    make(map[GUID]*endpointInfo),
+		remoteReaders:    make(map[GUID]*endpointInfo),
+		remoteReaderLocs: make(map[GUID]Locator),
+		stop:             make(chan struct{}),
 	}
 }
 
@@ -247,6 +251,8 @@ func (s *sedpService) handleEndpointAnnounce(remotePrefix GuidPrefix, payload []
 
 	if isWriter {
 		s.onRemoteWriter(&info, dataLocator)
+	} else {
+		s.onRemoteReader(&info, dataLocator)
 	}
 }
 
@@ -265,6 +271,41 @@ func (s *sedpService) onRemoteWriter(info *endpointInfo, dataLocator Locator) {
 		}
 	}
 	s.mu.Unlock()
+}
+
+// onRemoteReader stores a remote subscription and its delivery locator so that
+// matchedReaderLocators can return only the peers interested in each topic.
+func (s *sedpService) onRemoteReader(info *endpointInfo, dataLocator Locator) {
+	s.mu.Lock()
+	s.remoteReaders[info.guid] = info
+	s.remoteReaderLocs[info.guid] = dataLocator
+	s.mu.Unlock()
+}
+
+// onPeerEvicted removes all remote endpoints belonging to prefix from the SEDP
+// tables. Called by the SPDP eviction loop when a participant's lease expires.
+func (s *sedpService) onPeerEvicted(prefix GuidPrefix) {
+	s.mu.Lock()
+	for guid := range s.remoteWriters {
+		if guid.Prefix == prefix {
+			delete(s.remoteWriters, guid)
+		}
+	}
+	for guid := range s.remoteReaders {
+		if guid.Prefix == prefix {
+			delete(s.remoteReaders, guid)
+			delete(s.remoteReaderLocs, guid)
+		}
+	}
+	s.mu.Unlock()
+	// Remove the evicted participant's writer locators from the participant.
+	s.p.mu.Lock()
+	for guid := range s.p.writerLocators {
+		if guid.Prefix == prefix {
+			delete(s.p.writerLocators, guid)
+		}
+	}
+	s.p.mu.Unlock()
 }
 
 // seqCounter is a process-wide monotonic sequence number generator.
