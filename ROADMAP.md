@@ -45,7 +45,8 @@ API parity does not.
 | v0.6 | 1, 4 | Production Runtime + Observability ✅ |
 | v0.7 | 2, 7 | Developer Experience + Deterministic Networking ✅ |
 | v0.8 | 3, 5, 6 | Verification, Edge Performance, Safety ✅ |
-| v0.9 | 8, 9, 10 | Enterprise Security, Dynamic Data, Services |
+| v0.9 | 8, 9, 10 | Enterprise Security, Dynamic Data, Services ✅ |
+| v0.10 | — | Routing, Context API, Secure Discovery |
 
 ### Released — v0.1 – v0.8
 
@@ -57,6 +58,7 @@ API parity does not.
 - **v0.6** — JSON/YAML config (`config/`), `DiscoveryMetrics`/`TopicMetrics`/`Health` interfaces, per-topic counters in rtps+mock, `WithHeartbeatPeriod`/`WithConfig`, monitor `/health` + `/api/topics` + `/api/diagnostics` + SSE discovery events
 - **v0.7** — Test harness helpers (`testutil/`), CLI tool (`cmd/ddstool` — pub/sub/discover), TSN TAPRIO diagnostics (`tsn.HealthTracker`, `tsn.TAPRIOConfig`), CI upgraded to Node.js 24 + golangci-lint v2
 - **v0.8** — Topic recording/replay (`record.Recorder`/`Player`/`FaultPublisher`), allocation-free buffer recycling (`pool.BytePool`/`SampleBuffer`), E2E protection header + deterministic queue (`safety.E2EPublisher`/`E2ESubscriber`/`DeterministicQueue`)
+- **v0.9** — Enterprise security (`security.CertPlugin`/`AccessPolicy`/`ReplayGuard`), dynamic data (`xtypes.TypeObject`/`DynamicData`/`TypeRegistry`), domain bridge, WAN bridge, admin HTTP API, managed services (`RecorderService`/`ReplayService`/`MonitorService`); `Participant.Domain()`, `Publisher.WriteCtx()`, `Subscriber.Unsubscribe()`, `mock.IsolatedBroker()`, HMAC-authenticated SPDP discovery
 
 ---
 
@@ -424,9 +426,9 @@ Provide operational services around the middleware.
 
 ### Routing
 
-- Domain bridge
-- WAN bridge
-- Protocol bridge
+- Domain bridge ✅
+- WAN bridge ✅
+- Protocol bridge (planned v0.10 — DDS ↔ gRPC/REST gateway)
 
 ### Administration
 

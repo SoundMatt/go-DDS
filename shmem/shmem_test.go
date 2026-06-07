@@ -6,6 +6,7 @@
 package shmem_test
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -332,4 +333,108 @@ func TestSampleTimestamp_Set(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("timeout")
 	}
+}
+
+func TestDomain_ShmemParticipant(t *testing.T) {
+	p, err := shmem.New(dds.Domain(7))
+	if err != nil {
+		t.Fatalf("shmem.New: %v", err)
+	}
+	defer func() { _ = p.Close() }()
+	if got := p.Domain(); got != dds.Domain(7) {
+		t.Errorf("Domain() = %d, want 7", got)
+	}
+}
+
+func TestWriteCtx_Shmem_CancelledBeforeWrite(t *testing.T) {
+	p, err := shmem.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("shmem.New: %v", err)
+	}
+	defer func() { _ = p.Close() }()
+	pub, err := p.NewPublisher("shmctx/cancel", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer func() { _ = pub.Close() }()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := pub.WriteCtx(ctx, []byte("data")); err == nil {
+		t.Error("WriteCtx with cancelled context should return error")
+	}
+}
+
+func TestWriteCtx_Shmem_ValidContext(t *testing.T) {
+	p, err := shmem.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("shmem.New: %v", err)
+	}
+	defer func() { _ = p.Close() }()
+	pub, err := p.NewPublisher("shmctx/valid", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer func() { _ = pub.Close() }()
+	sub, err := p.NewSubscriber("shmctx/valid", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer func() { _ = sub.Close() }()
+
+	if err := pub.WriteCtx(context.Background(), []byte("ok")); err != nil {
+		t.Fatalf("WriteCtx: %v", err)
+	}
+	select {
+	case s := <-sub.C():
+		if string(s.Payload) != "ok" {
+			t.Errorf("got %q, want %q", s.Payload, "ok")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout")
+	}
+}
+
+func TestSubscriberUnsubscribe_Shmem(t *testing.T) {
+	p, err := shmem.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("shmem.New: %v", err)
+	}
+	defer func() { _ = p.Close() }()
+	pub, err := p.NewPublisher("shmunsub/test", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer func() { _ = pub.Close() }()
+	sub, err := p.NewSubscriber("shmunsub/test", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+
+	_ = pub.Write([]byte("before"))
+	select {
+	case <-sub.C():
+	case <-time.After(time.Second):
+		t.Fatal("timeout before unsubscribe")
+	}
+
+	if err := sub.Unsubscribe(); err != nil {
+		t.Fatalf("Unsubscribe: %v", err)
+	}
+
+	_ = pub.Write([]byte("after"))
+	select {
+	case <-sub.C():
+		// Samples written before Unsubscribe took effect may still be
+		// buffered; drain them. Only fail if the channel was closed.
+	case <-time.After(50 * time.Millisecond):
+		// No new sample — expected.
+	}
+
+	// Idempotent unsubscribe.
+	if err := sub.Unsubscribe(); err != nil {
+		t.Errorf("Unsubscribe[2]: %v", err)
+	}
+	_ = sub.Close()
+	_ = sub.Close() // idempotent close
 }

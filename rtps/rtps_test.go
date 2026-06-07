@@ -637,3 +637,155 @@ func TestRTPS_Security_AESGCM(t *testing.T) {
 		t.Fatal("timeout")
 	}
 }
+
+func TestRTPS_Domain_Accessor(t *testing.T) {
+	if testing.Short() {
+		t.Skip("rtps: uses UDP sockets")
+	}
+	const d = dds.Domain(93)
+	p, err := rtps.New(d)
+	if err != nil {
+		t.Fatalf("rtps.New: %v", err)
+	}
+	defer func() { _ = p.Close() }()
+	if got := p.Domain(); got != d {
+		t.Errorf("Domain() = %v, want %v", got, d)
+	}
+}
+
+func TestRTPS_WriteCtx_CancelledBeforeWrite(t *testing.T) {
+	if testing.Short() {
+		t.Skip("rtps: uses UDP sockets")
+	}
+	p, err := rtps.New(dds.Domain(94))
+	if err != nil {
+		t.Fatalf("rtps.New: %v", err)
+	}
+	defer func() { _ = p.Close() }()
+	pub, err := p.NewPublisher("rtpsctx/cancel", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer func() { _ = pub.Close() }()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := pub.WriteCtx(ctx, []byte("x")); err == nil {
+		t.Error("WriteCtx with cancelled context should return error")
+	}
+}
+
+func TestRTPS_WriteCtx_ValidContext(t *testing.T) {
+	if testing.Short() {
+		t.Skip("rtps: uses UDP sockets")
+	}
+	p, err := rtps.New(dds.Domain(95))
+	if err != nil {
+		t.Fatalf("rtps.New: %v", err)
+	}
+	defer func() { _ = p.Close() }()
+	pub, err := p.NewPublisher("rtpsctx/valid", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer func() { _ = pub.Close() }()
+	sub, err := p.NewSubscriber("rtpsctx/valid", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer func() { _ = sub.Close() }()
+
+	if err := pub.WriteCtx(context.Background(), []byte("rtps-ctx")); err != nil {
+		t.Fatalf("WriteCtx: %v", err)
+	}
+	select {
+	case s := <-sub.C():
+		if string(s.Payload) != "rtps-ctx" {
+			t.Errorf("got %q, want %q", s.Payload, "rtps-ctx")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout")
+	}
+}
+
+func TestRTPS_SubscriberUnsubscribe(t *testing.T) {
+	if testing.Short() {
+		t.Skip("rtps: uses UDP sockets")
+	}
+	p, err := rtps.New(dds.Domain(96))
+	if err != nil {
+		t.Fatalf("rtps.New: %v", err)
+	}
+	defer func() { _ = p.Close() }()
+	pub, err := p.NewPublisher("rtpsunsub/test", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer func() { _ = pub.Close() }()
+	sub, err := p.NewSubscriber("rtpsunsub/test", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+
+	// Confirm delivery before unsubscribe.
+	_ = pub.Write([]byte("before"))
+	select {
+	case <-sub.C():
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout before unsubscribe")
+	}
+
+	if err := sub.Unsubscribe(); err != nil {
+		t.Fatalf("Unsubscribe: %v", err)
+	}
+
+	// Channel must remain open after Unsubscribe.
+	select {
+	case _, ok := <-sub.C():
+		if !ok {
+			t.Error("Unsubscribe must not close the channel")
+		}
+	default:
+	}
+
+	// Idempotent.
+	if err := sub.Unsubscribe(); err != nil {
+		t.Errorf("Unsubscribe[2]: %v", err)
+	}
+	_ = sub.Close()
+	_ = sub.Close()
+}
+
+func TestRTPS_DiscoverySecurity_HMAC(t *testing.T) {
+	if testing.Short() {
+		t.Skip("rtps: uses UDP sockets")
+	}
+	plugin := security.NewHMACDiscoveryPlugin([]byte("rtps-discovery-key"))
+	p, err := rtps.New(dds.Domain(97), rtps.WithDiscoverySecurity(plugin))
+	if err != nil {
+		t.Fatalf("rtps.New with discovery security: %v", err)
+	}
+	defer func() { _ = p.Close() }()
+
+	// Basic pub/sub should still work within the same participant.
+	pub, err := p.NewPublisher("rtpsdiscsec/topic", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer func() { _ = pub.Close() }()
+	sub, err := p.NewSubscriber("rtpsdiscsec/topic", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer func() { _ = sub.Close() }()
+
+	_ = pub.Write([]byte("secure-discovery"))
+	select {
+	case s := <-sub.C():
+		if string(s.Payload) != "secure-discovery" {
+			t.Errorf("got %q, want %q", s.Payload, "secure-discovery")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout")
+	}
+}

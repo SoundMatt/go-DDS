@@ -6,6 +6,7 @@
 package safety_test
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"testing"
@@ -171,10 +172,12 @@ func TestDeterministicQueue_MultipleSamples(t *testing.T) {
 
 type panicPublisher struct{}
 
-func (p *panicPublisher) Write(_ []byte) error { panic("test panic from publisher") }
-func (p *panicPublisher) Close() error         { return nil }
+func (p *panicPublisher) Write(_ []byte) error                       { panic("test panic from publisher") }
+func (p *panicPublisher) WriteCtx(_ context.Context, b []byte) error { return p.Write(b) }
+func (p *panicPublisher) Close() error                               { return nil }
 
 type errorPublisher struct{ err error }
 
-func (p *errorPublisher) Write(_ []byte) error { return p.err }
-func (p *errorPublisher) Close() error         { return nil }
+func (p *errorPublisher) Write(_ []byte) error                       { return p.err }
+func (p *errorPublisher) WriteCtx(_ context.Context, b []byte) error { return p.Write(b) }
+func (p *errorPublisher) Close() error                               { return nil }

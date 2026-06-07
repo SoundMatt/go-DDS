@@ -15,7 +15,7 @@ The API is a stable Go interface. Implementations are swappable without changing
 | `rtps` | Pure-Go RTPS/UDP wire protocol. Real DDS across processes and hosts. | Nothing |
 | `cyclone` | [CycloneDDS](https://cyclonedds.io) via CGo. Full wire interop with non-Go participants. | `libcyclonedds-dev` + `-tags cyclone` |
 | `shmem` | Shared-memory transport. Zero UDP overhead for same-host pub/sub. | Nothing |
-| `security` | Pluggable payload security — NullPlugin, HMAC-SHA-256, AES-256-GCM, CertPlugin (X.509/ECDSA), AccessPolicy (topic ACL), ReplayGuard (anti-replay). | Nothing |
+| `security` | Pluggable payload security — NullPlugin, HMAC-SHA-256, AES-256-GCM, CertPlugin (X.509/ECDSA), AccessPolicy (topic ACL), ReplayGuard (anti-replay); `HMACDiscoveryPlugin` for SPDP-layer peer authentication. | Nothing |
 | `xtypes` | Dynamic Data / XTypes — TypeDescriptor, TypeIdentifier, DynamicData, TypeRegistry, CheckCompatibility. | Nothing |
 | `config` | JSON/YAML participant configuration with validation. | Nothing |
 | `monitor` | Real-time web dashboard. `/health`, `/api/topics`, `/api/diagnostics`, SSE discovery events. | Nothing |
@@ -149,6 +149,32 @@ p, _ = rtps.New(dds.Domain(0), rtps.WithSecurity(policy))
 // ReplayGuard: drop duplicate or replayed samples (sequence + timestamp window)
 guard := security.NewReplayGuard(security.ReplayGuardOptions{WindowSize: 1000})
 p, _ = rtps.New(dds.Domain(0), rtps.WithSecurity(guard))
+
+// Secure Discovery: HMAC-SHA-256 authentication of SPDP announcements.
+// Peers without the same key are silently ignored at the discovery layer.
+discPlugin := security.NewHMACDiscoveryPlugin([]byte("shared-discovery-key"))
+p, _ = rtps.New(dds.Domain(0), rtps.WithDiscoverySecurity(discPlugin))
+```
+
+## Context API
+
+All three core operations support context cancellation:
+
+```go
+// Publisher.WriteCtx — returns ctx.Err() immediately if context is done.
+ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+defer cancel()
+err := pub.WriteCtx(ctx, payload)
+
+// Subscriber.Unsubscribe — stops delivery without closing the channel.
+// Use when you want to stop receiving but keep the channel readable for
+// any already-buffered samples.
+sub.Unsubscribe()   // no more samples delivered
+<-sub.C()           // drain buffered samples (channel still open)
+sub.Close()         // close channel when done
+
+// Participant.Domain — inspect which domain a participant joined.
+fmt.Println(p.Domain()) // dds.Domain(0)
 ```
 
 ## Configuration
@@ -566,7 +592,7 @@ See [ROADMAP.md](ROADMAP.md) for per-milestone goals, sub-items, and success cri
 - [x] E2E protection header (`safety.E2EPublisher` / `safety.E2ESubscriber`) — CRC-16/CCITT, sequence counter, configurable freshness window
 - [x] Deterministic queue with panic containment (`safety.DeterministicQueue`)
 
-**Released — v0.9 — Enterprise Security, Dynamic Data, Services**
+**Released — v0.9 — Enterprise Security, Dynamic Data, Services, Context API**
 
 - [x] CertPlugin (X.509/ECDSA mutual auth), AccessPolicy (topic ACL), ReplayGuard (anti-replay) — `security/`
 - [x] XTypes dynamic data — TypeDescriptor, TypeIdentifier (content hash), DynamicData, TypeRegistry, CheckCompatibility — `xtypes/`
@@ -574,6 +600,15 @@ See [ROADMAP.md](ROADMAP.md) for per-milestone goals, sub-items, and success cri
 - [x] WAN bridge — TCP forwarding with length-framed JSON wire format, 16 MiB cap — `bridge/wan/`
 - [x] HTTP admin API — health, metrics, discovery, publish; bearer-token auth — `admin/`
 - [x] Managed service lifecycle — RecorderService, ReplayService (loop + seek + speed), MonitorService — `services/`
+- [x] `Participant.Domain()` accessor — `dds.Participant` interface
+- [x] `Publisher.WriteCtx(ctx, payload)` — context-aware writes across all transports
+- [x] `Subscriber.Unsubscribe()` — non-destructive deregistration (channel stays open)
+- [x] `mock.IsolatedBroker()` — per-test broker isolation, eliminates cross-test echo loops
+- [x] `HMACDiscoveryPlugin` + `rtps.WithDiscoverySecurity()` — HMAC-SHA-256 authenticated SPDP announcements
+
+**Planned — v0.10 — Routing and Protocol Bridge**
+
+- [ ] Protocol bridge — DDS ↔ gRPC/REST gateway
 
 See [ROADMAP.md](ROADMAP.md) for goals and sub-items.
 

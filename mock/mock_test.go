@@ -831,6 +831,161 @@ func TestMaxSampleSize_ZeroMeansUnlimited_Mock(t *testing.T) {
 	}
 }
 
+func TestDomain_MockParticipant(t *testing.T) {
+	p, err := mock.New(42)
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
+	defer func() { _ = p.Close() }()
+	if got := p.Domain(); got != dds.Domain(42) {
+		t.Errorf("Domain() = %d, want 42", got)
+	}
+}
+
+func TestWriteCtx_CancelledBeforeWrite(t *testing.T) {
+	p := newParticipant(t)
+	pub, err := p.NewPublisher("ctx/test", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer func() { _ = pub.Close() }()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // cancel immediately
+	if err := pub.WriteCtx(ctx, []byte("data")); err == nil {
+		t.Error("WriteCtx with cancelled context should return error")
+	}
+}
+
+func TestWriteCtx_ValidContext(t *testing.T) {
+	p := newParticipant(t)
+	pub, err := p.NewPublisher("ctx/valid", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer func() { _ = pub.Close() }()
+	sub, err := p.NewSubscriber("ctx/valid", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer func() { _ = sub.Close() }()
+
+	if err := pub.WriteCtx(context.Background(), []byte("hello")); err != nil {
+		t.Fatalf("WriteCtx: %v", err)
+	}
+	select {
+	case s := <-sub.C():
+		if string(s.Payload) != "hello" {
+			t.Errorf("got %q, want %q", s.Payload, "hello")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for sample")
+	}
+}
+
+func TestSubscriberUnsubscribe_StopsDelivery(t *testing.T) {
+	p := newParticipant(t)
+	pub, err := p.NewPublisher("unsub/test", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer func() { _ = pub.Close() }()
+	sub, err := p.NewSubscriber("unsub/test", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+
+	// Deliver one sample to confirm the subscriber is working.
+	_ = pub.Write([]byte("before"))
+	select {
+	case <-sub.C():
+	case <-time.After(time.Second):
+		t.Fatal("timeout before unsubscribe")
+	}
+
+	// Unsubscribe: channel stays open but no more samples arrive.
+	if err := sub.Unsubscribe(); err != nil {
+		t.Fatalf("Unsubscribe: %v", err)
+	}
+	_ = pub.Write([]byte("after"))
+	select {
+	case s, ok := <-sub.C():
+		if ok {
+			t.Errorf("received sample after Unsubscribe: %q", s.Payload)
+		}
+		// ok=false means Close was called — unexpected here
+	case <-time.After(50 * time.Millisecond):
+		// Expected: no sample delivered after unsubscribe.
+	}
+
+	// Channel should still be open (not closed by Unsubscribe).
+	select {
+	case _, ok := <-sub.C():
+		if !ok {
+			t.Error("channel was closed by Unsubscribe; expected it to remain open")
+		}
+	default:
+		// Expected: channel open, no sample.
+	}
+
+	// Close should close the channel.
+	_ = sub.Close()
+	select {
+	case _, ok := <-sub.C():
+		if ok {
+			t.Error("expected channel to be closed after Close()")
+		}
+	default:
+		t.Error("channel should be closed after Close()")
+	}
+}
+
+func TestSubscriberUnsubscribe_Idempotent(t *testing.T) {
+	p := newParticipant(t)
+	sub, err := p.NewSubscriber("unsub/idem", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer func() { _ = sub.Close() }()
+
+	for i := 0; i < 3; i++ {
+		if err := sub.Unsubscribe(); err != nil {
+			t.Errorf("Unsubscribe[%d]: %v", i, err)
+		}
+	}
+}
+
+func TestSubscriberClose_AfterUnsubscribe(t *testing.T) {
+	p := newParticipant(t)
+	sub, err := p.NewSubscriber("unsub/closeafter", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	_ = sub.Unsubscribe()
+	_ = sub.Close() // must not panic or double-close
+	_ = sub.Close() // idempotent
+}
+
+func TestIsolatedBroker_NoEcho(t *testing.T) {
+	p1, _ := mock.New(0, mock.IsolatedBroker())
+	defer func() { _ = p1.Close() }()
+	p2, _ := mock.New(0, mock.IsolatedBroker())
+	defer func() { _ = p2.Close() }()
+
+	sub1, _ := p1.NewSubscriber("isolated/topic", dds.DefaultQoS)
+	defer func() { _ = sub1.Close() }()
+	pub2, _ := p2.NewPublisher("isolated/topic", dds.DefaultQoS)
+	defer func() { _ = pub2.Close() }()
+
+	_ = pub2.Write([]byte("from-p2"))
+	select {
+	case <-sub1.C():
+		t.Error("isolated broker: p1 subscriber should not receive p2's publish")
+	case <-time.After(50 * time.Millisecond):
+		// Expected: isolated brokers don't share state.
+	}
+}
+
 func TestMetrics_MockParticipant(t *testing.T) {
 	p := newParticipant(t)
 	mp, ok := p.(dds.MetricsProvider)

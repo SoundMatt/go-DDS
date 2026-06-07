@@ -157,6 +157,12 @@ func (s *spdpService) buildParticipantData() []byte {
 	binary.LittleEndian.PutUint32(duration[4:], 0)
 	enc.addParam(pidParticipantLeaseDuration, duration)
 
+	// Append discovery authentication token when a DiscoveryPlugin is configured.
+	if p.discoveryPlugin != nil {
+		tag := p.discoveryPlugin.SignDiscovery(p.guidPrefix[:])
+		enc.addParam(pidDiscoveryToken, tag)
+	}
+
 	return enc.finish()
 }
 
@@ -193,6 +199,13 @@ func (s *spdpService) handlePacket(data []byte, from *net.UDPAddr) {
 		}
 		if ds.WriterEntityId != EntityIdSPDPWriter {
 			return nil
+		}
+		// Verify discovery authentication token when a plugin is configured.
+		if s.p.discoveryPlugin != nil {
+			token := extractDiscoveryToken(ds.Payload)
+			if !s.p.discoveryPlugin.VerifyDiscovery(hdr.GuidPrefix[:], token) {
+				return nil // reject unauthenticated or wrongly-signed peer
+			}
 		}
 		proxy := parseParticipantData(hdr.GuidPrefix, ds.Payload, from)
 		if proxy != nil {
@@ -272,6 +285,27 @@ func (s *spdpService) evictExpired() {
 }
 
 // parseParticipantData decodes PL_CDR_LE participant proxy data.
+// extractDiscoveryToken scans a PL_CDR_LE payload for pidDiscoveryToken and
+// returns a copy of its value, or nil if the PID is absent.
+func extractDiscoveryToken(payload []byte) []byte {
+	dec, ok := newPLCDRDecoder(payload)
+	if !ok {
+		return nil
+	}
+	for {
+		p, ok := dec.next()
+		if !ok {
+			break
+		}
+		if p.pid == pidDiscoveryToken {
+			v := make([]byte, len(p.value))
+			copy(v, p.value)
+			return v
+		}
+	}
+	return nil
+}
+
 func parseParticipantData(prefix GuidPrefix, payload []byte, from *net.UDPAddr) *participantProxy {
 	dec, ok := newPLCDRDecoder(payload)
 	if !ok {

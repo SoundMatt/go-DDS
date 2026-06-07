@@ -376,6 +376,9 @@ type Participant interface {
 	// per-subscriber policies.
 	NewSubscriber(topic string, qos QoS, opts ...SubscriberOption) (Subscriber, error)
 
+	// Domain returns the DDS domain this participant joined.
+	Domain() Domain
+
 	// Close releases all DDS resources held by this participant.
 	Close() error
 }
@@ -384,6 +387,9 @@ type Participant interface {
 // A Publisher is safe for concurrent use from multiple goroutines.
 type Publisher interface {
 	Write(payload []byte) error
+	// WriteCtx is Write with context cancellation support. If ctx is already
+	// done when WriteCtx is called it returns ctx.Err() immediately.
+	WriteCtx(ctx context.Context, payload []byte) error
 	Close() error
 }
 
@@ -391,6 +397,10 @@ type Publisher interface {
 // A Subscriber is safe for concurrent use from multiple goroutines.
 type Subscriber interface {
 	C() <-chan Sample
+	// Unsubscribe removes this subscriber from the topic without closing its
+	// channel. After Unsubscribe the channel remains open but no new samples
+	// are delivered. Call Close to stop delivery AND close the channel.
+	Unsubscribe() error
 	Close() error
 }
 
@@ -485,6 +495,15 @@ func (tp *TypedPublisher[T]) Write(v T) error {
 		return err
 	}
 	return tp.pub.Write(data)
+}
+
+// WriteCtx encodes v and writes it, honouring ctx cancellation.
+func (tp *TypedPublisher[T]) WriteCtx(ctx context.Context, v T) error {
+	data, err := tp.codec.Marshal(v)
+	if err != nil {
+		return err
+	}
+	return tp.pub.WriteCtx(ctx, data)
 }
 
 // Close closes the underlying publisher.
