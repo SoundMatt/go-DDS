@@ -2,14 +2,29 @@
 
 A generic Go library for [DDS](https://www.omg.org/omg-dds-portal/) (Data Distribution Service) publish/subscribe. Works in any domain — IoT, robotics, industrial control, vehicle networks, simulation, and more.
 
-The API is a stable Go interface. Implementations are swappable without changing application code:
+The API is a stable Go interface. Implementations are swappable without changing application code.
+
+[![CI](https://github.com/SoundMatt/go-DDS/actions/workflows/ci.yml/badge.svg)](https://github.com/SoundMatt/go-DDS/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/SoundMatt/go-DDS.svg)](https://pkg.go.dev/github.com/SoundMatt/go-DDS)
+
+## Packages
 
 | Package | Description | Requires |
 |---|---|---|
-| `mock` | In-process, pure Go. Zero dependencies. Default for development and testing. | Nothing |
-| `rtps` | Pure-Go RTPS/UDP wire protocol. Real DDS, zero native dependencies. | Nothing |
-| `cyclone` | [CycloneDDS](https://cyclonedds.io) via CGo. Interoperates with non-Go DDS participants. | `libcyclonedds-dev` + `-tags cyclone` |
-| `security` | Pluggable security — NullPlugin, HMAC-SHA-256, AES-256-GCM. | Nothing |
+| `mock` | In-process broker. Zero dependencies. Default for development and testing. | Nothing |
+| `rtps` | Pure-Go RTPS/UDP wire protocol. Real DDS across processes and hosts. | Nothing |
+| `cyclone` | [CycloneDDS](https://cyclonedds.io) via CGo. Full wire interop with non-Go participants. | `libcyclonedds-dev` + `-tags cyclone` |
+| `shmem` | Shared-memory transport. Zero UDP overhead for same-host pub/sub. | Nothing |
+| `security` | Pluggable payload security — NullPlugin, HMAC-SHA-256, AES-256-GCM. | Nothing |
+| `config` | JSON/YAML participant configuration with validation. | Nothing |
+| `monitor` | Real-time web dashboard. `/health`, `/api/topics`, `/api/diagnostics`, SSE discovery events. | Nothing |
+| `tsn` | TSN stream model, TAPRIO scheduling, stream health tracking. | Nothing |
+| `bridge/mqtt` | Bidirectional DDS ↔ MQTT bridge with QoS and topic mapping. | Nothing |
+| `record` | Topic recording to JSONL, deterministic replay (real-time or scaled), fault injection. | Nothing |
+| `pool` | Allocation-free byte-slice recycling and fixed-capacity sample ring buffer. | Nothing |
+| `safety` | E2E protection header (CRC-16, sequence counter, freshness) and deterministic queue. | Nothing |
+| `testutil` | Test harness helpers: `NewParticipant`, `AssertSample`, `TopicRecorder`, `BurstPublish`. | Nothing |
+| `cmd/ddstool` | CLI tool: `pub`, `sub`, `discover` subcommands. | Nothing |
 
 ## Install
 
@@ -39,7 +54,7 @@ fmt.Println(string(sample.Payload)) // {"value": 21.5, "unit": "celsius"}
 
 ## Switching implementations
 
-Application code only ever references the `dds` interface package. Swap implementations at the call site:
+Application code only ever references the `dds` interface package. Swap at the call site:
 
 ```go
 // Development / tests — no system library needed:
@@ -50,8 +65,12 @@ p, err := mock.New(dds.Domain(0))
 import "github.com/SoundMatt/go-DDS/rtps"
 p, err := rtps.New(dds.Domain(0))
 
-// Interop — real CycloneDDS domain, multi-host:
-// (rebuild with: go build -tags cyclone ./...)
+// Same host, zero UDP overhead:
+import "github.com/SoundMatt/go-DDS/shmem"
+p, err := shmem.New(dds.Domain(0))
+
+// Interop with non-Go DDS participants:
+// go build -tags cyclone ./...
 import "github.com/SoundMatt/go-DDS/cyclone"
 p, err := cyclone.New(dds.Domain(0))
 ```
@@ -75,18 +94,12 @@ subTemp, _ := p.NewSubscriber("sensors/temp", dds.DefaultQoS)
 subSpeed, _ := p.NewSubscriber("vehicle/speed", dds.DefaultQoS)
 
 ws := dds.NewWaitSet(subTemp, subSpeed)
-ctx := context.Background()
-
 for {
     sample, sub, err := ws.Wait(ctx)
-    if err != nil {
-        break
-    }
+    if err != nil { break }
     switch sub {
-    case subTemp:
-        fmt.Println("temp:", string(sample.Payload))
-    case subSpeed:
-        fmt.Println("speed:", string(sample.Payload))
+    case subTemp:  fmt.Println("temp:", string(sample.Payload))
+    case subSpeed: fmt.Println("speed:", string(sample.Payload))
     }
 }
 ```
@@ -112,7 +125,317 @@ hmacPlugin := security.NewHMACPlugin(key)
 p, _ = rtps.New(dds.Domain(0), rtps.WithSecurity(hmacPlugin))
 ```
 
-All peers communicating on a topic must use the same plugin and key.
+All peers on a topic must use the same plugin and key.
+
+## Configuration
+
+Load participant settings from a JSON or YAML file:
+
+```go
+import "github.com/SoundMatt/go-DDS/config"
+
+cfg, err := config.LoadConfig("dds.json")
+// or:  cfg, err := config.ParseConfig([]byte(`{...}`))
+if err != nil { log.Fatal(err) }
+
+p, err := rtps.New(dds.Domain(0), rtps.WithConfig(cfg))
+```
+
+## Runtime monitoring
+
+The `monitor` package serves a live web dashboard with no external dependencies:
+
+```go
+import "github.com/SoundMatt/go-DDS/monitor"
+
+mon := monitor.New(p) // p implements MetricsProvider, HealthProvider, etc.
+log.Fatal(http.ListenAndServe(":8080", mon))
+```
+
+Endpoints:
+
+| Path | Description |
+|---|---|
+| `GET /health` | JSON health status (`ok` / `degraded` / `down`) |
+| `GET /api/topics` | Per-topic metrics (write/deliver/drop counts, bytes) |
+| `GET /api/diagnostics` | Discovery metrics and transport statistics |
+| `GET /api/events` | SSE stream of discovery events (peer joined/left) |
+
+## Recording and replay
+
+Record live traffic to a JSONL file and replay it deterministically:
+
+```go
+import "github.com/SoundMatt/go-DDS/record"
+
+// Record
+sub, _ := p.NewSubscriber("vehicle/speed", dds.DefaultQoS)
+f, _ := os.Create("capture.jsonl")
+rec := record.NewRecorder(f).AddTopic(sub).Start()
+time.Sleep(10 * time.Second)
+rec.Stop()
+
+// Replay (real-time)
+f2, _ := os.Open("capture.jsonl")
+pl := record.NewPlayer(f2, p)
+pl.Play(ctx)
+
+// Replay at 4× speed, only one topic
+pl.PlayScaled(ctx, 4.0)
+pl.PlayFiltered(ctx, []string{"vehicle/speed"})
+```
+
+## Fault injection
+
+Stress-test consumers by wrapping any publisher with configurable faults:
+
+```go
+import "github.com/SoundMatt/go-DDS/record"
+
+pub, _ := p.NewPublisher("vehicle/speed", dds.DefaultQoS)
+faulty := record.NewFaultPublisher(pub, record.FaultOptions{
+    LossRate:      0.05,               // 5% packet loss
+    DelayMin:      2 * time.Millisecond,
+    DelayMax:      10 * time.Millisecond,
+    CorruptRate:   0.01,               // 1% payload corruption
+    DuplicateRate: 0.02,               // 2% duplicate delivery
+}, 0 /* seed: 0 = time-seeded */)
+defer faulty.Close()
+
+faulty.Write(payload) // faults applied transparently
+```
+
+## Safety communication
+
+Protect topics with an 18-byte E2E header (DataID, SourceID, sequence counter, timestamp, CRC-16):
+
+```go
+import "github.com/SoundMatt/go-DDS/safety"
+
+cfg := safety.E2EConfig{
+    DataID:   42,
+    SourceID: 1,
+    MaxAge:   100 * time.Millisecond, // freshness check
+}
+
+// Publisher side — header added automatically
+rawPub, _ := p.NewPublisher("safety/speed", dds.DefaultQoS)
+pub := safety.NewE2EPublisher(rawPub, cfg)
+
+// Subscriber side — header stripped, checks run
+rawSub, _ := p.NewSubscriber("safety/speed", dds.DefaultQoS)
+sub := safety.NewE2ESubscriber(rawSub, cfg)
+
+go func() {
+    for e := range sub.Errors() {
+        log.Printf("E2E fault: %v", e) // ErrCRCMismatch, ErrSequenceGap, ErrStaleSample
+    }
+}()
+
+for s := range sub.C() {
+    // s.Payload is the original payload, header already removed
+}
+```
+
+Decouple writes from transport using a bounded, panic-containing queue:
+
+```go
+q := safety.NewDeterministicQueue(pub, 128 /* depth */).Start()
+defer q.Stop()
+
+if err := q.Enqueue(payload); errors.Is(err, safety.ErrQueueFull) {
+    // back-pressure: queue is full
+}
+```
+
+## Edge performance
+
+Recycle payload buffers on high-throughput paths:
+
+```go
+import "github.com/SoundMatt/go-DDS/pool"
+
+bp := pool.New(1500) // capacity in bytes
+buf := bp.Get()
+buf = append(buf, payload...)
+pub.Write(buf)
+bp.Put(buf) // returned to pool; no allocation next cycle
+```
+
+Fixed-capacity ring buffer for decoupling a subscriber from a processing loop:
+
+```go
+sb := pool.NewSampleBuffer(256)
+
+// producer goroutine
+go func() {
+    for s := range sub.C() {
+        if !sb.Push(s) { /* drop or handle back-pressure */ }
+    }
+}()
+
+// consumer goroutine at its own rate
+s, ok := sb.Pop()
+```
+
+## Testing
+
+The `testutil` package provides ready-made fixtures for unit and integration tests:
+
+```go
+import "github.com/SoundMatt/go-DDS/testutil"
+
+p := testutil.NewParticipant(t, dds.Domain(0)) // auto-closed at test end
+
+sub, _ := p.NewSubscriber("test/topic", dds.DefaultQoS)
+pub, _ := p.NewPublisher("test/topic", dds.DefaultQoS)
+
+pub.Write([]byte("ping"))
+testutil.AssertSample(t, sub, []byte("ping"), time.Second)
+
+rec := testutil.NewTopicRecorder(sub).Start()
+testutil.BurstPublish(pub, 10, []byte("burst"))
+rec.WaitFor(10, 2*time.Second)
+```
+
+The `ddstool` CLI inspects a live domain without writing application code:
+
+```bash
+go run github.com/SoundMatt/go-DDS/cmd/ddstool pub -topic vehicle/speed -payload '{"kmh":80}' -count 10
+go run github.com/SoundMatt/go-DDS/cmd/ddstool sub -topic vehicle/speed -count 5
+go run github.com/SoundMatt/go-DDS/cmd/ddstool discover -wait 5s
+```
+
+## TSN (Time-Sensitive Networking)
+
+Map DDS topics directly to IEEE 802.1Qbv TAPRIO streams:
+
+```go
+import "github.com/SoundMatt/go-DDS/tsn"
+
+cfg, _ := tsn.LoadConfig("streams.json")
+p, _ := rtps.New(dds.Domain(0), rtps.WithConfig(cfg.ParticipantConfig))
+
+// Monitor write timing health per stream
+stream := cfg.Streams[0]
+tracker := tsn.NewHealthTracker(stream, 100 /* window */)
+tracker.Record(time.Now())
+health := tracker.Health() // Healthy=true when <5% of writes are late
+
+// Generate tc-qdisc command for a TAPRIO gate
+taprioCfg, _ := tsn.TAPRIOFromStreams(cfg)
+fmt.Println(taprioCfg.TCCommand("eth0", 0))
+// tc qdisc replace dev eth0 parent root handle 100 taprio ...
+```
+
+## RTPS interoperability testing
+
+Wire-compatibility tests against a live CycloneDDS peer (gated behind the `interop` build tag):
+
+```bash
+docker compose -f interop/docker-compose.yml up -d cyclone-peer
+go test -tags interop -v -timeout 60s ./interop/...
+docker compose -f interop/docker-compose.yml down
+```
+
+## Using CycloneDDS
+
+```bash
+# Linux
+apt-get install -y libcyclonedds-dev
+
+# macOS
+brew install cyclonedds
+
+# Build + test
+go build -tags cyclone ./...
+go test -tags cyclone ./cyclone/...
+```
+
+## CI
+
+| Job | Platforms | Notes |
+|---|---|---|
+| `test-mock` | ubuntu, macOS, Windows × Go 1.22/1.23 | race detector, full coverage |
+| `test-rtps` | ubuntu | `-short` |
+| `test-cyclone` | ubuntu-22.04 | skips cleanly if `libcyclonedds-dev` absent |
+| `benchmark-smoke` | ubuntu | 1 iteration each, catches panics/deadlocks |
+| `fuzz-short` | ubuntu | 10 s per fuzz target |
+| `lint` | ubuntu | golangci-lint v2 |
+| `dco` | PR only | Signed-off-by check |
+
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for per-milestone goals, sub-items, and success criteria.
+
+**Released — v0.1 – v0.3**
+
+- [x] Go interface (`Participant`, `Publisher`, `Subscriber`, `QoS`, `WaitSet`)
+- [x] In-process mock broker — 100% statement coverage
+- [x] CycloneDDS CGo implementation (`-tags cyclone`)
+- [x] Pure-Go RTPS/UDP — no CGo, all platforms
+- [x] Reliable QoS retransmission (HEARTBEAT / ACKNACK)
+- [x] DDS-Security plugin interface (NullPlugin, HMAC-SHA-256, AES-256-GCM)
+- [x] TransientLocal durability — late-joiner last-value cache
+- [x] IPv6 multicast transport
+- [x] RTPS interop testing with CycloneDDS (Docker Compose)
+- [x] Sentinel errors, unicast discovery, content filters, deadline QoS
+- [x] Large-payload fragmentation (DATA_FRAG), topic wildcards, metrics
+- [x] Persistent history, real-time web monitor
+
+**Released — v0.4**
+
+- [x] Configurable channel depth and back-pressure (`DropNewest` / `DropOldest` / `Block`)
+- [x] Structured logging (`WithLogger(*slog.Logger)`)
+- [x] Participant liveliness detection (`WithLivelinessCallback`)
+- [x] Graceful shutdown with reliable-ACK drain (`CloseWithDrain`)
+- [x] Multicast data delivery
+- [x] Shared-memory transport (`shmem/`)
+- [x] INFO_TS submessage — source timestamps in `Sample.Timestamp`
+- [x] MQTT bridge (`bridge/mqtt/`)
+- [x] Typed generics (`TypedPublisher[T]`, `TypedSubscriber[T]`, `JSONCodec[T]`)
+- [x] OpenTelemetry-compatible tracing
+
+**Released — v0.5 — TSN**
+
+- [x] TSN-extended QoS fields (`TransportPriority`, `LatencyBudget`, `Lifespan`, `PublishPeriod`)
+- [x] DDS-to-TSN stream model (`tsn.Stream`, `tsn.StreamConfig`, `tsn.LoadConfig`)
+- [x] VLAN, PCP, and DSCP socket marking (Linux)
+- [x] Scheduled transmit time (`SO_TXTIME` + `CLOCK_TAI` + ETF/TAPRIO, Linux)
+- [x] Per-PCP traffic-class sockets, TSN-safe discovery, fragmentation bounds
+
+**Released — v0.6 — Production Runtime + Observability**
+
+- [x] JSON/YAML participant configuration (`config/`)
+- [x] `DiscoveryMetrics`, `TopicMetrics`, `Health` interfaces
+- [x] Per-topic atomic counters in `rtps` and `mock`
+- [x] `WithHeartbeatPeriod`, `WithConfig` RTPS options
+- [x] Monitor `/health`, `/api/topics`, `/api/diagnostics`, SSE discovery events
+
+**Released — v0.7 — Developer Experience + Deterministic Networking**
+
+- [x] Test harness helpers (`testutil/`) — `NewParticipant`, `AssertSample`, `TopicRecorder`, `BurstPublish`, `PeriodicPublish`
+- [x] CLI tool (`cmd/ddstool`) — `pub`, `sub`, `discover` subcommands
+- [x] TSN diagnostics (`tsn.HealthTracker`, `tsn.TAPRIOConfig`, `TCCommand`)
+- [x] CI upgraded to Node.js 24 and golangci-lint v2
+
+**Released — v0.8 — Verification, Edge Performance, Safety**
+
+- [x] Topic recording to JSONL (`record.Recorder`) and deterministic replay (`record.Player`) — real-time, time-scaled, topic-filtered
+- [x] Fault injection wrapper (`record.FaultPublisher`) — packet loss, delay, corruption, duplication
+- [x] Allocation-free buffer recycling (`pool.BytePool`) and sample ring buffer (`pool.SampleBuffer`)
+- [x] E2E protection header (`safety.E2EPublisher` / `safety.E2ESubscriber`) — CRC-16/CCITT, sequence counter, configurable freshness window
+- [x] Deterministic queue with panic containment (`safety.DeterministicQueue`)
+
+**Planned — v0.9 — Enterprise Security, Dynamic Data, Services**
+
+| Milestone | Theme |
+|---|---|
+| 8 | Authentication, authorisation, secure discovery |
+| 9 | XTypes, dynamic type inspection, forward/backward compatibility |
+| 10 | Domain bridge, WAN bridge, recorder/replay/monitoring services |
+
+See [ROADMAP.md](ROADMAP.md) for goals and sub-items.
 
 ## Example use cases
 
@@ -130,126 +453,9 @@ Each DDS sample payload is raw bytes. The application chooses the encoding — J
 
 The RTPS transport encodes payloads as CDR_LE byte arrays, compatible with the RTPS 2.3 wire format. The CycloneDDS implementation uses an opaque `RawMessage` DDS type.
 
-## RTPS interoperability testing
-
-The `interop/` directory contains wire-compatibility tests against a live CycloneDDS peer. These tests are gated behind the `interop` build tag so they never run in normal CI.
-
-```bash
-# Start CycloneDDS peer in Docker
-docker compose -f interop/docker-compose.yml up -d cyclone-peer
-
-# Run interop tests
-go test -tags interop -v -timeout 60s ./interop/...
-
-# Tear down
-docker compose -f interop/docker-compose.yml down
-```
-
-Three tests are provided:
-
-| Test | Direction | What it verifies |
-|---|---|---|
-| `TestInterop_GoPublisher_CycloneSubscriber` | go-DDS → CycloneDDS | RTPS writer is interoperable |
-| `TestInterop_CyclonePublisher_GoSubscriber` | CycloneDDS → go-DDS | RTPS reader is interoperable |
-| `TestInterop_BidirectionalEcho` | both | End-to-end round-trip |
-
-Set `INTEROP_DOMAIN` (default `0`) and `INTEROP_TIMEOUT` (default `15s`) to configure the tests.
-
-## Using CycloneDDS (production interop)
-
-```bash
-# Linux
-apt-get install -y libcyclonedds-dev
-
-# macOS
-brew install cyclonedds
-
-# Build
-go build -tags cyclone ./...
-go test -tags cyclone ./cyclone/...
-```
-
-## CI status
-
-[![CI](https://github.com/SoundMatt/go-DDS/actions/workflows/ci.yml/badge.svg)](https://github.com/SoundMatt/go-DDS/actions/workflows/ci.yml)
-[![Go Reference](https://pkg.go.dev/badge/github.com/SoundMatt/go-DDS.svg)](https://pkg.go.dev/github.com/SoundMatt/go-DDS)
-
-| Job | Platforms | Notes |
-|---|---|---|
-| `test-mock` | ubuntu, macOS, Windows × Go 1.22/1.23 | race detector, full coverage |
-| `test-rtps` | ubuntu | `-short` (skips 2.2 s two-participant test) |
-| `test-cyclone` | ubuntu-22.04 | probe-and-flag — skips cleanly if `libcyclonedds-dev` is absent |
-| `benchmark-smoke` | ubuntu | 1 iteration each, catches panics/deadlocks |
-| `fuzz-short` | ubuntu | 10 s per fuzz target |
-| `lint` | ubuntu | golangci-lint |
-| `dco` | PR only | Signed-off-by check |
-
-## Roadmap
-
-See [ROADMAP.md](ROADMAP.md) for per-item context, release notes, and implementation guidance.
-
-**Released — v0.1 – v0.3**
-
-- [x] Go interface (`Participant`, `Publisher`, `Subscriber`, `QoS`)
-- [x] In-process mock — 100% statement coverage
-- [x] CycloneDDS CGo implementation (`-tags cyclone`)
-- [x] Configurable poll interval (`cyclone.Options`)
-- [x] Pure-Go RTPS/UDP — no CGo, all platforms
-- [x] Reliable QoS retransmission (HEARTBEAT / ACKNACK)
-- [x] WaitSet — sub-millisecond multi-topic blocking receive
-- [x] DDS-Security plugin interface (NullPlugin, HMAC-SHA-256, AES-256-GCM)
-- [x] TransientLocal durability (last-value cache for late joiners)
-- [x] IPv6 multicast transport (`WithIPv6()` option, `LocatorKindUDPv6`)
-- [x] RTPS interop testing with CycloneDDS (Docker Compose + CycloneDDS peer)
-- [x] Typed sentinel errors (`ErrClosed`, `ErrTopicEmpty` — `errors.Is` support)
-- [x] Unicast-only / no-multicast discovery mode (`WithNoMulticast`, `WithPeerLocators`)
-- [x] Content-filtered subscriptions (`WithFilter`)
-- [x] Deadline QoS (`WithDeadlineCallback`)
-- [x] Large payload fragmentation (RTPS DATA_FRAG submessage)
-- [x] Topic wildcards (`sensors/#`, `vehicle/+/speed`)
-- [x] Metrics / statistics API (`Metrics()` / `MetricsProvider`)
-- [x] RTPS persistent history (`WithPersistentHistory`)
-- [x] Real-time web monitor (`monitor/` sub-package, SSE, no external dependencies)
-
-**Released — v0.4**
-
-- [x] Configurable subscriber channel depth (`WithChannelDepth`) and back-pressure policy (`DropNewest` / `DropOldest` / `Block`)
-- [x] Structured logging (`WithLogger(*slog.Logger)`, zero-cost when unused)
-- [x] Participant liveliness detection and callback (`WithLivelinessCallback`, `LivelinessGained` / `LivelinessLost`)
-- [x] Graceful shutdown with reliable-ACK drain (`CloseWithDrain(ctx)`, `Drainer` interface)
-- [x] Multicast data delivery (domain-scoped multicast group, one packet per write)
-- [x] Shared memory transport (`shmem/` sub-package, cross-process same-host)
-- [x] INFO_TS submessage — source timestamps in `Sample.Timestamp`
-- [x] MQTT bridge (`bridge/mqtt/` — DDS ↔ MQTT bidirectional, QoS and topic mapping, no external dep)
-- [x] Typed generics (`TypedPublisher[T]` / `TypedSubscriber[T]`, `Codec[T]`, `JSONCodec[T]`)
-- [x] OpenTelemetry-compatible tracing (`WithTracer(dds.Tracer)`, per-deliver spans, zero dep)
-
-**Released — v0.5 — TSN (Time-Sensitive Networking)**
-
-- [x] TSN-extended QoS fields (`TransportPriority`, `LatencyBudget`, `Lifespan`, `PublishPeriod`, `MaxSampleSize`)
-- [x] DDS-to-TSN stream model (`tsn.Stream` descriptor, `tsn.StreamConfig`, `tsn.LoadConfig`)
-- [x] VLAN, PCP, and DSCP socket marking (`SO_PRIORITY`, `IP_TOS`, Linux-only build tag)
-- [x] Scheduled transmit time (`SO_TXTIME` + `CLOCK_TAI` + ETF/taprio qdisc, Linux-only)
-- [x] gPTP / IEEE 802.1AS time base (`CLOCK_TAI` via `syscall.ClockGettime`, no external dep)
-- [x] Separate traffic-class sockets (per-PCP socket map, `tsnSocketForPCP`)
-- [x] TSN-safe discovery (`WithSPDPInterval`, `WithSPDPJitter`, `WithStaticPeers`)
-- [x] Fragmentation bounds for TSN streams (`MaxSampleSize` guard, `splitIntoFragmentsN`)
-- [x] External TSN configuration (JSON file, `tsn.LoadConfig`, `WithTSNConfig`)
-
-**Future — [10-milestone roadmap](ROADMAP.md) targeting v0.9**
-
-| Version | Theme |
-|---|---|
-| v0.6 | Production Runtime + Observability |
-| v0.7 | Developer Experience + Deterministic Networking |
-| v0.8 | Verification, Edge Performance, Safety |
-| v0.9 | Enterprise Security, Dynamic Data, Services |
-
-See [ROADMAP.md](ROADMAP.md) for goals, sub-items, and success criteria per milestone.
-
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). All commits require a DCO sign-off.
+See [CONTRIBUTING.md](CONTRIBUTING.md). All commits require a DCO sign-off (`Signed-off-by:`).
 
 ## License
 
