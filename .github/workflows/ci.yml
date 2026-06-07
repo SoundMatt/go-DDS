@@ -102,6 +102,26 @@ jobs:
       - name: FuzzDropOnFullChannel
         run: go test -fuzz=^FuzzDropOnFullChannel$ -fuzztime=10s ./mock/...
 
+  # ── Pure-Go RTPS/UDP implementation ──────────────────────────────────────
+  # Wire-format unit tests always pass. Intra-process socket tests skip
+  # gracefully if UDP multicast is unavailable. The two-participant test is
+  # gated behind -short so the 2.2 s SPDP wait does not slow CI.
+  test-rtps:
+    name: Test (rtps, ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: go vet (rtps)
+        run: go vet ./rtps/...
+
+      - name: go test (rtps wire + intra-process, -race)
+        run: go test -race -count=1 -short -v ./rtps/...
+
   # ── CycloneDDS CGo build (Linux only — requires system library) ───────────
   # libcyclonedds-dev is not in the Ubuntu 24.04 (Noble) apt repo; this job
   # is best-effort so CI is not blocked if the package is temporarily
