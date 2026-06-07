@@ -96,8 +96,12 @@ func enableTxTime(conn *net.UDPConn) error {
 // Falls back to time.Now() if the kernel clock is unavailable.
 func clockTAINow() (time.Time, error) {
 	var ts syscall.Timespec
-	if err := syscall.ClockGettime(clockTAI, &ts); err != nil {
-		return time.Now(), err
+	// syscall.ClockGettime is not available on all Linux build configurations;
+	// use a raw syscall instead for portability across Go toolchain versions.
+	_, _, errno := syscall.RawSyscall(syscall.SYS_CLOCK_GETTIME,
+		uintptr(clockTAI), uintptr(unsafe.Pointer(&ts)), 0)
+	if errno != 0 {
+		return time.Now(), errno
 	}
 	return time.Unix(ts.Sec, ts.Nsec), nil
 }
