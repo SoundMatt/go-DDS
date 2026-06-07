@@ -84,7 +84,11 @@ func TestCloseWithDrain_ShmemParticipant(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	if err := p.(*participant).CloseWithDrain(context.Background()); err != nil {
+	part, ok := p.(*participant)
+	if !ok {
+		t.Fatalf("expected *participant, got %T", p)
+	}
+	if err := part.CloseWithDrain(context.Background()); err != nil {
 		t.Fatalf("CloseWithDrain: %v", err)
 	}
 }

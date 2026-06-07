@@ -1711,7 +1711,10 @@ func TestAdvanceAcked_SignalsDrainCh(t *testing.T) {
 	defer pub.Close()
 
 	_ = pub.Write([]byte("w1"))
-	w := pub.(*rtpsWriter)
+	w, ok := pub.(*rtpsWriter)
+	if !ok {
+		t.Fatalf("expected *rtpsWriter, got %T", pub)
+	}
 
 	// Simulate receiving ACKNACK with base=2 (acking seqLo=1).
 	w.advanceAcked(2)
@@ -1818,7 +1821,10 @@ func TestWriter_FragmentSize_NoTSNStream(t *testing.T) {
 	p := testPart(t)
 	pub, _ := p.NewPublisher("fsize/default", dds.DefaultQoS)
 	defer pub.Close()
-	w := pub.(*rtpsWriter)
+	w, ok := pub.(*rtpsWriter)
+	if !ok {
+		t.Fatalf("expected *rtpsWriter, got %T", pub)
+	}
 	if w.fragmentSize() != maxFragmentPayload {
 		t.Errorf("fragmentSize() without TSN stream: got %d, want %d", w.fragmentSize(), maxFragmentPayload)
 	}
@@ -1828,7 +1834,10 @@ func TestWriter_SendSock_NoTSN_IsDataSock(t *testing.T) {
 	p := testPart(t)
 	pub, _ := p.NewPublisher("ssock/default", dds.DefaultQoS)
 	defer pub.Close()
-	w := pub.(*rtpsWriter)
+	w, ok := pub.(*rtpsWriter)
+	if !ok {
+		t.Fatalf("expected *rtpsWriter, got %T", pub)
+	}
 	if w.sendSock() != p.dataSock {
 		t.Error("sendSock() without TSN should return p.dataSock")
 	}
@@ -1888,7 +1897,10 @@ func TestWithTSNConfig_MatchesTopic(t *testing.T) {
 	}
 	defer pub.Close()
 
-	w := pub.(*rtpsWriter)
+	w, ok := pub.(*rtpsWriter)
+	if !ok {
+		t.Fatalf("expected *rtpsWriter, got %T", pub)
+	}
 	if w.tsnStream == nil {
 		t.Fatal("tsnStream should be set for topic 'tsn/cfg'")
 	}
@@ -1923,7 +1935,10 @@ func TestWithTSNConfig_NonMatchingTopic_NoTSN(t *testing.T) {
 	}
 	defer pub.Close()
 
-	w := pub.(*rtpsWriter)
+	w, ok := pub.(*rtpsWriter)
+	if !ok {
+		t.Fatalf("expected *rtpsWriter, got %T", pub)
+	}
 	if w.tsnStream != nil {
 		t.Error("tsnStream should be nil for non-matching topic")
 	}
@@ -1941,7 +1956,10 @@ func TestTransportPriority_QoS_CreatesTSNSock(t *testing.T) {
 		t.Fatalf("NewPublisher: %v", err)
 	}
 	defer pub.Close()
-	w := pub.(*rtpsWriter)
+	w, ok := pub.(*rtpsWriter)
+	if !ok {
+		t.Fatalf("expected *rtpsWriter, got %T", pub)
+	}
 	if w.tsnSock == nil {
 		t.Error("tsnSock should be allocated when TransportPriority > 0")
 	}
@@ -1954,7 +1972,10 @@ func TestTransportPriority_Zero_NoTSNSock(t *testing.T) {
 		t.Fatalf("NewPublisher: %v", err)
 	}
 	defer pub.Close()
-	w := pub.(*rtpsWriter)
+	w, ok := pub.(*rtpsWriter)
+	if !ok {
+		t.Fatalf("expected *rtpsWriter, got %T", pub)
+	}
 	if w.tsnSock != nil {
 		t.Error("tsnSock should be nil when TransportPriority = 0 and no tsn config")
 	}
@@ -1992,7 +2013,10 @@ func TestTSNConfig_FragSizePropagated(t *testing.T) {
 
 	pub, _ := p.NewPublisher("frag/tsn", dds.DefaultQoS)
 	defer pub.Close()
-	w := pub.(*rtpsWriter)
+	w, ok := pub.(*rtpsWriter)
+	if !ok {
+		t.Fatalf("expected *rtpsWriter, got %T", pub)
+	}
 	if w.tsnStream == nil {
 		t.Fatal("tsnStream nil")
 	}
@@ -2025,7 +2049,10 @@ func TestEnableTxTime_WhenTxOffsetPositive(t *testing.T) {
 	}
 	defer pub.Close()
 
-	w := pub.(*rtpsWriter)
+	w, ok := pub.(*rtpsWriter)
+	if !ok {
+		t.Fatalf("expected *rtpsWriter, got %T", pub)
+	}
 	if w.tsnStream == nil {
 		t.Fatal("tsnStream should be set when topic matches TSN config")
 	}
