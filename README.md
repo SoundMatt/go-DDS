@@ -606,6 +606,10 @@ See [ROADMAP.md](ROADMAP.md) for per-milestone goals, sub-items, and success cri
 - [x] `mock.IsolatedBroker()` — per-test broker isolation, eliminates cross-test echo loops
 - [x] `HMACDiscoveryPlugin` + `rtps.WithDiscoverySecurity()` — HMAC-SHA-256 authenticated SPDP announcements
 
+**Planned — v0.10 — Routing and Protocol Bridge**
+
+- [ ] Protocol bridge — DDS ↔ gRPC/REST gateway
+
 See [ROADMAP.md](ROADMAP.md) for goals and sub-items.
 
 ## Example use cases
