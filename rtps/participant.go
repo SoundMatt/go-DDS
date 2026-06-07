@@ -490,7 +490,10 @@ func (p *participant) dataReceiveLoop() {
 			active--
 			continue
 		}
-		pkt := recv.Interface().(udpPacket)
+		pkt, valid := recv.Interface().(udpPacket)
+		if !valid {
+			continue
+		}
 		p.handleDataPacket(pkt.data, pkt.from)
 	}
 }
