@@ -19,6 +19,8 @@ import (
 	"time"
 )
 
+const defaultLeaseDuration = 10 * time.Second
+
 const spdpAnnouncePeriod = 2 * time.Second
 
 // participantProxy stores the addresses needed to exchange SEDP traffic
@@ -28,6 +30,8 @@ type participantProxy struct {
 	metatrafficUnicast Locator
 	defaultUnicast     Locator
 	builtinEndpoints   uint32
+	leaseDuration      time.Duration // from pidParticipantLeaseDuration; 0 → use defaultLeaseDuration
+	lastSeen           time.Time     // updated on each received SPDP announcement
 }
 
 // spdpService manages discovery announcements and the known-peers table.
@@ -46,10 +50,11 @@ func newSPDPService(p *participant) *spdpService {
 	}
 }
 
-// start launches the SPDP announce and receive goroutines.
+// start launches the SPDP announce, receive, and lease-eviction goroutines.
 func (s *spdpService) start() {
 	go s.announceLoop()
 	go s.receiveLoop()
+	go s.evictLoop()
 }
 
 func (s *spdpService) close() {
@@ -180,9 +185,48 @@ func (s *spdpService) handlePacket(data []byte, from *net.UDPAddr) {
 }
 
 func (s *spdpService) storePeer(proxy *participantProxy) {
+	proxy.lastSeen = time.Now()
+	if proxy.leaseDuration == 0 {
+		proxy.leaseDuration = defaultLeaseDuration
+	}
 	s.mu.Lock()
 	s.peers[proxy.guid.Prefix] = proxy
 	s.mu.Unlock()
+}
+
+// evictLoop checks once per second for peers whose lease has expired and
+// removes them from the known-peers table, notifying SEDP for each eviction.
+func (s *spdpService) evictLoop() {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-s.stop:
+			return
+		case <-ticker.C:
+			s.evictExpired()
+		}
+	}
+}
+
+func (s *spdpService) evictExpired() {
+	now := time.Now()
+	var evicted []GuidPrefix
+	s.mu.Lock()
+	for prefix, peer := range s.peers {
+		d := peer.leaseDuration
+		if d == 0 {
+			d = defaultLeaseDuration
+		}
+		if now.Sub(peer.lastSeen) > d {
+			delete(s.peers, prefix)
+			evicted = append(evicted, prefix)
+		}
+	}
+	s.mu.Unlock()
+	for _, prefix := range evicted {
+		s.p.sedp.onPeerEvicted(prefix)
+	}
 }
 
 // parseParticipantData decodes PL_CDR_LE participant proxy data.
@@ -225,6 +269,13 @@ func parseParticipantData(prefix GuidPrefix, payload []byte, from *net.UDPAddr) 
 		case pidBuiltinEndpointSet:
 			if len(p.value) >= 4 {
 				proxy.builtinEndpoints = binary.LittleEndian.Uint32(p.value)
+			}
+		case pidParticipantLeaseDuration:
+			if len(p.value) >= 4 {
+				secs := binary.LittleEndian.Uint32(p.value[0:4])
+				if secs > 0 {
+					proxy.leaseDuration = time.Duration(secs) * time.Second
+				}
 			}
 		case pidParticipantGUID:
 			if g, ok := decodeGUID(p.value); ok {

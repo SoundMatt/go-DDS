@@ -333,7 +333,7 @@ func (p *participant) handleDataPacket(data []byte, from *net.UDPAddr) {
 			if !ok {
 				return nil
 			}
-			p.handleAckNack(an)
+			p.handleAckNack(an, from)
 		}
 		return nil
 	})
@@ -414,15 +414,19 @@ func (p *participant) handleHeartbeat(writerGUID GUID, hb Heartbeat, from *net.U
 	}
 }
 
-// handleAckNack retransmits any missing samples from the writer's history.
-func (p *participant) handleAckNack(an AckNack) {
+// handleAckNack retransmits missing samples from the writer's history and sends
+// a GAP for any requested sequence numbers that have been evicted.
+func (p *participant) handleAckNack(an AckNack, from *net.UDPAddr) {
 	p.mu.Lock()
 	w, ok := p.writers[an.WriterEntityId]
 	p.mu.Unlock()
 	if !ok || !w.reliable {
 		return
 	}
-	// Retransmit any samples in the bitmap.
+
+	histFirst, _, histOK := w.history.firstLast()
+
+	// Retransmit samples that are still in history.
 	for bit := uint32(0); bit < 32; bit++ {
 		if an.Bitmap&(1<<bit) == 0 {
 			continue
@@ -430,12 +434,39 @@ func (p *participant) handleAckNack(an AckNack) {
 		seqLo := an.Base.Low + bit
 		msg := w.history.get(seqLo)
 		if msg == nil {
-			continue // evicted from history
+			continue
 		}
 		for _, loc := range p.matchedReaderLocators(w.topic) {
-			dst := loc.udpAddr()
-			if dst != nil {
+			if dst := loc.udpAddr(); dst != nil {
 				_ = p.dataSock.send(dst, msg)
+			}
+		}
+	}
+
+	// Send a GAP for the leading portion of the NACK range that has been
+	// evicted from history. This allows the reader to advance its expected-SN
+	// pointer instead of stalling waiting for samples we can never provide.
+	if histOK && an.Base.Low < histFirst {
+		gapEnd := histFirst - 1
+		// Cap to the 32-bit NACK bitmap range so we don't over-declare.
+		if maxBit := an.Base.Low + 31; gapEnd > maxBit {
+			gapEnd = maxBit
+		}
+		g := Gap{
+			ReaderEntityId: an.ReaderEntityId,
+			WriterEntityId: an.WriterEntityId,
+			GapStart:       SequenceNumber{Low: an.Base.Low},
+			GapEnd:         SequenceNumber{Low: gapEnd},
+		}
+		gapMsg := wrapInRTPSMessage(p.guidPrefix, marshalGAP(g))
+		// Send directly to the requesting reader if we know its address.
+		if from != nil {
+			_ = p.dataSock.send(from, gapMsg)
+		}
+		// Also send to all matched readers so any reader on this topic can advance.
+		for _, loc := range p.matchedReaderLocators(w.topic) {
+			if dst := loc.udpAddr(); dst != nil {
+				_ = p.dataSock.send(dst, gapMsg)
 			}
 		}
 	}
@@ -485,16 +516,28 @@ func (p *participant) addWriterLocator(g GUID, l Locator) {
 	p.mu.Unlock()
 }
 
-// matchedReaderLocators returns the user-data unicast locators for all known
-// participants that have a reader for topicName.
+// matchedReaderLocators returns the data-unicast locators for all remote
+// participants that have an active subscription to topicName. Locators are
+// deduplicated so a participant with multiple readers on the same topic
+// receives only one copy of each DATA packet.
 func (p *participant) matchedReaderLocators(topicName string) []Locator {
+	p.sedp.mu.RLock()
+	defer p.sedp.mu.RUnlock()
 	var locators []Locator
-	for _, peer := range p.spdp.allPeers() {
-		if peer.defaultUnicast.Kind != LocatorKindInvalid {
-			locators = append(locators, peer.defaultUnicast)
+	seen := make(map[Locator]bool)
+	for guid, ri := range p.sedp.remoteReaders {
+		if ri.topicName != topicName {
+			continue
+		}
+		loc, ok := p.sedp.remoteReaderLocs[guid]
+		if !ok || loc.Kind == LocatorKindInvalid {
+			continue
+		}
+		if !seen[loc] {
+			seen[loc] = true
+			locators = append(locators, loc)
 		}
 	}
-	_ = topicName
 	return locators
 }
 
