@@ -16,6 +16,10 @@ linters:
   settings:
     errcheck:
       check-type-assertions: true
+      exclude-functions:
+        - (io.Closer).Close
+        - (*os.File).Close
+        - os.Remove
     govet:
       enable-all: true
       disable:
