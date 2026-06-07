@@ -130,6 +130,31 @@ Each DDS sample payload is raw bytes. The application chooses the encoding — J
 
 The RTPS transport encodes payloads as CDR_LE byte arrays, compatible with the RTPS 2.3 wire format. The CycloneDDS implementation uses an opaque `RawMessage` DDS type.
 
+## RTPS interoperability testing
+
+The `interop/` directory contains wire-compatibility tests against a live CycloneDDS peer. These tests are gated behind the `interop` build tag so they never run in normal CI.
+
+```bash
+# Start CycloneDDS peer in Docker
+docker compose -f interop/docker-compose.yml up -d cyclone-peer
+
+# Run interop tests
+go test -tags interop -v -timeout 60s ./interop/...
+
+# Tear down
+docker compose -f interop/docker-compose.yml down
+```
+
+Three tests are provided:
+
+| Test | Direction | What it verifies |
+|---|---|---|
+| `TestInterop_GoPublisher_CycloneSubscriber` | go-DDS → CycloneDDS | RTPS writer is interoperable |
+| `TestInterop_CyclonePublisher_GoSubscriber` | CycloneDDS → go-DDS | RTPS reader is interoperable |
+| `TestInterop_BidirectionalEcho` | both | End-to-end round-trip |
+
+Set `INTEROP_DOMAIN` (default `0`) and `INTEROP_TIMEOUT` (default `15s`) to configure the tests.
+
 ## Using CycloneDDS (production interop)
 
 ```bash
