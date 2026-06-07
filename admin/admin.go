@@ -172,7 +172,7 @@ func (s *Server) handlePublish(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	defer pub.Close()
+	defer func() { _ = pub.Close() }()
 	if err := pub.Write(payload); err != nil {
 		http.Error(w, "write error: "+err.Error(), http.StatusInternalServerError)
 		return

@@ -114,7 +114,7 @@ func (b *Bridge) Close() error {
 func (b *Bridge) forward(sub dds.Subscriber, pub dds.Publisher) {
 	// recover handles the case where mock's broker panics if a downstream
 	// subscriber's channel was closed while we were mid-delivery.
-	defer func() { recover() }()
+	defer func() { _ = recover() }()
 	for {
 		select {
 		case s, ok := <-sub.C():

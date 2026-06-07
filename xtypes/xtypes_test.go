@@ -251,8 +251,12 @@ func TestDynamicData_FromJSON_RoundTrip(t *testing.T) {
 		t.Fatal("FromJSON: kmh not found after round-trip")
 	}
 	// JSON numbers unmarshal as float64.
-	if v.(float64) != 80.0 {
-		t.Errorf("FromJSON kmh: got %v, want 80.0", v)
+	f, ok2 := v.(float64)
+	if !ok2 {
+		t.Fatalf("FromJSON kmh: expected float64, got %T", v)
+	}
+	if f != 80.0 {
+		t.Errorf("FromJSON kmh: got %v, want 80.0", f)
 	}
 }
 

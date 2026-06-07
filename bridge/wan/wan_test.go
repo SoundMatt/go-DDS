@@ -20,7 +20,10 @@ import (
 
 func newPart(t *testing.T) dds.Participant {
 	t.Helper()
-	p, err := mock.New(0)
+	// IsolatedBroker prevents the global mock broker from echoing samples
+	// published by the server back to the WAN client's subscribers, which
+	// would create a feedback loop and a data race.
+	p, err := mock.New(0, mock.IsolatedBroker())
 	if err != nil {
 		t.Fatalf("mock.New: %v", err)
 	}

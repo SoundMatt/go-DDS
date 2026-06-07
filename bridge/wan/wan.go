@@ -183,7 +183,7 @@ func (b *Bridge) acceptLoop() {
 func (b *Bridge) receiveLoop(conn net.Conn) {
 	defer b.wg.Done()
 	defer b.removeConn(conn)
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	pubs := make(map[string]dds.Publisher)
 	defer func() {
@@ -214,7 +214,7 @@ func (b *Bridge) receiveLoop(conn net.Conn) {
 func (b *Bridge) sendLoop(conn net.Conn, scs []subChan) {
 	defer b.wg.Done()
 	defer b.removeConn(conn)
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	// closeAllSubs interrupts goroutines blocked on sc.ch by closing each subscriber.
 	closeAllSubs := func() {
@@ -228,7 +228,6 @@ func (b *Bridge) sendLoop(conn net.Conn, scs []subChan) {
 	var innerWg sync.WaitGroup
 
 	for _, sc := range scs {
-		sc := sc
 		innerWg.Add(1)
 		go func() {
 			defer innerWg.Done()
@@ -263,8 +262,8 @@ func writeFrame(w io.Writer, f *wireFrame) error {
 	}
 	var hdr [4]byte
 	binary.BigEndian.PutUint32(hdr[:], uint32(len(data)))
-	if _, err := w.Write(hdr[:]); err != nil {
-		return err
+	if _, werr := w.Write(hdr[:]); werr != nil {
+		return werr
 	}
 	_, err = w.Write(data)
 	return err
