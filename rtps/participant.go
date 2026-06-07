@@ -154,7 +154,10 @@ func (p *participant) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, er
 	if w.reliable {
 		w.history = newSendHistory()
 		w.hbDone = make(chan struct{})
-		go w.heartbeatLoop()
+		// Pass the channel by value so heartbeatLoop never reads w.hbDone
+		// after the goroutine starts — Close() can then safely nil the field
+		// under w.mu without racing with the goroutine.
+		go w.heartbeatLoop(w.hbDone)
 	}
 	p.writers[eid] = w
 	p.sedp.registerWriter(eid, topic)
@@ -503,10 +506,7 @@ func (w *rtpsWriter) sendHeartbeatLocked() {
 
 // heartbeatLoop periodically sends a HEARTBEAT for as long as the writer is
 // open, so remote readers can detect and recover from losses.
-func (w *rtpsWriter) heartbeatLoop() {
-	// Capture hbDone once before entering the loop so that Close() can safely
-	// nil out w.hbDone under w.mu without racing with the select expression.
-	hbDone := w.hbDone
+func (w *rtpsWriter) heartbeatLoop(done <-chan struct{}) {
 	ticker := time.NewTicker(heartbeatPeriod)
 	defer ticker.Stop()
 	for {
@@ -517,7 +517,7 @@ func (w *rtpsWriter) heartbeatLoop() {
 				w.sendHeartbeatLocked()
 			}
 			w.mu.Unlock()
-		case <-hbDone:
+		case <-done:
 			return
 		}
 	}
