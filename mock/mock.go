@@ -104,14 +104,15 @@ func (b *broker) subscribe(topic string, qos dds.QoS, cfg dds.SubscriberConfig) 
 	return ch
 }
 
-func (b *broker) unsubscribe(topic string, ch chan dds.Sample) {
+// removeSubscription removes the channel from the broker's subscription list
+// without closing it. Used by Subscriber.Unsubscribe().
+func (b *broker) removeSubscription(topic string, ch chan dds.Sample) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	list := b.subs[topic]
 	for i, s := range list {
 		if s.ch == ch {
 			b.subs[topic] = append(list[:i], list[i+1:]...)
-			close(ch)
 			return
 		}
 	}
@@ -238,7 +239,7 @@ func IsolatedBroker() Option {
 // for API compatibility but has no effect — all mock participants share the
 // same global broker regardless of domain (unless IsolatedBroker is used).
 func New(domain dds.Domain, opts ...Option) (dds.Participant, error) {
-	p := &participant{broker: globalBroker}
+	p := &participant{broker: globalBroker, domain: domain}
 	for _, o := range opts {
 		o(p)
 	}
@@ -256,6 +257,7 @@ type participant struct {
 	mu           sync.Mutex
 	closed       bool
 	broker       *broker
+	domain       dds.Domain
 	deadlineCb   func(string)
 	log          *slog.Logger
 	livelinessCb func(dds.GUID, dds.LivelinessEvent)
@@ -267,6 +269,9 @@ func (p *participant) logf(msg string, args ...any) {
 		p.log.Debug(fmt.Sprintf(msg, args...))
 	}
 }
+
+// Domain implements dds.Participant.
+func (p *participant) Domain() dds.Domain { return p.domain }
 
 func (p *participant) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, error) {
 	if topic == "" {
@@ -410,6 +415,16 @@ func (pub *publisher) Write(payload []byte) error {
 	return nil
 }
 
+// WriteCtx writes payload, returning ctx.Err() immediately if the context is
+// already cancelled. Note: Block back-pressure policy does not honour ctx after
+// the Write call begins.
+func (pub *publisher) WriteCtx(ctx context.Context, payload []byte) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return pub.Write(payload)
+}
+
 func (pub *publisher) Close() error {
 	pub.mu.Lock()
 	defer pub.mu.Unlock()
@@ -423,16 +438,26 @@ func (pub *publisher) Close() error {
 
 // subscriber implements dds.Subscriber.
 type subscriber struct {
-	broker *broker
-	topic  string
-	ch     chan dds.Sample
-	once   sync.Once
+	broker    *broker
+	topic     string
+	ch        chan dds.Sample
+	unsubOnce sync.Once
+	closeOnce sync.Once
 }
 
 func (sub *subscriber) C() <-chan dds.Sample { return sub.ch }
 
+// Unsubscribe removes this subscriber from the broker without closing its
+// channel. After Unsubscribe no new samples are delivered, but the channel
+// remains readable for any buffered samples.
+func (sub *subscriber) Unsubscribe() error {
+	sub.unsubOnce.Do(func() { sub.broker.removeSubscription(sub.topic, sub.ch) })
+	return nil
+}
+
 func (sub *subscriber) Close() error {
-	sub.once.Do(func() { sub.broker.unsubscribe(sub.topic, sub.ch) })
+	_ = sub.Unsubscribe()
+	sub.closeOnce.Do(func() { close(sub.ch) })
 	return nil
 }
 

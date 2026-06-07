@@ -111,14 +111,13 @@ func (b *shmBroker) subscribe(topic string, qos dds.QoS, cfg dds.SubscriberConfi
 	return ch
 }
 
-func (b *shmBroker) unsubscribe(topic string, ch chan dds.Sample) {
+func (b *shmBroker) removeSubscription(topic string, ch chan dds.Sample) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	list := b.subs[topic]
 	for i, s := range list {
 		if s.ch == ch {
 			b.subs[topic] = append(list[:i], list[i+1:]...)
-			close(ch)
 			return
 		}
 	}
@@ -348,6 +347,9 @@ func New(domain dds.Domain) (dds.Participant, error) {
 	}, nil
 }
 
+// Domain implements dds.Participant.
+func (p *participant) Domain() dds.Domain { return p.domain }
+
 func (p *participant) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, error) {
 	if topic == "" {
 		return nil, fmt.Errorf("shmem: %w", dds.ErrTopicEmpty)
@@ -433,6 +435,14 @@ func (pub *shmPublisher) Write(payload []byte) error {
 	return nil
 }
 
+// WriteCtx writes payload, returning ctx.Err() immediately if ctx is already done.
+func (pub *shmPublisher) WriteCtx(ctx context.Context, payload []byte) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return pub.Write(payload)
+}
+
 func (pub *shmPublisher) Close() error {
 	pub.mu.Lock()
 	defer pub.mu.Unlock()
@@ -445,14 +455,15 @@ func (pub *shmPublisher) Close() error {
 // shmSubscriber fans in samples from an in-process channel and an optional
 // cross-process shmListener into a single unified channel.
 type shmSubscriber struct {
-	topic    string
-	broker   *shmBroker
-	inProc   chan dds.Sample
-	listener *shmListener
-	ch       chan dds.Sample
-	done     chan struct{}
-	once     sync.Once
-	started  sync.Once
+	topic     string
+	broker    *shmBroker
+	inProc    chan dds.Sample
+	listener  *shmListener
+	ch        chan dds.Sample
+	done      chan struct{}
+	unsubOnce sync.Once
+	closeOnce sync.Once
+	started   sync.Once
 }
 
 func (sub *shmSubscriber) C() <-chan dds.Sample {
@@ -497,14 +508,22 @@ func (sub *shmSubscriber) pump() {
 	}()
 }
 
+// Unsubscribe removes this subscriber from the broker without closing its
+// channel. After Unsubscribe no new samples are delivered to the channel.
+func (sub *shmSubscriber) Unsubscribe() error {
+	sub.unsubOnce.Do(func() {
+		sub.broker.removeSubscription(sub.topic, sub.inProc)
+	})
+	return nil
+}
+
 func (sub *shmSubscriber) Close() error {
-	sub.once.Do(func() {
+	_ = sub.Unsubscribe()
+	sub.closeOnce.Do(func() {
 		close(sub.done)
-		// Remove from the in-process broker and close the inProc channel so the
-		// pump goroutine exits cleanly via the ok=false branch. Without this the
-		// broker retains a reference to the channel indefinitely, causing future
-		// publishes to accumulate drops in a channel nobody is reading.
-		sub.broker.unsubscribe(sub.topic, sub.inProc)
+		// Close the inProc channel so the pump goroutine exits cleanly via the
+		// ok=false branch. Without this the pump goroutine would block forever.
+		close(sub.inProc)
 		if sub.listener != nil {
 			sub.listener.close()
 		}

@@ -109,6 +109,7 @@ static int32_t go_dds_payload_max() { return GO_DDS_PAYLOAD_MAX; }
 import "C"
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -143,15 +144,19 @@ func NewWithOptions(domain dds.Domain, opts Options) (dds.Participant, error) {
 	if pid < 0 {
 		return nil, fmt.Errorf("cyclone: dds_create_participant failed (rc=%d)", int(pid))
 	}
-	return &participant{pid: pid, opts: opts}, nil
+	return &participant{pid: pid, opts: opts, domain: domain}, nil
 }
 
 type participant struct {
 	mu     sync.Mutex
 	pid    C.int32_t
 	opts   Options
+	domain dds.Domain
 	closed bool
 }
+
+// Domain implements dds.Participant.
+func (p *participant) Domain() dds.Domain { return p.domain }
 
 func (p *participant) NewPublisher(topic string, _ dds.QoS) (dds.Publisher, error) {
 	p.mu.Lock()
@@ -243,6 +248,14 @@ func (pub *publisher) Write(payload []byte) error {
 	return nil
 }
 
+// WriteCtx writes payload, returning ctx.Err() immediately if ctx is already done.
+func (pub *publisher) WriteCtx(ctx context.Context, payload []byte) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return pub.Write(payload)
+}
+
 func (pub *publisher) Close() error {
 	pub.mu.Lock()
 	defer pub.mu.Unlock()
@@ -255,12 +268,13 @@ func (pub *publisher) Close() error {
 // A waitset-based approach can replace this when sub-millisecond latency
 // is required — polling avoids the //export CGo complexity of DDS listeners.
 type subscriber struct {
-	topic string
-	rid   C.int32_t
-	ch    chan dds.Sample
-	stop  chan struct{}
-	once  sync.Once
-	poll  time.Duration
+	topic     string
+	rid       C.int32_t
+	ch        chan dds.Sample
+	stop      chan struct{}
+	unsubOnce sync.Once
+	closeOnce sync.Once
+	poll      time.Duration
 }
 
 func (s *subscriber) pollLoop() {
@@ -293,11 +307,18 @@ func (s *subscriber) pollLoop() {
 
 func (s *subscriber) C() <-chan dds.Sample { return s.ch }
 
-func (s *subscriber) Close() error {
-	s.once.Do(func() {
+// Unsubscribe stops the poll loop and deletes the CycloneDDS reader entity
+// without closing the channel. No new samples are delivered after this call.
+func (s *subscriber) Unsubscribe() error {
+	s.unsubOnce.Do(func() {
 		close(s.stop)
 		C.dds_delete(C.dds_entity_t(s.rid))
-		close(s.ch)
 	})
+	return nil
+}
+
+func (s *subscriber) Close() error {
+	_ = s.Unsubscribe()
+	s.closeOnce.Do(func() { close(s.ch) })
 	return nil
 }

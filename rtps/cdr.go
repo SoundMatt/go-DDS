@@ -39,6 +39,10 @@ const (
 	pidBuiltinEndpointSet          = uint16(0x0058)
 	pidReliability                 = uint16(0x001A)
 	pidDurability                  = uint16(0x001D)
+	// pidDiscoveryToken is a vendor-specific PID (OMG vendor-extension range
+	// 0x8000–0xBFFF) used to carry the SPDP discovery authentication tag
+	// produced by a DiscoveryPlugin.
+	pidDiscoveryToken = uint16(0x8001)
 )
 
 // plCDREncoder builds a PL_CDR_LE encoded parameter list.

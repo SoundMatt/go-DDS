@@ -391,3 +391,55 @@ func TestWaitSet_OneClosedOnePending(t *testing.T) {
 		t.Errorf("payload: %q", s.Payload)
 	}
 }
+
+func TestTypedPublisher_WriteCtx_ValidContext(t *testing.T) {
+	p, _ := mock.New(0)
+	defer func() { _ = p.Close() }()
+
+	pub, _ := p.NewPublisher("typed/ctx", dds.DefaultQoS)
+	sub, _ := p.NewSubscriber("typed/ctx", dds.DefaultQoS)
+	defer func() { _ = sub.Close() }()
+
+	tp := dds.NewTypedPublisher[speedSample](pub, dds.JSONCodec[speedSample]{})
+	defer func() { _ = tp.Close() }()
+
+	if err := tp.WriteCtx(context.Background(), speedSample{KMH: 120.0}); err != nil {
+		t.Fatalf("TypedPublisher.WriteCtx: %v", err)
+	}
+	select {
+	case s := <-sub.C():
+		if len(s.Payload) == 0 {
+			t.Error("expected non-empty payload")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout")
+	}
+}
+
+func TestTypedPublisher_WriteCtx_CancelledContext(t *testing.T) {
+	p, _ := mock.New(0)
+	defer func() { _ = p.Close() }()
+
+	pub, _ := p.NewPublisher("typed/ctxcancel", dds.DefaultQoS)
+	tp := dds.NewTypedPublisher[speedSample](pub, dds.JSONCodec[speedSample]{})
+	defer func() { _ = tp.Close() }()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := tp.WriteCtx(ctx, speedSample{KMH: 0}); err == nil {
+		t.Error("WriteCtx with cancelled context must return error")
+	}
+}
+
+func TestTypedPublisher_WriteCtx_MarshalError(t *testing.T) {
+	p, _ := mock.New(0)
+	defer func() { _ = p.Close() }()
+
+	pub, _ := p.NewPublisher("typed/ctxmarshalerr", dds.DefaultQoS)
+	tp := dds.NewTypedPublisher[speedSample](pub, errCodec[speedSample]{})
+	defer func() { _ = tp.Close() }()
+
+	if err := tp.WriteCtx(context.Background(), speedSample{KMH: 10}); err == nil {
+		t.Error("WriteCtx with marshal error must return error")
+	}
+}

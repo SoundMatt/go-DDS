@@ -53,12 +53,34 @@ type SecurityPlugin interface {
 	Open(ciphertext []byte) ([]byte, error)
 }
 
+// DiscoveryPlugin authenticates SPDP participant-discovery announcements.
+// When configured via [WithDiscoverySecurity], outbound announcements are
+// tagged with a token produced by SignDiscovery, and inbound announcements
+// whose token does not verify are silently discarded.
+//
+// The built-in implementation is security.HMACDiscoveryPlugin.
+type DiscoveryPlugin interface {
+	// SignDiscovery returns an authentication tag for the given GUID prefix
+	// (12 bytes). The tag is embedded in the SPDP announcement.
+	SignDiscovery(guidPrefix []byte) []byte
+	// VerifyDiscovery returns true when tag is a valid authentication tag for
+	// guidPrefix. A nil or empty tag must return false.
+	VerifyDiscovery(guidPrefix, tag []byte) bool
+}
+
 // Option configures a Participant at creation time.
 type Option func(*participant)
 
 // WithSecurity returns an Option that applies plugin to every payload transmitted
 // and received by this participant. All peers that communicate with this
 // participant must use the same plugin and key material.
+// WithDiscoverySecurity returns an Option that applies plugin to SPDP
+// discovery announcements. Outbound announcements are signed; inbound
+// announcements with missing or invalid tokens are rejected.
+func WithDiscoverySecurity(plugin DiscoveryPlugin) Option {
+	return func(p *participant) { p.discoveryPlugin = plugin }
+}
+
 func WithSecurity(plugin SecurityPlugin) Option {
 	return func(p *participant) { p.security = plugin }
 }
@@ -209,6 +231,8 @@ type participant struct {
 
 	// Optional security plugin (nil = no security).
 	security SecurityPlugin
+	// Optional discovery security plugin (nil = unauthenticated discovery).
+	discoveryPlugin DiscoveryPlugin
 
 	// Endpoint registry.
 	mu             sync.Mutex
@@ -257,6 +281,9 @@ func (p *participant) topicCounterFor(topic string) *topicCounter {
 	}
 	return tc
 }
+
+// Domain implements dds.Participant.
+func (p *participant) Domain() dds.Domain { return p.domain }
 
 // New creates an RTPS participant joined to the given DDS domain.
 // It binds UDP sockets, starts SPDP/SEDP, and returns a dds.Participant.
@@ -1219,6 +1246,16 @@ func (w *rtpsWriter) heartbeatLoop(done <-chan struct{}) {
 	}
 }
 
+// WriteCtx writes payload, returning ctx.Err() immediately if ctx is already
+// done. Because RTPS writes are non-blocking, the context is only checked
+// before the write begins.
+func (w *rtpsWriter) WriteCtx(ctx context.Context, payload []byte) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return w.Write(payload)
+}
+
 func (w *rtpsWriter) Close() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -1250,7 +1287,8 @@ type rtpsReader struct {
 	reliable     bool
 	filter       func(dds.Sample) bool // nil = no filter
 	backPressure dds.BackPressurePolicy
-	once         sync.Once
+	unsubOnce    sync.Once // guards deregistration from the participant
+	closeOnce    sync.Once // guards channel close
 }
 
 func (r *rtpsReader) addSourceGUID(g GUID) {
@@ -1292,12 +1330,20 @@ func (r *rtpsReader) acceptsSource(g GUID) bool {
 
 func (r *rtpsReader) C() <-chan dds.Sample { return r.ch }
 
-func (r *rtpsReader) Close() error {
-	r.once.Do(func() {
+// Unsubscribe removes this reader from the participant's endpoint registry so
+// no new samples are dispatched. The channel remains open; call Close to also
+// close the channel and release all reader resources.
+func (r *rtpsReader) Unsubscribe() error {
+	r.unsubOnce.Do(func() {
 		r.p.mu.Lock()
 		delete(r.p.readers, r.eid)
 		r.p.mu.Unlock()
-		close(r.ch)
 	})
+	return nil
+}
+
+func (r *rtpsReader) Close() error {
+	_ = r.Unsubscribe()
+	r.closeOnce.Do(func() { close(r.ch) })
 	return nil
 }

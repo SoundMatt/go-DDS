@@ -1,0 +1,67 @@
+// Copyright (c) 2026 Matt Jones. All rights reserved.
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+package security
+
+import (
+	"crypto/hmac"
+	"crypto/sha256"
+)
+
+// DiscoveryPlugin signs and verifies SPDP participant-discovery announcements.
+// Use with rtps.WithDiscoverySecurity to authenticate the discovery layer.
+//
+// Only go-DDS participants configured with compatible plugins accept each
+// other's discovery announcements; unauthenticated or wrongly-signed peers
+// are silently discarded at the SPDP layer.
+type DiscoveryPlugin interface {
+	// SignDiscovery returns an authentication tag for guidPrefix (12 bytes).
+	// The tag is embedded in outbound SPDP announcements as PID 0x8001.
+	SignDiscovery(guidPrefix []byte) []byte
+	// VerifyDiscovery returns true when tag is a valid authentication token
+	// for the given guidPrefix. A nil or empty tag must return false.
+	VerifyDiscovery(guidPrefix, tag []byte) bool
+}
+
+const discoveryContext = "go-dds-discovery-v1"
+
+// HMACDiscoveryPlugin authenticates SPDP announcements using HMAC-SHA-256.
+// All participants in a discovery group must share the same key.
+//
+// Usage:
+//
+//	plugin := security.NewHMACDiscoveryPlugin([]byte("shared-secret"))
+//	p, err := rtps.New(0, rtps.WithDiscoverySecurity(plugin))
+type HMACDiscoveryPlugin struct {
+	key []byte
+}
+
+// NewHMACDiscoveryPlugin returns an HMACDiscoveryPlugin keyed with key.
+// The key is copied; the caller may discard or reuse the slice.
+func NewHMACDiscoveryPlugin(key []byte) *HMACDiscoveryPlugin {
+	k := make([]byte, len(key))
+	copy(k, key)
+	return &HMACDiscoveryPlugin{key: k}
+}
+
+func (h *HMACDiscoveryPlugin) sign(guidPrefix []byte) []byte {
+	mac := hmac.New(sha256.New, h.key)
+	_, _ = mac.Write([]byte(discoveryContext))
+	_, _ = mac.Write(guidPrefix)
+	return mac.Sum(nil)
+}
+
+// SignDiscovery returns an HMAC-SHA-256 tag for guidPrefix.
+func (h *HMACDiscoveryPlugin) SignDiscovery(guidPrefix []byte) []byte {
+	return h.sign(guidPrefix)
+}
+
+// VerifyDiscovery returns true when tag matches the expected HMAC for guidPrefix.
+func (h *HMACDiscoveryPlugin) VerifyDiscovery(guidPrefix, tag []byte) bool {
+	if len(tag) == 0 {
+		return false
+	}
+	return hmac.Equal(h.sign(guidPrefix), tag)
+}
