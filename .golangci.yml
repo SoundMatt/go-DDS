@@ -20,12 +20,11 @@ linters:
       enable-all: true
       disable:
         - fieldalignment
+  exclusions:
+    rules:
+      - path: cyclone/cyclone\.go
+        linters: [govet]
 
 formatters:
   enable:
     - gofmt
-
-issues:
-  exclude-rules:
-    - path: cyclone/cyclone\.go
-      linters: [govet]
