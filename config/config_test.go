@@ -80,6 +80,14 @@ func TestParseConfig_EmptyReader(t *testing.T) {
 	}
 }
 
+func TestParseConfig_ValidationError(t *testing.T) {
+	// Valid JSON but fails Validate: domain out of range triggers return nil, err.
+	_, err := config.ParseConfig(strings.NewReader(`{"domain": -1}`))
+	if err == nil {
+		t.Fatal("expected error for invalid domain in ParseConfig")
+	}
+}
+
 // ── LoadConfig ────────────────────────────────────────────────────────────────
 
 func TestLoadConfig_HappyPath(t *testing.T) {

@@ -162,6 +162,32 @@ func TestLoadConfig_FileNotFound(t *testing.T) {
 	}
 }
 
+func TestLoadConfig_DecodeError(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "bad.json")
+	if err := os.WriteFile(path, []byte(`{broken json`), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	_, err := tsn.LoadConfig(path)
+	if err == nil {
+		t.Error("expected error for invalid JSON file")
+	}
+}
+
+func TestLoadConfig_ValidationError(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "invalid.json")
+	// Valid JSON but stream has empty topic → fails Validate.
+	data := `{"streams":[{"topic":"","pcp":1}]}`
+	if err := os.WriteFile(path, []byte(data), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	_, err := tsn.LoadConfig(path)
+	if err == nil {
+		t.Error("expected validation error from LoadConfig")
+	}
+}
+
 func TestParseConfig_InvalidJSON(t *testing.T) {
 	_, err := tsn.ParseConfig([]byte(`{broken`))
 	if err == nil {

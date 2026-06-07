@@ -7,6 +7,9 @@ package testutil_test
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -218,6 +221,30 @@ func TestPeriodicPublish_DeliversSamples(t *testing.T) {
 	}
 }
 
+func TestPeriodicPublish_WriteError(t *testing.T) {
+	p := testutil.NewParticipant(t, dds.Domain(0))
+	topic := fmt.Sprintf("testutil/periodic-err/%d", time.Now().UnixNano())
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	_ = pub.Close() // pre-close so Write returns an error immediately
+
+	stop := make(chan struct{})
+	defer close(stop)
+	done := make(chan error, 1)
+	go func() { done <- testutil.PeriodicPublish(pub, []byte("x"), 5*time.Millisecond, stop) }()
+
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("expected write error from PeriodicPublish on closed publisher")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("PeriodicPublish did not return on write error")
+	}
+}
+
 func TestPeriodicPublish_StopsOnClosedStop(t *testing.T) {
 	p := testutil.NewParticipant(t, dds.Domain(0))
 	topic := fmt.Sprintf("testutil/periodic-stop/%d", time.Now().UnixNano())
@@ -377,6 +404,26 @@ func TestTopicRecorder_DrainSamples(t *testing.T) {
 	}
 }
 
+// TestTopicRecorder_Loop_ClosedSub verifies the loop's !ok branch, which fires
+// when the underlying subscriber's channel is closed (sub.Close() called).
+func TestTopicRecorder_Loop_ClosedSub(t *testing.T) {
+	p := testutil.NewParticipant(t, dds.Domain(0))
+	topic := fmt.Sprintf("testutil/recorder-closed/%d", time.Now().UnixNano())
+
+	sub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+
+	rec := testutil.NewTopicRecorder(sub).Start()
+	// Closing the subscriber closes its channel; the loop goroutine sees !ok and exits.
+	sub.Close()
+	// Wait long enough for the goroutine to see the closed channel.
+	time.Sleep(50 * time.Millisecond)
+	// Stop must complete promptly since the loop has already exited.
+	rec.Stop()
+}
+
 func TestTopicRecorder_StopIdempotent(t *testing.T) {
 	p := testutil.NewParticipant(t, dds.Domain(0))
 	topic := fmt.Sprintf("testutil/recorder-stop/%d", time.Now().UnixNano())
@@ -390,6 +437,62 @@ func TestTopicRecorder_StopIdempotent(t *testing.T) {
 	rec := testutil.NewTopicRecorder(sub).Start()
 	rec.Stop()
 	rec.Stop() // must not panic
+}
+
+// ── AssertSample / AssertNoSample fatal paths via subprocess ──────────────────
+
+// The subprocess helpers below cover the t.Fatalf branches inside AssertSample
+// and AssertNoSample. Each helper function runs only when the matching
+// environment variable is set; the outer test spawns the subprocess and checks
+// that it exits non-zero with the expected message.
+
+func runFatalSubprocess(t *testing.T, env string, wantMsg string) {
+	t.Helper()
+	cmd := exec.Command(os.Args[0], "-test.run="+env, "-test.v")
+	cmd.Env = append(os.Environ(), "TESTUTIL_FATAL_CASE="+env)
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Fatalf("subprocess %q: expected non-zero exit, got success. output:\n%s", env, out)
+	}
+	if !strings.Contains(string(out), wantMsg) {
+		t.Errorf("subprocess %q: output does not contain %q:\n%s", env, wantMsg, out)
+	}
+}
+
+func TestAssertSample_Timeout_Fatal(t *testing.T) {
+	if os.Getenv("TESTUTIL_FATAL_CASE") == "TestAssertSample_Timeout_Fatal" {
+		p := testutil.NewParticipant(t, dds.Domain(0))
+		sub, _ := p.NewSubscriber(fmt.Sprintf("fatal/timeout/%d", time.Now().UnixNano()), dds.DefaultQoS)
+		testutil.AssertSample(t, sub, []byte("x"), 10*time.Millisecond)
+		return
+	}
+	runFatalSubprocess(t, "TestAssertSample_Timeout_Fatal", "AssertSample: timeout")
+}
+
+func TestAssertSample_Mismatch_Fatal(t *testing.T) {
+	if os.Getenv("TESTUTIL_FATAL_CASE") == "TestAssertSample_Mismatch_Fatal" {
+		p := testutil.NewParticipant(t, dds.Domain(0))
+		topic := fmt.Sprintf("fatal/mismatch/%d", time.Now().UnixNano())
+		sub, _ := p.NewSubscriber(topic, dds.DefaultQoS)
+		pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+		_ = pub.Write([]byte("wrong"))
+		testutil.AssertSample(t, sub, []byte("right"), time.Second)
+		return
+	}
+	runFatalSubprocess(t, "TestAssertSample_Mismatch_Fatal", "AssertSample: payload mismatch")
+}
+
+func TestAssertNoSample_UnexpectedSample_Fatal(t *testing.T) {
+	if os.Getenv("TESTUTIL_FATAL_CASE") == "TestAssertNoSample_UnexpectedSample_Fatal" {
+		p := testutil.NewParticipant(t, dds.Domain(0))
+		topic := fmt.Sprintf("fatal/nosample/%d", time.Now().UnixNano())
+		sub, _ := p.NewSubscriber(topic, dds.DefaultQoS)
+		pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+		_ = pub.Write([]byte("unexpected"))
+		testutil.AssertNoSample(t, sub, time.Second)
+		return
+	}
+	runFatalSubprocess(t, "TestAssertNoSample_UnexpectedSample_Fatal", "AssertNoSample: unexpected sample")
 }
 
 func TestTopicRecorder_WaitFor_ReturnsFalseOnTimeout(t *testing.T) {

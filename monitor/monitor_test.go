@@ -140,6 +140,17 @@ func TestMonitor_MetricsProvider_PushesMetrics(t *testing.T) {
 	}
 }
 
+// TestMonitor_New_ListenError covers the net.Listen error path in New.
+func TestMonitor_New_ListenError(t *testing.T) {
+	p := newMockParticipant(t)
+	defer p.Close()
+	// Port 99999 is out of the valid range; net.Listen returns an error.
+	_, err := monitor.New(p, monitor.Options{Addr: "127.0.0.1:99999"})
+	if err == nil {
+		t.Fatal("expected error for invalid listen address")
+	}
+}
+
 func TestMonitor_DefaultAddr_Listens(t *testing.T) {
 	// Using an empty Addr triggers the default ":8080" path — but to avoid
 	// binding on a well-known port in CI, we only verify the Options accessor
@@ -324,6 +335,104 @@ func TestMonitor_APIDiagnostics_ReturnsJSON(t *testing.T) {
 	// Must be a JSON object containing metrics.
 	if !strings.Contains(body, "metrics") {
 		t.Errorf("expected 'metrics' in diagnostics response: %s", body)
+	}
+}
+
+// nilTopicsParticipant wraps a participant and always returns nil from TopicMetrics.
+// This covers the nil-slice guard in handleAPITopics.
+type nilTopicsParticipant struct {
+	dds.Participant
+}
+
+func (n *nilTopicsParticipant) TopicMetrics() []dds.TopicMetrics { return nil }
+
+// TestMonitor_APITopics_NilTopicsSlice covers the `if topics == nil` guard in
+// handleAPITopics, which normalises a nil return from TopicMetrics() to [].
+func TestMonitor_APITopics_NilTopicsSlice(t *testing.T) {
+	realPart := newMockParticipant(t)
+	defer realPart.Close()
+	stub := &nilTopicsParticipant{Participant: realPart}
+
+	mon, err := monitor.New(stub, monitor.Options{Addr: "127.0.0.1:0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mon.Close()
+
+	ctx := context.Background()
+	resp, err := get(ctx, "http://"+mon.Addr()+"/api/topics")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	var buf strings.Builder
+	sc := bufio.NewScanner(resp.Body)
+	for sc.Scan() {
+		buf.WriteString(sc.Text())
+	}
+	if buf.String() != "[]" {
+		t.Errorf("nil topics: expected '[]', got %q", buf.String())
+	}
+}
+
+// TestMonitor_APITopics_NilProvider covers handleAPITopics when m.tp == nil.
+func TestMonitor_APITopics_NilProvider(t *testing.T) {
+	// minPart does not implement TopicMetricsProvider.
+	type minPart struct{ dds.Participant }
+	realPart := newMockParticipant(t)
+	defer realPart.Close()
+	stub := &minPart{Participant: realPart}
+
+	mon, err := monitor.New(stub, monitor.Options{Addr: "127.0.0.1:0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mon.Close()
+
+	ctx := context.Background()
+	resp, err := get(ctx, "http://"+mon.Addr()+"/api/topics")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	var buf strings.Builder
+	sc := bufio.NewScanner(resp.Body)
+	for sc.Scan() {
+		buf.WriteString(sc.Text())
+	}
+	if buf.String() != "[]" {
+		t.Errorf("nil tp: expected '[]', got %q", buf.String())
+	}
+}
+
+// TestMonitor_Health_Down verifies /health returns 503 when the participant
+// reports HealthDown status.
+func TestMonitor_Health_Down(t *testing.T) {
+	p := newMockParticipant(t)
+	defer p.Close()
+	mon, err := monitor.New(p, monitor.Options{Addr: "127.0.0.1:0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mon.Close()
+
+	// Close the participant so mock.Health() returns HealthDown.
+	p.Close()
+
+	ctx := context.Background()
+	resp, err := get(ctx, "http://"+mon.Addr()+"/health")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503 for HealthDown, got %d", resp.StatusCode)
 	}
 }
 

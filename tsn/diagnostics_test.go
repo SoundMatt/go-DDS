@@ -159,6 +159,54 @@ func TestHealthTracker_MaxLateness_Tracked(t *testing.T) {
 	}
 }
 
+// TestHealthTracker_ScheduledAdjustment covers the branch in Record that steps
+// scheduled back by one interval when txOffset pushes it past actual.
+func TestHealthTracker_ScheduledAdjustment(t *testing.T) {
+	// interval=1ms, txOffset=600µs. If actual lands within the first 600µs of
+	// an interval, scheduled = boundary + 600µs > actual → adjustment fires.
+	s := streamWith("vehicle/speed", 1000, 600)
+	ht := tsn.NewHealthTracker(s, 10)
+
+	interval := s.Interval()
+	now := time.Now()
+	ns := now.UnixNano()
+	iNS := int64(interval)
+	boundary := (ns / iNS) * iNS
+	// Pick a point 100µs into the interval so scheduled (boundary+600µs) > actual.
+	actual := time.Unix(0, boundary+100_000)
+
+	ht.Record(actual)
+	sh := ht.Health()
+	if sh.WriteCount != 1 {
+		t.Errorf("WriteCount: got %d, want 1", sh.WriteCount)
+	}
+}
+
+// TestHealthTracker_NegativeLateness_Clamped covers the `if lateness < 0`
+// guard in Health. It arises when txOffset > interval, leaving scheduled after
+// actual even after the single-step adjustment in Record.
+func TestHealthTracker_NegativeLateness_Clamped(t *testing.T) {
+	// interval=1ms, txOffset=1500µs (> interval). After one adjustment:
+	// scheduled = boundary + 1500µs - 1ms = boundary + 500µs.
+	// With actual = boundary + 100µs, lateness = -400µs → clamped to 0.
+	s := streamWith("vehicle/speed", 1000, 1500)
+	ht := tsn.NewHealthTracker(s, 10)
+
+	interval := s.Interval()
+	now := time.Now()
+	ns := now.UnixNano()
+	iNS := int64(interval)
+	boundary := (ns / iNS) * iNS
+	actual := time.Unix(0, boundary+100_000) // 100µs into the interval
+
+	ht.Record(actual)
+	sh := ht.Health()
+	// lateness is clamped; the write must not register as late (0µs < threshold).
+	if sh.LateWrites != 0 {
+		t.Errorf("clamped lateness: LateWrites=%d, want 0", sh.LateWrites)
+	}
+}
+
 // ── TAPRIOFromStreams ─────────────────────────────────────────────────────────
 
 func TestTAPRIOFromStreams_NilConfig(t *testing.T) {

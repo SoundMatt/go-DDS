@@ -372,6 +372,39 @@ func TestE2EPublisher_Close(t *testing.T) {
 	}
 }
 
+// TestE2EError_Error verifies the Error() method returns the Message field.
+func TestE2EError_Error(t *testing.T) {
+	e := safety.E2EError{Kind: safety.ErrCRCMismatch, Message: "crc check failed"}
+	if got := e.Error(); got != "crc check failed" {
+		t.Errorf("Error(): got %q, want %q", got, "crc check failed")
+	}
+}
+
+// TestE2ESubscriber_ClosedRawSub exercises the pump's !ok branch, which fires
+// when the underlying subscriber's channel is closed directly.
+func TestE2ESubscriber_ClosedRawSub(t *testing.T) {
+	p := newPart(t)
+	topic := uniqueTopic("e2e/rawclose")
+	rawSub, _ := p.NewSubscriber(topic, dds.DefaultQoS)
+
+	sub := safety.NewE2ESubscriber(rawSub, safety.E2EConfig{})
+
+	// Closing the raw subscriber closes its channel; the pump sees !ok and exits.
+	rawSub.Close()
+
+	// Give the pump goroutine time to see the closed channel and stop.
+	select {
+	case <-sub.C():
+		// ch was closed by pump; receiving zero-value or channel close is fine
+	case <-time.After(500 * time.Millisecond):
+		// pump exited without sending — also fine
+	}
+	// Close must not block since the pump has already exited.
+	if err := sub.Close(); err != nil {
+		t.Fatalf("sub.Close after rawSub.Close: %v", err)
+	}
+}
+
 // ── frame builder helpers (white-box helpers for test scenarios) ──────────────
 
 // buildFrame constructs a valid E2E frame — used to craft specific counter values.

@@ -6,6 +6,7 @@
 package mqtt_test
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -276,6 +277,50 @@ func TestBridge_FromMQTT_NoTopicMatch(t *testing.T) {
 	case <-time.After(80 * time.Millisecond):
 		// correct: nothing delivered
 	}
+}
+
+// errToken is an MQTT Token that always reports an error.
+type errToken struct{}
+
+func (errToken) Wait() bool   { return true }
+func (errToken) Error() error { return fmt.Errorf("stub subscribe error") }
+
+// errSubscribeClient wraps stubMQTTClient but returns an error token from Subscribe.
+type errSubscribeClient struct {
+	*stubMQTTClient
+}
+
+func (c *errSubscribeClient) Subscribe(topic string, qos byte, handler mqttbridge.MessageHandler) mqttbridge.Token {
+	return errToken{}
+}
+
+// TestNewBridge_MQTTSubscribeError covers the token-error path in NewBridge.
+func TestNewBridge_MQTTSubscribeError(t *testing.T) {
+	p := newMockPart(t)
+	client := &errSubscribeClient{newStubClient()}
+	_, err := mqttbridge.NewBridge(p, client, mqttbridge.Options{})
+	if err == nil {
+		t.Fatal("expected error when MQTT subscribe fails")
+	}
+}
+
+// TestBridge_FromMQTT_PublisherCreateError covers the NewPublisher error path
+// in fromMQTT. Closing the participant makes NewPublisher fail for new topics.
+func TestBridge_FromMQTT_PublisherCreateError(t *testing.T) {
+	p := newMockPart(t)
+	client := newStubClient()
+	b, err := mqttbridge.NewBridge(p, client, mqttbridge.Options{})
+	if err != nil {
+		t.Fatalf("NewBridge: %v", err)
+	}
+	defer b.Close()
+
+	// Close the participant so NewPublisher fails for a new DDS topic.
+	p.Close()
+	// Inject a new MQTT topic (no cached publisher) — fromMQTT will try to create one.
+	client.injectMQTT("new/topic", []byte("data"))
+	// Give the goroutine a moment to process; it must not panic.
+	time.Sleep(30 * time.Millisecond)
 }
 
 func TestBridge_Close_Idempotent(t *testing.T) {

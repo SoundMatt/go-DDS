@@ -266,6 +266,32 @@ func TestTypedSubscriber_DecodeErrorDropped(t *testing.T) {
 	}
 }
 
+// TestTypedSubscriber_ClosedRawSub covers the pump's !ok branch, which fires
+// when the underlying subscriber channel closes before ts.Close() is called.
+func TestTypedSubscriber_ClosedRawSub(t *testing.T) {
+	p := newMockParticipant(t)
+	rawSub, _ := p.NewSubscriber("typed/rawclose", dds.DefaultQoS)
+
+	ts := dds.NewTypedSubscriber[speedSample](rawSub, dds.JSONCodec[speedSample]{})
+
+	// Close the raw subscriber — its channel closes, pump sees !ok and exits.
+	rawSub.Close()
+
+	// The typed channel will be closed by the pump goroutine.
+	select {
+	case _, ok := <-ts.C():
+		if ok {
+			// drain any delivered samples before close
+		}
+	case <-time.After(500 * time.Millisecond):
+		// pump may have already exited
+	}
+	// ts.Close() must not block since the pump is done.
+	if err := ts.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+}
+
 func TestTypedSubscriber_Close_StopsPump(t *testing.T) {
 	p := newMockParticipant(t)
 	rawSub, _ := p.NewSubscriber("typed/close", dds.DefaultQoS)
@@ -313,6 +339,26 @@ func TestTypedPublisher_MarshalError_Propagated(t *testing.T) {
 	err := tp.Write(speedSample{KMH: 1})
 	if err == nil {
 		t.Error("expected TypedPublisher.Write to propagate Marshal error")
+	}
+}
+
+// ── HealthStatus.String ───────────────────────────────────────────────────────
+
+func TestHealthStatus_String_OK(t *testing.T) {
+	if got := dds.HealthOK.String(); got != "ok" {
+		t.Errorf("HealthOK.String(): got %q, want %q", got, "ok")
+	}
+}
+
+func TestHealthStatus_String_Degraded(t *testing.T) {
+	if got := dds.HealthDegraded.String(); got != "degraded" {
+		t.Errorf("HealthDegraded.String(): got %q, want %q", got, "degraded")
+	}
+}
+
+func TestHealthStatus_String_Down(t *testing.T) {
+	if got := dds.HealthDown.String(); got != "down" {
+		t.Errorf("HealthDown.String(): got %q, want %q", got, "down")
 	}
 }
 

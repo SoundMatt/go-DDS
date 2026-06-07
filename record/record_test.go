@@ -323,6 +323,75 @@ func TestPlayer_PlayScaled_ZeroSpeedClamped(t *testing.T) {
 	}
 }
 
+// TestRecorder_Drain_ClosedSubscriber covers the drain goroutine's !ok branch,
+// which fires when the underlying subscriber's channel is closed externally.
+func TestRecorder_Drain_ClosedSubscriber(t *testing.T) {
+	p := newPart(t)
+	topic := uniqueTopic("rec/drain-close")
+
+	sub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+
+	var buf bytes.Buffer
+	rec := record.NewRecorder(&buf).AddTopic(sub).Start()
+
+	// Closing the subscriber closes its channel; the drain goroutine sees !ok.
+	sub.Close()
+	time.Sleep(30 * time.Millisecond)
+
+	// Stop must complete promptly — the drain goroutine has already exited.
+	rec.Stop()
+}
+
+// TestPlayer_PlayFiltered_CancelledContext covers the ctx.Err() early-exit
+// branch inside playFiltered when the context is already cancelled before the
+// loop body runs.
+func TestPlayer_PlayFiltered_CancelledContext(t *testing.T) {
+	topic := uniqueTopic("play/cancelled")
+	now := time.Now()
+	samples := []record.RecordedSample{
+		{Topic: topic, Payload: []byte("a"), RecordedAt: now},
+		{Topic: topic, Payload: []byte("b"), RecordedAt: now.Add(100 * time.Millisecond)},
+	}
+	buf := makeJSONL(t, samples)
+
+	p := newPart(t)
+	pl := record.NewPlayer(buf, p)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // cancel before Play so ctx.Err() is non-nil on first loop iteration
+
+	err := pl.Play(ctx)
+	if err == nil {
+		t.Fatal("expected context error from already-cancelled context")
+	}
+}
+
+// TestPlayer_Play_WriteError covers the pub.Write error path in playFiltered,
+// triggered when the participant is closed before Play can publish samples.
+func TestPlayer_Play_WriteError(t *testing.T) {
+	p := newPart(t)
+	topic := uniqueTopic("play/writeerr")
+	now := time.Now()
+	samples := []record.RecordedSample{
+		{Topic: topic, Payload: []byte("a"), RecordedAt: now},
+	}
+	buf := makeJSONL(t, samples)
+	pl := record.NewPlayer(buf, p)
+
+	// Close the participant so NewPublisher succeeds but Write fails.
+	p.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	err := pl.Play(ctx)
+	if err == nil {
+		t.Fatal("expected error when participant is closed during play")
+	}
+}
+
 // ── RecordedSample JSON round-trip ────────────────────────────────────────────
 
 func TestRecordedSample_JSONRoundTrip(t *testing.T) {

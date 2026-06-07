@@ -215,6 +215,25 @@ func TestFaultPublisher_CloseIdempotent(t *testing.T) {
 	_ = fp.Close()
 }
 
+// TestFaultPublisher_UnderlyingWriteError covers the `return err` branch inside
+// Write when the underlying publisher fails but the FaultPublisher itself is
+// still open (f.closed == false).
+func TestFaultPublisher_UnderlyingWriteError(t *testing.T) {
+	p := newPart(t)
+	topic := uniqueTopic("fault/pub-err")
+	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+
+	fp := record.NewFaultPublisher(pub, record.FaultOptions{}, 1)
+	// Close the underlying publisher directly — FaultPublisher stays "open".
+	_ = pub.Close()
+
+	err := fp.Write([]byte("x"))
+	if err == nil {
+		t.Fatal("expected error from underlying closed publisher")
+	}
+	_ = fp.Close()
+}
+
 func TestFaultPublisher_ZeroSeedIsNonDeterministic(t *testing.T) {
 	// Seed 0 triggers time.Now() seeding; just verify it constructs without panic.
 	p := newPart(t)

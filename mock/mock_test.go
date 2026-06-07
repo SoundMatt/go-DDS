@@ -424,6 +424,34 @@ func TestWildcard_MultiLevel(t *testing.T) {
 	}
 }
 
+// TestWildcard_PatternLongerThanTopic covers the `len(tSegs) == 0` branch in
+// matchSlices, which fires when the pattern has more segments than the topic.
+func TestWildcard_PatternLongerThanTopic(t *testing.T) {
+	p := newParticipant(t)
+	// Subscriber pattern has 3 levels; publisher has 2.
+	// matchSlices(["a","b","c"],["a","b"]) → recurses to (["c"],[]) → len(tSegs)==0 → false
+	sub, err := p.NewSubscriber("a/b/c", dds.DefaultQoS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+
+	pub, err := p.NewPublisher("a/b", dds.DefaultQoS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pub.Close()
+
+	_ = pub.Write([]byte("data"))
+	// Shorter topic must NOT match longer pattern.
+	select {
+	case <-sub.C():
+		t.Error("shorter topic 'a/b' must not match longer pattern 'a/b/c'")
+	case <-time.After(50 * time.Millisecond):
+		// correct: no delivery
+	}
+}
+
 func TestSentinelErrors_EmptyTopic(t *testing.T) {
 	p := newParticipant(t)
 	if _, err := p.NewPublisher("", dds.DefaultQoS); err == nil {
