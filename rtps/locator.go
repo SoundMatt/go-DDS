@@ -72,9 +72,9 @@ var spdpMulticastAddr = net.ParseIP("239.255.0.1")
 
 // portBase constants from the RTPS port mapping formula (§9.6.1).
 const (
-	portBase          = 7400
-	domainGain        = 250
-	participantGain   = 2
+	portBase        = 7400
+	domainGain      = 250
+	participantGain = 2
 )
 
 // metaMulticastPort returns the SPDP multicast port for a domain.

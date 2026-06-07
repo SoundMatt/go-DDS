@@ -27,11 +27,11 @@ type endpointInfo struct {
 
 // sedpService manages endpoint discovery and matching.
 type sedpService struct {
-	p    *participant
-	mu   sync.RWMutex
+	p  *participant
+	mu sync.RWMutex
 	// Local endpoints registered by this participant.
-	localWriters  map[EntityId]*endpointInfo
-	localReaders  map[EntityId]*endpointInfo
+	localWriters map[EntityId]*endpointInfo
+	localReaders map[EntityId]*endpointInfo
 	// Remote endpoints discovered from peers.
 	remoteWriters map[GUID]*endpointInfo
 	stop          chan struct{}

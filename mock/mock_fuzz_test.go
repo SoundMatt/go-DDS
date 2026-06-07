@@ -254,7 +254,7 @@ func FuzzConcurrentPubSub(f *testing.F) {
 				pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
 				defer pub.Close()
 				// Any error here (e.g. closed participant) is a test bug, not a library bug.
-				pub.Write(payload)
+				_ = pub.Write(payload)
 			}()
 		}
 
@@ -289,12 +289,12 @@ func FuzzDropOnFullChannel(f *testing.F) {
 		wantFill := make([]byte, len(fillPayload))
 		copy(wantFill, fillPayload)
 		for i := 0; i < 64; i++ {
-			pub.Write(fillPayload)
+			_ = pub.Write(fillPayload)
 		}
 
 		// These must not panic or block — they hit the drop path.
 		for i := 0; i < 10; i++ {
-			pub.Write(overflowPayload)
+			_ = pub.Write(overflowPayload)
 		}
 
 		// Drain and verify the buffered samples are the fill payload, not the overflow.

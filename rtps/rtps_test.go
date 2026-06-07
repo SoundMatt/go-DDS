@@ -10,6 +10,7 @@ package rtps_test
 
 import (
 	"bytes"
+	"runtime"
 	"testing"
 	"time"
 
@@ -252,6 +253,9 @@ func TestRTPS_SubscriberClose_Idempotent(t *testing.T) {
 func TestRTPS_TwoParticipants_SameHost(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping two-participant test in -short mode (requires network)")
+	}
+	if runtime.GOOS != "linux" {
+		t.Skipf("UDP multicast loopback unreliable on %s; skipping cross-participant test", runtime.GOOS)
 	}
 
 	p1, err := rtps.New(testDomain)

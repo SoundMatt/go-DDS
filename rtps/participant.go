@@ -237,10 +237,10 @@ func (p *participant) matchedReaderLocators(topicName string) []Locator {
 // ── Writer ────────────────────────────────────────────────────────────────────
 
 type rtpsWriter struct {
-	p     *participant
-	topic string
-	eid   EntityId
-	mu    sync.Mutex
+	p      *participant
+	topic  string
+	eid    EntityId
+	mu     sync.Mutex
 	closed bool
 	seqHi  int32
 	seqLo  uint32
