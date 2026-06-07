@@ -91,8 +91,8 @@ func parseDataFrag(body []byte) (DataFrag, bool) {
 
 // fragmentAssembler reassembles DATA_FRAG submessages for a single writer+seqnum pair.
 type fragmentAssembler struct {
-	mu       sync.Mutex
-	buffers  map[fragKey]*fragBuffer
+	mu      sync.Mutex
+	buffers map[fragKey]*fragBuffer
 }
 
 type fragKey struct {

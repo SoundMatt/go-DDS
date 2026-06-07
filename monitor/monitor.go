@@ -66,9 +66,6 @@ type Monitor struct {
 	ctx     context.Context
 	mu      sync.RWMutex
 	clients map[chan string]struct{}
-
-	// Intercept publisher and subscriber creation so we can observe samples.
-	pubSubs []dds.Subscriber
 }
 
 // New creates a Monitor wrapping p and starts the HTTP server.
@@ -96,7 +93,7 @@ func New(p dds.Participant, opts Options) (*Monitor, error) {
 	mux.HandleFunc("/events", m.handleSSE)
 	m.server = &http.Server{Handler: mux}
 
-	go m.server.Serve(ln)           //nolint:errcheck
+	go m.server.Serve(ln) //nolint:errcheck
 	go m.metricsLoop()
 	return m, nil
 }

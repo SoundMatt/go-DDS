@@ -627,7 +627,7 @@ type rtpsWriter struct {
 	seqLo         uint32
 	reliable      bool
 	history       *sendHistory  // non-nil when reliable == true
-	hbDone        chan struct{}  // closed to stop the heartbeat goroutine
+	hbDone        chan struct{} // closed to stop the heartbeat goroutine
 	deadlineTimer *time.Timer   // non-nil when QoS.Deadline > 0
 }
 

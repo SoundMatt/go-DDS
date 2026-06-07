@@ -27,6 +27,14 @@ func newMockParticipant(t *testing.T) dds.Participant {
 	return p
 }
 
+func get(ctx context.Context, url string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	return http.DefaultClient.Do(req)
+}
+
 func TestMonitor_ServesIndexHTML(t *testing.T) {
 	p := newMockParticipant(t)
 	defer p.Close()
@@ -36,7 +44,8 @@ func TestMonitor_ServesIndexHTML(t *testing.T) {
 	}
 	defer mon.Close()
 
-	resp, err := http.Get("http://" + mon.Addr() + "/")
+	ctx := context.Background()
+	resp, err := get(ctx, "http://"+mon.Addr()+"/")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,8 +82,7 @@ func TestMonitor_SSEDeliversSampleEvent(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+mon.Addr()+"/events", nil)
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := get(ctx, "http://"+mon.Addr()+"/events")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,8 +120,7 @@ func TestMonitor_MetricsProvider_PushesMetrics(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+mon.Addr()+"/events", nil)
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := get(ctx, "http://"+mon.Addr()+"/events")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -141,12 +148,15 @@ func TestMonitor_Close_StopsServer(t *testing.T) {
 		t.Fatal(err)
 	}
 	addr := mon.Addr()
-	if err := mon.Close(); err != nil {
-		t.Fatal(err)
+	closeErr := mon.Close()
+	if closeErr != nil {
+		t.Fatal(closeErr)
 	}
 	// After close, requests should fail.
-	_, err = http.Get("http://" + addr + "/")
-	if err == nil {
+	ctx := context.Background()
+	resp, reqErr := get(ctx, "http://"+addr+"/")
+	if reqErr == nil {
+		resp.Body.Close()
 		t.Fatal("expected error after monitor closed")
 	}
 }

@@ -5,6 +5,8 @@
 
 package rtps
 
+import "strings"
+
 // TopicMatches reports whether pattern (which may contain MQTT-style + and #
 // wildcards) matches the concrete topic name.
 //
@@ -12,49 +14,23 @@ package rtps
 //   - '+' matches exactly one topic level (no slashes).
 //   - '#' at the end of a segment matches zero or more remaining levels.
 //   - Literal segments must match exactly (case-sensitive).
+//   - "foo/" and "foo" are distinct topics (two levels vs one level).
 func TopicMatches(pattern, topic string) bool {
-	return matchSegments(pattern, topic)
+	return matchSlices(strings.Split(pattern, "/"), strings.Split(topic, "/"))
 }
 
-func matchSegments(pat, top string) bool {
-	for {
-		if pat == "" {
-			return top == ""
-		}
-		pi := indexByte(pat, '/')
-		var pseg string
-		if pi < 0 {
-			pseg, pat = pat, ""
-		} else {
-			pseg, pat = pat[:pi], pat[pi+1:]
-		}
-
-		if pseg == "#" {
-			return true
-		}
-
-		if top == "" {
-			return false
-		}
-		ti := indexByte(top, '/')
-		var tseg string
-		if ti < 0 {
-			tseg, top = top, ""
-		} else {
-			tseg, top = top[:ti], top[ti+1:]
-		}
-
-		if pseg != "+" && pseg != tseg {
-			return false
-		}
+func matchSlices(pSegs, tSegs []string) bool {
+	if len(pSegs) == 0 {
+		return len(tSegs) == 0
 	}
-}
-
-func indexByte(s string, b byte) int {
-	for i := 0; i < len(s); i++ {
-		if s[i] == b {
-			return i
-		}
+	if pSegs[0] == "#" {
+		return true
 	}
-	return -1
+	if len(tSegs) == 0 {
+		return false
+	}
+	if pSegs[0] == "+" || pSegs[0] == tSegs[0] {
+		return matchSlices(pSegs[1:], tSegs[1:])
+	}
+	return false
 }
