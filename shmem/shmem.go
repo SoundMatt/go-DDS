@@ -230,7 +230,7 @@ func shmPublish(topic string, payload []byte) {
 		return // no subscriber socket yet — that is fine
 	}
 	_, _ = conn.Write([]byte{0})
-	conn.Close()
+	_ = conn.Close()
 }
 
 // ── shmSubscriber (cross-process) ────────────────────────────────────────────
@@ -322,7 +322,7 @@ func (l *shmListener) readData() ([]byte, error) {
 func (l *shmListener) close() {
 	l.once.Do(func() {
 		close(l.done)
-		l.conn.Close()
+		_ = l.conn.Close()
 		_ = os.Remove(shmSocketPath(l.topic))
 	})
 }

@@ -167,7 +167,7 @@ func (s *udpSocket) send(dst *net.UDPAddr, data []byte) error {
 
 func (s *udpSocket) close() {
 	close(s.done)
-	s.conn.Close()
+	_ = s.conn.Close()
 }
 
 // firstMulticastInterface returns the first UP, non-loopback multicast

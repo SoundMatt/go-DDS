@@ -109,14 +109,14 @@ func runPub(args []string) int {
 		fmt.Fprintf(os.Stderr, "pub: participant: %v\n", err)
 		return 1
 	}
-	defer p.Close()
+	defer func() { _ = p.Close() }()
 
 	pub, err := p.NewPublisher(*topic, dds.DefaultQoS)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "pub: publisher: %v\n", err)
 		return 1
 	}
-	defer pub.Close()
+	defer func() { _ = pub.Close() }()
 
 	data := []byte(*payload)
 	for i := 0; *count == 0 || i < *count; i++ {
@@ -159,14 +159,14 @@ func runSub(args []string) int {
 		fmt.Fprintf(os.Stderr, "sub: participant: %v\n", err)
 		return 1
 	}
-	defer p.Close()
+	defer func() { _ = p.Close() }()
 
 	sub, err := p.NewSubscriber(*topic, dds.DefaultQoS)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "sub: subscriber: %v\n", err)
 		return 1
 	}
-	defer sub.Close()
+	defer func() { _ = sub.Close() }()
 
 	fmt.Printf("subscribed: topic=%s domain=%d\n", *topic, common.domain)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -211,7 +211,7 @@ func runDiscover(args []string) int {
 		fmt.Fprintf(os.Stderr, "discover: participant: %v\n", err)
 		return 1
 	}
-	defer p.Close()
+	defer func() { _ = p.Close() }()
 
 	fmt.Printf("discovering: domain=%d wait=%v\n", common.domain, *wait)
 	time.Sleep(*wait)

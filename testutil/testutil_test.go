@@ -88,31 +88,15 @@ func TestAssertSample_PayloadMismatch(t *testing.T) {
 	if err := pub.Write([]byte("wrong")); err != nil {
 		t.Fatalf("Write: %v", err)
 	}
-	// Use a sub-test with its own *testing.T so that Fatal inside
-	// AssertSample doesn't kill the outer test.
-	failed := false
-	t.Run("inner", func(t2 *testing.T) {
-		// This will call t2.Fatalf because payload is "wrong" not "right".
-		defer func() {
-			if r := recover(); r != nil {
-				// runtime.Goexit() causes a panic-like unwinding in sub-tests.
-			}
-		}()
-		// We expect this to not match — but the test passes because the
-		// sub-test will be marked failed, not the outer test.
-		// Directly verify the mismatch by reading from the channel and
-		// comparing, without calling AssertSample on the mis-matched value.
-		select {
-		case got := <-sub.C():
-			if string(got.Payload) != "right" {
-				failed = true
-			}
-		case <-time.After(time.Second):
-			t2.Fatal("timeout")
+	// Directly verify the mismatch by reading from the channel.
+	// The payload "wrong" must not equal "right".
+	select {
+	case got := <-sub.C():
+		if string(got.Payload) == "right" {
+			t.Fatalf("expected payload %q != %q", got.Payload, "right")
 		}
-	})
-	if !failed {
-		t.Fatal("expected mismatch to be detected")
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for published sample")
 	}
 }
 
