@@ -21,7 +21,9 @@
 package dds
 
 import (
+	"bytes"
 	"context"
+	"encoding/gob"
 	"encoding/json"
 	"errors"
 	"reflect"
@@ -40,6 +42,18 @@ var ErrTopicEmpty = errors.New("dds: topic name must not be empty")
 // ErrPayloadTooLarge is returned when Write is called with a payload that
 // exceeds the MaxSampleSize set in the publisher's QoS.
 var ErrPayloadTooLarge = errors.New("dds: payload exceeds QoS MaxSampleSize")
+
+// ErrQoSMismatch is returned when a publisher and subscriber have incompatible QoS policies.
+var ErrQoSMismatch = errors.New("dds: QoS incompatibility between publisher and subscriber")
+
+// ErrDeadlineMissed is returned when a subscriber receives no sample within its QoS.Deadline period.
+var ErrDeadlineMissed = errors.New("dds: deadline missed — no sample within QoS.Deadline period")
+
+// ErrSampleRejected is returned when a sample is rejected because resource limits are exceeded.
+var ErrSampleRejected = errors.New("dds: sample rejected — resource limits exceeded")
+
+// ErrResourceLimits is returned when a resource limit is exceeded.
+var ErrResourceLimits = errors.New("dds: resource limit exceeded")
 
 // ── Domain ────────────────────────────────────────────────────────────────────
 
@@ -124,9 +138,11 @@ var ReliableQoS = QoS{
 // Timestamp is the source time of the write; zero means no timestamp was set
 // (INFO_TS was not present in the RTPS message, or the mock transport was used).
 type Sample struct {
-	Topic     string
-	Payload   []byte
-	Timestamp time.Time
+	Topic          string
+	Payload        []byte
+	Timestamp      time.Time
+	SequenceNumber uint64 // monotonically increasing per writer; 0 = not set
+	WriterGUID     GUID   // identity of the publishing endpoint; zero = not set
 }
 
 // ── BackPressurePolicy ────────────────────────────────────────────────────────
@@ -208,9 +224,10 @@ var NoopTracer Tracer = noopTracerImpl{}
 // It is exported so that implementation packages (mock, rtps, cyclone) can
 // read the resolved configuration without duplicating the option-merge logic.
 type SubscriberConfig struct {
-	Filter       func(Sample) bool
-	ChannelDepth int                // 0 = implementation default (64)
-	BackPressure BackPressurePolicy // default: DropNewest
+	Filter                 func(Sample) bool
+	ChannelDepth           int                // 0 = implementation default (64)
+	BackPressure           BackPressurePolicy // default: DropNewest
+	DeadlineMissedCallback func()             // called when subscriber deadline expires; nil = disabled
 }
 
 // SubscriberOption configures a subscriber at creation time.
@@ -233,6 +250,13 @@ func WithChannelDepth(n int) SubscriberOption {
 // channel is full. The default policy is DropNewest.
 func WithBackPressure(policy BackPressurePolicy) SubscriberOption {
 	return func(c *SubscriberConfig) { c.BackPressure = policy }
+}
+
+// WithDeadlineMissed registers fn to be called when the subscriber has not
+// received a sample within its QoS.Deadline period. fn must be non-nil.
+// Has no effect when QoS.Deadline == 0 on the subscriber.
+func WithDeadlineMissed(fn func()) SubscriberOption {
+	return func(c *SubscriberConfig) { c.DeadlineMissedCallback = fn }
 }
 
 // ApplySubscriberOpts merges a slice of SubscriberOption into a SubscriberConfig.
@@ -397,6 +421,9 @@ type Publisher interface {
 // A Subscriber is safe for concurrent use from multiple goroutines.
 type Subscriber interface {
 	C() <-chan Sample
+	// TryRead attempts a non-blocking read. Returns (zero, false) when the
+	// channel is empty or closed.
+	TryRead() (Sample, bool)
 	// Unsubscribe removes this subscriber from the topic without closing its
 	// channel. After Unsubscribe the channel remains open but no new samples
 	// are delivered. Call Close to stop delivery AND close the channel.
@@ -471,9 +498,11 @@ type Codec[T any] interface {
 
 // TypedSample[T] is a decoded sample delivered by TypedSubscriber[T].
 type TypedSample[T any] struct {
-	Topic     string
-	Value     T
-	Timestamp time.Time
+	Topic          string
+	Value          T
+	Timestamp      time.Time
+	SequenceNumber uint64
+	WriterGUID     GUID
 }
 
 // TypedPublisher[T] wraps a Publisher to encode values with a Codec before writing.
@@ -545,7 +574,7 @@ func (ts *TypedSubscriber[T]) pump() {
 				continue // decode error: drop this sample
 			}
 			select {
-			case ts.ch <- TypedSample[T]{Topic: s.Topic, Value: v, Timestamp: s.Timestamp}:
+			case ts.ch <- TypedSample[T]{Topic: s.Topic, Value: v, Timestamp: s.Timestamp, SequenceNumber: s.SequenceNumber, WriterGUID: s.WriterGUID}:
 			case <-ts.done:
 				return
 			}
@@ -577,4 +606,26 @@ func (JSONCodec[T]) Marshal(v T) ([]byte, error) { return json.Marshal(v) }
 func (JSONCodec[T]) Unmarshal(data []byte) (T, error) {
 	var v T
 	return v, json.Unmarshal(data, &v)
+}
+
+// ── GobCodec ──────────────────────────────────────────────────────────────────
+
+// GobCodec[T] implements Codec[T] using encoding/gob.
+// It is a zero-size struct; the zero value is ready to use.
+// Suitable for concrete struct types exchanged within a single Go binary.
+type GobCodec[T any] struct{}
+
+// Marshal encodes v using gob encoding.
+func (GobCodec[T]) Marshal(v T) ([]byte, error) {
+	var buf bytes.Buffer
+	if err := gob.NewEncoder(&buf).Encode(v); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// Unmarshal decodes data from gob encoding into T.
+func (GobCodec[T]) Unmarshal(data []byte) (T, error) {
+	var v T
+	return v, gob.NewDecoder(bytes.NewReader(data)).Decode(&v)
 }

@@ -70,9 +70,10 @@ type shmBroker struct {
 }
 
 type shmSub struct {
-	ch           chan dds.Sample
-	filter       func(dds.Sample) bool
-	backPressure dds.BackPressurePolicy
+	ch            chan dds.Sample
+	filter        func(dds.Sample) bool
+	backPressure  dds.BackPressurePolicy
+	resetDeadline func()
 }
 
 func brokerFor(d dds.Domain) *shmBroker {
@@ -89,10 +90,10 @@ func brokerFor(d dds.Domain) *shmBroker {
 	return b
 }
 
-func (b *shmBroker) subscribe(topic string, qos dds.QoS, cfg dds.SubscriberConfig) chan dds.Sample {
+func (b *shmBroker) subscribe(topic string, qos dds.QoS, cfg dds.SubscriberConfig, resetDeadline func()) chan dds.Sample {
 	depth := cfg.ChanDepth(64)
 	ch := make(chan dds.Sample, depth)
-	sub := shmSub{ch: ch, filter: cfg.Filter, backPressure: cfg.BackPressure}
+	sub := shmSub{ch: ch, filter: cfg.Filter, backPressure: cfg.BackPressure, resetDeadline: resetDeadline}
 	b.mu.Lock()
 	b.subs[topic] = append(b.subs[topic], sub)
 	var last *dds.Sample
@@ -123,10 +124,10 @@ func (b *shmBroker) removeSubscription(topic string, ch chan dds.Sample) {
 	}
 }
 
-func (b *shmBroker) publish(topic string, payload []byte, qos dds.QoS) {
+func (b *shmBroker) publish(topic string, payload []byte, qos dds.QoS, seqNum uint64, writerGUID dds.GUID) {
 	cp := make([]byte, len(payload))
 	copy(cp, payload)
-	sample := dds.Sample{Topic: topic, Payload: cp, Timestamp: time.Now()}
+	sample := dds.Sample{Topic: topic, Payload: cp, Timestamp: time.Now(), SequenceNumber: seqNum, WriterGUID: writerGUID}
 
 	b.writes.Add(1)
 	b.bWritten.Add(uint64(len(payload)))
@@ -137,6 +138,12 @@ func (b *shmBroker) publish(topic string, payload []byte, qos dds.QoS) {
 	}
 	subs := make([]shmSub, len(b.subs[topic]))
 	copy(subs, b.subs[topic])
+	// Also deliver to wildcard subscribers whose pattern matches topic.
+	for t, list := range b.subs {
+		if t != topic && shmTopicMatches(t, topic) {
+			subs = append(subs, list...)
+		}
+	}
 	b.mu.Unlock()
 
 	for _, sub := range subs {
@@ -152,12 +159,14 @@ func (b *shmBroker) publish(topic string, payload []byte, qos dds.QoS) {
 
 func (b *shmBroker) deliverSub(sub shmSub, sample dds.Sample) {
 	byteLen := uint64(len(sample.Payload))
+	delivered := false
 	switch sub.backPressure {
 	case dds.DropOldest:
 		select {
 		case sub.ch <- sample:
 			b.delivers.Add(1)
 			b.bDeliv.Add(byteLen)
+			delivered = true
 		default:
 			select {
 			case <-sub.ch:
@@ -168,6 +177,7 @@ func (b *shmBroker) deliverSub(sub shmSub, sample dds.Sample) {
 			case sub.ch <- sample:
 				b.delivers.Add(1)
 				b.bDeliv.Add(byteLen)
+				delivered = true
 			default:
 				b.drops.Add(1)
 			}
@@ -176,14 +186,19 @@ func (b *shmBroker) deliverSub(sub shmSub, sample dds.Sample) {
 		sub.ch <- sample
 		b.delivers.Add(1)
 		b.bDeliv.Add(byteLen)
+		delivered = true
 	default:
 		select {
 		case sub.ch <- sample:
 			b.delivers.Add(1)
 			b.bDeliv.Add(byteLen)
+			delivered = true
 		default:
 			b.drops.Add(1)
 		}
+	}
+	if delivered && sub.resetDeadline != nil {
+		sub.resetDeadline()
 	}
 }
 
@@ -359,7 +374,7 @@ func (p *participant) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, er
 	if p.closed {
 		return nil, fmt.Errorf("shmem: %w", dds.ErrClosed)
 	}
-	return &shmPublisher{topic: topic, qos: qos, broker: p.broker}, nil
+	return &shmPublisher{topic: topic, qos: qos, broker: p.broker, guid: shmNewGUID()}, nil
 }
 
 func (p *participant) NewSubscriber(topic string, qos dds.QoS, opts ...dds.SubscriberOption) (dds.Subscriber, error) {
@@ -373,18 +388,35 @@ func (p *participant) NewSubscriber(topic string, qos dds.QoS, opts ...dds.Subsc
 	}
 	cfg := dds.ApplySubscriberOpts(opts)
 	depth := cfg.ChanDepth(64)
+
+	sub := &shmSubscriber{
+		topic:  topic,
+		broker: p.broker,
+		ch:     make(chan dds.Sample, depth),
+		done:   make(chan struct{}),
+	}
+
+	var resetDeadline func()
+	if qos.Deadline > 0 && cfg.DeadlineMissedCallback != nil {
+		fn := cfg.DeadlineMissedCallback
+		dur := qos.Deadline
+		sub.deadlineDur = dur
+		// Use atomic.Pointer so the AfterFunc goroutine can safely read the
+		// timer without a data race against the write in NewSubscriber.
+		var tp atomic.Pointer[time.Timer]
+		tp.Store(time.AfterFunc(dur, func() {
+			fn()
+			tp.Load().Reset(dur)
+		}))
+		sub.deadlineTimer = tp.Load()
+		resetDeadline = func() { tp.Load().Reset(dur) }
+	}
+
 	// In-process channel from the shared broker.
-	inProcCh := p.broker.subscribe(topic, qos, cfg)
+	sub.inProc = p.broker.subscribe(topic, qos, cfg, resetDeadline)
 	// Cross-process listener (best-effort; failure is non-fatal).
-	listener, _ := newShmListener(topic, cfg.Filter, depth)
-	return &shmSubscriber{
-		topic:    topic,
-		broker:   p.broker,
-		inProc:   inProcCh,
-		listener: listener,
-		ch:       make(chan dds.Sample, depth),
-		done:     make(chan struct{}),
-	}, nil
+	sub.listener, _ = newShmListener(topic, cfg.Filter, depth)
+	return sub, nil
 }
 
 func (p *participant) Close() error {
@@ -419,6 +451,8 @@ type shmPublisher struct {
 	broker *shmBroker
 	mu     sync.Mutex
 	closed bool
+	seqNum atomic.Uint64
+	guid   dds.GUID
 }
 
 func (pub *shmPublisher) Write(payload []byte) error {
@@ -431,7 +465,8 @@ func (pub *shmPublisher) Write(payload []byte) error {
 		return fmt.Errorf("shmem: %w: got %d bytes, limit %d",
 			dds.ErrPayloadTooLarge, len(payload), pub.qos.MaxSampleSize)
 	}
-	pub.broker.publish(pub.topic, payload, pub.qos)
+	seq := pub.seqNum.Add(1)
+	pub.broker.publish(pub.topic, payload, pub.qos, seq, pub.guid)
 	return nil
 }
 
@@ -455,20 +490,36 @@ func (pub *shmPublisher) Close() error {
 // shmSubscriber fans in samples from an in-process channel and an optional
 // cross-process shmListener into a single unified channel.
 type shmSubscriber struct {
-	topic     string
-	broker    *shmBroker
-	inProc    chan dds.Sample
-	listener  *shmListener
-	ch        chan dds.Sample
-	done      chan struct{}
-	unsubOnce sync.Once
-	closeOnce sync.Once
-	started   sync.Once
+	topic         string
+	broker        *shmBroker
+	inProc        chan dds.Sample
+	listener      *shmListener
+	ch            chan dds.Sample
+	done          chan struct{}
+	unsubOnce     sync.Once
+	closeOnce     sync.Once
+	started       sync.Once
+	deadlineTimer *time.Timer
+	deadlineDur   time.Duration
 }
 
 func (sub *shmSubscriber) C() <-chan dds.Sample {
 	sub.started.Do(sub.pump)
 	return sub.ch
+}
+
+// TryRead attempts a non-blocking read. Returns (zero, false) if empty or closed.
+func (sub *shmSubscriber) TryRead() (dds.Sample, bool) {
+	sub.started.Do(sub.pump)
+	select {
+	case s, ok := <-sub.ch:
+		if !ok {
+			return dds.Sample{}, false
+		}
+		return s, true
+	default:
+		return dds.Sample{}, false
+	}
 }
 
 func (sub *shmSubscriber) pump() {
@@ -512,6 +563,9 @@ func (sub *shmSubscriber) pump() {
 // channel. After Unsubscribe no new samples are delivered to the channel.
 func (sub *shmSubscriber) Unsubscribe() error {
 	sub.unsubOnce.Do(func() {
+		if sub.deadlineTimer != nil {
+			sub.deadlineTimer.Stop()
+		}
 		sub.broker.removeSubscription(sub.topic, sub.inProc)
 	})
 	return nil
@@ -520,6 +574,9 @@ func (sub *shmSubscriber) Unsubscribe() error {
 func (sub *shmSubscriber) Close() error {
 	_ = sub.Unsubscribe()
 	sub.closeOnce.Do(func() {
+		if sub.deadlineTimer != nil {
+			sub.deadlineTimer.Stop()
+		}
 		close(sub.done)
 		// Close the inProc channel so the pump goroutine exits cleanly via the
 		// ok=false branch. Without this the pump goroutine would block forever.
@@ -529,4 +586,35 @@ func (sub *shmSubscriber) Close() error {
 		}
 	})
 	return nil
+}
+
+// shmTopicMatches reports whether pattern (MQTT-style wildcards) matches topic.
+func shmTopicMatches(pattern, topic string) bool {
+	return shmMatchSegs(strings.Split(pattern, "/"), strings.Split(topic, "/"))
+}
+
+func shmMatchSegs(p, t []string) bool {
+	if len(p) == 0 {
+		return len(t) == 0
+	}
+	if p[0] == "#" {
+		return true
+	}
+	if len(t) == 0 {
+		return false
+	}
+	if p[0] == "+" || p[0] == t[0] {
+		return shmMatchSegs(p[1:], t[1:])
+	}
+	return false
+}
+
+// shmNewGUID returns a time-seeded GUID for a shmem publisher.
+func shmNewGUID() dds.GUID {
+	var g dds.GUID
+	ns := time.Now().UnixNano()
+	for i := 0; i < 8; i++ {
+		g[i] = byte(ns >> (i * 8))
+	}
+	return g
 }

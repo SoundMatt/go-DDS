@@ -756,6 +756,197 @@ func TestRTPS_SubscriberUnsubscribe(t *testing.T) {
 	_ = sub.Close()
 }
 
+// ── v0.9.1 additions ──────────────────────────────────────────────────────────
+
+func TestTryRead_RTPS(t *testing.T) {
+	p, err := rtps.New(dds.Domain(85))
+	if err != nil {
+		t.Skipf("rtps.New: %v", err)
+	}
+	defer p.Close()
+
+	sub, err := p.NewSubscriber("rtps91/tryread", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	_, ok := sub.TryRead()
+	if ok {
+		t.Error("TryRead on empty channel must return false")
+	}
+
+	pub, err := p.NewPublisher("rtps91/tryread", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	_ = pub.Write([]byte("tryread"))
+
+	var s dds.Sample
+	for i := 0; i < 20; i++ {
+		s, ok = sub.TryRead()
+		if ok {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if !ok {
+		t.Fatal("TryRead must return true after Write")
+	}
+	if string(s.Payload) != "tryread" {
+		t.Errorf("payload: got %q, want tryread", s.Payload)
+	}
+}
+
+func TestSequenceNumber_RTPS(t *testing.T) {
+	p, err := rtps.New(dds.Domain(86))
+	if err != nil {
+		t.Skipf("rtps.New: %v", err)
+	}
+	defer p.Close()
+
+	sub, err := p.NewSubscriber("rtps91/seqnum", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	pub, err := p.NewPublisher("rtps91/seqnum", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	_ = pub.Write([]byte("a"))
+	_ = pub.Write([]byte("b"))
+
+	recv := func() dds.Sample {
+		select {
+		case s := <-sub.C():
+			return s
+		case <-time.After(2 * time.Second):
+			t.Fatal("timeout")
+			return dds.Sample{}
+		}
+	}
+	s1 := recv()
+	s2 := recv()
+
+	if s1.SequenceNumber == 0 {
+		t.Error("first SequenceNumber must be non-zero")
+	}
+	if s2.SequenceNumber <= s1.SequenceNumber {
+		t.Errorf("SequenceNumber must increase: %d then %d", s1.SequenceNumber, s2.SequenceNumber)
+	}
+}
+
+func TestWriterGUID_RTPS(t *testing.T) {
+	p, err := rtps.New(dds.Domain(87))
+	if err != nil {
+		t.Skipf("rtps.New: %v", err)
+	}
+	defer p.Close()
+
+	sub, err := p.NewSubscriber("rtps91/guid", dds.DefaultQoS, dds.WithChannelDepth(4))
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	pub, err := p.NewPublisher("rtps91/guid", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	_ = pub.Write([]byte("a"))
+	_ = pub.Write([]byte("b"))
+
+	recv := func() dds.Sample {
+		select {
+		case s := <-sub.C():
+			return s
+		case <-time.After(2 * time.Second):
+			t.Fatal("timeout")
+			return dds.Sample{}
+		}
+	}
+	s1 := recv()
+	s2 := recv()
+
+	var zero dds.GUID
+	if s1.WriterGUID == zero {
+		t.Error("WriterGUID must not be zero")
+	}
+	if s1.WriterGUID != s2.WriterGUID {
+		t.Error("WriterGUID must be consistent per publisher")
+	}
+}
+
+func TestWildcard_RTPS(t *testing.T) {
+	p, err := rtps.New(dds.Domain(88))
+	if err != nil {
+		t.Skipf("rtps.New: %v", err)
+	}
+	defer p.Close()
+
+	sub, err := p.NewSubscriber("rtps/+/val", dds.DefaultQoS, dds.WithChannelDepth(4))
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	pub1, err := p.NewPublisher("rtps/1/val", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher pub1: %v", err)
+	}
+	defer pub1.Close()
+
+	_ = pub1.Write([]byte("wildcard-hit"))
+
+	select {
+	case s := <-sub.C():
+		if string(s.Payload) != "wildcard-hit" {
+			t.Errorf("payload: got %q, want wildcard-hit", s.Payload)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout: wildcard sample not delivered")
+	}
+}
+
+func TestDeadline_Subscriber_RTPS(t *testing.T) {
+	fired := make(chan struct{}, 1)
+	p, err := rtps.New(dds.Domain(89))
+	if err != nil {
+		t.Skipf("rtps.New: %v", err)
+	}
+	defer p.Close()
+
+	qos := dds.DefaultQoS
+	qos.Deadline = 50 * time.Millisecond
+
+	sub, err := p.NewSubscriber("rtps91/deadline", qos,
+		dds.WithDeadlineMissed(func() {
+			select {
+			case fired <- struct{}{}:
+			default:
+			}
+		}),
+	)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	select {
+	case <-fired:
+	case <-time.After(time.Second):
+		t.Fatal("DeadlineMissedCallback did not fire")
+	}
+}
+
 func TestRTPS_DiscoverySecurity_HMAC(t *testing.T) {
 	if testing.Short() {
 		t.Skip("rtps: uses UDP sockets")

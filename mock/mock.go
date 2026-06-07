@@ -43,9 +43,10 @@ var globalBroker = &broker{
 // subscription holds a subscriber channel together with its optional filter
 // and back-pressure policy.
 type subscription struct {
-	ch           chan dds.Sample
-	filter       func(dds.Sample) bool
-	backPressure dds.BackPressurePolicy
+	ch            chan dds.Sample
+	filter        func(dds.Sample) bool
+	backPressure  dds.BackPressurePolicy
+	resetDeadline func() // nil if no deadline; called on each successful delivery
 }
 
 // broker is the central in-memory routing hub.
@@ -82,10 +83,10 @@ func (b *broker) topicCounterFor(topic string) *mockTopicCounter {
 
 const defaultChanDepth = 64
 
-func (b *broker) subscribe(topic string, qos dds.QoS, cfg dds.SubscriberConfig) chan dds.Sample {
+func (b *broker) subscribe(topic string, qos dds.QoS, cfg dds.SubscriberConfig, resetDeadline func()) chan dds.Sample {
 	depth := cfg.ChanDepth(defaultChanDepth)
 	ch := make(chan dds.Sample, depth)
-	sub := subscription{ch: ch, filter: cfg.Filter, backPressure: cfg.BackPressure}
+	sub := subscription{ch: ch, filter: cfg.Filter, backPressure: cfg.BackPressure, resetDeadline: resetDeadline}
 	b.mu.Lock()
 	b.subs[topic] = append(b.subs[topic], sub)
 	var last *dds.Sample
@@ -118,10 +119,10 @@ func (b *broker) removeSubscription(topic string, ch chan dds.Sample) {
 	}
 }
 
-func (b *broker) publish(topic string, payload []byte, qos dds.QoS) {
+func (b *broker) publish(topic string, payload []byte, qos dds.QoS, seqNum uint64, writerGUID dds.GUID) {
 	cp := make([]byte, len(payload))
 	copy(cp, payload)
-	sample := dds.Sample{Topic: topic, Payload: cp, Timestamp: time.Now()}
+	sample := dds.Sample{Topic: topic, Payload: cp, Timestamp: time.Now(), SequenceNumber: seqNum, WriterGUID: writerGUID}
 
 	b.writes.Add(1)
 	b.bytesWritten.Add(uint64(len(payload)))
@@ -153,6 +154,7 @@ func (b *broker) publish(topic string, payload []byte, qos dds.QoS) {
 // deliver routes sample to sub according to its back-pressure policy.
 func (b *broker) deliver(sub subscription, sample dds.Sample, byteLen uint64) {
 	tc := b.topicCounterFor(sample.Topic)
+	delivered := false
 	switch sub.backPressure {
 	case dds.DropOldest:
 		select {
@@ -161,6 +163,7 @@ func (b *broker) deliver(sub subscription, sample dds.Sample, byteLen uint64) {
 			b.bytesDeliv.Add(byteLen)
 			tc.delivers.Add(1)
 			tc.bytesD.Add(byteLen)
+			delivered = true
 		default:
 			// Evict oldest, then retry.
 			select {
@@ -175,6 +178,7 @@ func (b *broker) deliver(sub subscription, sample dds.Sample, byteLen uint64) {
 				b.bytesDeliv.Add(byteLen)
 				tc.delivers.Add(1)
 				tc.bytesD.Add(byteLen)
+				delivered = true
 			default:
 				b.drops.Add(1)
 				tc.drops.Add(1)
@@ -186,6 +190,7 @@ func (b *broker) deliver(sub subscription, sample dds.Sample, byteLen uint64) {
 		b.bytesDeliv.Add(byteLen)
 		tc.delivers.Add(1)
 		tc.bytesD.Add(byteLen)
+		delivered = true
 	default: // DropNewest
 		select {
 		case sub.ch <- sample:
@@ -193,10 +198,14 @@ func (b *broker) deliver(sub subscription, sample dds.Sample, byteLen uint64) {
 			b.bytesDeliv.Add(byteLen)
 			tc.delivers.Add(1)
 			tc.bytesD.Add(byteLen)
+			delivered = true
 		default:
 			b.drops.Add(1)
 			tc.drops.Add(1)
 		}
+	}
+	if delivered && sub.resetDeadline != nil {
+		sub.resetDeadline()
 	}
 }
 
@@ -283,7 +292,7 @@ func (p *participant) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, er
 		return nil, fmt.Errorf("mock: %w", dds.ErrClosed)
 	}
 	p.logf("new publisher topic=%s reliability=%d", topic, qos.Reliability)
-	pub := &publisher{broker: p.broker, topic: topic, qos: qos, deadlineCb: p.deadlineCb, log: p.log}
+	pub := &publisher{broker: p.broker, topic: topic, qos: qos, deadlineCb: p.deadlineCb, log: p.log, guid: newMockGUID()}
 	if qos.Deadline > 0 && p.deadlineCb != nil {
 		pub.deadlineTimer = time.AfterFunc(qos.Deadline, func() {
 			p.deadlineCb(topic)
@@ -303,8 +312,23 @@ func (p *participant) NewSubscriber(topic string, qos dds.QoS, opts ...dds.Subsc
 	}
 	cfg := dds.ApplySubscriberOpts(opts)
 	p.logf("new subscriber topic=%s depth=%d backpressure=%d", topic, cfg.ChanDepth(defaultChanDepth), cfg.BackPressure)
-	ch := p.broker.subscribe(topic, qos, cfg)
-	return &subscriber{broker: p.broker, topic: topic, ch: ch}, nil
+	sub := &subscriber{broker: p.broker, topic: topic}
+
+	var resetDeadline func()
+	if qos.Deadline > 0 && cfg.DeadlineMissedCallback != nil {
+		fn := cfg.DeadlineMissedCallback
+		dur := qos.Deadline
+		var tp atomic.Pointer[time.Timer]
+		tp.Store(time.AfterFunc(dur, func() {
+			fn()
+			tp.Load().Reset(dur)
+		}))
+		sub.deadlineTimer = tp.Load()
+		resetDeadline = func() { tp.Load().Reset(dur) }
+	}
+
+	sub.ch = p.broker.subscribe(topic, qos, cfg, resetDeadline)
+	return sub, nil
 }
 
 func (p *participant) Close() error {
@@ -393,6 +417,8 @@ type publisher struct {
 	deadlineTimer *time.Timer
 	mu            sync.Mutex
 	closed        bool
+	seqNum        atomic.Uint64
+	guid          dds.GUID
 }
 
 func (pub *publisher) Write(payload []byte) error {
@@ -411,7 +437,8 @@ func (pub *publisher) Write(payload []byte) error {
 	if pub.log != nil {
 		pub.log.Debug("publish", "topic", pub.topic, "bytes", len(payload))
 	}
-	pub.broker.publish(pub.topic, payload, pub.qos)
+	seq := pub.seqNum.Add(1)
+	pub.broker.publish(pub.topic, payload, pub.qos, seq, pub.guid)
 	return nil
 }
 
@@ -438,26 +465,50 @@ func (pub *publisher) Close() error {
 
 // subscriber implements dds.Subscriber.
 type subscriber struct {
-	broker    *broker
-	topic     string
-	ch        chan dds.Sample
-	unsubOnce sync.Once
-	closeOnce sync.Once
+	broker        *broker
+	topic         string
+	ch            chan dds.Sample
+	unsubOnce     sync.Once
+	closeOnce     sync.Once
+	deadlineTimer *time.Timer
 }
 
 func (sub *subscriber) C() <-chan dds.Sample { return sub.ch }
+
+// TryRead attempts a non-blocking read. Returns (zero, false) if empty or closed.
+func (sub *subscriber) TryRead() (dds.Sample, bool) {
+	select {
+	case s, ok := <-sub.ch:
+		if !ok {
+			return dds.Sample{}, false
+		}
+		return s, true
+	default:
+		return dds.Sample{}, false
+	}
+}
 
 // Unsubscribe removes this subscriber from the broker without closing its
 // channel. After Unsubscribe no new samples are delivered, but the channel
 // remains readable for any buffered samples.
 func (sub *subscriber) Unsubscribe() error {
-	sub.unsubOnce.Do(func() { sub.broker.removeSubscription(sub.topic, sub.ch) })
+	sub.unsubOnce.Do(func() {
+		if sub.deadlineTimer != nil {
+			sub.deadlineTimer.Stop()
+		}
+		sub.broker.removeSubscription(sub.topic, sub.ch)
+	})
 	return nil
 }
 
 func (sub *subscriber) Close() error {
 	_ = sub.Unsubscribe()
-	sub.closeOnce.Do(func() { close(sub.ch) })
+	sub.closeOnce.Do(func() {
+		if sub.deadlineTimer != nil {
+			sub.deadlineTimer.Stop()
+		}
+		close(sub.ch)
+	})
 	return nil
 }
 

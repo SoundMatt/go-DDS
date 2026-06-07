@@ -438,3 +438,177 @@ func TestSubscriberUnsubscribe_Shmem(t *testing.T) {
 	_ = sub.Close()
 	_ = sub.Close() // idempotent close
 }
+
+// ── v0.9.1 additions ──────────────────────────────────────────────────────────
+
+func TestTryRead_Empty_Shmem(t *testing.T) {
+	p := newPart(t)
+	sub, _ := p.NewSubscriber("shmem/tryread/empty", dds.DefaultQoS)
+	defer sub.Close()
+
+	_, ok := sub.TryRead()
+	if ok {
+		t.Error("TryRead on empty channel must return false")
+	}
+}
+
+func TestTryRead_HasSample_Shmem(t *testing.T) {
+	p := newPart(t)
+	sub, _ := p.NewSubscriber("shmem/tryread/has", dds.DefaultQoS)
+	defer sub.Close()
+	pub, _ := p.NewPublisher("shmem/tryread/has", dds.DefaultQoS)
+	defer pub.Close()
+
+	_ = pub.Write([]byte("ready"))
+
+	var s dds.Sample
+	var ok bool
+	for i := 0; i < 20; i++ {
+		s, ok = sub.TryRead()
+		if ok {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if !ok {
+		t.Fatal("TryRead must return true after Write")
+	}
+	if string(s.Payload) != "ready" {
+		t.Errorf("payload: got %q, want ready", s.Payload)
+	}
+}
+
+func TestSequenceNumber_Shmem(t *testing.T) {
+	p := newPart(t)
+	sub, _ := p.NewSubscriber("shmem/seqnum", dds.DefaultQoS)
+	defer sub.Close()
+	pub, _ := p.NewPublisher("shmem/seqnum", dds.DefaultQoS)
+	defer pub.Close()
+
+	_ = pub.Write([]byte("a"))
+	_ = pub.Write([]byte("b"))
+
+	recv := func() dds.Sample {
+		select {
+		case s := <-sub.C():
+			return s
+		case <-time.After(time.Second):
+			t.Fatal("timeout")
+			return dds.Sample{}
+		}
+	}
+	s1 := recv()
+	s2 := recv()
+
+	if s1.SequenceNumber == 0 {
+		t.Error("first SequenceNumber must be non-zero")
+	}
+	if s2.SequenceNumber <= s1.SequenceNumber {
+		t.Errorf("SequenceNumber must increase: %d then %d", s1.SequenceNumber, s2.SequenceNumber)
+	}
+}
+
+func TestWriterGUID_Shmem(t *testing.T) {
+	p := newPart(t)
+	sub, _ := p.NewSubscriber("shmem/writerguid", dds.DefaultQoS, dds.WithChannelDepth(4))
+	defer sub.Close()
+	pub, _ := p.NewPublisher("shmem/writerguid", dds.DefaultQoS)
+	defer pub.Close()
+
+	_ = pub.Write([]byte("a"))
+	_ = pub.Write([]byte("b"))
+
+	recv := func() dds.Sample {
+		select {
+		case s := <-sub.C():
+			return s
+		case <-time.After(time.Second):
+			t.Fatal("timeout")
+			return dds.Sample{}
+		}
+	}
+	s1 := recv()
+	s2 := recv()
+
+	var zero dds.GUID
+	if s1.WriterGUID == zero {
+		t.Error("WriterGUID must not be zero")
+	}
+	if s1.WriterGUID != s2.WriterGUID {
+		t.Error("WriterGUID must be consistent per publisher")
+	}
+}
+
+func TestWildcard_Shmem(t *testing.T) {
+	p := newPart(t)
+
+	sub, err := p.NewSubscriber("shmem/+/val", dds.DefaultQoS, dds.WithChannelDepth(4))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+
+	pub1, _ := p.NewPublisher("shmem/1/val", dds.DefaultQoS)
+	defer pub1.Close()
+	pub2, _ := p.NewPublisher("shmem/2/val", dds.DefaultQoS)
+	defer pub2.Close()
+	pubNo, _ := p.NewPublisher("shmem/1/other", dds.DefaultQoS)
+	defer pubNo.Close()
+
+	_ = pub1.Write([]byte("one"))
+	_ = pub2.Write([]byte("two"))
+	_ = pubNo.Write([]byte("no"))
+
+	received := 0
+	timeout := time.After(500 * time.Millisecond)
+loop:
+	for {
+		select {
+		case s := <-sub.C():
+			if string(s.Payload) == "no" {
+				t.Error("received sample from non-matching topic")
+			}
+			received++
+			if received >= 2 {
+				break loop
+			}
+		case <-timeout:
+			break loop
+		}
+	}
+
+	if received < 2 {
+		t.Errorf("expected 2 matching samples, got %d", received)
+	}
+}
+
+func TestDeadline_Shmem(t *testing.T) {
+	fired := make(chan struct{}, 1)
+	p, err := shmem.New(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+
+	qos := dds.DefaultQoS
+	qos.Deadline = 50 * time.Millisecond
+
+	sub, err := p.NewSubscriber("shmem/deadline", qos,
+		dds.WithDeadlineMissed(func() {
+			select {
+			case fired <- struct{}{}:
+			default:
+			}
+		}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+
+	select {
+	case <-fired:
+	case <-time.After(time.Second):
+		t.Fatal("DeadlineMissedCallback did not fire")
+	}
+}

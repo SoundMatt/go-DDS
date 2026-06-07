@@ -8,6 +8,7 @@ package dds_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -441,5 +442,97 @@ func TestTypedPublisher_WriteCtx_MarshalError(t *testing.T) {
 
 	if err := tp.WriteCtx(context.Background(), speedSample{KMH: 10}); err == nil {
 		t.Error("WriteCtx with marshal error must return error")
+	}
+}
+
+// ── v0.9.1 additions ──────────────────────────────────────────────────────────
+
+type gobMsg struct {
+	Value int
+	Label string
+}
+
+func TestGobCodec_RoundTrip(t *testing.T) {
+	codec := dds.GobCodec[gobMsg]{}
+	want := gobMsg{Value: 42, Label: "hello"}
+	data, err := codec.Marshal(want)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	got, err := codec.Unmarshal(data)
+	if err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	if got != want {
+		t.Errorf("round-trip: got %v, want %v", got, want)
+	}
+}
+
+func TestGobCodec_ImplementsCodec(t *testing.T) {
+	var _ dds.Codec[gobMsg] = dds.GobCodec[gobMsg]{}
+}
+
+func TestNewSentinels_ErrorsIs(t *testing.T) {
+	sentinels := []error{
+		dds.ErrQoSMismatch,
+		dds.ErrDeadlineMissed,
+		dds.ErrSampleRejected,
+		dds.ErrResourceLimits,
+	}
+	for _, s := range sentinels {
+		wrapped := fmt.Errorf("wrapped: %w", s)
+		if !errors.Is(wrapped, s) {
+			t.Errorf("errors.Is failed for %v", s)
+		}
+	}
+}
+
+func TestTryRead_Interface(t *testing.T) {
+	p := newMockParticipant(t)
+	sub, err := p.NewSubscriber("tryread/iface", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	// Channel is empty — TryRead must return false.
+	_, ok := sub.TryRead()
+	if ok {
+		t.Error("TryRead on empty channel must return false")
+	}
+}
+
+func TestWithDeadlineMissed_Option(t *testing.T) {
+	called := false
+	cfg := dds.ApplySubscriberOpts([]dds.SubscriberOption{
+		dds.WithDeadlineMissed(func() { called = true }),
+	})
+	if cfg.DeadlineMissedCallback == nil {
+		t.Fatal("DeadlineMissedCallback must be set")
+	}
+	cfg.DeadlineMissedCallback()
+	if !called {
+		t.Error("callback not invoked")
+	}
+}
+
+func TestTypedSample_MetadataForwarded(t *testing.T) {
+	p := newMockParticipant(t)
+	rawSub, _ := p.NewSubscriber("typed/meta", dds.DefaultQoS)
+	rawPub, _ := p.NewPublisher("typed/meta", dds.DefaultQoS)
+	defer rawPub.Close()
+
+	ts := dds.NewTypedSubscriber[speedSample](rawSub, dds.JSONCodec[speedSample]{})
+	defer ts.Close()
+
+	_ = rawPub.Write([]byte(`{"kmh":10}`))
+
+	select {
+	case s := <-ts.C():
+		if s.SequenceNumber == 0 {
+			t.Error("TypedSample.SequenceNumber should be non-zero after mock write")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout")
 	}
 }

@@ -1012,3 +1012,262 @@ func TestMetrics_MockParticipant(t *testing.T) {
 		t.Error("DeliverCount should be > 0")
 	}
 }
+
+// ── v0.9.1 additions ──────────────────────────────────────────────────────────
+
+func TestSequenceNumber_Monotonic(t *testing.T) {
+	p := newParticipant(t)
+
+	sub, _ := p.NewSubscriber("mock/seqnum", dds.DefaultQoS)
+	defer sub.Close()
+	pub, _ := p.NewPublisher("mock/seqnum", dds.DefaultQoS)
+	defer pub.Close()
+
+	_ = pub.Write([]byte("a"))
+	_ = pub.Write([]byte("b"))
+
+	recv := func() dds.Sample {
+		select {
+		case s := <-sub.C():
+			return s
+		case <-time.After(time.Second):
+			t.Fatal("timeout waiting for sample")
+			return dds.Sample{}
+		}
+	}
+	s1 := recv()
+	s2 := recv()
+
+	if s1.SequenceNumber == 0 {
+		t.Error("first sample SequenceNumber must be non-zero")
+	}
+	if s2.SequenceNumber <= s1.SequenceNumber {
+		t.Errorf("SequenceNumber must increase: got %d then %d", s1.SequenceNumber, s2.SequenceNumber)
+	}
+}
+
+func TestWriterGUID_Set(t *testing.T) {
+	p := newParticipant(t)
+
+	sub, _ := p.NewSubscriber("mock/guid", dds.DefaultQoS)
+	defer sub.Close()
+	pub, _ := p.NewPublisher("mock/guid", dds.DefaultQoS)
+	defer pub.Close()
+
+	_ = pub.Write([]byte("a"))
+	_ = pub.Write([]byte("b"))
+
+	recv := func() dds.Sample {
+		select {
+		case s := <-sub.C():
+			return s
+		case <-time.After(time.Second):
+			t.Fatal("timeout")
+			return dds.Sample{}
+		}
+	}
+	s1 := recv()
+	s2 := recv()
+
+	var zero dds.GUID
+	if s1.WriterGUID == zero {
+		t.Error("WriterGUID must not be zero")
+	}
+	if s1.WriterGUID != s2.WriterGUID {
+		t.Error("WriterGUID must be consistent across writes from the same publisher")
+	}
+}
+
+func TestTwoPublishers_DifferentGUIDs(t *testing.T) {
+	p := newParticipant(t)
+
+	sub, _ := p.NewSubscriber("mock/twoguid", dds.DefaultQoS, dds.WithChannelDepth(4))
+	defer sub.Close()
+	pub1, _ := p.NewPublisher("mock/twoguid", dds.DefaultQoS)
+	defer pub1.Close()
+
+	time.Sleep(time.Millisecond)
+
+	pub2, _ := p.NewPublisher("mock/twoguid", dds.DefaultQoS)
+	defer pub2.Close()
+
+	_ = pub1.Write([]byte("from-1"))
+	_ = pub2.Write([]byte("from-2"))
+
+	recv := func() dds.Sample {
+		select {
+		case s := <-sub.C():
+			return s
+		case <-time.After(time.Second):
+			t.Fatal("timeout")
+			return dds.Sample{}
+		}
+	}
+	s1 := recv()
+	s2 := recv()
+
+	if s1.WriterGUID == s2.WriterGUID {
+		t.Error("two different publishers must have different WriterGUIDs")
+	}
+}
+
+func TestDeadline_SubscriberMissed(t *testing.T) {
+	fired := make(chan struct{}, 1)
+	p, err := mock.New(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+
+	qos := dds.DefaultQoS
+	qos.Deadline = 50 * time.Millisecond
+
+	sub, err := p.NewSubscriber("mock/sub-deadline", qos,
+		dds.WithDeadlineMissed(func() {
+			select {
+			case fired <- struct{}{}:
+			default:
+			}
+		}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+
+	select {
+	case <-fired:
+	case <-time.After(time.Second):
+		t.Fatal("DeadlineMissedCallback did not fire")
+	}
+}
+
+func TestDeadline_SubscriberReset(t *testing.T) {
+	fired := make(chan struct{}, 1)
+	p, err := mock.New(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+
+	qos := dds.DefaultQoS
+	qos.Deadline = 100 * time.Millisecond
+
+	sub, err := p.NewSubscriber("mock/sub-nodeadline", qos,
+		dds.WithDeadlineMissed(func() {
+			select {
+			case fired <- struct{}{}:
+			default:
+			}
+		}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+
+	pub, err := p.NewPublisher("mock/sub-nodeadline", dds.DefaultQoS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pub.Close()
+
+	// Write samples every 40ms — well within 100ms deadline.
+	for i := 0; i < 4; i++ {
+		_ = pub.Write([]byte("keep-alive"))
+		time.Sleep(40 * time.Millisecond)
+		// Drain sample to avoid channel fill.
+		select {
+		case <-sub.C():
+		default:
+		}
+	}
+
+	select {
+	case <-fired:
+		t.Error("deadline callback must not fire when samples arrive within deadline")
+	case <-time.After(30 * time.Millisecond):
+		// Good.
+	}
+}
+
+func TestWildcard_Subscription(t *testing.T) {
+	p := newParticipant(t)
+
+	sub, err := p.NewSubscriber("a/+/c", dds.DefaultQoS, dds.WithChannelDepth(4))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+
+	pub1, _ := p.NewPublisher("a/1/c", dds.DefaultQoS)
+	defer pub1.Close()
+	pub2, _ := p.NewPublisher("a/2/c", dds.DefaultQoS)
+	defer pub2.Close()
+	pubNo, _ := p.NewPublisher("a/1/d", dds.DefaultQoS)
+	defer pubNo.Close()
+
+	_ = pub1.Write([]byte("one"))
+	_ = pub2.Write([]byte("two"))
+	_ = pubNo.Write([]byte("no"))
+
+	received := 0
+	timeout := time.After(500 * time.Millisecond)
+loop:
+	for {
+		select {
+		case s := <-sub.C():
+			if string(s.Payload) == "no" {
+				t.Error("received sample from non-matching topic a/1/d")
+			}
+			received++
+			if received >= 2 {
+				break loop
+			}
+		case <-timeout:
+			break loop
+		}
+	}
+
+	if received < 2 {
+		t.Errorf("expected 2 matching samples, got %d", received)
+	}
+}
+
+func TestTryRead_Empty(t *testing.T) {
+	p := newParticipant(t)
+	sub, _ := p.NewSubscriber("tryread/empty", dds.DefaultQoS)
+	defer sub.Close()
+
+	_, ok := sub.TryRead()
+	if ok {
+		t.Error("TryRead on empty channel must return false")
+	}
+}
+
+func TestTryRead_HasSample(t *testing.T) {
+	p := newParticipant(t)
+	sub, _ := p.NewSubscriber("tryread/has", dds.DefaultQoS)
+	defer sub.Close()
+	pub, _ := p.NewPublisher("tryread/has", dds.DefaultQoS)
+	defer pub.Close()
+
+	_ = pub.Write([]byte("ready"))
+
+	// Give the synchronous broker time to deliver.
+	var s dds.Sample
+	var ok bool
+	for i := 0; i < 10; i++ {
+		s, ok = sub.TryRead()
+		if ok {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if !ok {
+		t.Fatal("TryRead should return true after Write")
+	}
+	if string(s.Payload) != "ready" {
+		t.Errorf("payload: got %q, want ready", s.Payload)
+	}
+}
