@@ -22,8 +22,10 @@ package dds
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"reflect"
+	"sync"
 	"time"
 )
 
@@ -95,10 +97,86 @@ var ReliableQoS = QoS{
 // ── Sample ────────────────────────────────────────────────────────────────────
 
 // Sample is a single data sample delivered to a Subscriber.
+// Timestamp is the source time of the write; zero means no timestamp was set
+// (INFO_TS was not present in the RTPS message, or the mock transport was used).
 type Sample struct {
-	Topic   string
-	Payload []byte
+	Topic     string
+	Payload   []byte
+	Timestamp time.Time
 }
+
+// ── BackPressurePolicy ────────────────────────────────────────────────────────
+
+// BackPressurePolicy controls what happens when a subscriber's channel is full.
+type BackPressurePolicy int
+
+const (
+	// DropNewest silently discards the incoming sample when the channel is full.
+	// This is the default policy and matches pre-v0.4 behaviour.
+	DropNewest BackPressurePolicy = iota
+	// DropOldest evicts the oldest queued sample to make room for the new one.
+	DropOldest
+	// Block waits until the channel has capacity (may block the writer goroutine).
+	Block
+)
+
+// ── GUID ──────────────────────────────────────────────────────────────────────
+
+// GUID is a globally unique 16-byte DDS participant or endpoint identifier.
+// The first 12 bytes are the GuidPrefix; the last 4 bytes are the EntityId.
+type GUID [16]byte
+
+// ── Liveliness ────────────────────────────────────────────────────────────────
+
+// LivelinessEvent reports whether a remote participant has been discovered or
+// lost its lease.
+type LivelinessEvent int
+
+const (
+	// LivelinessGained fires when a new remote participant is discovered via SPDP.
+	LivelinessGained LivelinessEvent = iota
+	// LivelinessLost fires when a remote participant's lease has expired.
+	LivelinessLost
+)
+
+// ── Tracer (OpenTelemetry-compatible interface) ────────────────────────────────
+
+// SpanAttribute is a key/value pair attached to a tracing span.
+type SpanAttribute struct {
+	Key   string
+	Value string
+}
+
+// Span is a single tracing span. Call End when the operation is complete.
+type Span interface {
+	// SetAttribute attaches a key/value attribute to the span.
+	SetAttribute(key, value string)
+	// End finalises the span and records it to the tracer backend.
+	End()
+}
+
+// Tracer is satisfied by any OpenTelemetry-compatible tracer implementation.
+// go-DDS does not import go.opentelemetry.io/otel; callers bridge their
+// tracer to this interface using a thin adapter.
+type Tracer interface {
+	Start(ctx context.Context, spanName string, attrs ...SpanAttribute) (context.Context, Span)
+}
+
+// noopSpan implements Span with zero allocations.
+type noopSpan struct{}
+
+func (noopSpan) SetAttribute(_, _ string) {}
+func (noopSpan) End()                     {}
+
+// noopTracerImpl is the default Tracer used when no tracer is configured.
+type noopTracerImpl struct{}
+
+func (noopTracerImpl) Start(ctx context.Context, _ string, _ ...SpanAttribute) (context.Context, Span) {
+	return ctx, noopSpan{}
+}
+
+// NoopTracer is the zero-cost tracer used when no OTel backend is configured.
+var NoopTracer Tracer = noopTracerImpl{}
 
 // ── SubscriberOption ──────────────────────────────────────────────────────────
 
@@ -106,7 +184,9 @@ type Sample struct {
 // It is exported so that implementation packages (mock, rtps, cyclone) can
 // read the resolved configuration without duplicating the option-merge logic.
 type SubscriberConfig struct {
-	Filter func(Sample) bool
+	Filter       func(Sample) bool
+	ChannelDepth int                // 0 = implementation default (64)
+	BackPressure BackPressurePolicy // default: DropNewest
 }
 
 // SubscriberOption configures a subscriber at creation time.
@@ -119,6 +199,18 @@ func WithFilter(fn func(Sample) bool) SubscriberOption {
 	return func(c *SubscriberConfig) { c.Filter = fn }
 }
 
+// WithChannelDepth sets the capacity of the subscriber's internal channel.
+// A depth of 0 uses the implementation default (typically 64).
+func WithChannelDepth(n int) SubscriberOption {
+	return func(c *SubscriberConfig) { c.ChannelDepth = n }
+}
+
+// WithBackPressure sets the back-pressure policy applied when the subscriber
+// channel is full. The default policy is DropNewest.
+func WithBackPressure(policy BackPressurePolicy) SubscriberOption {
+	return func(c *SubscriberConfig) { c.BackPressure = policy }
+}
+
 // ApplySubscriberOpts merges a slice of SubscriberOption into a SubscriberConfig.
 func ApplySubscriberOpts(opts []SubscriberOption) SubscriberConfig {
 	var c SubscriberConfig
@@ -126,6 +218,15 @@ func ApplySubscriberOpts(opts []SubscriberOption) SubscriberConfig {
 		o(&c)
 	}
 	return c
+}
+
+// ChanDepth returns the resolved channel depth: cfg.ChannelDepth if > 0,
+// otherwise the provided default.
+func (c SubscriberConfig) ChanDepth(defaultDepth int) int {
+	if c.ChannelDepth > 0 {
+		return c.ChannelDepth
+	}
+	return defaultDepth
 }
 
 // ── Metrics ───────────────────────────────────────────────────────────────────
@@ -142,6 +243,25 @@ type Metrics struct {
 // MetricsProvider is implemented by participants that expose runtime statistics.
 type MetricsProvider interface {
 	Metrics() Metrics
+}
+
+// ── Drainer ───────────────────────────────────────────────────────────────────
+
+// Drainer is optionally implemented by Participants that support graceful
+// shutdown: waiting for all in-flight reliable writes to be acknowledged before
+// closing. If a Participant does not implement Drainer, CloseWithDrain falls
+// back to a plain Close.
+type Drainer interface {
+	CloseWithDrain(ctx context.Context) error
+}
+
+// CloseWithDrain waits for all pending reliable ACKs then closes p.
+// If p does not implement Drainer, it calls p.Close() directly.
+func CloseWithDrain(ctx context.Context, p Participant) error {
+	if d, ok := p.(Drainer); ok {
+		return d.CloseWithDrain(ctx)
+	}
+	return p.Close()
 }
 
 // ── Interfaces ────────────────────────────────────────────────────────────────
@@ -224,4 +344,115 @@ func (ws *WaitSet) Wait(ctx context.Context) (Sample, Subscriber, error) {
 		}
 		return s, ws.subs[chosen-1], nil
 	}
+}
+
+// ── Typed generics ────────────────────────────────────────────────────────────
+
+// Codec[T] marshals and unmarshals values of type T to/from []byte.
+// Implement this interface to bind a schema (JSON, protobuf, msgpack, …) to a
+// TypedPublisher or TypedSubscriber.
+type Codec[T any] interface {
+	Marshal(v T) ([]byte, error)
+	Unmarshal(data []byte) (T, error)
+}
+
+// TypedSample[T] is a decoded sample delivered by TypedSubscriber[T].
+type TypedSample[T any] struct {
+	Topic     string
+	Value     T
+	Timestamp time.Time
+}
+
+// TypedPublisher[T] wraps a Publisher to encode values with a Codec before writing.
+type TypedPublisher[T any] struct {
+	pub   Publisher
+	codec Codec[T]
+}
+
+// NewTypedPublisher wraps pub so that Write accepts T values, encoding them
+// with codec before passing bytes to the underlying Publisher.
+func NewTypedPublisher[T any](pub Publisher, codec Codec[T]) *TypedPublisher[T] {
+	return &TypedPublisher[T]{pub: pub, codec: codec}
+}
+
+// Write encodes v with the configured Codec and writes it to the underlying publisher.
+func (tp *TypedPublisher[T]) Write(v T) error {
+	data, err := tp.codec.Marshal(v)
+	if err != nil {
+		return err
+	}
+	return tp.pub.Write(data)
+}
+
+// Close closes the underlying publisher.
+func (tp *TypedPublisher[T]) Close() error { return tp.pub.Close() }
+
+// TypedSubscriber[T] wraps a Subscriber to decode samples with a Codec.
+// Samples that fail to decode are silently dropped.
+type TypedSubscriber[T any] struct {
+	sub   Subscriber
+	codec Codec[T]
+	ch    chan TypedSample[T]
+	done  chan struct{}
+	once  sync.Once
+}
+
+// NewTypedSubscriber wraps sub so that its channel delivers TypedSample[T]
+// values decoded with codec. A background goroutine pumps samples from sub.C().
+func NewTypedSubscriber[T any](sub Subscriber, codec Codec[T]) *TypedSubscriber[T] {
+	ts := &TypedSubscriber[T]{
+		sub:   sub,
+		codec: codec,
+		ch:    make(chan TypedSample[T], 64),
+		done:  make(chan struct{}),
+	}
+	go ts.pump()
+	return ts
+}
+
+func (ts *TypedSubscriber[T]) pump() {
+	defer close(ts.ch)
+	for {
+		select {
+		case s, ok := <-ts.sub.C():
+			if !ok {
+				return
+			}
+			v, err := ts.codec.Unmarshal(s.Payload)
+			if err != nil {
+				continue // decode error: drop this sample
+			}
+			select {
+			case ts.ch <- TypedSample[T]{Topic: s.Topic, Value: v, Timestamp: s.Timestamp}:
+			case <-ts.done:
+				return
+			}
+		case <-ts.done:
+			return
+		}
+	}
+}
+
+// C returns the typed sample channel.
+func (ts *TypedSubscriber[T]) C() <-chan TypedSample[T] { return ts.ch }
+
+// Close stops the pump goroutine and closes the underlying subscriber.
+func (ts *TypedSubscriber[T]) Close() error {
+	ts.once.Do(func() { close(ts.done) })
+	return ts.sub.Close()
+}
+
+// ── JSONCodec ─────────────────────────────────────────────────────────────────
+
+// JSONCodec[T] implements Codec[T] using encoding/json.
+// It is a zero-size struct; the zero value is ready to use.
+type JSONCodec[T any] struct{}
+
+// Marshal encodes v to JSON bytes.
+func (JSONCodec[T]) Marshal(v T) ([]byte, error) { return json.Marshal(v) }
+
+// Unmarshal decodes data from JSON into T.
+func (JSONCodec[T]) Unmarshal(data []byte) (T, error) {
+	var v T
+	return v, json.Unmarshal(data, &v)
 }

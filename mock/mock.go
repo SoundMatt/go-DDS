@@ -14,7 +14,9 @@
 package mock
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -29,10 +31,12 @@ var globalBroker = &broker{
 	lastSample: make(map[string]*dds.Sample),
 }
 
-// subscription holds a subscriber channel together with its optional filter.
+// subscription holds a subscriber channel together with its optional filter
+// and back-pressure policy.
 type subscription struct {
-	ch     chan dds.Sample
-	filter func(dds.Sample) bool
+	ch           chan dds.Sample
+	filter       func(dds.Sample) bool
+	backPressure dds.BackPressurePolicy
 }
 
 // broker is the central in-memory routing hub.
@@ -49,9 +53,12 @@ type broker struct {
 	bytesDeliv   atomic.Uint64
 }
 
-func (b *broker) subscribe(topic string, qos dds.QoS, filter func(dds.Sample) bool) chan dds.Sample {
-	ch := make(chan dds.Sample, 64)
-	sub := subscription{ch: ch, filter: filter}
+const defaultChanDepth = 64
+
+func (b *broker) subscribe(topic string, qos dds.QoS, cfg dds.SubscriberConfig) chan dds.Sample {
+	depth := cfg.ChanDepth(defaultChanDepth)
+	ch := make(chan dds.Sample, depth)
+	sub := subscription{ch: ch, filter: cfg.Filter, backPressure: cfg.BackPressure}
 	b.mu.Lock()
 	b.subs[topic] = append(b.subs[topic], sub)
 	var last *dds.Sample
@@ -60,7 +67,7 @@ func (b *broker) subscribe(topic string, qos dds.QoS, filter func(dds.Sample) bo
 	}
 	b.mu.Unlock()
 	if last != nil {
-		if filter == nil || filter(*last) {
+		if cfg.Filter == nil || cfg.Filter(*last) {
 			select {
 			case ch <- *last:
 			default:
@@ -86,7 +93,7 @@ func (b *broker) unsubscribe(topic string, ch chan dds.Sample) {
 func (b *broker) publish(topic string, payload []byte, qos dds.QoS) {
 	cp := make([]byte, len(payload))
 	copy(cp, payload)
-	sample := dds.Sample{Topic: topic, Payload: cp}
+	sample := dds.Sample{Topic: topic, Payload: cp, Timestamp: time.Now()}
 
 	b.writes.Add(1)
 	b.bytesWritten.Add(uint64(len(payload)))
@@ -108,10 +115,42 @@ func (b *broker) publish(topic string, payload []byte, qos dds.QoS) {
 		if sub.filter != nil && !sub.filter(sample) {
 			continue
 		}
+		b.deliver(sub, sample, uint64(len(payload)))
+	}
+}
+
+// deliver routes sample to sub according to its back-pressure policy.
+func (b *broker) deliver(sub subscription, sample dds.Sample, byteLen uint64) {
+	switch sub.backPressure {
+	case dds.DropOldest:
 		select {
 		case sub.ch <- sample:
 			b.delivers.Add(1)
-			b.bytesDeliv.Add(uint64(len(payload)))
+			b.bytesDeliv.Add(byteLen)
+		default:
+			// Evict oldest, then retry.
+			select {
+			case <-sub.ch:
+				b.drops.Add(1)
+			default:
+			}
+			select {
+			case sub.ch <- sample:
+				b.delivers.Add(1)
+				b.bytesDeliv.Add(byteLen)
+			default:
+				b.drops.Add(1)
+			}
+		}
+	case dds.Block:
+		sub.ch <- sample
+		b.delivers.Add(1)
+		b.bytesDeliv.Add(byteLen)
+	default: // DropNewest
+		select {
+		case sub.ch <- sample:
+			b.delivers.Add(1)
+			b.bytesDeliv.Add(byteLen)
 		default:
 			b.drops.Add(1)
 		}
@@ -127,6 +166,19 @@ func WithDeadlineCallback(fn func(topic string)) Option {
 	return func(p *participant) { p.deadlineCb = fn }
 }
 
+// WithLogger sets the structured logger used by this participant.
+// Log output is zero-cost when l is nil.
+func WithLogger(l *slog.Logger) Option {
+	return func(p *participant) { p.log = l }
+}
+
+// WithLivelinessCallback registers fn to be called when a participant is
+// discovered or lost. In the mock, participants fire LivelinessGained on New
+// and LivelinessLost on Close.
+func WithLivelinessCallback(fn func(dds.GUID, dds.LivelinessEvent)) Option {
+	return func(p *participant) { p.livelinessCb = fn }
+}
+
 // New creates a mock DDS Participant for the given domain. Domain is accepted
 // for API compatibility but has no effect — all mock participants share the
 // same global broker regardless of domain.
@@ -135,14 +187,29 @@ func New(domain dds.Domain, opts ...Option) (dds.Participant, error) {
 	for _, o := range opts {
 		o(p)
 	}
+	// Assign a random GUID for this participant and fire LivelinessGained.
+	p.guid = newMockGUID()
+	if p.livelinessCb != nil {
+		p.livelinessCb(p.guid, dds.LivelinessGained)
+	}
+	p.logf("new mock participant guid=%x domain=%d", p.guid, domain)
 	return p, nil
 }
 
 // participant implements dds.Participant.
 type participant struct {
-	mu         sync.Mutex
-	closed     bool
-	deadlineCb func(string)
+	mu           sync.Mutex
+	closed       bool
+	deadlineCb   func(string)
+	log          *slog.Logger
+	livelinessCb func(dds.GUID, dds.LivelinessEvent)
+	guid         dds.GUID
+}
+
+func (p *participant) logf(msg string, args ...any) {
+	if p.log != nil {
+		p.log.Debug(fmt.Sprintf(msg, args...))
+	}
 }
 
 func (p *participant) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, error) {
@@ -154,7 +221,8 @@ func (p *participant) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, er
 	if p.closed {
 		return nil, fmt.Errorf("mock: %w", dds.ErrClosed)
 	}
-	pub := &publisher{topic: topic, qos: qos, deadlineCb: p.deadlineCb}
+	p.logf("new publisher topic=%s reliability=%d", topic, qos.Reliability)
+	pub := &publisher{topic: topic, qos: qos, deadlineCb: p.deadlineCb, log: p.log}
 	if qos.Deadline > 0 && p.deadlineCb != nil {
 		pub.deadlineTimer = time.AfterFunc(qos.Deadline, func() {
 			p.deadlineCb(topic)
@@ -173,15 +241,29 @@ func (p *participant) NewSubscriber(topic string, qos dds.QoS, opts ...dds.Subsc
 		return nil, fmt.Errorf("mock: %w", dds.ErrClosed)
 	}
 	cfg := dds.ApplySubscriberOpts(opts)
-	ch := globalBroker.subscribe(topic, qos, cfg.Filter)
+	p.logf("new subscriber topic=%s depth=%d backpressure=%d", topic, cfg.ChanDepth(defaultChanDepth), cfg.BackPressure)
+	ch := globalBroker.subscribe(topic, qos, cfg)
 	return &subscriber{topic: topic, ch: ch}, nil
 }
 
 func (p *participant) Close() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	if p.closed {
+		return nil
+	}
 	p.closed = true
+	if p.livelinessCb != nil {
+		p.livelinessCb(p.guid, dds.LivelinessLost)
+	}
+	p.logf("participant closed guid=%x", p.guid)
 	return nil
+}
+
+// CloseWithDrain implements dds.Drainer. In the mock, all writes are
+// synchronous so there are no in-flight ACKs; this is equivalent to Close.
+func (p *participant) CloseWithDrain(_ context.Context) error {
+	return p.Close()
 }
 
 // Metrics implements dds.MetricsProvider.
@@ -200,6 +282,7 @@ type publisher struct {
 	topic         string
 	qos           dds.QoS
 	deadlineCb    func(string)
+	log           *slog.Logger
 	deadlineTimer *time.Timer
 	mu            sync.Mutex
 	closed        bool
@@ -213,6 +296,9 @@ func (pub *publisher) Write(payload []byte) error {
 	}
 	if pub.deadlineTimer != nil {
 		pub.deadlineTimer.Reset(pub.qos.Deadline)
+	}
+	if pub.log != nil {
+		pub.log.Debug("publish", "topic", pub.topic, "bytes", len(payload))
 	}
 	globalBroker.publish(pub.topic, payload, pub.qos)
 	return nil
@@ -264,4 +350,15 @@ func matchSlices(pSegs, tSegs []string) bool {
 		return matchSlices(pSegs[1:], tSegs[1:])
 	}
 	return false
+}
+
+// newMockGUID returns a pseudo-random 16-byte GUID backed by the current time.
+// Not cryptographically random; sufficient for in-process participant identity.
+func newMockGUID() dds.GUID {
+	var g dds.GUID
+	ns := time.Now().UnixNano()
+	for i := 0; i < 8; i++ {
+		g[i] = byte(ns >> (i * 8))
+	}
+	return g
 }

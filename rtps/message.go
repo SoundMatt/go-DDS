@@ -11,6 +11,7 @@ package rtps
 import (
 	"encoding/binary"
 	"fmt"
+	"time"
 )
 
 // Magic bytes at the start of every RTPS message.
@@ -278,6 +279,43 @@ func marshalGAP(g Gap) []byte {
 	hdr[1] = flagEndianness
 	binary.LittleEndian.PutUint16(hdr[2:], uint16(len(body)))
 	return append(hdr, body...)
+}
+
+// ── INFO_TS submessage (§9.4.5.8) ────────────────────────────────────────────
+
+// marshalInfoTS builds an INFO_TS submessage encoding t as an NTP64 timestamp.
+// The timestamp is: seconds since 1 Jan 1900 (NTP epoch) in 32 bits + 32-bit
+// fractional second (2^32 ticks per second).
+//
+// The resulting submessage should be prepended to DATA so that readers can
+// associate the source timestamp with the immediately following DATA.
+func marshalInfoTS(t time.Time) []byte {
+	// NTP epoch is 1 Jan 1900; Unix epoch is 1 Jan 1970. Delta = 70 years.
+	const ntpDelta = 2208988800
+	secs := uint32(t.Unix() + ntpDelta)
+	frac := uint32(uint64(t.Nanosecond()) * (1 << 32) / 1e9)
+	body := make([]byte, 8)
+	binary.LittleEndian.PutUint32(body[0:], secs)
+	binary.LittleEndian.PutUint32(body[4:], frac)
+	hdr := make([]byte, 4)
+	hdr[0] = submsgINFO_TS
+	hdr[1] = flagEndianness
+	binary.LittleEndian.PutUint16(hdr[2:], 8)
+	return append(hdr, body...)
+}
+
+// parseInfoTS extracts a time.Time from an INFO_TS submessage body.
+// Returns (zero, false) on malformed input.
+func parseInfoTS(body []byte) (time.Time, bool) {
+	if len(body) < 8 {
+		return time.Time{}, false
+	}
+	const ntpDelta = 2208988800
+	secs := binary.LittleEndian.Uint32(body[0:])
+	frac := binary.LittleEndian.Uint32(body[4:])
+	unixSec := int64(secs) - ntpDelta
+	ns := int64(uint64(frac) * 1e9 >> 32)
+	return time.Unix(unixSec, ns).UTC(), true
 }
 
 // wrapInRTPSMessage wraps submessage bytes in an RTPS Header.

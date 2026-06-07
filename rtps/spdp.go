@@ -17,6 +17,8 @@ import (
 	"net"
 	"sync"
 	"time"
+
+	dds "github.com/SoundMatt/go-DDS"
 )
 
 const defaultLeaseDuration = 10 * time.Second
@@ -190,8 +192,19 @@ func (s *spdpService) storePeer(proxy *participantProxy) {
 		proxy.leaseDuration = defaultLeaseDuration
 	}
 	s.mu.Lock()
+	_, existed := s.peers[proxy.guid.Prefix]
 	s.peers[proxy.guid.Prefix] = proxy
 	s.mu.Unlock()
+	if !existed && s.p.livelinessCb != nil {
+		// Build full participant GUID: prefix + built-in participant entity 0x000001c1.
+		var g dds.GUID
+		copy(g[:12], proxy.guid.Prefix[:])
+		g[12] = 0x00
+		g[13] = 0x00
+		g[14] = 0x01
+		g[15] = 0xc1
+		s.p.livelinessCb(g, dds.LivelinessGained)
+	}
 }
 
 // evictLoop checks once per second for peers whose lease has expired and
@@ -226,6 +239,15 @@ func (s *spdpService) evictExpired() {
 	s.mu.Unlock()
 	for _, prefix := range evicted {
 		s.p.sedp.onPeerEvicted(prefix)
+		if s.p.livelinessCb != nil {
+			var g dds.GUID
+			copy(g[:12], prefix[:])
+			g[12] = 0x00
+			g[13] = 0x00
+			g[14] = 0x01
+			g[15] = 0xc1
+			s.p.livelinessCb(g, dds.LivelinessLost)
+		}
 	}
 }
 

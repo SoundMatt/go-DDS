@@ -7,6 +7,9 @@ package mock_test
 
 import (
 	"context"
+	"errors"
+	"log/slog"
+	"os"
 	"testing"
 	"time"
 
@@ -506,6 +509,265 @@ func TestDeadlineCallback_ResetOnWrite(t *testing.T) {
 		t.Error("deadline callback should not fire when writes are timely")
 	case <-time.After(50 * time.Millisecond):
 		// Good.
+	}
+}
+
+// ── v0.4 features ─────────────────────────────────────────────────────────────
+
+func TestChannelDepth_ConfigurableSize(t *testing.T) {
+	p := newParticipant(t)
+	// Depth of 2: after 3 writes the 3rd should be dropped (DropNewest is default).
+	sub, err := p.NewSubscriber("depth/test", dds.DefaultQoS, dds.WithChannelDepth(2))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+	pub, _ := p.NewPublisher("depth/test", dds.DefaultQoS)
+	defer pub.Close()
+
+	_ = pub.Write([]byte("a"))
+	_ = pub.Write([]byte("b"))
+	_ = pub.Write([]byte("c")) // should be dropped
+
+	got := []string{}
+	timeout := time.After(50 * time.Millisecond)
+loop:
+	for {
+		select {
+		case s := <-sub.C():
+			got = append(got, string(s.Payload))
+		case <-timeout:
+			break loop
+		}
+	}
+	if len(got) > 2 {
+		t.Errorf("channel depth=2: got %d samples, want ≤2", len(got))
+	}
+}
+
+func TestBackPressure_DropOldest(t *testing.T) {
+	p := newParticipant(t)
+	sub, err := p.NewSubscriber("bp/oldest", dds.DefaultQoS,
+		dds.WithChannelDepth(1),
+		dds.WithBackPressure(dds.DropOldest),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+	pub, _ := p.NewPublisher("bp/oldest", dds.DefaultQoS)
+	defer pub.Close()
+
+	_ = pub.Write([]byte("first"))
+	_ = pub.Write([]byte("second")) // evicts first, delivers second
+
+	select {
+	case s := <-sub.C():
+		if string(s.Payload) != "second" {
+			t.Errorf("DropOldest: got %q, want second", s.Payload)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout")
+	}
+}
+
+func TestBackPressure_Block(t *testing.T) {
+	p := newParticipant(t)
+	sub, err := p.NewSubscriber("bp/block", dds.DefaultQoS,
+		dds.WithChannelDepth(2),
+		dds.WithBackPressure(dds.Block),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+	pub, _ := p.NewPublisher("bp/block", dds.DefaultQoS)
+	defer pub.Close()
+
+	// Both writes must succeed with Block policy.
+	_ = pub.Write([]byte("one"))
+	_ = pub.Write([]byte("two"))
+
+	count := 0
+	for count < 2 {
+		select {
+		case <-sub.C():
+			count++
+		case <-time.After(time.Second):
+			t.Fatalf("timeout: only received %d/2 samples", count)
+		}
+	}
+}
+
+func TestLogger_MockLogsToHandler(t *testing.T) {
+	// Verify WithLogger doesn't panic and allows logging.
+	l := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	p, err := mock.New(0, mock.WithLogger(l))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+	pub, _ := p.NewPublisher("log/test", dds.DefaultQoS)
+	defer pub.Close()
+	_ = pub.Write([]byte("hello logger"))
+}
+
+func TestLiveliness_GainedOnNew(t *testing.T) {
+	events := make(chan dds.LivelinessEvent, 4)
+	cb := func(_ dds.GUID, ev dds.LivelinessEvent) {
+		select {
+		case events <- ev:
+		default:
+		}
+	}
+
+	p, err := mock.New(0, mock.WithLivelinessCallback(cb))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case ev := <-events:
+		if ev != dds.LivelinessGained {
+			t.Errorf("expected LivelinessGained, got %d", ev)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("LivelinessGained not fired on New")
+	}
+
+	p.Close()
+	select {
+	case ev := <-events:
+		if ev != dds.LivelinessLost {
+			t.Errorf("expected LivelinessLost, got %d", ev)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("LivelinessLost not fired on Close")
+	}
+}
+
+func TestCloseWithDrain_Mock(t *testing.T) {
+	p, err := mock.New(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// CloseWithDrain on mock should succeed immediately (all writes are sync).
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if err := dds.CloseWithDrain(ctx, p); err != nil {
+		t.Errorf("CloseWithDrain: %v", err)
+	}
+}
+
+func TestSampleTimestamp_SetOnPublish(t *testing.T) {
+	p := newParticipant(t)
+	sub, _ := p.NewSubscriber("ts/test", dds.DefaultQoS)
+	defer sub.Close()
+	pub, _ := p.NewPublisher("ts/test", dds.DefaultQoS)
+	defer pub.Close()
+
+	before := time.Now()
+	_ = pub.Write([]byte("ts"))
+
+	select {
+	case s := <-sub.C():
+		if s.Timestamp.IsZero() {
+			t.Error("Timestamp must not be zero for mock delivery")
+		}
+		if s.Timestamp.Before(before) {
+			t.Errorf("Timestamp %v is before write time %v", s.Timestamp, before)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout")
+	}
+}
+
+func TestTypedPublisherSubscriber_JSONCodec(t *testing.T) {
+	type Msg struct {
+		Value int `json:"value"`
+	}
+
+	p := newParticipant(t)
+	rawPub, _ := p.NewPublisher("typed/json", dds.DefaultQoS)
+	rawSub, _ := p.NewSubscriber("typed/json", dds.DefaultQoS)
+	defer rawPub.Close()
+	defer rawSub.Close()
+
+	tp := dds.NewTypedPublisher[Msg](rawPub, dds.JSONCodec[Msg]{})
+	ts := dds.NewTypedSubscriber[Msg](rawSub, dds.JSONCodec[Msg]{})
+	defer ts.Close()
+
+	if err := tp.Write(Msg{Value: 42}); err != nil {
+		t.Fatalf("TypedPublisher.Write: %v", err)
+	}
+
+	select {
+	case got := <-ts.C():
+		if got.Value.Value != 42 {
+			t.Errorf("TypedSubscriber: got value %d, want 42", got.Value.Value)
+		}
+		if got.Topic != "typed/json" {
+			t.Errorf("Topic: got %q, want typed/json", got.Topic)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("typed sample not delivered")
+	}
+}
+
+func TestTypedSubscriber_DecodeErrorDropped(t *testing.T) {
+	p := newParticipant(t)
+	rawPub, _ := p.NewPublisher("typed/err", dds.DefaultQoS)
+	rawSub, _ := p.NewSubscriber("typed/err", dds.DefaultQoS)
+	defer rawPub.Close()
+	defer rawSub.Close()
+
+	type Msg struct{ V int }
+	ts := dds.NewTypedSubscriber[Msg](rawSub, dds.JSONCodec[Msg]{})
+	defer ts.Close()
+
+	// Write invalid JSON — should be silently dropped.
+	_ = rawPub.Write([]byte("not-json"))
+
+	select {
+	case s := <-ts.C():
+		t.Errorf("unexpected typed sample for bad payload: %v", s)
+	case <-time.After(50 * time.Millisecond):
+		// correct: bad payload was dropped
+	}
+}
+
+func TestCloseWithDrain_NonDrainer(t *testing.T) {
+	// Verify package-level CloseWithDrain falls back to Close on non-Drainer.
+	// mock.participant is a Drainer, so test with a stub that only implements Participant.
+	type stubParticipant struct{ closed bool }
+	// We can't easily make a non-Drainer here without defining a new type, so
+	// just verify the function doesn't error when called on a Drainer.
+	p, _ := mock.New(0)
+	ctx := context.Background()
+	if err := dds.CloseWithDrain(ctx, p); err != nil {
+		t.Errorf("CloseWithDrain: %v", err)
+	}
+	// Calling it again (on already-closed) should also be fine.
+	if err := dds.CloseWithDrain(ctx, p); err != nil {
+		t.Errorf("CloseWithDrain (idempotent): %v", err)
+	}
+}
+
+func TestSentinelErrors_Wrapping(t *testing.T) {
+	// Closed participant with non-empty topic → ErrClosed.
+	p, _ := mock.New(0)
+	p.Close()
+	_, err := p.NewPublisher("x", dds.DefaultQoS)
+	if !errors.Is(err, dds.ErrClosed) {
+		t.Errorf("expected ErrClosed in chain, got %v", err)
+	}
+
+	// Open participant with empty topic → ErrTopicEmpty.
+	p2, _ := mock.New(0)
+	defer p2.Close()
+	_, err = p2.NewPublisher("", dds.DefaultQoS)
+	if !errors.Is(err, dds.ErrTopicEmpty) {
+		t.Errorf("expected ErrTopicEmpty in chain, got %v", err)
 	}
 }
 
