@@ -7,7 +7,6 @@ package rtps
 
 import (
 	"fmt"
-	"net"
 	"sync"
 	"sync/atomic"
 
@@ -172,14 +171,16 @@ func (p *participant) handleDataPacket(data []byte) {
 			return nil
 		}
 		sourceGUID := GUID{Prefix: hdr.GuidPrefix, Entity: ds.WriterEntityId}
-		p.dispatchToReaders(sourceGUID, rawPayload)
+		p.dispatchToReaders(sourceGUID, "", rawPayload)
 		return nil
 	})
 }
 
 // dispatchToReaders delivers payload to all readers that have sourceGUID in
-// their accept-list.
-func (p *participant) dispatchToReaders(source GUID, payload []byte) {
+// their accept-list. topicFilter, when non-empty, restricts delivery to readers
+// on that topic (used for intra-process dispatch where topic is known; UDP
+// paths pass "" and rely on SEDP-based source GUID filtering instead).
+func (p *participant) dispatchToReaders(source GUID, topicFilter string, payload []byte) {
 	p.mu.Lock()
 	readers := make([]*rtpsReader, 0, len(p.readers))
 	for _, r := range p.readers {
@@ -188,6 +189,9 @@ func (p *participant) dispatchToReaders(source GUID, payload []byte) {
 	p.mu.Unlock()
 
 	for _, r := range readers {
+		if topicFilter != "" && r.topic != topicFilter {
+			continue
+		}
 		if r.acceptsSource(source) {
 			sample := dds.Sample{Topic: r.topic, Payload: payload}
 			select {
@@ -255,8 +259,11 @@ func (w *rtpsWriter) Write(payload []byte) error {
 	submsg := marshalDataSubmessage(w.eid, EntityIdUnknown, seqNum, wrapped)
 	msg := wrapInRTPSMessage(w.p.guidPrefix, submsg)
 
-	// Deliver locally (same process).
-	w.p.dispatchToReaders(GUID{Prefix: w.p.guidPrefix, Entity: w.eid}, payload)
+	// Deliver locally (same process). Copy payload so caller mutations after
+	// Write do not affect the already-queued sample.
+	localCopy := make([]byte, len(payload))
+	copy(localCopy, payload)
+	w.p.dispatchToReaders(GUID{Prefix: w.p.guidPrefix, Entity: w.eid}, w.topic, localCopy)
 
 	// Send to all known remote peers.
 	for _, loc := range w.p.matchedReaderLocators(w.topic) {
@@ -323,32 +330,4 @@ func (r *rtpsReader) Close() error {
 		close(r.ch)
 	})
 	return nil
-}
-
-// localIPv4 returns the first non-loopback IPv4 address on this host,
-// or 127.0.0.1 as fallback.
-func localIPv4() net.IP {
-	ifaces, err := net.Interfaces()
-	if err != nil {
-		return net.ParseIP("127.0.0.1")
-	}
-	for _, iface := range ifaces {
-		if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
-			continue
-		}
-		addrs, _ := iface.Addrs()
-		for _, addr := range addrs {
-			var ip net.IP
-			switch v := addr.(type) {
-			case *net.IPNet:
-				ip = v.IP
-			case *net.IPAddr:
-				ip = v.IP
-			}
-			if ip4 := ip.To4(); ip4 != nil {
-				return ip4
-			}
-		}
-	}
-	return net.ParseIP("127.0.0.1")
 }

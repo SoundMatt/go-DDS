@@ -106,7 +106,9 @@ func FuzzPublishIsolation(f *testing.F) {
 		want := make([]byte, len(payload))
 		copy(want, payload)
 
-		pub.Write(payload)
+		if err := pub.Write(payload); err != nil {
+			t.Fatalf("Write: %v", err)
+		}
 
 		// Mutate every byte of the original slice after Write.
 		for i := range payload {
@@ -163,7 +165,9 @@ func FuzzTopicName(f *testing.F) {
 		defer pub.Close()
 
 		want := []byte("probe")
-		pub.Write(want)
+		if err := pub.Write(want); err != nil {
+			t.Fatalf("Write: %v", err)
+		}
 
 		select {
 		case s := <-sub.C():
@@ -205,7 +209,7 @@ func FuzzNoRouting(f *testing.F) {
 		pub, _ := p.NewPublisher(topicA, dds.DefaultQoS)
 		defer pub.Close()
 
-		pub.Write(payload)
+		_ = pub.Write(payload) // intentional: error irrelevant for routing check
 
 		// broker.publish is synchronous: if a sample were mis-routed it would
 		// already be in subB's channel. Non-blocking read is correct here.

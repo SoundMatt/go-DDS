@@ -19,7 +19,6 @@ import (
 func TestCDR_StringRoundTrip(t *testing.T) {
 	cases := []string{"hello", "", "unicode/日本語", "a/b/c/d", "topic with spaces"}
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc, func(t *testing.T) {
 			enc := newPLCDREncoder()
 			enc.addString(pidTopicName, tc)

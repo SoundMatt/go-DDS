@@ -32,11 +32,6 @@ type SequenceNumber struct {
 	Low  uint32
 }
 
-// value returns the combined 64-bit sequence number.
-func (s SequenceNumber) value() int64 {
-	return int64(s.High)<<32 | int64(s.Low)
-}
-
 // submessage IDs (§9.4.5).
 const (
 	submsgDATA    = byte(0x15)

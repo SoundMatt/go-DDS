@@ -24,11 +24,10 @@ const spdpAnnouncePeriod = 2 * time.Second
 // participantProxy stores the addresses needed to exchange SEDP traffic
 // with a remote participant.
 type participantProxy struct {
-	guid                  GUID
-	metatrafficUnicast    Locator
-	metatrafficMulticast  Locator
-	defaultUnicast        Locator
-	builtinEndpoints      uint32
+	guid               GUID
+	metatrafficUnicast Locator
+	defaultUnicast     Locator
+	builtinEndpoints   uint32
 }
 
 // spdpService manages discovery announcements and the known-peers table.
@@ -55,13 +54,6 @@ func (s *spdpService) start() {
 
 func (s *spdpService) close() {
 	close(s.stop)
-}
-
-// peer returns the proxy for a known participant, or nil.
-func (s *spdpService) peer(prefix GuidPrefix) *participantProxy {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.peers[prefix]
 }
 
 // allPeers returns a snapshot of all known participant proxies.

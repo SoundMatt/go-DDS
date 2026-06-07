@@ -31,7 +31,6 @@ var payloadSizes = []struct {
 // at various payload sizes. One iteration = one Write + one channel receive.
 func BenchmarkPublish_RoundTrip(b *testing.B) {
 	for _, ps := range payloadSizes {
-		ps := ps
 		b.Run(ps.name, func(b *testing.B) {
 			p, _ := mock.New(dds.Domain(0))
 			defer p.Close()
@@ -64,7 +63,6 @@ func BenchmarkPublish_RoundTrip(b *testing.B) {
 // cost from the receive-path cost.
 func BenchmarkPublish_FireAndForget(b *testing.B) {
 	for _, ps := range payloadSizes {
-		ps := ps
 		b.Run(ps.name, func(b *testing.B) {
 			p, _ := mock.New(dds.Domain(0))
 			defer p.Close()
@@ -94,7 +92,6 @@ func BenchmarkPublish_FireAndForget(b *testing.B) {
 // concurrent subscribers. b.SetBytes reflects total bytes delivered per op.
 func BenchmarkPublish_FanOut(b *testing.B) {
 	for _, n := range []int{1, 2, 4, 8, 16} {
-		n := n
 		b.Run(fmt.Sprintf("%dsubs", n), func(b *testing.B) {
 			p, _ := mock.New(dds.Domain(0))
 			defer p.Close()

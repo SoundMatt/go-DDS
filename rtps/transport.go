@@ -76,7 +76,7 @@ func newSocket(conn *net.UDPConn, port int) *udpSocket {
 func (s *udpSocket) readLoop() {
 	buf := make([]byte, maxUDPSize)
 	for {
-		s.conn.SetReadDeadline(time.Now().Add(250 * time.Millisecond))
+		_ = s.conn.SetReadDeadline(time.Now().Add(250 * time.Millisecond))
 		n, from, err := s.conn.ReadFromUDP(buf)
 		if err != nil {
 			select {
