@@ -1,0 +1,382 @@
+// Copyright (c) 2026 Matt Jones. All rights reserved.
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+package services_test
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"strings"
+	"testing"
+	"time"
+
+	dds "github.com/SoundMatt/go-DDS"
+	"github.com/SoundMatt/go-DDS/mock"
+	"github.com/SoundMatt/go-DDS/monitor"
+	"github.com/SoundMatt/go-DDS/record"
+	"github.com/SoundMatt/go-DDS/services"
+)
+
+func newPart(t *testing.T) dds.Participant {
+	t.Helper()
+	p, err := mock.New(0)
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
+	t.Cleanup(func() { _ = p.Close() })
+	return p
+}
+
+func uniqueTopic(prefix string) string {
+	return fmt.Sprintf("%s/%d", prefix, time.Now().UnixNano())
+}
+
+// ── RecorderService ───────────────────────────────────────────────────────────
+
+func TestRecorderService_StartStop(t *testing.T) {
+	p := newPart(t)
+	var buf bytes.Buffer
+	svc := services.NewRecorderService(p, services.RecorderOptions{
+		Topics: []string{uniqueTopic("svc/rec")},
+		Output: &buf,
+	})
+	if err := svc.Start(); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	svc.Stop()
+}
+
+func TestRecorderService_CapturesSamples(t *testing.T) {
+	p := newPart(t)
+	topic := uniqueTopic("svc/rec/capture")
+
+	var buf bytes.Buffer
+	svc := services.NewRecorderService(p, services.RecorderOptions{
+		Topics: []string{topic},
+		Output: &buf,
+	})
+	if err := svc.Start(); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+	_ = pub.Write([]byte("captured"))
+	time.Sleep(50 * time.Millisecond)
+
+	svc.Stop()
+
+	if buf.Len() == 0 {
+		t.Fatal("expected non-empty recording after Stop")
+	}
+	var rs record.RecordedSample
+	if err := json.NewDecoder(&buf).Decode(&rs); err != nil {
+		t.Fatalf("decode JSONL: %v", err)
+	}
+	if string(rs.Payload) != "captured" {
+		t.Errorf("payload: got %q, want captured", rs.Payload)
+	}
+}
+
+func TestRecorderService_StartIdempotent(t *testing.T) {
+	p := newPart(t)
+	var buf bytes.Buffer
+	svc := services.NewRecorderService(p, services.RecorderOptions{
+		Output: &buf,
+	})
+	_ = svc.Start()
+	if err := svc.Start(); err != nil {
+		t.Errorf("second Start should be no-op: %v", err)
+	}
+	svc.Stop()
+}
+
+func TestRecorderService_StopIdempotent(t *testing.T) {
+	p := newPart(t)
+	var buf bytes.Buffer
+	svc := services.NewRecorderService(p, services.RecorderOptions{Output: &buf})
+	_ = svc.Start()
+	svc.Stop()
+	svc.Stop() // must not panic
+}
+
+func TestRecorderService_NoTopics_NoError(t *testing.T) {
+	p := newPart(t)
+	var buf bytes.Buffer
+	svc := services.NewRecorderService(p, services.RecorderOptions{Output: &buf})
+	if err := svc.Start(); err != nil {
+		t.Fatalf("Start with no topics: %v", err)
+	}
+	svc.Stop()
+}
+
+func TestRecorderService_ClosedParticipant_StartError(t *testing.T) {
+	p := newPart(t)
+	p.Close()
+	var buf bytes.Buffer
+	svc := services.NewRecorderService(p, services.RecorderOptions{
+		Topics: []string{"some/topic"},
+		Output: &buf,
+	})
+	if err := svc.Start(); err == nil {
+		t.Error("expected error starting recorder on closed participant")
+		svc.Stop()
+	}
+}
+
+// ── ReplayService ─────────────────────────────────────────────────────────────
+
+func makeJSONL(t *testing.T, samples []record.RecordedSample) *bytes.Buffer {
+	t.Helper()
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	for _, s := range samples {
+		if err := enc.Encode(s); err != nil {
+			t.Fatalf("encode: %v", err)
+		}
+	}
+	return &buf
+}
+
+func TestReplayService_Plays(t *testing.T) {
+	p := newPart(t)
+	topic := uniqueTopic("svc/replay")
+	now := time.Now()
+	samples := []record.RecordedSample{
+		{Topic: topic, Payload: []byte("replayed"), RecordedAt: now},
+	}
+	buf := makeJSONL(t, samples)
+
+	sub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	svc := services.NewReplayService(p, services.ReplayOptions{Input: buf})
+	ctx := context.Background()
+	if err := svc.Start(ctx); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	select {
+	case s := <-sub.C():
+		if string(s.Payload) != "replayed" {
+			t.Errorf("payload: got %q, want replayed", s.Payload)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for replayed sample")
+	}
+
+	svc.Stop()
+	if svc.Err() != nil {
+		t.Errorf("Err after normal playback: %v", svc.Err())
+	}
+}
+
+func TestReplayService_Done_ClosedAfterStop(t *testing.T) {
+	p := newPart(t)
+	svc := services.NewReplayService(p, services.ReplayOptions{
+		Input: strings.NewReader(""),
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	_ = svc.Start(ctx)
+	cancel()
+	svc.Stop()
+
+	select {
+	case <-svc.Done():
+		// correct
+	case <-time.After(time.Second):
+		t.Fatal("Done() not closed after Stop")
+	}
+}
+
+func TestReplayService_StartIdempotent(t *testing.T) {
+	p := newPart(t)
+	svc := services.NewReplayService(p, services.ReplayOptions{
+		Input: strings.NewReader(""),
+	})
+	ctx := context.Background()
+	_ = svc.Start(ctx)
+	if err := svc.Start(ctx); err != nil {
+		t.Errorf("second Start should be no-op: %v", err)
+	}
+	svc.Stop()
+}
+
+func TestReplayService_Loop_SeekableInput(t *testing.T) {
+	p := newPart(t)
+	topic := uniqueTopic("svc/loop")
+	now := time.Now()
+	samples := []record.RecordedSample{
+		{Topic: topic, Payload: []byte("looped"), RecordedAt: now},
+	}
+	buf := makeJSONL(t, samples)
+
+	sub, err := p.NewSubscriber(topic, dds.DefaultQoS, dds.WithChannelDepth(8))
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	svc := services.NewReplayService(p, services.ReplayOptions{
+		Input: bytes.NewReader(buf.Bytes()), // *bytes.Reader implements io.Seeker
+		Loop:  true,
+	})
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+	_ = svc.Start(ctx)
+
+	// Collect at least 2 deliveries to confirm looping.
+	count := 0
+	deadline := time.After(time.Second)
+	for count < 2 {
+		select {
+		case <-sub.C():
+			count++
+		case <-deadline:
+			t.Fatalf("timeout: only got %d deliveries, want ≥ 2 (looping)", count)
+			return
+		}
+	}
+	svc.Stop()
+}
+
+func TestReplayService_FilteredTopics(t *testing.T) {
+	p := newPart(t)
+	topicA := uniqueTopic("svc/filter/a")
+	topicB := uniqueTopic("svc/filter/b")
+	now := time.Now()
+	samples := []record.RecordedSample{
+		{Topic: topicA, Payload: []byte("keep"), RecordedAt: now},
+		{Topic: topicB, Payload: []byte("skip"), RecordedAt: now},
+	}
+	buf := makeJSONL(t, samples)
+
+	subA, _ := p.NewSubscriber(topicA, dds.DefaultQoS)
+	subB, _ := p.NewSubscriber(topicB, dds.DefaultQoS)
+	defer subA.Close()
+	defer subB.Close()
+
+	svc := services.NewReplayService(p, services.ReplayOptions{
+		Input:  buf,
+		Topics: []string{topicA},
+	})
+	ctx := context.Background()
+	_ = svc.Start(ctx)
+
+	// Wait for the replay goroutine to finish (non-looping, ends when recording ends).
+	select {
+	case <-svc.Done():
+	case <-time.After(2 * time.Second):
+		t.Fatal("replay did not complete within 2s")
+	}
+
+	select {
+	case s := <-subA.C():
+		if string(s.Payload) != "keep" {
+			t.Errorf("topicA payload: got %q, want keep", s.Payload)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout for topicA")
+	}
+
+	select {
+	case <-subB.C():
+		t.Error("topicB should have been filtered out")
+	case <-time.After(60 * time.Millisecond):
+	}
+}
+
+// ── MonitorService ────────────────────────────────────────────────────────────
+
+func TestMonitorService_New(t *testing.T) {
+	p := newPart(t)
+	svc, err := services.NewMonitorService(p, monitor.Options{Addr: "127.0.0.1:0"})
+	if err != nil {
+		t.Fatalf("NewMonitorService: %v", err)
+	}
+	defer svc.Close()
+}
+
+func TestMonitorService_Addr_NonEmpty(t *testing.T) {
+	p := newPart(t)
+	svc, err := services.NewMonitorService(p, monitor.Options{Addr: "127.0.0.1:0"})
+	if err != nil {
+		t.Fatalf("NewMonitorService: %v", err)
+	}
+	defer svc.Close()
+	if svc.Addr() == "" {
+		t.Error("Addr() must not be empty")
+	}
+}
+
+func TestMonitorService_Mon_NotNil(t *testing.T) {
+	p := newPart(t)
+	svc, err := services.NewMonitorService(p, monitor.Options{Addr: "127.0.0.1:0"})
+	if err != nil {
+		t.Fatalf("NewMonitorService: %v", err)
+	}
+	defer svc.Close()
+	if svc.Mon() == nil {
+		t.Error("Mon() must not be nil")
+	}
+}
+
+func TestMonitorService_Close(t *testing.T) {
+	p := newPart(t)
+	svc, err := services.NewMonitorService(p, monitor.Options{Addr: "127.0.0.1:0"})
+	if err != nil {
+		t.Fatalf("NewMonitorService: %v", err)
+	}
+	if err := svc.Close(); err != nil {
+		t.Errorf("Close: %v", err)
+	}
+}
+
+func TestMonitorService_New_ListenError(t *testing.T) {
+	p := newPart(t)
+	_, err := services.NewMonitorService(p, monitor.Options{Addr: "127.0.0.1:99999"})
+	if err == nil {
+		t.Fatal("expected error for invalid port")
+	}
+}
+
+// TestReplayService_Loop_NonSeekable verifies that a non-seekable input with
+// Loop:true runs once and exits cleanly (cannot seek back to start).
+func TestReplayService_Loop_NonSeekable(t *testing.T) {
+	p := newPart(t)
+	topic := uniqueTopic("svc/loop/nonseek")
+	now := time.Now()
+	samples := []record.RecordedSample{
+		{Topic: topic, Payload: []byte("once"), RecordedAt: now},
+	}
+	buf := makeJSONL(t, samples)
+	// strings.Reader does not implement io.Seeker in the services sense —
+	// we wrap it in a non-seekable reader.
+	var nonSeekable io.Reader = io.NopCloser(buf)
+
+	svc := services.NewReplayService(p, services.ReplayOptions{
+		Input: nonSeekable,
+		Loop:  true,
+	})
+	ctx := context.Background()
+	_ = svc.Start(ctx)
+
+	select {
+	case <-svc.Done():
+		// correct: non-seekable loop exits after one pass
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout: non-seekable loop should exit after one pass")
+	}
+	svc.Stop()
+}
