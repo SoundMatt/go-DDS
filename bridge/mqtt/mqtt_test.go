@@ -240,6 +240,44 @@ func TestDefaultQoSMap_MQTTToDDS(t *testing.T) {
 	}
 }
 
+func TestDefaultQoSMap_MQTTToDDS_ReliableNotRetained(t *testing.T) {
+	m := mqttbridge.DefaultQoSMap
+	// qos=1, retained=false → Reliable + Volatile (not TransientLocal)
+	q := m.MQTTToDDS(1, false)
+	if q.Reliability != dds.Reliable {
+		t.Errorf("expected Reliable, got %v", q.Reliability)
+	}
+	if q.Durability != dds.Volatile {
+		t.Errorf("expected Volatile (not retained), got %v", q.Durability)
+	}
+}
+
+func TestBridge_FromMQTT_NoTopicMatch(t *testing.T) {
+	p := newMockPart(t)
+	client := newStubClient()
+	// PrefixMap: MQTT topics must start with "vehicle/" to be forwarded to DDS.
+	b, err := mqttbridge.NewBridge(p, client, mqttbridge.Options{
+		TopicMap: mqttbridge.PrefixMap("signals/", "vehicle/"),
+	})
+	if err != nil {
+		t.Fatalf("NewBridge: %v", err)
+	}
+	defer b.Close()
+
+	sub, _ := p.NewSubscriber("signals/rpm", dds.DefaultQoS)
+	defer sub.Close()
+
+	// Inject a topic that does NOT match the mqtt prefix — should be discarded.
+	client.injectMQTT("other/topic", []byte("ignored"))
+
+	select {
+	case <-sub.C():
+		t.Error("non-matching MQTT topic should not be forwarded to DDS")
+	case <-time.After(80 * time.Millisecond):
+		// correct: nothing delivered
+	}
+}
+
 func TestBridge_Close_Idempotent(t *testing.T) {
 	p := newMockPart(t)
 	client := newStubClient()

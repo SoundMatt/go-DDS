@@ -8,12 +8,22 @@ package rtps
 import (
 	"encoding/binary"
 	"sync"
+	"time"
 )
 
 // maxFragmentPayload is the maximum bytes placed in a single DATA_FRAG body.
 // Chosen to keep the full RTPS packet under 1400 bytes on a typical Ethernet
 // MTU of 1500 bytes (headers ≈ 100 bytes).
 const maxFragmentPayload = 1200
+
+// maxReassemblyBytes is the maximum DataSize accepted from an incoming
+// DATA_FRAG submessage. Frames claiming a larger size are discarded to
+// prevent memory exhaustion from malformed or malicious peers.
+const maxReassemblyBytes = 16 * 1024 * 1024 // 16 MiB
+
+// staleFragAge is how long an incomplete fragment reassembly is held before
+// being discarded. This bounds memory use when fragments are permanently lost.
+const staleFragAge = 5 * time.Second
 
 // submsgDATAFRAG is the RTPS submessage ID for DATA_FRAG (§8.3.7.3).
 const submsgDATAFRAG = byte(0x16)
@@ -102,8 +112,9 @@ type fragKey struct {
 
 type fragBuffer struct {
 	data     []byte
-	received uint32 // count of fragments received so far
-	total    uint32 // total number of fragments expected
+	received uint32    // count of fragments received so far
+	total    uint32    // total number of fragments expected
+	created  time.Time // wall time when the first fragment was received
 }
 
 // receive adds a fragment and returns the complete reassembled payload if all
@@ -112,19 +123,32 @@ func (fa *fragmentAssembler) receive(f DataFrag) []byte {
 	if f.FragmentSize == 0 || f.DataSize == 0 || f.FragmentsInSubmsg == 0 {
 		return nil
 	}
+	// Reject implausibly large payloads before allocating any memory.
+	if uint64(f.DataSize) > maxReassemblyBytes {
+		return nil
+	}
 	total := (uint32(f.DataSize) + uint32(f.FragmentSize) - 1) / uint32(f.FragmentSize)
 
 	key := fragKey{writer: f.WriterEntityId, seqLo: f.WriterSeqNum.Low}
+	now := time.Now()
 	fa.mu.Lock()
 	defer fa.mu.Unlock()
 	if fa.buffers == nil {
 		fa.buffers = make(map[fragKey]*fragBuffer)
 	}
+	// Evict incomplete reassemblies that are older than staleFragAge.
+	// This prevents memory accumulation from lost or abandoned fragment streams.
+	for k, b := range fa.buffers {
+		if now.Sub(b.created) > staleFragAge {
+			delete(fa.buffers, k)
+		}
+	}
 	fb, ok := fa.buffers[key]
 	if !ok {
 		fb = &fragBuffer{
-			data:  make([]byte, f.DataSize),
-			total: total,
+			data:    make([]byte, f.DataSize),
+			total:   total,
+			created: now,
 		}
 		fa.buffers[key] = fb
 	}

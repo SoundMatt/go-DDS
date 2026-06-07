@@ -294,6 +294,10 @@ func (pub *publisher) Write(payload []byte) error {
 	if pub.closed {
 		return fmt.Errorf("mock: %w", dds.ErrClosed)
 	}
+	if pub.qos.MaxSampleSize > 0 && len(payload) > pub.qos.MaxSampleSize {
+		return fmt.Errorf("mock: %w: got %d bytes, limit %d",
+			dds.ErrPayloadTooLarge, len(payload), pub.qos.MaxSampleSize)
+	}
 	if pub.deadlineTimer != nil {
 		pub.deadlineTimer.Reset(pub.qos.Deadline)
 	}

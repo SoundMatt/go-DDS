@@ -771,6 +771,41 @@ func TestSentinelErrors_Wrapping(t *testing.T) {
 	}
 }
 
+func TestMaxSampleSize_EnforcedInMock(t *testing.T) {
+	p := newParticipant(t)
+	qos := dds.DefaultQoS
+	qos.MaxSampleSize = 10
+	pub, err := p.NewPublisher("mock/maxsize", qos)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	// Payload within limit must succeed.
+	if err := pub.Write([]byte("0123456789")); err != nil {
+		t.Fatalf("Write at limit: %v", err)
+	}
+
+	// Payload over limit must return ErrPayloadTooLarge.
+	err = pub.Write([]byte("01234567890")) // 11 bytes
+	if !errors.Is(err, dds.ErrPayloadTooLarge) {
+		t.Errorf("expected ErrPayloadTooLarge, got %v", err)
+	}
+}
+
+func TestMaxSampleSize_ZeroMeansUnlimited_Mock(t *testing.T) {
+	p := newParticipant(t)
+	qos := dds.DefaultQoS
+	qos.MaxSampleSize = 0 // unlimited
+	pub, _ := p.NewPublisher("mock/unlimited", qos)
+	defer pub.Close()
+
+	large := make([]byte, 100_000)
+	if err := pub.Write(large); err != nil {
+		t.Fatalf("Write with MaxSampleSize=0 should be unlimited: %v", err)
+	}
+}
+
 func TestMetrics_MockParticipant(t *testing.T) {
 	p := newParticipant(t)
 	mp, ok := p.(dds.MetricsProvider)

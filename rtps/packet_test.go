@@ -15,6 +15,8 @@ import (
 	"io"
 	"log/slog"
 	"net"
+	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -1057,6 +1059,110 @@ func TestFragmentAssembler_PartialNoResult(t *testing.T) {
 	}
 }
 
+func TestFragmentAssembler_OversizeDataSize_Rejected(t *testing.T) {
+	// A DATA_FRAG claiming DataSize > maxReassemblyBytes must be silently
+	// dropped; no allocation should occur and receive must return nil.
+	f := DataFrag{
+		WriterEntityId:      entityIdForWriter(99),
+		ReaderEntityId:      EntityIdUnknown,
+		WriterSeqNum:        SequenceNumber{Low: 1},
+		FragmentStartingNum: 1,
+		FragmentsInSubmsg:   1,
+		FragmentSize:        1200,
+		DataSize:            maxReassemblyBytes + 1, // one byte over the cap
+		Payload:             make([]byte, 1200),
+	}
+	var fa fragmentAssembler
+	if result := fa.receive(f); result != nil {
+		t.Error("oversize DataSize must return nil, not allocate")
+	}
+}
+
+func TestFragmentAssembler_OutOfOrder(t *testing.T) {
+	// Deliver fragments in reverse order; the assembler must still reconstruct
+	// the original payload correctly.
+	payload := make([]byte, maxFragmentPayload*3)
+	for i := range payload {
+		payload[i] = byte(i % 251)
+	}
+	eid := entityIdForWriter(42)
+	frags := splitIntoFragments(eid, SequenceNumber{Low: 7}, payload)
+	if len(frags) < 3 {
+		t.Skipf("need at least 3 fragments, got %d", len(frags))
+	}
+
+	// Reverse the order.
+	for i, j := 0, len(frags)-1; i < j; i, j = i+1, j-1 {
+		frags[i], frags[j] = frags[j], frags[i]
+	}
+
+	var fa fragmentAssembler
+	var result []byte
+	for _, f := range frags {
+		result = fa.receive(f)
+		if result != nil {
+			break
+		}
+	}
+	if result == nil {
+		t.Fatal("out-of-order assembler did not complete")
+	}
+	if string(result) != string(payload) {
+		t.Error("out-of-order reassembled payload does not match original")
+	}
+}
+
+func TestFragmentAssembler_StaleEviction(t *testing.T) {
+	// An incomplete reassembly that is older than staleFragAge must be evicted
+	// so the assembler does not accumulate memory indefinitely.
+	//
+	// We achieve this by directly manipulating the buffer's created time via a
+	// second receive call on a different sequence number which triggers the sweep.
+	payload1 := make([]byte, maxFragmentPayload*2)
+	eid := entityIdForWriter(55)
+	frags1 := splitIntoFragments(eid, SequenceNumber{Low: 1}, payload1)
+
+	var fa fragmentAssembler
+	// Deliver only the first fragment — leaves the reassembly incomplete.
+	fa.receive(frags1[0])
+
+	// Manually back-date the buffer by moving created time into the past.
+	fa.mu.Lock()
+	for _, b := range fa.buffers {
+		b.created = b.created.Add(-(staleFragAge + time.Second))
+	}
+	fa.mu.Unlock()
+
+	// Delivering a fragment for a different sequence triggers the stale sweep.
+	payload2 := []byte("trigger")
+	frags2 := splitIntoFragments(eid, SequenceNumber{Low: 2}, payload2)
+	fa.receive(frags2[0])
+
+	// The stale buffer for seq 1 must have been evicted.
+	fa.mu.Lock()
+	_, stillPresent := fa.buffers[fragKey{writer: eid, seqLo: 1}]
+	fa.mu.Unlock()
+	if stillPresent {
+		t.Error("stale incomplete reassembly was not evicted")
+	}
+}
+
+func TestFragmentAssembler_ZeroDataSize_Rejected(t *testing.T) {
+	f := DataFrag{FragmentSize: 100, DataSize: 0, FragmentsInSubmsg: 1}
+	var fa fragmentAssembler
+	if fa.receive(f) != nil {
+		t.Error("zero DataSize must return nil")
+	}
+}
+
+func TestFragmentAssembler_ZeroFragmentSize_Rejected(t *testing.T) {
+	f := DataFrag{FragmentSize: 0, DataSize: 100, FragmentsInSubmsg: 1}
+	var fa fragmentAssembler
+	if fa.receive(f) != nil {
+		t.Error("zero FragmentSize must return nil")
+	}
+}
+
 // ── Persist tests ─────────────────────────────────────────────────────────────
 
 func TestPersistFlushLoad_RoundTrip(t *testing.T) {
@@ -1086,6 +1192,91 @@ func TestPersistLoad_MissingFile_ReturnsNil(t *testing.T) {
 func TestPersistFlush_EmptyDir_NoOp(t *testing.T) {
 	// Should not panic.
 	persistFlush("", "topic", []byte("data"))
+}
+
+func TestPersistLoad_OversizePayload_Rejected(t *testing.T) {
+	dir := t.TempDir()
+	// Write a file whose 4-byte length header claims > 64 MiB.
+	path := persistPath(dir, "big/topic")
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	var hdr [4]byte
+	binary.LittleEndian.PutUint32(hdr[:], 64*1024*1024+1) // one byte over the cap
+	_, _ = f.Write(hdr[:])
+	f.Close()
+
+	_, loadErr := persistLoad(dir, "big/topic")
+	if loadErr == nil {
+		t.Error("expected error for oversized payload header, got nil")
+	}
+}
+
+func TestWithPersistentHistory_LateJoinerGetsPersistedSample(t *testing.T) {
+	dir := t.TempDir()
+	p, err := newParticipant(dds.Domain(77), WithNoMulticast(), WithPersistentHistory(dir))
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	defer p.Close()
+
+	pub, err := p.NewPublisher("persist/topic", dds.ReliableQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	if err := pub.Write([]byte("persisted-value")); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+
+	// Late subscriber: should receive the persisted last sample from disk.
+	sub, err := p.NewSubscriber("persist/topic", dds.ReliableQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	select {
+	case s := <-sub.C():
+		if string(s.Payload) != "persisted-value" {
+			t.Errorf("got %q, want persisted-value", s.Payload)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout: persisted late-joiner sample not delivered")
+	}
+}
+
+// TestPlog_Warn_WithNonNilLogger exercises the non-nil logger branch of
+// plog.warn (0% coverage in the full suite since warn is not called from
+// any production code path — it's a defensive utility).
+func TestPlog_Warn_WithNonNilLogger(t *testing.T) {
+	var buf strings.Builder
+	l := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))
+	pl := plog{l: l}
+	pl.warn("test warning %s", "msg")
+	if !strings.Contains(buf.String(), "test warning msg") {
+		t.Errorf("expected warn log output, got %q", buf.String())
+	}
+}
+
+// TestPlog_Warn_NilLogger verifies warn is a no-op when no logger is set.
+func TestPlog_Warn_NilLogger(t *testing.T) {
+	pl := plog{} // l is nil
+	pl.warn("should not panic")
+}
+
+// TestPlog_Debug_WithNonNilLogger exercises the non-nil logger branch of
+// plog.debug, which is otherwise only exercised via the nil-logger path.
+func TestPlog_Debug_WithNonNilLogger(t *testing.T) {
+	var buf strings.Builder
+	l := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	pl := plog{l: l}
+	pl.debug("test debug %d", 7)
+	if !strings.Contains(buf.String(), "test debug 7") {
+		t.Errorf("expected debug log output, got %q", buf.String())
+	}
 }
 
 // ── Sentinel error tests ──────────────────────────────────────────────────────
@@ -1810,6 +2001,87 @@ func TestTSNConfig_FragSizePropagated(t *testing.T) {
 	want := cfg.Streams[0].MaxFragPayload()
 	if w.fragmentSize() != want {
 		t.Errorf("fragmentSize() = %d, want %d (from MaxFrameSize=200)", w.fragmentSize(), want)
+	}
+}
+
+// TestEnableTxTime_WhenTxOffsetPositive verifies that enableTxTime is called
+// when a TSN stream has TxOffsetUS > 0.  On non-Linux platforms the stub just
+// returns nil; on Linux it calls setsockopt(SO_TXTIME) which may fail on VMs
+// without an ETF qdisc — the caller ignores the error either way.
+func TestEnableTxTime_WhenTxOffsetPositive(t *testing.T) {
+	cfg, err := tsn.ParseConfig([]byte(`{
+		"streams":[{"topic":"tsn/txtime","pcp":5,"dscp":46,"tx_offset_us":50,"interval_us":125}]
+	}`))
+	if err != nil {
+		t.Fatalf("ParseConfig: %v", err)
+	}
+	p, err := newParticipant(dds.Domain(79), WithNoMulticast(), WithTSNConfig(cfg))
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	defer p.Close()
+
+	pub, err := p.NewPublisher("tsn/txtime", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	w := pub.(*rtpsWriter)
+	if w.tsnStream == nil {
+		t.Fatal("tsnStream should be set when topic matches TSN config")
+	}
+	if w.tsnSock == nil {
+		t.Fatal("tsnSock should be non-nil; tsnSocketForPCP should have called enableTxTime")
+	}
+}
+
+// TestScheduledSend_TriggeredOnWrite exercises the scheduledSend path by
+// injecting a fake remote-reader locator so that matchedReaderLocators returns
+// a non-empty slice, then writing a sample through a TSN publisher with
+// TxOffsetUS > 0.  The production code ignores the send error (nobody is
+// listening at the fake loopback port), so the test just verifies Write
+// returns nil (the local-delivery path is unaffected).
+func TestScheduledSend_TriggeredOnWrite(t *testing.T) {
+	cfg, err := tsn.ParseConfig([]byte(`{
+		"streams":[{"topic":"tsn/sched","pcp":5,"dscp":46,"tx_offset_us":50,"interval_us":125}]
+	}`))
+	if err != nil {
+		t.Fatalf("ParseConfig: %v", err)
+	}
+	p, err := newParticipant(dds.Domain(78), WithNoMulticast(), WithTSNConfig(cfg))
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	defer p.Close()
+
+	pub, err := p.NewPublisher("tsn/sched", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	// Inject a fake remote reader so matchedReaderLocators returns a locator,
+	// making the write take the unicast (scheduledSend) path instead of no-op.
+	fakeGUID := GUID{
+		Prefix: GuidPrefix{0xFA, 0xFB, 0xFC, 0xFD, 0xFE, 0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06},
+		Entity: entityIdForReader(0xFFFF),
+	}
+	// IPv4 loopback 127.0.0.1 at an ephemeral port — nobody listening, but the
+	// send error is silently ignored by the caller.
+	loopback := Locator{Kind: LocatorKindUDPv4, Port: 19977}
+	loopback.Address[12] = 127
+	loopback.Address[15] = 1
+
+	p.sedp.mu.Lock()
+	p.sedp.remoteReaders[fakeGUID] = &endpointInfo{topicName: "tsn/sched"}
+	p.sedp.remoteReaderLocs[fakeGUID] = loopback
+	p.sedp.mu.Unlock()
+
+	// Write triggers: tsnStream.TxOffsetUS > 0 → clockTAINow() → txTimeNS > 0
+	// → else branch → scheduledSend(tsnSock.conn, dst, msg, txTimeNS).
+	if err := pub.Write([]byte("tsn-scheduled")); err != nil {
+		t.Fatalf("Write: %v", err)
 	}
 }
 

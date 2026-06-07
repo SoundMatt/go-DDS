@@ -110,7 +110,10 @@ func buildTxTimeCmsg(txTimeNS uint64) []byte {
 	h.Level = syscall.SOL_SOCKET
 	h.Type = scmTxTime
 	h.SetLen(syscall.CmsgLen(8))
-	binary.LittleEndian.PutUint64(cmsg[syscall.SizeofCmsghdr:], txTimeNS)
+	// SCM_TXTIME expects the timestamp in host native byte order.
+	// Use NativeEndian (not LittleEndian) so the code is correct on both
+	// little-endian (amd64, arm64) and big-endian (s390x, ppc64) Linux targets.
+	binary.NativeEndian.PutUint64(cmsg[syscall.SizeofCmsghdr:], txTimeNS)
 	return cmsg
 }
 

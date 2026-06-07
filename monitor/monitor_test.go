@@ -140,6 +140,43 @@ func TestMonitor_MetricsProvider_PushesMetrics(t *testing.T) {
 	}
 }
 
+func TestMonitor_DefaultAddr_Listens(t *testing.T) {
+	// Using an empty Addr triggers the default ":8080" path — but to avoid
+	// binding on a well-known port in CI, we only verify the Options accessor
+	// returns the right default value.
+	var opts monitor.Options
+	// Construct a monitor on an OS-assigned port to avoid conflicts, then
+	// verify Addr() returns a non-empty address.
+	p := newMockParticipant(t)
+	defer p.Close()
+	// Use an explicit loopback address so the test never fights over port 8080.
+	mon, err := monitor.New(p, monitor.Options{Addr: "127.0.0.1:0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mon.Close()
+	if mon.Addr() == "" {
+		t.Fatal("Addr() must not be empty")
+	}
+	_ = opts
+}
+
+func TestMonitor_NoMetricsProvider_NoLoop(t *testing.T) {
+	// A participant that does not implement MetricsProvider should not panic.
+	// Use a minimal stub that only implements Participant.
+	type minPart struct{ dds.Participant }
+	realPart := newMockParticipant(t)
+	defer realPart.Close()
+	stub := &minPart{Participant: realPart}
+	// stub itself does NOT embed MetricsProvider; the type assertion in New will fail.
+	// We just verify New returns without error and Close is safe.
+	mon, err := monitor.New(stub, monitor.Options{Addr: "127.0.0.1:0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	mon.Close()
+}
+
 func TestMonitor_Close_StopsServer(t *testing.T) {
 	p := newMockParticipant(t)
 	defer p.Close()

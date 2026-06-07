@@ -377,6 +377,7 @@ func (p *participant) NewSubscriber(topic string, qos dds.QoS, opts ...dds.Subsc
 	listener, _ := newShmListener(topic, cfg.Filter, depth)
 	return &shmSubscriber{
 		topic:    topic,
+		broker:   p.broker,
 		inProc:   inProcCh,
 		listener: listener,
 		ch:       make(chan dds.Sample, depth),
@@ -424,6 +425,10 @@ func (pub *shmPublisher) Write(payload []byte) error {
 	if pub.closed {
 		return fmt.Errorf("shmem: %w", dds.ErrClosed)
 	}
+	if pub.qos.MaxSampleSize > 0 && len(payload) > pub.qos.MaxSampleSize {
+		return fmt.Errorf("shmem: %w: got %d bytes, limit %d",
+			dds.ErrPayloadTooLarge, len(payload), pub.qos.MaxSampleSize)
+	}
 	pub.broker.publish(pub.topic, payload, pub.qos)
 	return nil
 }
@@ -441,6 +446,7 @@ func (pub *shmPublisher) Close() error {
 // cross-process shmListener into a single unified channel.
 type shmSubscriber struct {
 	topic    string
+	broker   *shmBroker
 	inProc   chan dds.Sample
 	listener *shmListener
 	ch       chan dds.Sample
@@ -494,6 +500,11 @@ func (sub *shmSubscriber) pump() {
 func (sub *shmSubscriber) Close() error {
 	sub.once.Do(func() {
 		close(sub.done)
+		// Remove from the in-process broker and close the inProc channel so the
+		// pump goroutine exits cleanly via the ok=false branch. Without this the
+		// broker retains a reference to the channel indefinitely, causing future
+		// publishes to accumulate drops in a channel nobody is reading.
+		sub.broker.unsubscribe(sub.topic, sub.inProc)
 		if sub.listener != nil {
 			sub.listener.close()
 		}

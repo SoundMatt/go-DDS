@@ -216,6 +216,38 @@ func TestParseConfig_RoundTrip(t *testing.T) {
 	}
 }
 
+func TestParseConfig_NegativeMaxFrameSize(t *testing.T) {
+	bad := `{"streams":[{"topic":"x","max_frame_size":-1}]}`
+	_, err := tsn.ParseConfig([]byte(bad))
+	if err == nil {
+		t.Error("expected error for negative max_frame_size")
+	}
+}
+
+func TestParseConfig_NegativeMaxIntervalFrames(t *testing.T) {
+	bad := `{"streams":[{"topic":"x","max_interval_frames":-1}]}`
+	_, err := tsn.ParseConfig([]byte(bad))
+	if err == nil {
+		t.Error("expected error for negative max_interval_frames")
+	}
+}
+
+func TestParseConfig_NegativeIntervalUS(t *testing.T) {
+	bad := `{"streams":[{"topic":"x","interval_us":-1}]}`
+	_, err := tsn.ParseConfig([]byte(bad))
+	if err == nil {
+		t.Error("expected error for negative interval_us")
+	}
+}
+
+func TestParseConfig_NegativeTxOffsetUS(t *testing.T) {
+	bad := `{"streams":[{"topic":"x","tx_offset_us":-1}]}`
+	_, err := tsn.ParseConfig([]byte(bad))
+	if err == nil {
+		t.Error("expected error for negative tx_offset_us")
+	}
+}
+
 func TestParseConfig_EmptyStreams(t *testing.T) {
 	cfg, err := tsn.ParseConfig([]byte(`{"streams":[]}`))
 	if err != nil {

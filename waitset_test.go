@@ -7,6 +7,7 @@ package dds_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -66,6 +67,8 @@ func TestWaitSet_ContextCancelled(t *testing.T) {
 
 // TestWaitSet_AllChannelsClosed exercises the branch that returns when every
 // subscriber channel is closed (closed-channel event with ok=false).
+// When all channels are closed and the context is still active the error must
+// be ErrClosed (not nil and not a context error).
 func TestWaitSet_AllChannelsClosed(t *testing.T) {
 	p := newMockParticipant(t)
 	sub, _ := p.NewSubscriber("ws/closed", dds.DefaultQoS)
@@ -77,19 +80,248 @@ func TestWaitSet_AllChannelsClosed(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	done := make(chan struct{})
+	type result struct {
+		err error
+	}
+	ch := make(chan result, 1)
 	go func() {
-		defer close(done)
-		_, _, _ = ws.Wait(ctx) // should return promptly, not block until deadline
+		_, _, err := ws.Wait(ctx)
+		ch <- result{err}
 	}()
 
 	select {
-	case <-done:
-		// correct
+	case r := <-ch:
+		if !errors.Is(r.err, dds.ErrClosed) {
+			t.Errorf("expected ErrClosed when all channels closed, got %v", r.err)
+		}
 	case <-time.After(500 * time.Millisecond):
 		t.Fatal("WaitSet.Wait should return when all subscriber channels are closed")
 	}
 }
+
+// TestWaitSet_AllChannelsClosed_ContextCancelled verifies that a cancelled
+// context takes priority over ErrClosed when both occur simultaneously.
+func TestWaitSet_AllChannelsClosed_ContextCancelled(t *testing.T) {
+	p := newMockParticipant(t)
+	sub, _ := p.NewSubscriber("ws/closedctx", dds.DefaultQoS)
+	sub.Close()
+
+	ws := dds.NewWaitSet(sub)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // already cancelled
+
+	_, _, err := ws.Wait(ctx)
+	if err == nil {
+		t.Error("expected non-nil error when context is cancelled")
+	}
+	// May be ctx.Err() or ErrClosed — both are acceptable; must not be nil.
+}
+
+// ── SubscriberOption tests ────────────────────────────────────────────────────
+
+func TestWithFilter_AppliedInConfig(t *testing.T) {
+	fn := func(s dds.Sample) bool { return true }
+	cfg := dds.ApplySubscriberOpts([]dds.SubscriberOption{dds.WithFilter(fn)})
+	if cfg.Filter == nil {
+		t.Error("expected Filter to be set")
+	}
+}
+
+func TestWithChannelDepth_AppliedInConfig(t *testing.T) {
+	cfg := dds.ApplySubscriberOpts([]dds.SubscriberOption{dds.WithChannelDepth(128)})
+	if cfg.ChannelDepth != 128 {
+		t.Errorf("ChannelDepth: got %d, want 128", cfg.ChannelDepth)
+	}
+}
+
+func TestWithBackPressure_AppliedInConfig(t *testing.T) {
+	cfg := dds.ApplySubscriberOpts([]dds.SubscriberOption{dds.WithBackPressure(dds.DropOldest)})
+	if cfg.BackPressure != dds.DropOldest {
+		t.Errorf("BackPressure: got %v, want DropOldest", cfg.BackPressure)
+	}
+}
+
+func TestApplySubscriberOpts_Empty(t *testing.T) {
+	cfg := dds.ApplySubscriberOpts(nil)
+	if cfg.Filter != nil || cfg.ChannelDepth != 0 {
+		t.Error("empty opts: unexpected non-zero config")
+	}
+}
+
+func TestChanDepth_Default(t *testing.T) {
+	var cfg dds.SubscriberConfig // ChannelDepth == 0
+	if got := cfg.ChanDepth(64); got != 64 {
+		t.Errorf("ChanDepth default: got %d, want 64", got)
+	}
+}
+
+func TestChanDepth_Custom(t *testing.T) {
+	cfg := dds.SubscriberConfig{ChannelDepth: 32}
+	if got := cfg.ChanDepth(64); got != 32 {
+		t.Errorf("ChanDepth custom: got %d, want 32", got)
+	}
+}
+
+// ── CloseWithDrain tests ──────────────────────────────────────────────────────
+
+func TestCloseWithDrain_WithDrainer(t *testing.T) {
+	p := newMockParticipant(t)
+	// mock.participant implements Drainer via CloseWithDrain.
+	ctx := context.Background()
+	if err := dds.CloseWithDrain(ctx, p); err != nil {
+		t.Fatalf("CloseWithDrain: %v", err)
+	}
+}
+
+func TestCloseWithDrain_WithoutDrainer(t *testing.T) {
+	// stubNonDrainer implements Participant but not Drainer.
+	type stubParticipant struct {
+		dds.Participant
+		closed bool
+	}
+	// Use a real mock participant but wrap it — the wrapper doesn't implement Drainer.
+	p := newMockParticipant(t)
+	_ = p // still cleaned up by t.Cleanup; double-close is safe for mock
+	// Directly exercise the non-drainer path by constructing a non-Drainer participant.
+	// The easiest approach: use a partial mock that only implements Close.
+	type simplePart struct{ dds.Participant }
+	sp := &simplePart{Participant: p}
+	ctx := context.Background()
+	// simplePart does not have its own CloseWithDrain, but Participant from mock does;
+	// since simplePart embeds dds.Participant (interface), the type assertion checks the
+	// runtime type of sp (which is *simplePart), and *simplePart does NOT implement Drainer.
+	// Therefore CloseWithDrain falls back to sp.Close() which calls the mock's Close.
+	if err := dds.CloseWithDrain(ctx, sp); err != nil {
+		t.Fatalf("CloseWithDrain fallback: %v", err)
+	}
+}
+
+// ── NoopTracer tests ──────────────────────────────────────────────────────────
+
+func TestNoopTracer_Start(t *testing.T) {
+	ctx, span := dds.NoopTracer.Start(context.Background(), "test-span")
+	if ctx == nil {
+		t.Error("expected non-nil context")
+	}
+	// Verify span methods do not panic.
+	span.SetAttribute("key", "value")
+	span.End()
+}
+
+// ── TypedPublisher / TypedSubscriber tests ────────────────────────────────────
+
+type speedSample struct {
+	KMH float64 `json:"kmh"`
+}
+
+func TestTypedPublisher_WriteAndClose(t *testing.T) {
+	p := newMockParticipant(t)
+	pub, _ := p.NewPublisher("typed/speed", dds.DefaultQoS)
+	defer pub.Close()
+
+	tp := dds.NewTypedPublisher[speedSample](pub, dds.JSONCodec[speedSample]{})
+	if err := tp.Write(speedSample{KMH: 120}); err != nil {
+		t.Fatalf("TypedPublisher.Write: %v", err)
+	}
+	if err := tp.Close(); err != nil {
+		t.Fatalf("TypedPublisher.Close: %v", err)
+	}
+}
+
+func TestTypedSubscriber_DeliversDecodedValue(t *testing.T) {
+	p := newMockParticipant(t)
+	rawSub, _ := p.NewSubscriber("typed/sub", dds.DefaultQoS)
+	rawPub, _ := p.NewPublisher("typed/sub", dds.DefaultQoS)
+	defer rawPub.Close()
+
+	ts := dds.NewTypedSubscriber[speedSample](rawSub, dds.JSONCodec[speedSample]{})
+	defer ts.Close()
+
+	_ = rawPub.Write([]byte(`{"kmh":99.5}`))
+
+	select {
+	case s := <-ts.C():
+		if s.Value.KMH != 99.5 {
+			t.Errorf("decoded KMH: got %v, want 99.5", s.Value.KMH)
+		}
+		if s.Topic != "typed/sub" {
+			t.Errorf("topic: got %q", s.Topic)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for typed sample")
+	}
+}
+
+func TestTypedSubscriber_DecodeErrorDropped(t *testing.T) {
+	p := newMockParticipant(t)
+	rawSub, _ := p.NewSubscriber("typed/drop", dds.DefaultQoS)
+	rawPub, _ := p.NewPublisher("typed/drop", dds.DefaultQoS)
+	defer rawPub.Close()
+
+	ts := dds.NewTypedSubscriber[speedSample](rawSub, dds.JSONCodec[speedSample]{})
+	defer ts.Close()
+
+	_ = rawPub.Write([]byte("not-json")) // should be silently dropped
+
+	select {
+	case <-ts.C():
+		t.Error("expected bad-JSON sample to be dropped")
+	case <-time.After(100 * time.Millisecond):
+		// correct: nothing delivered
+	}
+}
+
+func TestTypedSubscriber_Close_StopsPump(t *testing.T) {
+	p := newMockParticipant(t)
+	rawSub, _ := p.NewSubscriber("typed/close", dds.DefaultQoS)
+	ts := dds.NewTypedSubscriber[speedSample](rawSub, dds.JSONCodec[speedSample]{})
+	if err := ts.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+}
+
+func TestJSONCodec_MarshalUnmarshal(t *testing.T) {
+	codec := dds.JSONCodec[speedSample]{}
+	v := speedSample{KMH: 55.5}
+	data, err := codec.Marshal(v)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	got, err := codec.Unmarshal(data)
+	if err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	if got.KMH != v.KMH {
+		t.Errorf("round-trip: got %v, want %v", got, v)
+	}
+}
+
+func TestJSONCodec_Unmarshal_InvalidJSON(t *testing.T) {
+	codec := dds.JSONCodec[speedSample]{}
+	if _, err := codec.Unmarshal([]byte("not-json")); err == nil {
+		t.Error("expected error for invalid JSON")
+	}
+}
+
+// errCodec is a stub Codec that always fails to Marshal.
+type errCodec[T any] struct{}
+
+func (errCodec[T]) Marshal(T) ([]byte, error)          { return nil, errors.New("forced marshal error") }
+func (errCodec[T]) Unmarshal([]byte) (T, error)        { var z T; return z, nil }
+
+func TestTypedPublisher_MarshalError_Propagated(t *testing.T) {
+	p := newMockParticipant(t)
+	pub, _ := p.NewPublisher("typed/marshal-err", dds.DefaultQoS)
+	defer pub.Close()
+
+	tp := dds.NewTypedPublisher[speedSample](pub, errCodec[speedSample]{})
+	err := tp.Write(speedSample{KMH: 1})
+	if err == nil {
+		t.Error("expected TypedPublisher.Write to propagate Marshal error")
+	}
+}
+
+// ── WaitSet OneClosedOnePending ───────────────────────────────────────────────
 
 // TestWaitSet_OneClosedOnePending verifies that Wait continues after a closed
 // channel is zeroed, and still delivers from the remaining open subscriber.

@@ -155,6 +155,9 @@ func (c *StreamConfig) validate() error {
 		if s.MaxFrameSize < 0 {
 			return fmt.Errorf("stream %q: MaxFrameSize must be ≥ 0", s.Topic)
 		}
+		if s.MaxIntervalFrames < 0 {
+			return fmt.Errorf("stream %q: MaxIntervalFrames must be ≥ 0", s.Topic)
+		}
 		if s.IntervalUS < 0 {
 			return fmt.Errorf("stream %q: IntervalUS must be ≥ 0", s.Topic)
 		}

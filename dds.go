@@ -358,7 +358,12 @@ func (ws *WaitSet) Wait(ctx context.Context) (Sample, Subscriber, error) {
 				}
 			}
 			if all {
-				return Sample{}, nil, ctx.Err()
+				// All subscriber channels are closed. Prefer context error when
+				// both occur simultaneously; otherwise signal channel exhaustion.
+				if err := ctx.Err(); err != nil {
+					return Sample{}, nil, err
+				}
+				return Sample{}, nil, ErrClosed
 			}
 			continue
 		}
