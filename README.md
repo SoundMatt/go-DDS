@@ -196,7 +196,7 @@ go test -tags cyclone ./cyclone/...
 - [x] DDS-Security plugin interface (NullPlugin, HMAC-SHA-256, AES-256-GCM)
 - [x] TransientLocal durability (last-value cache for late joiners)
 - [x] IPv6 multicast transport (`WithIPv6()` option, `LocatorKindUDPv6`)
-- [ ] RTPS interop testing with CycloneDDS (Docker Compose + CycloneDDS peer)
+- [x] RTPS interop testing with CycloneDDS (Docker Compose + CycloneDDS peer)
 - [ ] Typed sentinel errors (`errors.Is` / `errors.As` support)
 - [ ] Unicast-only / no-multicast discovery mode (Docker, container, NAT environments)
 - [ ] Content-filtered subscriptions (server-side predicate before channel delivery)
