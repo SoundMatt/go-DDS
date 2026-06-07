@@ -337,6 +337,20 @@ func TestAdmin_New_ListenError(t *testing.T) {
 	}
 }
 
+// TestAdmin_New_DefaultAddr exercises the default ":7070" address path when
+// Options.Addr is empty. The test skips if port 7070 is already in use.
+func TestAdmin_New_DefaultAddr(t *testing.T) {
+	p := newPart(t)
+	s, err := admin.New(p, admin.Options{}) // Addr == "" → defaults to ":7070"
+	if err != nil {
+		t.Skipf("default port 7070 not available (likely in use): %v", err)
+	}
+	defer func() { _ = s.Close() }()
+	if s.Addr() == "" {
+		t.Error("Addr() must not be empty after binding to default address")
+	}
+}
+
 func TestAdmin_ContentType_JSON(t *testing.T) {
 	p := newPart(t)
 	s := newServer(t, p, admin.Options{})

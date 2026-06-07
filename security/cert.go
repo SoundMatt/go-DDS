@@ -104,17 +104,11 @@ func (p *CertPlugin) Open(data []byte) ([]byte, error) {
 	}
 	sigEnd := len(data) - 4
 	sigStart := sigEnd - sigLen
-	if sigStart < 0 {
-		return nil, errors.New("security: cert payload too short for sig")
-	}
 	sig := data[sigStart:sigEnd]
 
 	// 4 bytes before sig → certLen.
 	certLenEnd := sigStart
 	certLenStart := certLenEnd - 4
-	if certLenStart < 0 {
-		return nil, errors.New("security: cert payload too short for certLen")
-	}
 	certLen := int(binary.BigEndian.Uint32(data[certLenStart:certLenEnd]))
 	certEnd := certLenStart
 	certStart := certEnd - certLen

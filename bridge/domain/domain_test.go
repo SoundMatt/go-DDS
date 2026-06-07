@@ -165,6 +165,36 @@ func TestBridge_New_ClosedDst_Error(t *testing.T) {
 	}
 }
 
+// TestBridge_DstClosed_ForwardExits exercises the forward goroutine's
+// pub.Write error (or recover'd panic) path by closing dst after the bridge
+// starts. The forward goroutine must exit cleanly whether mock returns
+// ErrClosed or panics on a closed channel.
+func TestBridge_DstClosed_ForwardExits(t *testing.T) {
+	src := newPart(t)
+	dst := newPart(t)
+	topic := uniqueTopic("bridge/dstclosed")
+
+	pub, err := src.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher on src: %v", err)
+	}
+	defer pub.Close()
+
+	b, err := domain.New(src, dst, domain.Options{Topics: []string{topic}})
+	if err != nil {
+		t.Fatalf("domain.New: %v", err)
+	}
+	b.Start()
+	defer b.Close() // registered last → runs first; forward goroutine should already be done
+
+	// Close dst so the bridge's dst publisher Write will fail or panic.
+	dst.Close()
+	_ = pub.Write([]byte("trigger"))
+	// Give the forward goroutine time to read the sample and attempt the
+	// Write on the closed dst publisher before the test ends.
+	time.Sleep(30 * time.Millisecond)
+}
+
 // TestBridge_SrcSubscriberClosed exercises the forward goroutine's !ok branch.
 func TestBridge_SrcSubscriberClosed(t *testing.T) {
 	src := newPart(t)

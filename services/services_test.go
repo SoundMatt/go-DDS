@@ -351,6 +351,85 @@ func TestMonitorService_New_ListenError(t *testing.T) {
 	}
 }
 
+// TestReplayService_ScaledSpeed exercises the PlayScaled branch in run()
+// (Speed != 0 && Speed != 1.0, no Topics filter).
+func TestReplayService_ScaledSpeed(t *testing.T) {
+	p := newPart(t)
+	topic := uniqueTopic("svc/scaled")
+	now := time.Now()
+	samples := []record.RecordedSample{
+		{Topic: topic, Payload: []byte("scaled"), RecordedAt: now},
+	}
+	buf := makeJSONL(t, samples)
+
+	sub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	svc := services.NewReplayService(p, services.ReplayOptions{
+		Input: buf,
+		Speed: 2.0, // != 0 && != 1.0 → PlayScaled branch
+	})
+	ctx := context.Background()
+	if err := svc.Start(ctx); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	select {
+	case s := <-sub.C():
+		if string(s.Payload) != "scaled" {
+			t.Errorf("payload: got %q, want scaled", s.Payload)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for scaled-speed sample")
+	}
+	svc.Stop()
+}
+
+// failSeeker wraps an io.Reader with a Seek method that always returns an error.
+// Used to test the seek-error path in ReplayService.
+type failSeeker struct {
+	io.Reader
+}
+
+func (f *failSeeker) Seek(_ int64, _ int) (int64, error) {
+	return 0, fmt.Errorf("seek failed deliberately")
+}
+
+// TestReplayService_SeekError exercises the Seek error branch in run():
+// Loop:true with a seekable input whose Seek call returns an error causes the
+// service to exit with a non-nil Err().
+func TestReplayService_SeekError(t *testing.T) {
+	p := newPart(t)
+	topic := uniqueTopic("svc/seek/err")
+	now := time.Now()
+	samples := []record.RecordedSample{
+		{Topic: topic, Payload: []byte("x"), RecordedAt: now},
+	}
+	buf := makeJSONL(t, samples)
+
+	svc := services.NewReplayService(p, services.ReplayOptions{
+		Input: &failSeeker{Reader: buf},
+		Loop:  true,
+	})
+	ctx := context.Background()
+	if err := svc.Start(ctx); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	select {
+	case <-svc.Done():
+		if svc.Err() == nil {
+			t.Error("expected Err() to be set after seek failure")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout: service did not exit after seek error")
+	}
+	svc.Stop()
+}
+
 // TestReplayService_Loop_NonSeekable verifies that a non-seekable input with
 // Loop:true runs once and exits cleanly (cannot seek back to start).
 func TestReplayService_Loop_NonSeekable(t *testing.T) {

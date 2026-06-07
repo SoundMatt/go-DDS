@@ -92,6 +92,81 @@ func TestIdentify_FieldOrderIndependent(t *testing.T) {
 	}
 }
 
+// TestIdentify_StructField exercises the canonicalField branch for KindStruct
+// fields (fields that contain nested sub-fields).
+func TestIdentify_StructField(t *testing.T) {
+	nested := xtypes.TypeDescriptor{
+		Name: "Point",
+		Fields: []xtypes.FieldDescriptor{
+			{
+				Name: "position",
+				Kind: xtypes.KindStruct,
+				Fields: []xtypes.FieldDescriptor{
+					{Name: "x", Kind: xtypes.KindFloat64},
+					{Name: "y", Kind: xtypes.KindFloat64},
+				},
+			},
+		},
+	}
+	// Hash must be stable.
+	id1 := xtypes.Identify(&nested)
+	id2 := xtypes.Identify(&nested)
+	if id1 != id2 {
+		t.Error("Identify with KindStruct field: not deterministic")
+	}
+	// Nested sub-fields must affect the hash.
+	different := xtypes.TypeDescriptor{
+		Name: "Point",
+		Fields: []xtypes.FieldDescriptor{
+			{
+				Name: "position",
+				Kind: xtypes.KindStruct,
+				Fields: []xtypes.FieldDescriptor{
+					{Name: "x", Kind: xtypes.KindFloat64},
+					{Name: "z", Kind: xtypes.KindFloat64}, // different name
+				},
+			},
+		},
+	}
+	if xtypes.Identify(&nested) == xtypes.Identify(&different) {
+		t.Error("Identify: different nested field names should produce different hash")
+	}
+}
+
+// TestIdentify_SeqField exercises the canonicalField branch for KindSeq fields
+// (fields that carry an Element descriptor for the sequence element type).
+func TestIdentify_SeqField(t *testing.T) {
+	withSeq := xtypes.TypeDescriptor{
+		Name: "Batch",
+		Fields: []xtypes.FieldDescriptor{
+			{
+				Name:    "items",
+				Kind:    xtypes.KindSeq,
+				Element: &xtypes.FieldDescriptor{Name: "item", Kind: xtypes.KindFloat64},
+			},
+		},
+	}
+	id1 := xtypes.Identify(&withSeq)
+	id2 := xtypes.Identify(&withSeq)
+	if id1 != id2 {
+		t.Error("Identify with KindSeq field: not deterministic")
+	}
+	// Changing the element type must change the hash.
+	withDiffElem := xtypes.TypeDescriptor{
+		Name: "Batch",
+		Fields: []xtypes.FieldDescriptor{
+			{
+				Name:    "items",
+				Kind:    xtypes.KindSeq,
+				Element: &xtypes.FieldDescriptor{Name: "item", Kind: xtypes.KindString},
+			},
+		},
+	}
+	if xtypes.Identify(&withSeq) == xtypes.Identify(&withDiffElem) {
+		t.Error("Identify: different element Kind in KindSeq field should produce different hash")
+	}
+}
+
 // ── NewTypeObject ─────────────────────────────────────────────────────────────
 
 func TestNewTypeObject_SetsID(t *testing.T) {
