@@ -224,7 +224,7 @@ func TestWaitSet_MultipleWaits(t *testing.T) {
 	ctx := context.Background()
 
 	for i := 0; i < 5; i++ {
-		pub.Write([]byte{byte(i)})
+		_ = pub.Write([]byte{byte(i)})
 		s, _, err := ws.Wait(ctx)
 		if err != nil {
 			t.Fatalf("Wait %d: %v", i, err)
@@ -247,7 +247,7 @@ func TestMultipleDomains_ShareBroker(t *testing.T) {
 	pub, _ := p2.NewPublisher("cross/domain", dds.DefaultQoS)
 	defer pub.Close()
 
-	pub.Write([]byte("cross"))
+	_ = pub.Write([]byte("cross"))
 	select {
 	case <-sub.C():
 	case <-time.After(time.Second):

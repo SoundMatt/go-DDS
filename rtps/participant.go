@@ -178,11 +178,11 @@ func (p *participant) Close() error {
 		return nil
 	}
 	p.closed = true
-	// Stop heartbeat loops before closing sockets.
+	// Stop heartbeat loops before closing sockets; delegate to w.Close() so
+	// the w.closed guard prevents double-close if the caller already closed
+	// individual writers.
 	for _, w := range p.writers {
-		if w.hbDone != nil {
-			close(w.hbDone)
-		}
+		_ = w.Close()
 	}
 	p.spdp.close()
 	p.sedp.close()
@@ -494,6 +494,9 @@ func (w *rtpsWriter) sendHeartbeatLocked() {
 // heartbeatLoop periodically sends a HEARTBEAT for as long as the writer is
 // open, so remote readers can detect and recover from losses.
 func (w *rtpsWriter) heartbeatLoop() {
+	// Capture hbDone once before entering the loop so that Close() can safely
+	// nil out w.hbDone under w.mu without racing with the select expression.
+	hbDone := w.hbDone
 	ticker := time.NewTicker(heartbeatPeriod)
 	defer ticker.Stop()
 	for {
@@ -504,7 +507,7 @@ func (w *rtpsWriter) heartbeatLoop() {
 				w.sendHeartbeatLocked()
 			}
 			w.mu.Unlock()
-		case <-w.hbDone:
+		case <-hbDone:
 			return
 		}
 	}
@@ -519,9 +522,7 @@ func (w *rtpsWriter) Close() error {
 	w.closed = true
 	if w.hbDone != nil {
 		close(w.hbDone)
-		// Do not nil hbDone: heartbeatLoop reads the field outside the lock
-		// (inside a reflect.Select / select statement) so assigning nil here
-		// would race with that read.
+		w.hbDone = nil // safe: heartbeatLoop captured the channel at startup
 	}
 	return nil
 }
