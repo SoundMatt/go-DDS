@@ -221,11 +221,24 @@ func WithLivelinessCallback(fn func(dds.GUID, dds.LivelinessEvent)) Option {
 	return func(p *participant) { p.livelinessCb = fn }
 }
 
+// IsolatedBroker creates the participant with its own independent broker that
+// is not shared with any other participant. Use this when testing components
+// that bridge between separate DDS domains (e.g. WAN or domain bridges), where
+// publishing on one participant must not echo to subscribers on another.
+func IsolatedBroker() Option {
+	return func(p *participant) {
+		p.broker = &broker{
+			subs:       make(map[string][]subscription),
+			lastSample: make(map[string]*dds.Sample),
+		}
+	}
+}
+
 // New creates a mock DDS Participant for the given domain. Domain is accepted
 // for API compatibility but has no effect — all mock participants share the
-// same global broker regardless of domain.
+// same global broker regardless of domain (unless IsolatedBroker is used).
 func New(domain dds.Domain, opts ...Option) (dds.Participant, error) {
-	p := &participant{}
+	p := &participant{broker: globalBroker}
 	for _, o := range opts {
 		o(p)
 	}
@@ -242,6 +255,7 @@ func New(domain dds.Domain, opts ...Option) (dds.Participant, error) {
 type participant struct {
 	mu           sync.Mutex
 	closed       bool
+	broker       *broker
 	deadlineCb   func(string)
 	log          *slog.Logger
 	livelinessCb func(dds.GUID, dds.LivelinessEvent)
@@ -264,7 +278,7 @@ func (p *participant) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, er
 		return nil, fmt.Errorf("mock: %w", dds.ErrClosed)
 	}
 	p.logf("new publisher topic=%s reliability=%d", topic, qos.Reliability)
-	pub := &publisher{topic: topic, qos: qos, deadlineCb: p.deadlineCb, log: p.log}
+	pub := &publisher{broker: p.broker, topic: topic, qos: qos, deadlineCb: p.deadlineCb, log: p.log}
 	if qos.Deadline > 0 && p.deadlineCb != nil {
 		pub.deadlineTimer = time.AfterFunc(qos.Deadline, func() {
 			p.deadlineCb(topic)
@@ -284,8 +298,8 @@ func (p *participant) NewSubscriber(topic string, qos dds.QoS, opts ...dds.Subsc
 	}
 	cfg := dds.ApplySubscriberOpts(opts)
 	p.logf("new subscriber topic=%s depth=%d backpressure=%d", topic, cfg.ChanDepth(defaultChanDepth), cfg.BackPressure)
-	ch := globalBroker.subscribe(topic, qos, cfg)
-	return &subscriber{topic: topic, ch: ch}, nil
+	ch := p.broker.subscribe(topic, qos, cfg)
+	return &subscriber{broker: p.broker, topic: topic, ch: ch}, nil
 }
 
 func (p *participant) Close() error {
@@ -311,11 +325,11 @@ func (p *participant) CloseWithDrain(_ context.Context) error {
 // Metrics implements dds.MetricsProvider.
 func (p *participant) Metrics() dds.Metrics {
 	return dds.Metrics{
-		WriteCount:     globalBroker.writes.Load(),
-		DeliverCount:   globalBroker.delivers.Load(),
-		DropCount:      globalBroker.drops.Load(),
-		BytesWritten:   globalBroker.bytesWritten.Load(),
-		BytesDelivered: globalBroker.bytesDeliv.Load(),
+		WriteCount:     p.broker.writes.Load(),
+		DeliverCount:   p.broker.delivers.Load(),
+		DropCount:      p.broker.drops.Load(),
+		BytesWritten:   p.broker.bytesWritten.Load(),
+		BytesDelivered: p.broker.bytesDeliv.Load(),
 	}
 }
 
@@ -328,7 +342,7 @@ func (p *participant) DiscoveryMetrics() dds.DiscoveryMetrics {
 // TopicMetrics implements dds.TopicMetricsProvider.
 func (p *participant) TopicMetrics() []dds.TopicMetrics {
 	var result []dds.TopicMetrics
-	globalBroker.topicMetrics.Range(func(k, v any) bool {
+	p.broker.topicMetrics.Range(func(k, v any) bool {
 		topic, ok := k.(string)
 		if !ok {
 			return true
@@ -366,6 +380,7 @@ func (p *participant) Health() dds.Health {
 
 // publisher implements dds.Publisher.
 type publisher struct {
+	broker        *broker
 	topic         string
 	qos           dds.QoS
 	deadlineCb    func(string)
@@ -391,7 +406,7 @@ func (pub *publisher) Write(payload []byte) error {
 	if pub.log != nil {
 		pub.log.Debug("publish", "topic", pub.topic, "bytes", len(payload))
 	}
-	globalBroker.publish(pub.topic, payload, pub.qos)
+	pub.broker.publish(pub.topic, payload, pub.qos)
 	return nil
 }
 
@@ -408,15 +423,16 @@ func (pub *publisher) Close() error {
 
 // subscriber implements dds.Subscriber.
 type subscriber struct {
-	topic string
-	ch    chan dds.Sample
-	once  sync.Once
+	broker *broker
+	topic  string
+	ch     chan dds.Sample
+	once   sync.Once
 }
 
 func (sub *subscriber) C() <-chan dds.Sample { return sub.ch }
 
 func (sub *subscriber) Close() error {
-	sub.once.Do(func() { globalBroker.unsubscribe(sub.topic, sub.ch) })
+	sub.once.Do(func() { sub.broker.unsubscribe(sub.topic, sub.ch) })
 	return nil
 }
 

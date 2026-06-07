@@ -15,11 +15,16 @@ The API is a stable Go interface. Implementations are swappable without changing
 | `rtps` | Pure-Go RTPS/UDP wire protocol. Real DDS across processes and hosts. | Nothing |
 | `cyclone` | [CycloneDDS](https://cyclonedds.io) via CGo. Full wire interop with non-Go participants. | `libcyclonedds-dev` + `-tags cyclone` |
 | `shmem` | Shared-memory transport. Zero UDP overhead for same-host pub/sub. | Nothing |
-| `security` | Pluggable payload security — NullPlugin, HMAC-SHA-256, AES-256-GCM. | Nothing |
+| `security` | Pluggable payload security — NullPlugin, HMAC-SHA-256, AES-256-GCM, CertPlugin (X.509/ECDSA), AccessPolicy (topic ACL), ReplayGuard (anti-replay). | Nothing |
+| `xtypes` | Dynamic Data / XTypes — TypeDescriptor, TypeIdentifier, DynamicData, TypeRegistry, CheckCompatibility. | Nothing |
 | `config` | JSON/YAML participant configuration with validation. | Nothing |
 | `monitor` | Real-time web dashboard. `/health`, `/api/topics`, `/api/diagnostics`, SSE discovery events. | Nothing |
 | `tsn` | TSN stream model, TAPRIO scheduling, stream health tracking. | Nothing |
+| `bridge/domain` | Domain bridge — forward samples between two Participant domains in-process. | Nothing |
 | `bridge/mqtt` | Bidirectional DDS ↔ MQTT bridge with QoS and topic mapping. | Nothing |
+| `bridge/wan` | WAN bridge — forward DDS samples between domains over TCP (length-framed JSON, 16 MiB cap). | Nothing |
+| `admin` | HTTP admin API — `/admin/health`, `/admin/topics`, `/admin/discovery`, `/admin/publish`; bearer-token auth. | Nothing |
+| `services` | Managed service lifecycle — RecorderService, ReplayService (loop + seek), MonitorService. | Nothing |
 | `record` | Topic recording to JSONL, deterministic replay (real-time or scaled), fault injection. | Nothing |
 | `pool` | Allocation-free byte-slice recycling and fixed-capacity sample ring buffer. | Nothing |
 | `safety` | E2E protection header (CRC-16, sequence counter, freshness) and deterministic queue. | Nothing |
@@ -126,6 +131,25 @@ p, _ = rtps.New(dds.Domain(0), rtps.WithSecurity(hmacPlugin))
 ```
 
 All peers on a topic must use the same plugin and key.
+
+**Enterprise security** (v0.9): X.509/ECDSA certificate authentication, topic ACL, and anti-replay protection:
+
+```go
+// CertPlugin: mutual authentication via X.509/ECDSA certificates
+certPlugin, _ := security.NewCertPlugin(caCertPEM, myCertPEM, myKeyPEM)
+p, _ := rtps.New(dds.Domain(0), rtps.WithSecurity(certPlugin))
+
+// AccessPolicy: per-topic publish/subscribe ACL
+policy := security.NewAccessPolicy([]security.TopicRule{
+    {Topic: "vehicle/speed",  CanPublish: true,  CanSubscribe: false},
+    {Topic: "vehicle/status", CanPublish: false, CanSubscribe: true},
+})
+p, _ = rtps.New(dds.Domain(0), rtps.WithSecurity(policy))
+
+// ReplayGuard: drop duplicate or replayed samples (sequence + timestamp window)
+guard := security.NewReplayGuard(security.ReplayGuardOptions{WindowSize: 1000})
+p, _ = rtps.New(dds.Domain(0), rtps.WithSecurity(guard))
+```
 
 ## Configuration
 
@@ -328,6 +352,121 @@ fmt.Println(taprioCfg.TCCommand("eth0", 0))
 // tc qdisc replace dev eth0 parent root handle 100 taprio ...
 ```
 
+## Dynamic Data (XTypes)
+
+Inspect and construct DDS samples at runtime without compile-time types:
+
+```go
+import "github.com/SoundMatt/go-DDS/xtypes"
+
+// Describe the type once
+td := xtypes.TypeDescriptor{
+    Kind: xtypes.KindStruct,
+    Fields: []xtypes.FieldDescriptor{
+        {Name: "kmh",    Kind: xtypes.KindFloat64},
+        {Name: "source", Kind: xtypes.KindString},
+    },
+}
+
+// Build and validate a sample against the descriptor
+d := xtypes.NewDynamicData(&td)
+_ = d.Set("kmh", 80.0)
+_ = d.Set("source", "gps")
+
+payload, _ := d.ToJSON()   // serialize
+d2 := xtypes.NewDynamicData(&td)
+_ = d2.FromJSON(payload)   // deserialize with schema validation
+
+// Forward/backward compatibility check
+compatible, err := xtypes.CheckCompatibility(&writerDesc, &readerDesc)
+```
+
+## Domain Bridge
+
+Forward DDS samples between two in-process Participant domains (e.g. a simulator domain and an integration-test domain):
+
+```go
+import "github.com/SoundMatt/go-DDS/bridge/domain"
+
+b, err := domain.New(srcParticipant, dstParticipant, domain.Options{
+    Topics: []string{"vehicle/speed", "vehicle/status"},
+})
+b.Start()
+defer b.Close()
+```
+
+## WAN Bridge
+
+Forward DDS samples between domains over a TCP connection (e.g. edge → cloud):
+
+```go
+import "github.com/SoundMatt/go-DDS/bridge/wan"
+
+// Cloud side — receive frames and publish to the cloud participant
+srv, err := wan.Serve(cloudParticipant, ":9000", wan.Options{})
+defer srv.Close()
+
+// Edge side — subscribe to topics and stream to the cloud
+cli, err := wan.Connect(edgeParticipant, "cloud.example.com:9000", wan.Options{
+    Topics: []string{"vehicle/speed", "vehicle/status"},
+})
+defer cli.Close()
+```
+
+Wire format: 4-byte big-endian length prefix + JSON `{"t":"<topic>","p":"<base64>"}`. Hard cap: 16 MiB per frame. For bidirectional bridging, create one pair in each direction.
+
+## Admin API
+
+HTTP endpoints for runtime inspection and publishing without a DDS client:
+
+```go
+import "github.com/SoundMatt/go-DDS/admin"
+
+srv, err := admin.New(p, admin.Options{
+    Addr:  ":8081",
+    Token: "secret",   // Bearer token; empty = no auth
+})
+defer srv.Close()
+```
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/admin/health` | GET | Participant health status |
+| `/admin/topics` | GET | Per-topic metrics |
+| `/admin/discovery` | GET | Discovery metrics |
+| `/admin/publish` | POST | Publish a payload to a topic |
+
+## Services
+
+Managed lifecycle wrappers for recorder, replay, and monitor:
+
+```go
+import "github.com/SoundMatt/go-DDS/services"
+
+// Record to file with managed start/stop
+recSvc := services.NewRecorderService(p, services.RecorderOptions{
+    Output: f,
+    Topics: []string{"vehicle/speed"},
+})
+recSvc.Start()
+time.Sleep(10 * time.Second)
+recSvc.Stop()
+
+// Replay from file (loop until stopped)
+replSvc := services.NewReplayService(p, services.ReplayOptions{
+    Input: f2,
+    Loop:  true,
+    Speed: 2.0,   // 2× real-time
+})
+replSvc.Start()
+defer replSvc.Stop()
+
+// Run the monitor as a managed service
+monSvc := services.NewMonitorService(p, ":8080")
+monSvc.Start()
+defer monSvc.Stop()
+```
+
 ## RTPS interoperability testing
 
 Wire-compatibility tests against a live CycloneDDS peer (gated behind the `interop` build tag):
@@ -427,13 +566,14 @@ See [ROADMAP.md](ROADMAP.md) for per-milestone goals, sub-items, and success cri
 - [x] E2E protection header (`safety.E2EPublisher` / `safety.E2ESubscriber`) — CRC-16/CCITT, sequence counter, configurable freshness window
 - [x] Deterministic queue with panic containment (`safety.DeterministicQueue`)
 
-**Planned — v0.9 — Enterprise Security, Dynamic Data, Services**
+**Released — v0.9 — Enterprise Security, Dynamic Data, Services**
 
-| Milestone | Theme |
-|---|---|
-| 8 | Authentication, authorisation, secure discovery |
-| 9 | XTypes, dynamic type inspection, forward/backward compatibility |
-| 10 | Domain bridge, WAN bridge, recorder/replay/monitoring services |
+- [x] CertPlugin (X.509/ECDSA mutual auth), AccessPolicy (topic ACL), ReplayGuard (anti-replay) — `security/`
+- [x] XTypes dynamic data — TypeDescriptor, TypeIdentifier (content hash), DynamicData, TypeRegistry, CheckCompatibility — `xtypes/`
+- [x] Domain bridge — in-process participant-to-participant forwarding — `bridge/domain/`
+- [x] WAN bridge — TCP forwarding with length-framed JSON wire format, 16 MiB cap — `bridge/wan/`
+- [x] HTTP admin API — health, metrics, discovery, publish; bearer-token auth — `admin/`
+- [x] Managed service lifecycle — RecorderService, ReplayService (loop + seek + speed), MonitorService — `services/`
 
 See [ROADMAP.md](ROADMAP.md) for goals and sub-items.
 
