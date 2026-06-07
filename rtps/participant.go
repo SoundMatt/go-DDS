@@ -3,6 +3,16 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+// Package rtps provides a pure-Go RTPS/UDP implementation of the dds
+// interfaces. It requires no CGo and no installed system libraries; it speaks
+// the OMG RTPS 2.3 wire protocol over UDP multicast/unicast so it can
+// interoperate with any standards-compliant DDS implementation.
+//
+// Create a participant with rtps.New. For reliable delivery, pass
+// dds.ReliableQoS to NewPublisher/NewSubscriber. For payload-level security,
+// pass rtps.WithSecurity to rtps.New:
+//
+//	p, err := rtps.New(dds.Domain(0), rtps.WithSecurity(myPlugin))
 package rtps
 
 import (
