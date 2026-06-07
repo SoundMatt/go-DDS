@@ -186,6 +186,10 @@ go test -tags cyclone ./cyclone/...
 
 ## Roadmap
 
+See [ROADMAP.md](ROADMAP.md) for per-item context, release notes, and implementation guidance.
+
+**Released**
+
 - [x] Go interface (`Participant`, `Publisher`, `Subscriber`, `QoS`)
 - [x] In-process mock — 100% statement coverage
 - [x] CycloneDDS CGo implementation (`-tags cyclone`)
@@ -197,6 +201,9 @@ go test -tags cyclone ./cyclone/...
 - [x] TransientLocal durability (last-value cache for late joiners)
 - [x] IPv6 multicast transport (`WithIPv6()` option, `LocatorKindUDPv6`)
 - [x] RTPS interop testing with CycloneDDS (Docker Compose + CycloneDDS peer)
+
+**Planned — core**
+
 - [ ] Typed sentinel errors (`errors.Is` / `errors.As` support)
 - [ ] Unicast-only / no-multicast discovery mode (Docker, container, NAT environments)
 - [ ] Content-filtered subscriptions (server-side predicate before channel delivery)
@@ -205,6 +212,19 @@ go test -tags cyclone ./cyclone/...
 - [ ] Topic wildcards (`sensors/#`, `vehicle/*/speed`)
 - [ ] Metrics / statistics API (publish count, drop count, latency histogram)
 - [ ] RTPS persistent history (disk-backed TransientLocal for crash recovery)
+- [ ] Real-time web monitor (`monitor/` sub-package, SSE, no external dependencies)
+
+**Planned — TSN (Time-Sensitive Networking)**
+
+- [ ] TSN-extended QoS fields (`TransportPriority`, `LatencyBudget`, `Lifespan`, `PublishPeriod`, `MaxSampleSize`)
+- [ ] DDS-to-TSN stream model (`tsn.Stream` descriptor; OMG DDS-TSN spec)
+- [ ] VLAN, PCP, and DSCP socket marking (`SO_PRIORITY`, `IP_TOS`, VLAN interface, Linux-only)
+- [ ] Scheduled transmit time (`SO_TXTIME` + `CLOCK_TAI` + ETF/taprio qdisc, Linux-only)
+- [ ] gPTP / IEEE 802.1AS time base integration (`CLOCK_TAI` via `golang.org/x/sys/unix`)
+- [ ] Separate traffic-class sockets (discovery, best-effort data, per-TSN-writer)
+- [ ] TSN-safe discovery (configurable SPDP interval, jitter budget, static peers)
+- [ ] Fragmentation bounds for TSN streams (reject oversize, deterministic DATA_FRAG)
+- [ ] External TSN configuration (YAML/JSON `tsn_streams:` file, `tsn.LoadConfig`)
 
 ## Contributing
 
