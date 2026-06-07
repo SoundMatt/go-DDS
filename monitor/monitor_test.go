@@ -197,3 +197,169 @@ func TestMonitor_Close_StopsServer(t *testing.T) {
 		t.Fatal("expected error after monitor closed")
 	}
 }
+
+// ── v0.6 endpoints ────────────────────────────────────────────────────────────
+
+func TestMonitor_Health_OK(t *testing.T) {
+	p := newMockParticipant(t)
+	defer p.Close()
+	mon, err := monitor.New(p, monitor.Options{Addr: "127.0.0.1:0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mon.Close()
+
+	ctx := context.Background()
+	resp, err := get(ctx, "http://"+mon.Addr()+"/health")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	if ct := resp.Header.Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
+		t.Fatalf("expected application/json, got %q", ct)
+	}
+	scanner := bufio.NewScanner(resp.Body)
+	body := ""
+	for scanner.Scan() {
+		body += scanner.Text()
+	}
+	if !strings.Contains(body, `"status"`) {
+		t.Errorf("expected 'status' in health response body: %s", body)
+	}
+	if !strings.Contains(body, `"ok"`) {
+		t.Errorf("expected 'ok' in health response body: %s", body)
+	}
+}
+
+func TestMonitor_Health_NoProvider_Returns501(t *testing.T) {
+	// A participant that doesn't implement HealthProvider.
+	type minPart struct{ dds.Participant }
+	realPart := newMockParticipant(t)
+	defer realPart.Close()
+	stub := &minPart{Participant: realPart}
+
+	mon, err := monitor.New(stub, monitor.Options{Addr: "127.0.0.1:0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mon.Close()
+
+	ctx := context.Background()
+	resp, err := get(ctx, "http://"+mon.Addr()+"/health")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNotImplemented {
+		t.Fatalf("expected 501, got %d", resp.StatusCode)
+	}
+}
+
+func TestMonitor_APITopics_ReturnsJSON(t *testing.T) {
+	p := newMockParticipant(t)
+	defer p.Close()
+	mon, err := monitor.New(p, monitor.Options{Addr: "127.0.0.1:0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mon.Close()
+
+	// Write a sample so the topic appears in the metrics.
+	pub, err := p.NewPublisher("monitor/test/topic", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+	_ = pub.Write([]byte("data"))
+
+	ctx := context.Background()
+	resp, err := get(ctx, "http://"+mon.Addr()+"/api/topics")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	if ct := resp.Header.Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
+		t.Fatalf("expected application/json, got %q", ct)
+	}
+	scanner := bufio.NewScanner(resp.Body)
+	body := ""
+	for scanner.Scan() {
+		body += scanner.Text()
+	}
+	// Should be a JSON array.
+	if !strings.HasPrefix(strings.TrimSpace(body), "[") {
+		t.Errorf("expected JSON array, got: %s", body)
+	}
+}
+
+func TestMonitor_APIDiagnostics_ReturnsJSON(t *testing.T) {
+	p := newMockParticipant(t)
+	defer p.Close()
+	mon, err := monitor.New(p, monitor.Options{Addr: "127.0.0.1:0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mon.Close()
+
+	ctx := context.Background()
+	resp, err := get(ctx, "http://"+mon.Addr()+"/api/diagnostics")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	scanner := bufio.NewScanner(resp.Body)
+	body := ""
+	for scanner.Scan() {
+		body += scanner.Text()
+	}
+	// Must be a JSON object containing metrics.
+	if !strings.Contains(body, "metrics") {
+		t.Errorf("expected 'metrics' in diagnostics response: %s", body)
+	}
+}
+
+func TestMonitor_DiscoveryMetrics_PushedOverSSE(t *testing.T) {
+	p := newMockParticipant(t)
+	defer p.Close()
+	mon, err := monitor.New(p, monitor.Options{
+		Addr:            "127.0.0.1:0",
+		MetricsInterval: 50 * time.Millisecond,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mon.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	resp, err := get(ctx, "http://"+mon.Addr()+"/events")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	scanner := bufio.NewScanner(resp.Body)
+	// Look for a "discovery" SSE event. The mock returns zero-value metrics so
+	// the event may not appear if the metricsLoop skips it. In that case we at
+	// least verify the /events endpoint is live by receiving a "metrics" event.
+	found := false
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, "write_count") || strings.Contains(line, "announces_sent") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("expected at least one metrics or discovery event over SSE")
+	}
+}

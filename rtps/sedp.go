@@ -37,6 +37,9 @@ type sedpService struct {
 	remoteReaders    map[GUID]*endpointInfo // remote subscriptions, keyed by reader GUID
 	remoteReaderLocs map[GUID]Locator       // data-unicast locator for each remote reader
 	stop             chan struct{}
+
+	// Cumulative count of local↔remote topic endpoint matches.
+	endpointMatches atomic.Uint64
 }
 
 func newSEDPService(p *participant) *sedpService {
@@ -262,6 +265,7 @@ func (s *sedpService) onRemoteWriter(info *endpointInfo, dataLocator Locator) {
 	// Match against local readers for this topic.
 	for _, lr := range s.localReaders {
 		if lr.topicName == info.topicName {
+			s.endpointMatches.Add(1)
 			// Notify the reader so it can accept DATA from this writer.
 			s.p.readerByEID(lr.guid.Entity, func(r *rtpsReader) {
 				r.addSourceGUID(info.guid)

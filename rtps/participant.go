@@ -26,8 +26,21 @@ import (
 	"time"
 
 	dds "github.com/SoundMatt/go-DDS"
+	"github.com/SoundMatt/go-DDS/config"
 	"github.com/SoundMatt/go-DDS/tsn"
 )
+
+// ── Per-topic metrics ─────────────────────────────────────────────────────────
+
+// topicCounter accumulates per-topic write, deliver, and drop statistics.
+// All fields are incremented atomically; no lock is required.
+type topicCounter struct {
+	writes   atomic.Uint64
+	delivers atomic.Uint64
+	drops    atomic.Uint64
+	bytesW   atomic.Uint64
+	bytesD   atomic.Uint64
+}
 
 // ── Options ───────────────────────────────────────────────────────────────────
 
@@ -116,6 +129,34 @@ func WithStaticPeers(addrs ...string) Option {
 	return WithPeerLocators(addrs...)
 }
 
+// WithHeartbeatPeriod sets the period of the periodic HEARTBEAT ticker used by
+// reliable writers. The default is 200 ms. Use shorter values for
+// low-latency reliable delivery; use longer values to reduce control traffic.
+func WithHeartbeatPeriod(d time.Duration) Option {
+	return func(p *participant) { p.heartbeatPeriodOverride = d }
+}
+
+// WithConfig applies all fields from cfg to the participant. It is equivalent
+// to calling the corresponding WithXxx options individually and is intended for
+// use with JSON configuration files loaded via [config.LoadConfig].
+func WithConfig(cfg *config.ParticipantConfig) Option {
+	return func(p *participant) {
+		if cfg.HeartbeatPeriodDur > 0 {
+			p.heartbeatPeriodOverride = cfg.HeartbeatPeriodDur
+		}
+		if cfg.SPDPIntervalDur > 0 {
+			p.spdpInterval = cfg.SPDPIntervalDur
+		}
+		if cfg.SPDPJitterDur > 0 {
+			p.spdpJitter = cfg.SPDPJitterDur
+		}
+		if cfg.NoMulticast {
+			p.noMulticast = true
+		}
+		p.peerLocators = append(p.peerLocators, cfg.PeerLocators...)
+	}
+}
+
 // WithTSNConfig registers a TSN stream configuration with the participant.
 // When a publisher is created for a topic in the config, the participant
 // allocates a dedicated socket for that traffic class, marks it with
@@ -140,6 +181,9 @@ type participant struct {
 	log          plog
 	livelinessCb func(dds.GUID, dds.LivelinessEvent)
 	tracer       dds.Tracer
+
+	// Configurable heartbeat period (0 = use package-level heartbeatPeriod constant).
+	heartbeatPeriodOverride time.Duration
 
 	// TSN options.
 	tsnConfig    *tsn.StreamConfig
@@ -178,12 +222,40 @@ type participant struct {
 	// not also acquire p.mu (which Close holds while iterating writers).
 	lastSample sync.Map
 
-	// Metrics counters — incremented atomically, never need p.mu.
+	// Participant-level metrics counters — incremented atomically, never need p.mu.
 	mWrites       atomic.Uint64
 	mDelivers     atomic.Uint64
 	mDrops        atomic.Uint64
 	mBytesWritten atomic.Uint64
 	mBytesDeliv   atomic.Uint64
+
+	// Per-topic metrics: topic string → *topicCounter (sync.Map, no lock needed).
+	topicMetrics sync.Map
+}
+
+// effectiveHeartbeatPeriod returns the heartbeat period configured by
+// WithHeartbeatPeriod (or WithConfig), falling back to the package constant.
+func (p *participant) effectiveHeartbeatPeriod() time.Duration {
+	if p.heartbeatPeriodOverride > 0 {
+		return p.heartbeatPeriodOverride
+	}
+	return heartbeatPeriod
+}
+
+// topicCounterFor returns (creating on first access) the per-topic counter for
+// the given topic name. The returned pointer is safe to use concurrently.
+func (p *participant) topicCounterFor(topic string) *topicCounter {
+	if v, ok := p.topicMetrics.Load(topic); ok {
+		if tc, ok2 := v.(*topicCounter); ok2 {
+			return tc
+		}
+	}
+	tc := &topicCounter{}
+	actual, _ := p.topicMetrics.LoadOrStore(topic, tc)
+	if tc2, ok := actual.(*topicCounter); ok {
+		return tc2
+	}
+	return tc
 }
 
 // New creates an RTPS participant joined to the given DDS domain.
@@ -295,6 +367,7 @@ func (p *participant) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, er
 		eid:      eid,
 		qos:      qos,
 		reliable: qos.Reliability == dds.Reliable,
+		hbPeriod: p.effectiveHeartbeatPeriod(),
 	}
 	if w.reliable {
 		w.history = newSendHistory()
@@ -387,6 +460,68 @@ func (p *participant) Metrics() dds.Metrics {
 		DropCount:      p.mDrops.Load(),
 		BytesWritten:   p.mBytesWritten.Load(),
 		BytesDelivered: p.mBytesDeliv.Load(),
+	}
+}
+
+// DiscoveryMetrics implements dds.DiscoveryMetricsProvider.
+func (p *participant) DiscoveryMetrics() dds.DiscoveryMetrics {
+	p.spdp.mu.RLock()
+	peers := uint64(len(p.spdp.peers))
+	p.spdp.mu.RUnlock()
+	return dds.DiscoveryMetrics{
+		AnnouncesSent:     p.spdp.announcesSent.Load(),
+		AnnouncesReceived: p.spdp.announcesReceived.Load(),
+		PeersKnown:        peers,
+		PeerEvictions:     p.spdp.peerEvictions.Load(),
+		EndpointMatches:   p.sedp.endpointMatches.Load(),
+	}
+}
+
+// TopicMetrics implements dds.TopicMetricsProvider.
+func (p *participant) TopicMetrics() []dds.TopicMetrics {
+	var result []dds.TopicMetrics
+	p.topicMetrics.Range(func(k, v any) bool {
+		topic, ok := k.(string)
+		if !ok {
+			return true
+		}
+		tc, ok2 := v.(*topicCounter)
+		if !ok2 {
+			return true
+		}
+		result = append(result, dds.TopicMetrics{
+			Topic:          topic,
+			WriteCount:     tc.writes.Load(),
+			DeliverCount:   tc.delivers.Load(),
+			DropCount:      tc.drops.Load(),
+			BytesWritten:   tc.bytesW.Load(),
+			BytesDelivered: tc.bytesD.Load(),
+		})
+		return true
+	})
+	return result
+}
+
+// Health implements dds.HealthProvider.
+func (p *participant) Health() dds.Health {
+	p.mu.Lock()
+	closed := p.closed
+	writers := len(p.writers)
+	readers := len(p.readers)
+	p.mu.Unlock()
+
+	if closed {
+		return dds.Health{
+			Status:  dds.HealthDown,
+			Details: map[string]string{"state": "closed"},
+		}
+	}
+	return dds.Health{
+		Status: dds.HealthOK,
+		Details: map[string]string{
+			"writers": fmt.Sprintf("%d", writers),
+			"readers": fmt.Sprintf("%d", readers),
+		},
 	}
 }
 
@@ -724,37 +859,49 @@ func (p *participant) dispatchToReaders(source GUID, topicFilter string, payload
 // deliverToReader sends sample to r according to r.backPressure.
 func (p *participant) deliverToReader(r *rtpsReader, sample dds.Sample) {
 	byteLen := uint64(len(sample.Payload))
+	tc := p.topicCounterFor(r.topic)
 	switch r.backPressure {
 	case dds.DropOldest:
 		select {
 		case r.ch <- sample:
 			p.mDelivers.Add(1)
 			p.mBytesDeliv.Add(byteLen)
+			tc.delivers.Add(1)
+			tc.bytesD.Add(byteLen)
 		default:
 			select {
 			case <-r.ch:
 				p.mDrops.Add(1)
+				tc.drops.Add(1)
 			default:
 			}
 			select {
 			case r.ch <- sample:
 				p.mDelivers.Add(1)
 				p.mBytesDeliv.Add(byteLen)
+				tc.delivers.Add(1)
+				tc.bytesD.Add(byteLen)
 			default:
 				p.mDrops.Add(1)
+				tc.drops.Add(1)
 			}
 		}
 	case dds.Block:
 		r.ch <- sample
 		p.mDelivers.Add(1)
 		p.mBytesDeliv.Add(byteLen)
+		tc.delivers.Add(1)
+		tc.bytesD.Add(byteLen)
 	default: // DropNewest
 		select {
 		case r.ch <- sample:
 			p.mDelivers.Add(1)
 			p.mBytesDeliv.Add(byteLen)
+			tc.delivers.Add(1)
+			tc.bytesD.Add(byteLen)
 		default:
 			p.mDrops.Add(1)
+			tc.drops.Add(1)
 		}
 	}
 }
@@ -847,6 +994,7 @@ type rtpsWriter struct {
 	hbDone        chan struct{} // closed to stop the heartbeat goroutine
 	drainCh       chan struct{} // closed when ackedLo >= seqLo (all ACKs in)
 	deadlineTimer *time.Timer   // non-nil when QoS.Deadline > 0
+	hbPeriod      time.Duration // heartbeat ticker period; set from participant option
 	// TSN fields — nil when not a TSN writer.
 	tsnStream *tsn.Stream // matching stream descriptor
 	tsnSock   *udpSocket  // priority-marked socket (nil = use dataSock)
@@ -888,6 +1036,9 @@ func (w *rtpsWriter) Write(payload []byte) error {
 	}
 	w.p.mWrites.Add(1)
 	w.p.mBytesWritten.Add(uint64(len(payload)))
+	topicTC := w.p.topicCounterFor(w.topic)
+	topicTC.writes.Add(1)
+	topicTC.bytesW.Add(uint64(len(payload)))
 	w.seqLo++
 	seqNum := SequenceNumber{High: w.seqHi, Low: w.seqLo}
 	now := time.Now()
@@ -1052,7 +1203,7 @@ func (w *rtpsWriter) advanceAcked(ackBase uint32) {
 // heartbeatLoop periodically sends a HEARTBEAT for as long as the writer is
 // open, so remote readers can detect and recover from losses.
 func (w *rtpsWriter) heartbeatLoop(done <-chan struct{}) {
-	ticker := time.NewTicker(heartbeatPeriod)
+	ticker := time.NewTicker(w.hbPeriod)
 	defer ticker.Stop()
 	for {
 		select {

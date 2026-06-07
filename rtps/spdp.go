@@ -17,6 +17,7 @@ import (
 	"math/rand"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	dds "github.com/SoundMatt/go-DDS"
@@ -43,6 +44,11 @@ type spdpService struct {
 	mu    sync.RWMutex
 	peers map[GuidPrefix]*participantProxy
 	stop  chan struct{}
+
+	// Discovery metric counters — incremented atomically.
+	announcesSent     atomic.Uint64
+	announcesReceived atomic.Uint64
+	peerEvictions     atomic.Uint64
 }
 
 func newSPDPService(p *participant) *spdpService {
@@ -100,6 +106,7 @@ func (s *spdpService) announceLoop() {
 }
 
 func (s *spdpService) sendAnnouncement() {
+	s.announcesSent.Add(1)
 	p := s.p
 	payload := s.buildParticipantData()
 	submsg := marshalDataSubmessage(
@@ -198,6 +205,7 @@ func (s *spdpService) handlePacket(data []byte, from *net.UDPAddr) {
 }
 
 func (s *spdpService) storePeer(proxy *participantProxy) {
+	s.announcesReceived.Add(1)
 	proxy.lastSeen = time.Now()
 	if proxy.leaseDuration == 0 {
 		proxy.leaseDuration = defaultLeaseDuration
@@ -248,6 +256,7 @@ func (s *spdpService) evictExpired() {
 		}
 	}
 	s.mu.Unlock()
+	s.peerEvictions.Add(uint64(len(evicted)))
 	for _, prefix := range evicted {
 		s.p.sedp.onPeerEvicted(prefix)
 		if s.p.livelinessCb != nil {

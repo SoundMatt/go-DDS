@@ -269,6 +269,80 @@ type MetricsProvider interface {
 	Metrics() Metrics
 }
 
+// ── Discovery Metrics ─────────────────────────────────────────────────────────
+
+// DiscoveryMetrics holds cumulative discovery statistics for a participant.
+type DiscoveryMetrics struct {
+	AnnouncesSent     uint64 // SPDP announcements sent
+	AnnouncesReceived uint64 // SPDP announcements received from remote peers
+	PeersKnown        uint64 // current number of known remote participants
+	PeerEvictions     uint64 // cumulative peers evicted due to lease expiry
+	EndpointMatches   uint64 // cumulative topic endpoint matches (local↔remote)
+}
+
+// DiscoveryMetricsProvider is implemented by participants that expose
+// discovery-layer statistics.
+type DiscoveryMetricsProvider interface {
+	DiscoveryMetrics() DiscoveryMetrics
+}
+
+// ── Per-Topic Metrics ─────────────────────────────────────────────────────────
+
+// TopicMetrics holds per-topic statistics for a single DDS topic.
+type TopicMetrics struct {
+	Topic          string
+	WriteCount     uint64
+	DeliverCount   uint64
+	DropCount      uint64
+	BytesWritten   uint64
+	BytesDelivered uint64
+}
+
+// TopicMetricsProvider is implemented by participants that expose per-topic
+// statistics. The returned slice contains one entry per observed topic.
+type TopicMetricsProvider interface {
+	TopicMetrics() []TopicMetrics
+}
+
+// ── Health ────────────────────────────────────────────────────────────────────
+
+// HealthStatus is the overall operational status of a participant.
+type HealthStatus int
+
+const (
+	// HealthOK means the participant is running normally.
+	HealthOK HealthStatus = iota
+	// HealthDegraded means the participant is running with reduced capability.
+	HealthDegraded
+	// HealthDown means the participant has been closed or has failed.
+	HealthDown
+)
+
+// String returns a lowercase, JSON-friendly representation of the status.
+func (h HealthStatus) String() string {
+	switch h {
+	case HealthOK:
+		return "ok"
+	case HealthDegraded:
+		return "degraded"
+	default:
+		return "down"
+	}
+}
+
+// Health is a point-in-time health snapshot for a participant.
+type Health struct {
+	// Status is the overall health classification.
+	Status HealthStatus
+	// Details carries optional per-subsystem messages (may be nil).
+	Details map[string]string
+}
+
+// HealthProvider is implemented by participants that expose health reporting.
+type HealthProvider interface {
+	Health() Health
+}
+
 // ── Drainer ───────────────────────────────────────────────────────────────────
 
 // Drainer is optionally implemented by Participants that support graceful

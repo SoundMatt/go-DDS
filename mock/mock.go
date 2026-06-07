@@ -25,6 +25,15 @@ import (
 	dds "github.com/SoundMatt/go-DDS"
 )
 
+// mockTopicCounter tracks per-topic publish/deliver/drop statistics in the broker.
+type mockTopicCounter struct {
+	writes   atomic.Uint64
+	delivers atomic.Uint64
+	drops    atomic.Uint64
+	bytesW   atomic.Uint64
+	bytesD   atomic.Uint64
+}
+
 // globalBroker is the process-wide in-memory pub/sub hub.
 var globalBroker = &broker{
 	subs:       make(map[string][]subscription),
@@ -45,12 +54,30 @@ type broker struct {
 	subs       map[string][]subscription
 	lastSample map[string]*dds.Sample
 
-	// Metrics counters (global across all participants sharing this broker).
+	// Participant-level metrics counters (global across all participants sharing this broker).
 	writes       atomic.Uint64
 	delivers     atomic.Uint64
 	drops        atomic.Uint64
 	bytesWritten atomic.Uint64
 	bytesDeliv   atomic.Uint64
+
+	// Per-topic metrics: topic string → *mockTopicCounter (sync.Map, no lock needed).
+	topicMetrics sync.Map
+}
+
+// topicCounterFor returns (creating on first access) the per-topic counter for topic.
+func (b *broker) topicCounterFor(topic string) *mockTopicCounter {
+	if v, ok := b.topicMetrics.Load(topic); ok {
+		if tc, ok2 := v.(*mockTopicCounter); ok2 {
+			return tc
+		}
+	}
+	tc := &mockTopicCounter{}
+	actual, _ := b.topicMetrics.LoadOrStore(topic, tc)
+	if tc2, ok := actual.(*mockTopicCounter); ok {
+		return tc2
+	}
+	return tc
 }
 
 const defaultChanDepth = 64
@@ -97,6 +124,9 @@ func (b *broker) publish(topic string, payload []byte, qos dds.QoS) {
 
 	b.writes.Add(1)
 	b.bytesWritten.Add(uint64(len(payload)))
+	ptc := b.topicCounterFor(topic)
+	ptc.writes.Add(1)
+	ptc.bytesW.Add(uint64(len(payload)))
 
 	b.mu.Lock()
 	if qos.Durability == dds.TransientLocal {
@@ -121,38 +151,50 @@ func (b *broker) publish(topic string, payload []byte, qos dds.QoS) {
 
 // deliver routes sample to sub according to its back-pressure policy.
 func (b *broker) deliver(sub subscription, sample dds.Sample, byteLen uint64) {
+	tc := b.topicCounterFor(sample.Topic)
 	switch sub.backPressure {
 	case dds.DropOldest:
 		select {
 		case sub.ch <- sample:
 			b.delivers.Add(1)
 			b.bytesDeliv.Add(byteLen)
+			tc.delivers.Add(1)
+			tc.bytesD.Add(byteLen)
 		default:
 			// Evict oldest, then retry.
 			select {
 			case <-sub.ch:
 				b.drops.Add(1)
+				tc.drops.Add(1)
 			default:
 			}
 			select {
 			case sub.ch <- sample:
 				b.delivers.Add(1)
 				b.bytesDeliv.Add(byteLen)
+				tc.delivers.Add(1)
+				tc.bytesD.Add(byteLen)
 			default:
 				b.drops.Add(1)
+				tc.drops.Add(1)
 			}
 		}
 	case dds.Block:
 		sub.ch <- sample
 		b.delivers.Add(1)
 		b.bytesDeliv.Add(byteLen)
+		tc.delivers.Add(1)
+		tc.bytesD.Add(byteLen)
 	default: // DropNewest
 		select {
 		case sub.ch <- sample:
 			b.delivers.Add(1)
 			b.bytesDeliv.Add(byteLen)
+			tc.delivers.Add(1)
+			tc.bytesD.Add(byteLen)
 		default:
 			b.drops.Add(1)
+			tc.drops.Add(1)
 		}
 	}
 }
@@ -275,6 +317,51 @@ func (p *participant) Metrics() dds.Metrics {
 		BytesWritten:   globalBroker.bytesWritten.Load(),
 		BytesDelivered: globalBroker.bytesDeliv.Load(),
 	}
+}
+
+// DiscoveryMetrics implements dds.DiscoveryMetricsProvider.
+// The mock has no real network discovery; this always returns zero values.
+func (p *participant) DiscoveryMetrics() dds.DiscoveryMetrics {
+	return dds.DiscoveryMetrics{}
+}
+
+// TopicMetrics implements dds.TopicMetricsProvider.
+func (p *participant) TopicMetrics() []dds.TopicMetrics {
+	var result []dds.TopicMetrics
+	globalBroker.topicMetrics.Range(func(k, v any) bool {
+		topic, ok := k.(string)
+		if !ok {
+			return true
+		}
+		tc, ok2 := v.(*mockTopicCounter)
+		if !ok2 {
+			return true
+		}
+		result = append(result, dds.TopicMetrics{
+			Topic:          topic,
+			WriteCount:     tc.writes.Load(),
+			DeliverCount:   tc.delivers.Load(),
+			DropCount:      tc.drops.Load(),
+			BytesWritten:   tc.bytesW.Load(),
+			BytesDelivered: tc.bytesD.Load(),
+		})
+		return true
+	})
+	return result
+}
+
+// Health implements dds.HealthProvider.
+func (p *participant) Health() dds.Health {
+	p.mu.Lock()
+	closed := p.closed
+	p.mu.Unlock()
+	if closed {
+		return dds.Health{
+			Status:  dds.HealthDown,
+			Details: map[string]string{"state": "closed"},
+		}
+	}
+	return dds.Health{Status: dds.HealthOK}
 }
 
 // publisher implements dds.Publisher.

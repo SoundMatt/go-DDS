@@ -58,7 +58,10 @@ func (o Options) metricsInterval() time.Duration {
 // Monitor wraps a dds.Participant and serves a real-time web dashboard.
 type Monitor struct {
 	p       dds.Participant
-	mp      dds.MetricsProvider // non-nil when p implements MetricsProvider
+	mp      dds.MetricsProvider          // non-nil when p implements MetricsProvider
+	dp      dds.DiscoveryMetricsProvider // non-nil when p implements DiscoveryMetricsProvider
+	tp      dds.TopicMetricsProvider     // non-nil when p implements TopicMetricsProvider
+	hp      dds.HealthProvider           // non-nil when p implements HealthProvider
 	opts    Options
 	server  *http.Server
 	ln      net.Listener
@@ -87,10 +90,22 @@ func New(p dds.Participant, opts Options) (*Monitor, error) {
 	if mp, ok := p.(dds.MetricsProvider); ok {
 		m.mp = mp
 	}
+	if dp, ok := p.(dds.DiscoveryMetricsProvider); ok {
+		m.dp = dp
+	}
+	if tp, ok := p.(dds.TopicMetricsProvider); ok {
+		m.tp = tp
+	}
+	if hp, ok := p.(dds.HealthProvider); ok {
+		m.hp = hp
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", m.handleIndex)
 	mux.HandleFunc("/events", m.handleSSE)
+	mux.HandleFunc("/health", m.handleHealth)
+	mux.HandleFunc("/api/topics", m.handleAPITopics)
+	mux.HandleFunc("/api/diagnostics", m.handleAPIDiagnostics)
 	m.server = &http.Server{Handler: mux}
 
 	go m.server.Serve(ln) //nolint:errcheck
@@ -162,6 +177,71 @@ func (m *Monitor) handleSSE(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handleHealth serves GET /health as JSON. Returns 503 when the participant is down.
+func (m *Monitor) handleHealth(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if m.hp == nil {
+		w.WriteHeader(http.StatusNotImplemented)
+		_, _ = w.Write([]byte(`{"status":"unknown","error":"health reporting not available"}`))
+		return
+	}
+	h := m.hp.Health()
+	type healthResp struct {
+		Status  string            `json:"status"`
+		Details map[string]string `json:"details,omitempty"`
+	}
+	b, _ := json.Marshal(healthResp{Status: h.Status.String(), Details: h.Details})
+	if h.Status == dds.HealthDown {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}
+	_, _ = w.Write(b)
+}
+
+// handleAPITopics serves GET /api/topics as a JSON array of per-topic metrics.
+func (m *Monitor) handleAPITopics(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if m.tp == nil {
+		_, _ = w.Write([]byte(`[]`))
+		return
+	}
+	topics := m.tp.TopicMetrics()
+	if topics == nil {
+		topics = []dds.TopicMetrics{}
+	}
+	b, _ := json.Marshal(topics)
+	_, _ = w.Write(b)
+}
+
+// handleAPIDiagnostics serves GET /api/diagnostics as a JSON object combining
+// participant, discovery, and health snapshots.
+func (m *Monitor) handleAPIDiagnostics(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	type diagHealth struct {
+		Status  string            `json:"status"`
+		Details map[string]string `json:"details,omitempty"`
+	}
+	type diagResp struct {
+		Metrics   *dds.Metrics          `json:"metrics,omitempty"`
+		Discovery *dds.DiscoveryMetrics `json:"discovery,omitempty"`
+		Health    *diagHealth           `json:"health,omitempty"`
+	}
+	resp := diagResp{}
+	if m.mp != nil {
+		mt := m.mp.Metrics()
+		resp.Metrics = &mt
+	}
+	if m.dp != nil {
+		dm := m.dp.DiscoveryMetrics()
+		resp.Discovery = &dm
+	}
+	if m.hp != nil {
+		h := m.hp.Health()
+		resp.Health = &diagHealth{Status: h.Status.String(), Details: h.Details}
+	}
+	b, _ := json.Marshal(resp)
+	_, _ = w.Write(b)
+}
+
 func (m *Monitor) broadcast(eventType, data string) {
 	msg := fmt.Sprintf("event: %s\ndata: %s\n\n", eventType, data)
 	m.mu.RLock()
@@ -175,7 +255,7 @@ func (m *Monitor) broadcast(eventType, data string) {
 }
 
 func (m *Monitor) metricsLoop() {
-	if m.mp == nil {
+	if m.mp == nil && m.dp == nil {
 		return
 	}
 	tick := time.NewTicker(m.opts.metricsInterval())
@@ -183,22 +263,42 @@ func (m *Monitor) metricsLoop() {
 	for {
 		select {
 		case <-tick.C:
-			mt := m.mp.Metrics()
-			type metricsEvent struct {
-				WriteCount     uint64 `json:"write_count"`
-				DeliverCount   uint64 `json:"deliver_count"`
-				DropCount      uint64 `json:"drop_count"`
-				BytesWritten   uint64 `json:"bytes_written"`
-				BytesDelivered uint64 `json:"bytes_delivered"`
+			if m.mp != nil {
+				mt := m.mp.Metrics()
+				type metricsEvent struct {
+					WriteCount     uint64 `json:"write_count"`
+					DeliverCount   uint64 `json:"deliver_count"`
+					DropCount      uint64 `json:"drop_count"`
+					BytesWritten   uint64 `json:"bytes_written"`
+					BytesDelivered uint64 `json:"bytes_delivered"`
+				}
+				b, _ := json.Marshal(metricsEvent{
+					WriteCount:     mt.WriteCount,
+					DeliverCount:   mt.DeliverCount,
+					DropCount:      mt.DropCount,
+					BytesWritten:   mt.BytesWritten,
+					BytesDelivered: mt.BytesDelivered,
+				})
+				m.broadcast("metrics", string(b))
 			}
-			b, _ := json.Marshal(metricsEvent{
-				WriteCount:     mt.WriteCount,
-				DeliverCount:   mt.DeliverCount,
-				DropCount:      mt.DropCount,
-				BytesWritten:   mt.BytesWritten,
-				BytesDelivered: mt.BytesDelivered,
-			})
-			m.broadcast("metrics", string(b))
+			if m.dp != nil {
+				dm := m.dp.DiscoveryMetrics()
+				type discoveryEvent struct {
+					AnnouncesSent     uint64 `json:"announces_sent"`
+					AnnouncesReceived uint64 `json:"announces_received"`
+					PeersKnown        uint64 `json:"peers_known"`
+					PeerEvictions     uint64 `json:"peer_evictions"`
+					EndpointMatches   uint64 `json:"endpoint_matches"`
+				}
+				b, _ := json.Marshal(discoveryEvent{
+					AnnouncesSent:     dm.AnnouncesSent,
+					AnnouncesReceived: dm.AnnouncesReceived,
+					PeersKnown:        dm.PeersKnown,
+					PeerEvictions:     dm.PeerEvictions,
+					EndpointMatches:   dm.EndpointMatches,
+				})
+				m.broadcast("discovery", string(b))
+			}
 		case <-m.ctx.Done():
 			return
 		}
