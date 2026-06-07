@@ -7,7 +7,7 @@ on:
     branches: ["main"]
 
 jobs:
-  # ── Pure-Go (mock) build and test ─────────────────────────────────────────
+  # ── Pure-Go (mock) build, unit tests, and benchmarks ─────────────────────
   test-mock:
     name: Test (mock, ${{ matrix.os }}, Go ${{ matrix.go }})
     runs-on: ${{ matrix.os }}
@@ -27,7 +27,7 @@ jobs:
       - name: go vet
         run: go vet ./...
 
-      - name: go test (mock, -race)
+      - name: go test (unit + fuzz seed corpus, -race)
         run: go test -race -count=1 -coverprofile=coverage.out ./...
 
       - name: Upload coverage
@@ -36,6 +36,70 @@ jobs:
         with:
           name: coverage-mock
           path: coverage.out
+
+  # ── Benchmark smoke run ───────────────────────────────────────────────────
+  # Runs every benchmark for exactly one iteration (-benchtime=1x) to catch
+  # panics, deadlocks, and alloc-reporting regressions without spending wall
+  # time on statistical sampling.
+  benchmark-smoke:
+    name: Benchmark smoke (ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: go test -bench (smoke, 1 iteration each)
+        run: >
+          go test
+          -bench=.
+          -benchtime=1x
+          -benchmem
+          -run=^$
+          ./mock/...
+        # -run=^$ skips unit tests so output is purely benchmark lines.
+
+      - name: go test -bench (smoke, parallel benchmarks)
+        run: >
+          go test
+          -bench=BenchmarkPublish_Parallel
+          -benchtime=100ms
+          -benchmem
+          -run=^$
+          ./mock/...
+
+  # ── Short fuzz run (seed corpus + a few seconds of engine exploration) ────
+  # The full fuzzer is meant to be run locally or in dedicated infra; here we
+  # run each fuzz target for 10 seconds to catch obvious regressions.
+  fuzz-short:
+    name: Fuzz (short, ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: FuzzPublish
+        run: go test -fuzz=FuzzPublish -fuzztime=10s ./mock/...
+
+      - name: FuzzPublishIsolation
+        run: go test -fuzz=FuzzPublishIsolation -fuzztime=10s ./mock/...
+
+      - name: FuzzTopicName
+        run: go test -fuzz=FuzzTopicName -fuzztime=10s ./mock/...
+
+      - name: FuzzNoRouting
+        run: go test -fuzz=FuzzNoRouting -fuzztime=10s ./mock/...
+
+      - name: FuzzConcurrentPubSub (with race detector)
+        run: go test -race -fuzz=FuzzConcurrentPubSub -fuzztime=10s ./mock/...
+
+      - name: FuzzDropOnFullChannel
+        run: go test -fuzz=FuzzDropOnFullChannel -fuzztime=10s ./mock/...
 
   # ── CycloneDDS CGo build (Linux only — requires system library) ───────────
   test-cyclone:
@@ -60,10 +124,18 @@ jobs:
       - name: go build (cyclone)
         run: go build -tags cyclone ./...
 
-      # The cyclone integration test starts a real DDS participant on domain 99.
-      # It writes one sample and reads it back via the C polling loop.
       - name: go test (cyclone, -race)
         run: go test -race -count=1 -tags cyclone -v ./cyclone/...
+
+      - name: Benchmark smoke (cyclone)
+        run: >
+          go test
+          -tags cyclone
+          -bench=.
+          -benchtime=1x
+          -benchmem
+          -run=^$
+          ./cyclone/...
 
   # ── go generate (placeholder, expands when IDL toolchain is added) ────────
   generate:
