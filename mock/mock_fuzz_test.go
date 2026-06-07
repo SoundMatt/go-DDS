@@ -199,6 +199,13 @@ func FuzzNoRouting(f *testing.F) {
 		if topicA == topicB || topicA == "" || topicB == "" {
 			return
 		}
+		// Wildcard subscriber patterns legitimately match across topics;
+		// skip those cases — they are exercised by the wildcard tests.
+		for _, c := range topicB {
+			if c == '+' || c == '#' {
+				return
+			}
+		}
 
 		p, _ := mock.New(dds.Domain(0))
 		defer p.Close()
