@@ -42,9 +42,9 @@ API parity does not.
 | Version | Milestones | Theme |
 |---|---|---|
 | v0.1 – v0.5 | Released | Foundation through TSN |
-| v0.6 | 1, 4 | Production Runtime + Observability |
-| v0.7 | 2, 7 | Developer Experience + Deterministic Networking |
-| v0.8 | 3, 5, 6 | Verification, Edge Performance, Safety |
+| v0.6 | 1, 4 | Production Runtime + Observability ✅ |
+| v0.7 | 2, 7 | Developer Experience + Deterministic Networking ✅ |
+| v0.8 | 3, 5, 6 | Verification, Edge Performance, Safety ✅ |
 | v0.9 | 8, 9, 10 | Enterprise Security, Dynamic Data, Services |
 
 ### Released — v0.1 – v0.5
@@ -182,15 +182,15 @@ Support the complete software lifecycle from unit testing through system validat
 
 ### Recording
 
-- Topic recording
+- Topic recording ✅
 - RTPS recording
-- Metadata recording
+- Metadata recording ✅
 
 ### Replay
 
-- Deterministic replay
-- Time-scaled replay
-- Filtered replay
+- Deterministic replay ✅
+- Time-scaled replay ✅
+- Filtered replay ✅
 
 ### Scenario Testing
 
@@ -200,11 +200,11 @@ Support the complete software lifecycle from unit testing through system validat
 
 ### Fault Injection
 
-- Packet loss
-- Delay
+- Packet loss ✅
+- Delay ✅
 - Reordering
-- Duplication
-- Corruption
+- Duplication ✅
+- Corruption ✅
 
 ### Test Reporting
 
@@ -258,17 +258,17 @@ Support high-performance embedded and edge deployments.
 
 ### Shared Memory
 
-- Cross-process transport
+- Cross-process transport ✅
 - Automatic transport selection
 
 ### Zero Copy
 
 - Loaned samples
-- Preallocated buffers
+- Preallocated buffers ✅
 
 ### Resource Controls
 
-- Bounded queues
+- Bounded queues ✅
 - Memory limits
 - Flow control
 
@@ -290,23 +290,23 @@ Support safety-oriented communication architectures.
 
 ### E2E Protection
 
-- Data IDs
-- Source IDs
-- Sequence counters
-- CRC protection
-- Freshness checking
+- Data IDs ✅
+- Source IDs ✅
+- Sequence counters ✅
+- CRC protection ✅
+- Freshness checking ✅
 - Schema validation
 
 ### Safety Runtime
 
-- Deterministic queues
-- Panic containment
+- Deterministic queues ✅
+- Panic containment ✅
 - Runtime monitoring
 
 ### Safety Visibility
 
 - Safety metrics
-- Safety events
+- Safety events ✅
 - Safety diagnostics
 
 ### Documentation
