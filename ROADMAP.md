@@ -47,8 +47,8 @@ API parity does not.
 | v0.8 | 3, 5, 6 | Verification, Edge Performance, Safety ✅ |
 | v0.9 | 8, 9, 10 | Enterprise Security, Dynamic Data, Services ✅ |
 | v0.9.1 | — | Spec Completeness & Go Idioms ✅ |
-| v0.10 | — | Routing, Context API, Secure Discovery |
-| v0.11 | — | Docker Quickstart |
+| v0.10 | 12 | Routing, Context API, Secure Discovery |
+| v0.11 | 13 | Docker Quickstart |
 
 ### Released — v0.1 – v0.8
 
@@ -474,7 +474,42 @@ A developer familiar with the OMG DDS spec or with standard Go networking librar
 
 ---
 
-## Milestone 12 — Docker Quickstart `v0.11`
+## Milestone 12 — Routing, Context API & Secure Discovery `v0.10`
+
+Goal:
+Harden the network boundary, make cancellation first-class, and finish the protocol-bridge story started in v0.9.
+
+### Context API
+
+- `context.Context` propagation through `WriteCtx`, `TryRead`, and `WaitSet.Wait`
+- Cancellation and deadline respected at every blocking call site
+- `WithContext` participant option for domain-scoped cancellation
+
+### Secure Discovery
+
+- SPDP/SEDP message signing and verification (extend the HMAC-authenticated SPDP from v0.9.1)
+- Participant identity validation on discovery (reject unknown or untrusted participants)
+- Key-rotation support: re-key without participant restart
+
+### Protocol Bridge
+
+- DDS ↔ gRPC gateway: expose any topic as a gRPC streaming RPC and vice-versa
+- DDS ↔ REST/SSE gateway: HTTP GET (SSE stream) for subscribe, HTTP POST for publish
+- Topic-level filter and transform hooks at the bridge boundary
+- Minimal config: single YAML stanza maps a DDS topic to a gRPC service method
+
+### Protobuf Codec
+
+- `proto.Codec[T]` alongside `json.Codec[T]` and `GobCodec[T]`
+- Wire format compatible with standard protobuf tooling
+- Codec autodiscovery via `TypeRegistry` in `xtypes`
+
+Success Criteria:
+Every blocking API call respects `context.Context`; discovery is authenticated end-to-end; a go-DDS topic is reachable from a vanilla gRPC or HTTP client.
+
+---
+
+## Milestone 13 — Docker Quickstart `v0.11`
 
 Goal:
 Let a developer experience working multi-process DDS in under two minutes with no Go toolchain required.
