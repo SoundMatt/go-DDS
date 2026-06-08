@@ -20,6 +20,8 @@ package monitor
 //fusa:req REQ-MON-003
 //fusa:req REQ-MON-004
 //fusa:req REQ-MON-005
+//fusa:req REQ-MON-006
+//fusa:req REQ-MON-007
 
 import (
 	"context"
@@ -33,6 +35,7 @@ import (
 	_ "embed"
 
 	dds "github.com/SoundMatt/go-DDS"
+	"github.com/SoundMatt/go-DDS/safety"
 )
 
 //go:embed static/index.html
@@ -132,6 +135,42 @@ func (m *Monitor) Publish(s dds.Sample) {
 	}
 	b, _ := json.Marshal(sampleEvent{Topic: s.Topic, Payload: string(s.Payload)})
 	m.broadcast("sample", string(b))
+}
+
+// PublishSafetyEvent broadcasts a safety violation event to all connected SSE clients.
+func (m *Monitor) PublishSafetyEvent(e safety.SafetyEvent) {
+	type safetyEv struct {
+		Kind    string `json:"kind"`
+		Topic   string `json:"topic"`
+		Counter uint32 `json:"counter"`
+		Message string `json:"message"`
+	}
+	b, _ := json.Marshal(safetyEv{
+		Kind:    e.Kind.String(),
+		Topic:   e.Topic,
+		Counter: e.Counter,
+		Message: e.Message,
+	})
+	m.broadcast("safety", string(b))
+}
+
+// WatchSafety starts a goroutine that reads from events and calls
+// PublishSafetyEvent for each one. It stops when the monitor is closed or
+// the channel is closed. Intended to be wired to E2ESubscriber.SafetyEvents().
+func (m *Monitor) WatchSafety(events <-chan safety.SafetyEvent) {
+	go func() {
+		for {
+			select {
+			case e, ok := <-events:
+				if !ok {
+					return
+				}
+				m.PublishSafetyEvent(e)
+			case <-m.ctx.Done():
+				return
+			}
+		}
+	}()
 }
 
 // Close stops the HTTP server and all background goroutines.

@@ -132,13 +132,21 @@ type TAPRIOEntry struct {
 }
 
 // TAPRIOConfig holds a TAPRIO gate control list derived from a StreamConfig.
-// Use TAPRIOFromStreams to build one, then TCCommand to generate the
-// corresponding tc(8) qdisc command.
+// Use TAPRIOFromStreams to build one; call TCCommand to get a tc(8) command
+// string, or call Apply (Linux only) to program the qdisc directly via netlink.
 type TAPRIOConfig struct {
 	// CycleTime is the total schedule cycle (sum of all stream intervals).
 	CycleTime time.Duration
 	// Entries is the ordered list of gate control entries.
 	Entries []TAPRIOEntry
+	// Interface is the network interface to configure (e.g., "eth0").
+	// Required when calling Apply.
+	Interface string
+	// BaseTime is the TAPRIO schedule base time in CLOCK_TAI nanoseconds.
+	// Zero means the kernel picks the next cycle boundary.
+	BaseTime int64
+	// Offload, when true, requests full hardware offload from the NIC.
+	Offload bool
 }
 
 // TAPRIOFromStreams derives a simple TAPRIO gate schedule from cfg.

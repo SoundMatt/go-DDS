@@ -10,6 +10,8 @@ package monitor_test
 //fusa:test REQ-MON-003
 //fusa:test REQ-MON-004
 //fusa:test REQ-MON-005
+//fusa:test REQ-MON-006
+//fusa:test REQ-MON-007
 
 import (
 	"bufio"
@@ -22,6 +24,7 @@ import (
 	dds "github.com/SoundMatt/go-DDS"
 	"github.com/SoundMatt/go-DDS/mock"
 	"github.com/SoundMatt/go-DDS/monitor"
+	"github.com/SoundMatt/go-DDS/safety"
 )
 
 func newMockParticipant(t *testing.T) dds.Participant {
@@ -476,5 +479,49 @@ func TestMonitor_DiscoveryMetrics_PushedOverSSE(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("expected at least one metrics or discovery event over SSE")
+	}
+}
+
+func TestMonitor_WatchSafety_SSE(t *testing.T) {
+	p := newMockParticipant(t)
+	defer p.Close()
+
+	mon, err := monitor.New(p, monitor.Options{Addr: ":0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mon.Close()
+
+	events := make(chan safety.SafetyEvent, 4)
+	mon.WatchSafety(events)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	resp, err := get(ctx, "http://"+mon.Addr()+"/events")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	// Send a safety event after the SSE connection is established.
+	time.Sleep(50 * time.Millisecond)
+	events <- safety.SafetyEvent{
+		Kind:    safety.SafetyEventCRCFailure,
+		Topic:   "test/topic",
+		Counter: 42,
+		Message: "test CRC failure",
+	}
+
+	scanner := bufio.NewScanner(resp.Body)
+	found := false
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, "crc_failure") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("expected safety SSE event with crc_failure kind")
 	}
 }
