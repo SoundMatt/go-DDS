@@ -587,7 +587,7 @@ See [ROADMAP.md](ROADMAP.md) for per-milestone goals, sub-items, and success cri
 **Released — v0.8 — Verification, Edge Performance, Safety**
 
 - [x] Topic recording to JSONL (`record.Recorder`) and deterministic replay (`record.Player`) — real-time, time-scaled, topic-filtered
-- [x] Fault injection wrapper (`record.FaultPublisher`) — packet loss, delay, corruption, duplication
+- [x] Fault injection wrapper (`record.FaultPublisher`) — packet loss, delay, corruption, duplication, reordering
 - [x] Allocation-free buffer recycling (`pool.BytePool`) and sample ring buffer (`pool.SampleBuffer`)
 - [x] E2E protection header (`safety.E2EPublisher` / `safety.E2ESubscriber`) — CRC-16/CCITT, sequence counter, configurable freshness window
 - [x] Deterministic queue with panic containment (`safety.DeterministicQueue`)
@@ -616,6 +616,16 @@ See [ROADMAP.md](ROADMAP.md) for per-milestone goals, sub-items, and success cri
 - [x] `GobCodec[T]` — stdlib binary codec complementing `JSONCodec[T]`
 - [x] `ErrQoSMismatch`, `ErrDeadlineMissed`, `ErrSampleRejected`, `ErrResourceLimits` sentinel errors
 - [x] `TypedSample[T]` gains `SequenceNumber` and `WriterGUID` fields
+
+**Released — v0.9.2 — ProtoCodec, Reorder Fault Injection, WithContext, Fuzz Coverage**
+
+- [x] `ProtoCodec[T proto.Message]` — Protocol Buffers codec complementing `JSONCodec[T]` and `GobCodec[T]`
+- [x] `FaultPublisher.ReorderWindow` — shuffle a window of N samples on emit, simulating out-of-order delivery
+- [x] `FaultPublisher.WriteCtx(ctx, payload)` — context-aware fault writes honouring deadline cancellation during delay
+- [x] `mock.WithContext(ctx)` / `rtps.WithContext(ctx)` — tie participant lifetime to a `context.Context`
+- [x] Fuzz targets for `security` (HMAC + AES-GCM round-trip and arbitrary-input safety)
+- [x] Fuzz targets for `rpc` wire format (reply/request dispatch robustness, round-trip)
+- [x] Fuzz targets for `ProtoCodec` (round-trip and arbitrary Unmarshal)
 
 **Planned — v0.10 — Routing and Protocol Bridge**
 

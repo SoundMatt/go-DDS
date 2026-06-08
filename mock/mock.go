@@ -25,6 +25,13 @@ import (
 	dds "github.com/SoundMatt/go-DDS"
 )
 
+// WithContext returns an Option that closes the participant when ctx is done.
+// This is the idiomatic Go shutdown pattern: pass a context with a cancel
+// function or deadline to tie the participant's lifetime to an outer scope.
+func WithContext(ctx context.Context) Option {
+	return func(p *participant) { p.cancelCtx = ctx }
+}
+
 // mockTopicCounter tracks per-topic publish/deliver/drop statistics in the broker.
 type mockTopicCounter struct {
 	writes   atomic.Uint64
@@ -258,6 +265,12 @@ func New(domain dds.Domain, opts ...Option) (dds.Participant, error) {
 		p.livelinessCb(p.guid, dds.LivelinessGained)
 	}
 	p.logf("new mock participant guid=%x domain=%d", p.guid, domain)
+	if p.cancelCtx != nil {
+		go func() {
+			<-p.cancelCtx.Done()
+			_ = p.Close()
+		}()
+	}
 	return p, nil
 }
 
@@ -271,6 +284,7 @@ type participant struct {
 	log          *slog.Logger
 	livelinessCb func(dds.GUID, dds.LivelinessEvent)
 	guid         dds.GUID
+	cancelCtx    context.Context
 }
 
 func (p *participant) logf(msg string, args ...any) {
