@@ -174,3 +174,78 @@ func TestHMACDiscoveryPlugin_DifferentTopics_DifferentTags(t *testing.T) {
 		t.Error("different topics must produce different endpoint tags")
 	}
 }
+
+// ── Rekey ─────────────────────────────────────────────────────────────────────
+
+func TestHMACDiscoveryPlugin_Rekey_ChangesOutput(t *testing.T) {
+	plugin := security.NewHMACDiscoveryPlugin([]byte("old-key"))
+	prefix := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
+
+	tagBefore := plugin.SignDiscovery(prefix)
+	plugin.Rekey([]byte("new-key"))
+	tagAfter := plugin.SignDiscovery(prefix)
+
+	if string(tagBefore) == string(tagAfter) {
+		t.Error("Rekey must produce a different tag")
+	}
+}
+
+func TestHMACDiscoveryPlugin_Rekey_VerifyWithNewKey(t *testing.T) {
+	plugin := security.NewHMACDiscoveryPlugin([]byte("old-key"))
+	prefix := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
+
+	plugin.Rekey([]byte("new-key"))
+	tag := plugin.SignDiscovery(prefix)
+	if !plugin.VerifyDiscovery(prefix, tag) {
+		t.Error("should verify own tag after Rekey")
+	}
+}
+
+func TestHMACDiscoveryPlugin_Rekey_OldTagInvalid(t *testing.T) {
+	plugin := security.NewHMACDiscoveryPlugin([]byte("old-key"))
+	prefix := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
+
+	oldTag := plugin.SignDiscovery(prefix)
+	plugin.Rekey([]byte("new-key"))
+
+	if plugin.VerifyDiscovery(prefix, oldTag) {
+		t.Error("tag signed with old key must be invalid after Rekey")
+	}
+}
+
+func TestHMACDiscoveryPlugin_Rekey_Endpoint(t *testing.T) {
+	plugin := security.NewHMACDiscoveryPlugin([]byte("old-key"))
+	prefix := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
+	topic := "sensors/temperature"
+
+	oldTag := plugin.SignEndpoint(prefix, topic)
+	plugin.Rekey([]byte("new-key"))
+	newTag := plugin.SignEndpoint(prefix, topic)
+
+	if string(oldTag) == string(newTag) {
+		t.Error("endpoint tag must change after Rekey")
+	}
+	if plugin.VerifyEndpoint(prefix, topic, oldTag) {
+		t.Error("old endpoint tag must be invalid after Rekey")
+	}
+	if !plugin.VerifyEndpoint(prefix, topic, newTag) {
+		t.Error("new endpoint tag must be valid after Rekey")
+	}
+}
+
+func TestHMACDiscoveryPlugin_Rekey_CopiesKey(t *testing.T) {
+	newKey := []byte("mutable-new-key")
+	plugin := security.NewHMACDiscoveryPlugin([]byte("old-key"))
+	plugin.Rekey(newKey)
+
+	prefix := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
+	tagBefore := plugin.SignDiscovery(prefix)
+
+	// Mutate the key slice after Rekey.
+	newKey[0] = 0xFF
+	tagAfter := plugin.SignDiscovery(prefix)
+
+	if string(tagBefore) != string(tagAfter) {
+		t.Error("Rekey must copy the key; external mutation must not affect plugin")
+	}
+}

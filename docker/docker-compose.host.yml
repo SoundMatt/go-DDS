@@ -1,0 +1,24 @@
+# Override to use host networking on Linux for multicast discovery.
+# Merges with docker-compose.yml:
+#
+#   docker compose \
+#     -f docker/docker-compose.yml \
+#     -f docker/docker-compose.host.yml \
+#     up --build
+
+services:
+  monitor:
+    network_mode: host
+    ports: !reset []        # host mode exposes all ports directly
+    environment:
+      DDS_PEERS: ""         # reset: use multicast discovery
+
+  pub:
+    network_mode: host
+    environment:
+      DDS_PEERS: ""
+
+  sub:
+    network_mode: host
+    environment:
+      DDS_PEERS: ""

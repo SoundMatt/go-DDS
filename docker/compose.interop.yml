@@ -1,0 +1,52 @@
+# go-DDS interop quickstart — proves wire compatibility with CycloneDDS.
+#
+# Extends docker-compose.yml to add a CycloneDDS peer container on the same
+# bridge network. The go-DDS pub container publishes on sensors/temperature;
+# the CycloneDDS subscriber receives it, and vice-versa.
+#
+# Usage:
+#   docker compose \
+#     -f docker/docker-compose.yml \
+#     -f docker/compose.interop.yml \
+#     up --build
+#
+# The cyclone-sub service prints received samples from the go-DDS publisher;
+# cyclone-pub emits samples that the go-DDS sub container receives.
+#
+# Note: discovery uses CYCLONEDDS_URI to disable multicast and set static
+# peers pointing at the go-DDS monitor container's unicast port.
+
+networks:
+  dds:
+    driver: bridge
+
+services:
+  # CycloneDDS subscriber — receives from the go-DDS pub container.
+  cyclone-sub:
+    image: eclipse-cyclonedds/cyclonedds:latest
+    networks:
+      - dds
+    environment:
+      - CYCLONEDDS_URI=<CycloneDDS><Domain><Id>0</Id><Discovery><Peers><Peer address="monitor"/><Peer address="pub"/></Peers><EnableMulticast>false</EnableMulticast></Discovery></Domain></CycloneDDS>
+    command: >
+      sh -c "
+        sleep 3 &&
+        ddsperf -D 0 sub T:sensors/temperature Qos:r:1k:e:1 -n 10
+      "
+    depends_on:
+      - pub
+
+  # CycloneDDS publisher — publishes samples that the go-DDS sub picks up.
+  cyclone-pub:
+    image: eclipse-cyclonedds/cyclonedds:latest
+    networks:
+      - dds
+    environment:
+      - CYCLONEDDS_URI=<CycloneDDS><Domain><Id>0</Id><Discovery><Peers><Peer address="monitor"/><Peer address="sub"/></Peers><EnableMulticast>false</EnableMulticast></Discovery></Domain></CycloneDDS>
+    command: >
+      sh -c "
+        sleep 3 &&
+        ddsperf -D 0 pub T:sensors/temperature Qos:r:1k:e:1 z:32 n:10
+      "
+    depends_on:
+      - sub

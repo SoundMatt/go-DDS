@@ -13,6 +13,8 @@
 //
 //	DDS_DOMAIN     DDS domain ID (default: 0)
 //	MONITOR_ADDR   HTTP listen address (default: :8080)
+//	DDS_PEERS      Comma-separated static peer addresses for bridge networking
+//	               (e.g. "pub:7400,sub:7400"). When set, multicast is disabled.
 package main
 
 import (
@@ -21,6 +23,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 
 	dds "github.com/SoundMatt/go-DDS"
@@ -43,7 +46,14 @@ func main() {
 		addr = s
 	}
 
-	p, err := rtps.New(domain)
+	var opts []rtps.Option
+	if peers := os.Getenv("DDS_PEERS"); peers != "" {
+		addrs := strings.Split(peers, ",")
+		opts = append(opts, rtps.WithNoMulticast(), rtps.WithStaticPeers(addrs...))
+		log.Printf("unicast mode, peers: %v", addrs)
+	}
+
+	p, err := rtps.New(domain, opts...)
 	if err != nil {
 		log.Fatalf("rtps.New(domain=%d): %v", domain, err)
 	}

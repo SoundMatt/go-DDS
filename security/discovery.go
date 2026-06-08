@@ -8,6 +8,7 @@ package security
 import (
 	"crypto/hmac"
 	"crypto/sha256"
+	"sync"
 )
 
 // DiscoveryPlugin signs and verifies SPDP participant-discovery announcements.
@@ -35,6 +36,7 @@ const discoveryContext = "go-dds-discovery-v1"
 //	plugin := security.NewHMACDiscoveryPlugin([]byte("shared-secret"))
 //	p, err := rtps.New(0, rtps.WithDiscoverySecurity(plugin))
 type HMACDiscoveryPlugin struct {
+	mu  sync.RWMutex
 	key []byte
 }
 
@@ -46,8 +48,22 @@ func NewHMACDiscoveryPlugin(key []byte) *HMACDiscoveryPlugin {
 	return &HMACDiscoveryPlugin{key: k}
 }
 
+// Rekey atomically replaces the HMAC key. Ongoing sign/verify operations
+// complete before the key is swapped; subsequent operations use the new key.
+// The new key is copied; the caller may discard or reuse the slice.
+func (h *HMACDiscoveryPlugin) Rekey(newKey []byte) {
+	k := make([]byte, len(newKey))
+	copy(k, newKey)
+	h.mu.Lock()
+	h.key = k
+	h.mu.Unlock()
+}
+
 func (h *HMACDiscoveryPlugin) sign(guidPrefix []byte) []byte {
-	mac := hmac.New(sha256.New, h.key)
+	h.mu.RLock()
+	key := h.key
+	h.mu.RUnlock()
+	mac := hmac.New(sha256.New, key)
 	_, _ = mac.Write([]byte(discoveryContext))
 	_, _ = mac.Write(guidPrefix)
 	return mac.Sum(nil)
@@ -71,7 +87,10 @@ const endpointContext = "go-dds-endpoint-v1"
 // SignEndpoint returns an HMAC-SHA-256 tag for the endpoint identified by
 // guidPrefix and topic. Implements rtps.EndpointPlugin.
 func (h *HMACDiscoveryPlugin) SignEndpoint(guidPrefix []byte, topic string) []byte {
-	mac := hmac.New(sha256.New, h.key)
+	h.mu.RLock()
+	key := h.key
+	h.mu.RUnlock()
+	mac := hmac.New(sha256.New, key)
 	_, _ = mac.Write([]byte(endpointContext))
 	_, _ = mac.Write(guidPrefix)
 	_, _ = mac.Write([]byte(topic))

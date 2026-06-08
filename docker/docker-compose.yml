@@ -1,7 +1,8 @@
 # go-DDS quickstart — multi-process DDS in under two minutes.
 #
-# All containers run on host networking so that RTPS UDP multicast discovery
-# works across processes without additional multicast routing configuration.
+# Uses a named bridge network so this works on macOS and Windows Docker
+# Desktop (where network_mode: host is unavailable). Each container discovers
+# its peers via static unicast addresses using DDS_PEERS + WithNoMulticast.
 #
 # Usage:
 #   docker compose -f docker/docker-compose.yml up --build
@@ -9,6 +10,13 @@
 # Then open http://localhost:8080 to view the live monitor dashboard.
 # The pub container publishes a temperature reading every second; the sub
 # container logs each received sample to stdout.
+#
+# Linux host networking (optional — faster multicast discovery):
+#   docker compose -f docker/docker-compose.yml -f docker/docker-compose.host.yml up --build
+
+networks:
+  dds:
+    driver: bridge
 
 services:
   monitor:
@@ -16,10 +24,14 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
       target: monitor
-    network_mode: host
+    networks:
+      - dds
+    ports:
+      - "8080:8080"
     environment:
       - MONITOR_ADDR=:8080
       - DDS_DOMAIN=0
+      - DDS_PEERS=pub:7400,sub:7400
     restart: unless-stopped
 
   pub:
@@ -27,9 +39,11 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
       target: pub
-    network_mode: host
+    networks:
+      - dds
     environment:
       - DDS_DOMAIN=0
+      - DDS_PEERS=monitor:7400,sub:7400
     restart: unless-stopped
     depends_on:
       - monitor
@@ -39,9 +53,11 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
       target: sub
-    network_mode: host
+    networks:
+      - dds
     environment:
       - DDS_DOMAIN=0
+      - DDS_PEERS=monitor:7400,pub:7400
     restart: unless-stopped
     depends_on:
       - monitor
