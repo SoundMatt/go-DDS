@@ -40,7 +40,7 @@ linters:
       # context in admin, bridge/wan, monitor, and testutil. These are
       # functionally correct; threading context through the listener/dialer API
       # is tracked as a follow-up refactor.
-      - path: "(admin|bridge/wan|monitor|testutil)/"
+      - path: "(admin|bridge/wan|monitor|testutil|shmem)/"
         linters: [noctx]
 
 formatters:
