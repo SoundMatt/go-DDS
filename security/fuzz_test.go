@@ -99,10 +99,10 @@ func FuzzHMACOpenArbitrary(f *testing.F) {
 func FuzzAESGCMOpenArbitrary(f *testing.F) {
 	f.Add([]byte(""))
 	f.Add([]byte("short"))
-	f.Add(make([]byte, 12))     // exactly nonce length, no ciphertext+tag
-	f.Add(make([]byte, 27))     // nonce + tag - 1
-	f.Add(make([]byte, 28))     // nonce(12) + tag(16) = minimum valid length
-	f.Add(make([]byte, 256))    // plausible ciphertext
+	f.Add(make([]byte, 12))  // exactly nonce length, no ciphertext+tag
+	f.Add(make([]byte, 27))  // nonce + tag - 1
+	f.Add(make([]byte, 28))  // nonce(12) + tag(16) = minimum valid length
+	f.Add(make([]byte, 256)) // plausible ciphertext
 
 	key := security.NewRandomKey(32)
 	p, err := security.NewAESGCMPlugin(key)

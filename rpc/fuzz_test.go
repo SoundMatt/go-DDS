@@ -27,8 +27,8 @@ import (
 func FuzzRPCReplyDispatch(f *testing.F) {
 	f.Add([]byte(""))
 	f.Add([]byte("tooshort"))
-	f.Add(make([]byte, 16))       // exactly a CorrelationID with no payload
-	f.Add(make([]byte, 32))       // CorrelationID + 16-byte body
+	f.Add(make([]byte, 16)) // exactly a CorrelationID with no payload
+	f.Add(make([]byte, 32)) // CorrelationID + 16-byte body
 	f.Add([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'x'})
 
 	f.Fuzz(func(t *testing.T, data []byte) {
@@ -61,8 +61,8 @@ func FuzzRPCReplyDispatch(f *testing.F) {
 func FuzzRPCRequestDispatch(f *testing.F) {
 	f.Add([]byte(""))
 	f.Add([]byte("short"))
-	f.Add(make([]byte, 16))  // correlation ID only
-	f.Add(make([]byte, 32))  // correlation ID + 16-byte body (not valid JSON)
+	f.Add(make([]byte, 16))                                     // correlation ID only
+	f.Add(make([]byte, 32))                                     // correlation ID + 16-byte body (not valid JSON)
 	f.Add(append(make([]byte, 16), []byte(`{"A":1,"B":2}`)...)) // valid RPC frame
 
 	f.Fuzz(func(t *testing.T, data []byte) {

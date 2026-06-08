@@ -26,6 +26,7 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
 	"sync"
 	"time"
@@ -647,6 +648,9 @@ func (ProtoCodec[T]) Marshal(v T) ([]byte, error) {
 // Unmarshal decodes data from protobuf wire format into a new T.
 func (ProtoCodec[T]) Unmarshal(data []byte) (T, error) {
 	var zero T
-	msg := reflect.New(reflect.TypeOf(zero).Elem()).Interface().(T)
+	msg, ok := reflect.New(reflect.TypeOf(zero).Elem()).Interface().(T)
+	if !ok {
+		return zero, fmt.Errorf("dds: ProtoCodec[%T]: type assertion failed", zero)
+	}
 	return msg, proto.Unmarshal(data, msg)
 }
