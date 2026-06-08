@@ -448,6 +448,17 @@ func (p *participant) NewSubscriber(topic string, qos dds.QoS, opts ...dds.Subsc
 		filter:       cfg.Filter,
 		backPressure: cfg.BackPressure,
 	}
+	if qos.Deadline > 0 && cfg.DeadlineMissedCallback != nil {
+		fn := cfg.DeadlineMissedCallback
+		dur := qos.Deadline
+		var tp atomic.Pointer[time.Timer]
+		tp.Store(time.AfterFunc(dur, func() {
+			fn()
+			tp.Load().Reset(dur)
+		}))
+		r.deadlineTimer = tp.Load()
+		r.resetDeadline = func() { tp.Load().Reset(dur) }
+	}
 	p.log.debug("new subscriber topic=%s depth=%d backpressure=%d", topic, depth, cfg.BackPressure)
 	p.readers[eid] = r
 	p.sedp.registerReader(eid, topic, r)
@@ -692,7 +703,7 @@ func (p *participant) handleDataPacket(data []byte, from *net.UDPAddr) {
 			}
 			sourceGUID := GUID{Prefix: hdr.GuidPrefix, Entity: ds.WriterEntityId}
 			p.notifyReliableReaders(sourceGUID, ds.SeqNum, from)
-			p.dispatchToReaders(sourceGUID, "", rawPayload, pendingTS)
+			p.dispatchToReaders(sourceGUID, "", rawPayload, pendingTS, uint64(ds.SeqNum.Low))
 
 		case submsgHEARTBEAT:
 			hb, ok := parseHeartbeat(body)
@@ -854,12 +865,17 @@ func (p *participant) handleAckNack(an AckNack, from *net.UDPAddr) {
 // whose accept-list includes source. topicFilter="" disables topic filtering
 // (used for UDP paths where the topic is resolved via SEDP source GUID).
 // ts is the source timestamp from INFO_TS (zero if not present).
-func (p *participant) dispatchToReaders(source GUID, topicFilter string, payload []byte, ts time.Time) {
+// seqNum is the writer's sequence number for this sample (0 = not set).
+func (p *participant) dispatchToReaders(source GUID, topicFilter string, payload []byte, ts time.Time, seqNum uint64) {
 	ctx, span := p.tracer.Start(context.Background(), "dds.dispatch",
 		dds.SpanAttribute{Key: "topic", Value: topicFilter},
 	)
 	defer span.End()
 	_ = ctx
+
+	var writerDDS dds.GUID
+	copy(writerDDS[:12], source.Prefix[:])
+	copy(writerDDS[12:], source.Entity[:])
 
 	p.mu.Lock()
 	readers := make([]*rtpsReader, 0, len(p.readers))
@@ -869,13 +885,19 @@ func (p *participant) dispatchToReaders(source GUID, topicFilter string, payload
 	p.mu.Unlock()
 
 	for _, r := range readers {
-		if topicFilter != "" && r.topic != topicFilter {
+		if topicFilter != "" && r.topic != topicFilter && !TopicMatches(r.topic, topicFilter) {
 			continue
 		}
 		if !r.acceptsSource(source) {
 			continue
 		}
-		sample := dds.Sample{Topic: r.topic, Payload: payload, Timestamp: ts}
+		sample := dds.Sample{
+			Topic:          r.topic,
+			Payload:        payload,
+			Timestamp:      ts,
+			WriterGUID:     writerDDS,
+			SequenceNumber: seqNum,
+		}
 		if r.filter != nil && !r.filter(sample) {
 			continue
 		}
@@ -887,6 +909,7 @@ func (p *participant) dispatchToReaders(source GUID, topicFilter string, payload
 func (p *participant) deliverToReader(r *rtpsReader, sample dds.Sample) {
 	byteLen := uint64(len(sample.Payload))
 	tc := p.topicCounterFor(r.topic)
+	delivered := false
 	switch r.backPressure {
 	case dds.DropOldest:
 		select {
@@ -895,6 +918,7 @@ func (p *participant) deliverToReader(r *rtpsReader, sample dds.Sample) {
 			p.mBytesDeliv.Add(byteLen)
 			tc.delivers.Add(1)
 			tc.bytesD.Add(byteLen)
+			delivered = true
 		default:
 			select {
 			case <-r.ch:
@@ -908,6 +932,7 @@ func (p *participant) deliverToReader(r *rtpsReader, sample dds.Sample) {
 				p.mBytesDeliv.Add(byteLen)
 				tc.delivers.Add(1)
 				tc.bytesD.Add(byteLen)
+				delivered = true
 			default:
 				p.mDrops.Add(1)
 				tc.drops.Add(1)
@@ -919,6 +944,7 @@ func (p *participant) deliverToReader(r *rtpsReader, sample dds.Sample) {
 		p.mBytesDeliv.Add(byteLen)
 		tc.delivers.Add(1)
 		tc.bytesD.Add(byteLen)
+		delivered = true
 	default: // DropNewest
 		select {
 		case r.ch <- sample:
@@ -926,10 +952,14 @@ func (p *participant) deliverToReader(r *rtpsReader, sample dds.Sample) {
 			p.mBytesDeliv.Add(byteLen)
 			tc.delivers.Add(1)
 			tc.bytesD.Add(byteLen)
+			delivered = true
 		default:
 			p.mDrops.Add(1)
 			tc.drops.Add(1)
 		}
+	}
+	if delivered && r.resetDeadline != nil {
+		r.resetDeadline()
 	}
 }
 
@@ -1116,7 +1146,7 @@ func (w *rtpsWriter) Write(payload []byte) error {
 	sample := dds.Sample{Topic: w.topic, Payload: localCopy, Timestamp: now}
 	w.p.lastSample.Store(w.topic, &sample)
 	persistFlush(w.p.persistDir, w.topic, localCopy)
-	w.p.dispatchToReaders(GUID{Prefix: w.p.guidPrefix, Entity: w.eid}, w.topic, localCopy, now)
+	w.p.dispatchToReaders(GUID{Prefix: w.p.guidPrefix, Entity: w.eid}, w.topic, localCopy, now, uint64(w.seqLo))
 
 	// Deliver to remote peers.
 	locs := w.p.matchedReaderLocators(w.topic)
@@ -1277,18 +1307,20 @@ func (w *rtpsWriter) Close() error {
 // ── Reader ────────────────────────────────────────────────────────────────────
 
 type rtpsReader struct {
-	p            *participant
-	topic        string
-	eid          EntityId
-	ch           chan dds.Sample
-	mu           sync.RWMutex
-	sources      map[GUID]struct{}     // SEDP-matched remote writer GUIDs
-	trackers     map[GUID]*recvTracker // reliability trackers, one per remote writer
-	reliable     bool
-	filter       func(dds.Sample) bool // nil = no filter
-	backPressure dds.BackPressurePolicy
-	unsubOnce    sync.Once // guards deregistration from the participant
-	closeOnce    sync.Once // guards channel close
+	p             *participant
+	topic         string
+	eid           EntityId
+	ch            chan dds.Sample
+	mu            sync.RWMutex
+	sources       map[GUID]struct{}     // SEDP-matched remote writer GUIDs
+	trackers      map[GUID]*recvTracker // reliability trackers, one per remote writer
+	reliable      bool
+	filter        func(dds.Sample) bool // nil = no filter
+	backPressure  dds.BackPressurePolicy
+	unsubOnce     sync.Once   // guards deregistration from the participant
+	closeOnce     sync.Once   // guards channel close
+	resetDeadline func()      // nil if no deadline configured
+	deadlineTimer *time.Timer // non-nil when QoS.Deadline > 0 and callback set
 }
 
 func (r *rtpsReader) addSourceGUID(g GUID) {
@@ -1330,11 +1362,27 @@ func (r *rtpsReader) acceptsSource(g GUID) bool {
 
 func (r *rtpsReader) C() <-chan dds.Sample { return r.ch }
 
+// TryRead attempts a non-blocking read. Returns (zero, false) if empty or closed.
+func (r *rtpsReader) TryRead() (dds.Sample, bool) {
+	select {
+	case s, ok := <-r.ch:
+		if !ok {
+			return dds.Sample{}, false
+		}
+		return s, true
+	default:
+		return dds.Sample{}, false
+	}
+}
+
 // Unsubscribe removes this reader from the participant's endpoint registry so
 // no new samples are dispatched. The channel remains open; call Close to also
 // close the channel and release all reader resources.
 func (r *rtpsReader) Unsubscribe() error {
 	r.unsubOnce.Do(func() {
+		if r.deadlineTimer != nil {
+			r.deadlineTimer.Stop()
+		}
 		r.p.mu.Lock()
 		delete(r.p.readers, r.eid)
 		r.p.mu.Unlock()
@@ -1344,6 +1392,11 @@ func (r *rtpsReader) Unsubscribe() error {
 
 func (r *rtpsReader) Close() error {
 	_ = r.Unsubscribe()
-	r.closeOnce.Do(func() { close(r.ch) })
+	r.closeOnce.Do(func() {
+		if r.deadlineTimer != nil {
+			r.deadlineTimer.Stop()
+		}
+		close(r.ch)
+	})
 	return nil
 }

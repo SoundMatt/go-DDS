@@ -307,6 +307,19 @@ func (s *subscriber) pollLoop() {
 
 func (s *subscriber) C() <-chan dds.Sample { return s.ch }
 
+// TryRead attempts a non-blocking read. Returns (zero, false) if empty or closed.
+func (s *subscriber) TryRead() (dds.Sample, bool) {
+	select {
+	case sample, ok := <-s.ch:
+		if !ok {
+			return dds.Sample{}, false
+		}
+		return sample, true
+	default:
+		return dds.Sample{}, false
+	}
+}
+
 // Unsubscribe stops the poll loop and deletes the CycloneDDS reader entity
 // without closing the channel. No new samples are delivered after this call.
 func (s *subscriber) Unsubscribe() error {

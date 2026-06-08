@@ -46,6 +46,7 @@ API parity does not.
 | v0.7 | 2, 7 | Developer Experience + Deterministic Networking ✅ |
 | v0.8 | 3, 5, 6 | Verification, Edge Performance, Safety ✅ |
 | v0.9 | 8, 9, 10 | Enterprise Security, Dynamic Data, Services ✅ |
+| v0.9.1 | — | Spec Completeness & Go Idioms ✅ |
 | v0.10 | — | Routing, Context API, Secure Discovery |
 | v0.11 | — | Docker Quickstart |
 
@@ -60,6 +61,7 @@ API parity does not.
 - **v0.7** — Test harness helpers (`testutil/`), CLI tool (`cmd/ddstool` — pub/sub/discover), TSN TAPRIO diagnostics (`tsn.HealthTracker`, `tsn.TAPRIOConfig`), CI upgraded to Node.js 24 + golangci-lint v2
 - **v0.8** — Topic recording/replay (`record.Recorder`/`Player`/`FaultPublisher`), allocation-free buffer recycling (`pool.BytePool`/`SampleBuffer`), E2E protection header + deterministic queue (`safety.E2EPublisher`/`E2ESubscriber`/`DeterministicQueue`)
 - **v0.9** — Enterprise security (`security.CertPlugin`/`AccessPolicy`/`ReplayGuard`), dynamic data (`xtypes.TypeObject`/`DynamicData`/`TypeRegistry`), domain bridge, WAN bridge, admin HTTP API, managed services (`RecorderService`/`ReplayService`/`MonitorService`); `Participant.Domain()`, `Publisher.WriteCtx()`, `Subscriber.Unsubscribe()`, `mock.IsolatedBroker()`, HMAC-authenticated SPDP discovery
+- **v0.9.1** — `Sample.SequenceNumber` + `Sample.WriterGUID` on all transports; `Subscriber.TryRead()` non-blocking read; active subscriber Deadline enforcement (`WithDeadlineMissed`); wildcard subscriptions in rtps+shmem; `rpc.Requester[Req,Rep]`/`Replier[Req,Rep]` (OMG DDS-RPC); `GobCodec[T]`; `ErrQoSMismatch`/`ErrDeadlineMissed`/`ErrSampleRejected`/`ErrResourceLimits` sentinels
 
 ---
 
@@ -448,7 +450,31 @@ Large deployments can be operated without custom infrastructure.
 
 ---
 
-## Milestone 11 — Docker Quickstart `v0.11`
+## Milestone 11 — Spec Completeness & Go Idioms `v0.9.1`
+
+Goal:
+Fill the gaps between "works for demos" and "expected by any DDS user or Go developer." Every item here is either mandated by the OMG DDS spec or is a standard idiom in modern Go pub/sub libraries.
+
+### Core DDS (spec-required)
+
+- **Sample metadata** — sequence number, writer GUID, and source timestamp carried on every `Sample`; required by the core DDS data model
+- **Transient-local durability** — late-joiner history delivery across transports (already live in mock/shmem; complete for rtps)
+- **Deadline QoS enforcement** — active enforcement: publisher deadline-missed event + subscriber deadline-missed event; current callback registration is passive only
+- **Content-filtered / wildcard subscriptions** — MQTT-style `+` / `#` wildcard topic matching (already live in mock; extend to rtps and shmem)
+- **Request-reply (Requester/Replier)** — OMG DDS-RPC pattern: typed `Requester[Req, Rep]` and `Replier[Req, Rep]` built on two topics; the standard Go-native RPC-over-DDS API
+
+### Go Idioms (expected in any modern Go library)
+
+- **`Subscriber.TryRead()`** — non-blocking read; returns `(Sample, bool)` without blocking on the channel; standard complement to the blocking `C()` channel
+- **Richer error sentinels** — `ErrQoSMismatch`, `ErrDeadlineMissed`, `ErrSampleRejected`, `ErrResourceLimits`; `errors.Is`-friendly throughout
+- **Protobuf codec** — `proto.Codec[T]` alongside the existing `json.Codec[T]`; industry default for binary pub/sub
+
+Success Criteria:
+A developer familiar with the OMG DDS spec or with standard Go networking libraries finds no surprising omissions.
+
+---
+
+## Milestone 12 — Docker Quickstart `v0.11`
 
 Goal:
 Let a developer experience working multi-process DDS in under two minutes with no Go toolchain required.
@@ -477,6 +503,26 @@ Let a developer experience working multi-process DDS in under two minutes with n
 
 Success Criteria:
 A developer can see DDS samples flowing in a browser within two minutes of cloning the repo.
+
+### Dev Container
+
+- `.devcontainer/devcontainer.json` with Go toolchain, golangci-lint, and recommended VS Code extensions pre-installed
+- Works in GitHub Codespaces and VS Code Dev Containers with zero local setup
+- Same container image re-used for CI to guarantee dev/CI parity
+
+### Examples
+
+- `examples/` directory with self-contained, runnable programs
+- `examples/sensor-pipeline/` — periodic publisher + aggregating subscriber (temperature telemetry pattern)
+- `examples/command-response/` — request/reply over two topics (RPC-over-DDS pattern)
+- `examples/secure-topic/` — HMAC discovery + AES topic encryption end-to-end
+- Each example has its own `README.md` with a `go run .` quickstart
+
+### Interop Scene
+
+- `compose.interop.yml` adds a FastDDS or CycloneDDS container to the quickstart compose file
+- Proves wire compatibility: go-DDS publisher, third-party subscriber (and vice-versa) exchange samples on the same topic
+- Documents any QoS or transport constraints required for cross-implementation discovery
 
 ---
 

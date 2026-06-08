@@ -17,10 +17,10 @@ import (
 	"time"
 )
 
-func setSockPriority(_ *net.UDPConn, _ int) error  { return nil }
-func setSockTOS(_ *net.UDPConn, _ uint8) error     { return nil }
-func enableTxTime(_ *net.UDPConn) error            { return nil }
-func clockTAINow() (time.Time, error)              { return time.Now(), nil }
+func setSockPriority(_ *net.UDPConn, _ int) error { return nil }
+func setSockTOS(_ *net.UDPConn, _ uint8) error    { return nil }
+func enableTxTime(_ *net.UDPConn) error           { return nil }
+func clockTAINow() (time.Time, error)             { return time.Now(), nil }
 
 func scheduledSend(conn *net.UDPConn, dst *net.UDPAddr, data []byte, _ uint64) error {
 	_, err := conn.WriteToUDP(data, dst)

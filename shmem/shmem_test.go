@@ -438,3 +438,178 @@ func TestSubscriberUnsubscribe_Shmem(t *testing.T) {
 	_ = sub.Close()
 	_ = sub.Close() // idempotent close
 }
+
+// ── v0.9.1 additions ──────────────────────────────────────────────────────────
+
+func TestTryRead_Empty_Shmem(t *testing.T) {
+	p := newPart(t)
+	sub, _ := p.NewSubscriber("shmem/tryread/empty", dds.DefaultQoS)
+	defer sub.Close()
+
+	_, ok := sub.TryRead()
+	if ok {
+		t.Error("TryRead on empty channel must return false")
+	}
+}
+
+func TestTryRead_HasSample_Shmem(t *testing.T) {
+	p := newPart(t)
+	sub, _ := p.NewSubscriber("shmem/tryread/has", dds.DefaultQoS)
+	defer sub.Close()
+	pub, _ := p.NewPublisher("shmem/tryread/has", dds.DefaultQoS)
+	defer pub.Close()
+
+	_ = pub.Write([]byte("ready"))
+
+	var s dds.Sample
+	var ok bool
+	for i := 0; i < 20; i++ {
+		s, ok = sub.TryRead()
+		if ok {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if !ok {
+		t.Fatal("TryRead must return true after Write")
+	}
+	if string(s.Payload) != "ready" {
+		t.Errorf("payload: got %q, want ready", s.Payload)
+	}
+}
+
+func TestSequenceNumber_Shmem(t *testing.T) {
+	p := newPart(t)
+	// WithChannelDepth large enough for in-process + cross-process duplicates.
+	sub, _ := p.NewSubscriber("shmem/seqnum", dds.DefaultQoS, dds.WithChannelDepth(8))
+	defer sub.Close()
+	pub, _ := p.NewPublisher("shmem/seqnum", dds.DefaultQoS)
+	defer pub.Close()
+
+	_ = pub.Write([]byte("a"))
+	_ = pub.Write([]byte("b"))
+
+	// Collect samples for up to 500 ms; the shmem subscriber delivers each
+	// write twice (in-process broker + cross-process shmListener), so we may
+	// receive 4 samples total. Only in-process broker samples carry a non-zero
+	// SequenceNumber; filter to those and verify monotonic increase.
+	deadline := time.After(500 * time.Millisecond)
+	var numbered []uint64
+	for len(numbered) < 2 {
+		select {
+		case s := <-sub.C():
+			if s.SequenceNumber > 0 {
+				numbered = append(numbered, s.SequenceNumber)
+			}
+		case <-deadline:
+			t.Fatalf("timeout: only collected %d numbered samples", len(numbered))
+		}
+	}
+	if numbered[1] <= numbered[0] {
+		t.Errorf("SequenceNumber must increase: %d then %d", numbered[0], numbered[1])
+	}
+}
+
+func TestWriterGUID_Shmem(t *testing.T) {
+	p := newPart(t)
+	sub, _ := p.NewSubscriber("shmem/writerguid", dds.DefaultQoS, dds.WithChannelDepth(8))
+	defer sub.Close()
+	pub, _ := p.NewPublisher("shmem/writerguid", dds.DefaultQoS)
+	defer pub.Close()
+
+	_ = pub.Write([]byte("a"))
+	_ = pub.Write([]byte("b"))
+
+	// Cross-process shmem re-deliveries arrive with WriterGUID=zero; filter to
+	// in-process broker samples which carry the real GUID.
+	var zero dds.GUID
+	deadline := time.After(500 * time.Millisecond)
+	var guids []dds.GUID
+	for len(guids) < 2 {
+		select {
+		case s := <-sub.C():
+			if s.WriterGUID != zero {
+				guids = append(guids, s.WriterGUID)
+			}
+		case <-deadline:
+			t.Fatalf("timeout: only collected %d GUID samples", len(guids))
+		}
+	}
+	if guids[0] != guids[1] {
+		t.Errorf("WriterGUID must be consistent per publisher: %x vs %x", guids[0], guids[1])
+	}
+}
+
+func TestWildcard_Shmem(t *testing.T) {
+	p := newPart(t)
+
+	sub, err := p.NewSubscriber("shmem/+/val", dds.DefaultQoS, dds.WithChannelDepth(4))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+
+	pub1, _ := p.NewPublisher("shmem/1/val", dds.DefaultQoS)
+	defer pub1.Close()
+	pub2, _ := p.NewPublisher("shmem/2/val", dds.DefaultQoS)
+	defer pub2.Close()
+	pubNo, _ := p.NewPublisher("shmem/1/other", dds.DefaultQoS)
+	defer pubNo.Close()
+
+	_ = pub1.Write([]byte("one"))
+	_ = pub2.Write([]byte("two"))
+	_ = pubNo.Write([]byte("no"))
+
+	received := 0
+	timeout := time.After(500 * time.Millisecond)
+loop:
+	for {
+		select {
+		case s := <-sub.C():
+			if string(s.Payload) == "no" {
+				t.Error("received sample from non-matching topic")
+			}
+			received++
+			if received >= 2 {
+				break loop
+			}
+		case <-timeout:
+			break loop
+		}
+	}
+
+	if received < 2 {
+		t.Errorf("expected 2 matching samples, got %d", received)
+	}
+}
+
+func TestDeadline_Shmem(t *testing.T) {
+	fired := make(chan struct{}, 1)
+	p, err := shmem.New(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+
+	qos := dds.DefaultQoS
+	qos.Deadline = 50 * time.Millisecond
+
+	sub, err := p.NewSubscriber("shmem/deadline", qos,
+		dds.WithDeadlineMissed(func() {
+			select {
+			case fired <- struct{}{}:
+			default:
+			}
+		}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+
+	select {
+	case <-fired:
+	case <-time.After(time.Second):
+		t.Fatal("DeadlineMissedCallback did not fire")
+	}
+}

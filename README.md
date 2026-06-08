@@ -606,6 +606,17 @@ See [ROADMAP.md](ROADMAP.md) for per-milestone goals, sub-items, and success cri
 - [x] `mock.IsolatedBroker()` — per-test broker isolation, eliminates cross-test echo loops
 - [x] `HMACDiscoveryPlugin` + `rtps.WithDiscoverySecurity()` — HMAC-SHA-256 authenticated SPDP announcements
 
+**Released — v0.9.1 — Spec Completeness and Go Idioms**
+
+- [x] `Sample.SequenceNumber` and `Sample.WriterGUID` — per-writer monotonic counter and endpoint identity on all transports (mock, shmem, rtps)
+- [x] `Subscriber.TryRead()` — non-blocking read on all transports (mock, shmem, rtps, cyclone)
+- [x] Active subscriber Deadline QoS enforcement — `WithDeadlineMissed(fn)` fires callback when no sample arrives within `QoS.Deadline` period
+- [x] Wildcard subscriptions in rtps and shmem transports (MQTT-style `+` and `#`)
+- [x] `rpc` package — OMG DDS-RPC style request-reply via `Requester[Req,Rep]` and `Replier[Req,Rep]`
+- [x] `GobCodec[T]` — stdlib binary codec complementing `JSONCodec[T]`
+- [x] `ErrQoSMismatch`, `ErrDeadlineMissed`, `ErrSampleRejected`, `ErrResourceLimits` sentinel errors
+- [x] `TypedSample[T]` gains `SequenceNumber` and `WriterGUID` fields
+
 **Planned — v0.10 — Routing and Protocol Bridge**
 
 - [ ] Protocol bridge — DDS ↔ gRPC/REST gateway
