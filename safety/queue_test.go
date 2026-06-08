@@ -66,7 +66,7 @@ func TestDeterministicQueue_Full_ReturnsErrQueueFull(t *testing.T) {
 	// Depth 1, no Start — drain goroutine not running so channel fills immediately.
 	q := safety.NewDeterministicQueue(pub, 1)
 
-	if err := q.Enqueue([]byte("a")); err != nil {
+	if enqErr := q.Enqueue([]byte("a")); enqErr != nil {
 		t.Fatalf("first Enqueue: unexpected error: %v", err)
 	}
 	err = q.Enqueue([]byte("b"))

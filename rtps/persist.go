@@ -44,8 +44,8 @@ func persistLoad(dir, topic string) ([]byte, error) {
 	}
 	defer f.Close()
 	var length uint32
-	if err := binary.Read(f, binary.LittleEndian, &length); err != nil {
-		return nil, err
+	if readErr := binary.Read(f, binary.LittleEndian, &length); readErr != nil {
+		return nil, readErr
 	}
 	if length > 64*1024*1024 {
 		return nil, fmt.Errorf("persist: payload %d bytes exceeds 64 MiB cap", length)

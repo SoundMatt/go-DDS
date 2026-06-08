@@ -246,8 +246,8 @@ func TestFaultPublisher_WriteAfterClose_ReturnsError(t *testing.T) {
 		t.Fatalf("NewPublisher: %v", err)
 	}
 	fp := record.NewFaultPublisher(pub, record.FaultOptions{}, 1)
-	if err := fp.Close(); err != nil {
-		t.Fatalf("Close: %v", err)
+	if closeErr := fp.Close(); closeErr != nil {
+		t.Fatalf("Close: %v", closeErr)
 	}
 	err = fp.Write([]byte("x"))
 	if err == nil {

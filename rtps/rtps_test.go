@@ -362,8 +362,8 @@ func TestWaitSet_ReceiveFromFirst(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	if err := pubA.Write([]byte("ping")); err != nil {
-		t.Fatalf("Write: %v", err)
+	if writeErr := pubA.Write([]byte("ping")); writeErr != nil {
+		t.Fatalf("Write: %v", writeErr)
 	}
 	s, sub, err := ws.Wait(ctx)
 	if err != nil {
@@ -401,8 +401,8 @@ func TestWaitSet_ReceiveFromSecond(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	if err := pubB.Write([]byte("from-b")); err != nil {
-		t.Fatalf("Write: %v", err)
+	if writeErr := pubB.Write([]byte("from-b")); writeErr != nil {
+		t.Fatalf("Write: %v", writeErr)
 	}
 	s, sub, err := ws.Wait(ctx)
 	if err != nil {

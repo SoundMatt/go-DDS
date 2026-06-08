@@ -287,7 +287,8 @@ func FuzzConcurrentPubSub(f *testing.F) {
 				defer func() { done <- struct{}{} }()
 				pub, err := p.NewPublisher(topic, dds.DefaultQoS)
 				if err != nil {
-					t.Fatalf("NewPublisher: %v", err)
+					t.Errorf("NewPublisher: %v", err)
+					return
 				}
 				defer pub.Close()
 				// Any error here (e.g. closed participant) is a test bug, not a library bug.

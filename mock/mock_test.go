@@ -245,8 +245,8 @@ func TestWaitSet_DeliversSample(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	if err := pubB.Write([]byte("ws-hello")); err != nil {
-		t.Fatalf("Write: %v", err)
+	if writeErr := pubB.Write([]byte("ws-hello")); writeErr != nil {
+		t.Fatalf("Write: %v", writeErr)
 	}
 	sample, got, err := ws.Wait(ctx)
 	if err != nil {
