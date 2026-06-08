@@ -8,6 +8,11 @@
 
 package rtps_test
 
+//fusa:test REQ-REL-005
+//fusa:test REQ-CONF-001
+//fusa:test REQ-CONF-002
+//fusa:test REQ-DISC-012
+
 import (
 	"strings"
 	"testing"

@@ -8,6 +8,45 @@
 
 package rtps
 
+//fusa:test REQ-DISC-002
+//fusa:test REQ-DISC-003
+//fusa:test REQ-DISC-006
+//fusa:test REQ-DISC-007
+//fusa:test REQ-DISC-010
+//fusa:test REQ-DISC-011
+//fusa:test REQ-DISC-013
+//fusa:test REQ-DISC-014
+//fusa:test REQ-DISC-015
+//fusa:test REQ-PART-003
+//fusa:test REQ-PART-007
+//fusa:test REQ-PART-009
+//fusa:test REQ-PART-010
+//fusa:test REQ-PART-011
+//fusa:test REQ-PUB-005
+//fusa:test REQ-PUB-007
+//fusa:test REQ-QOS-003
+//fusa:test REQ-QOS-004
+//fusa:test REQ-QOS-007
+//fusa:test REQ-REL-006
+//fusa:test REQ-REL-007
+//fusa:test REQ-REL-008
+//fusa:test REQ-REL-009
+//fusa:test REQ-REL-010
+//fusa:test REQ-REL-011
+//fusa:test REQ-REL-012
+//fusa:test REQ-RTPS-005
+//fusa:test REQ-SAFETY-003
+//fusa:test REQ-SUB-006
+//fusa:test REQ-SUB-007
+//fusa:test REQ-TRANS-001
+//fusa:test REQ-TRANS-002
+//fusa:test REQ-TRANS-003
+//fusa:test REQ-WILD-001
+//fusa:test REQ-WILD-002
+//fusa:test REQ-WILD-003
+//fusa:test REQ-WILD-004
+//fusa:test REQ-PART-008
+
 import (
 	"context"
 	"encoding/binary"

@@ -5,6 +5,13 @@
 
 package rpc_test
 
+//fusa:test REQ-RPC-001
+//fusa:test REQ-RPC-002
+//fusa:test REQ-RPC-003
+//fusa:test REQ-RPC-004
+//fusa:test REQ-RPC-005
+//fusa:test REQ-RPC-006
+
 import (
 	"context"
 	"errors"

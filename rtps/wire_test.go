@@ -8,6 +8,30 @@
 
 package rtps
 
+//fusa:test REQ-RTPS-001
+//fusa:test REQ-RTPS-002
+//fusa:test REQ-RTPS-003
+//fusa:test REQ-RTPS-004
+//fusa:test REQ-RTPS-006
+//fusa:test REQ-RTPS-007
+//fusa:test REQ-RTPS-008
+//fusa:test REQ-RTPS-009
+//fusa:test REQ-RTPS-010
+//fusa:test REQ-RTPS-011
+//fusa:test REQ-CDR-001
+//fusa:test REQ-CDR-002
+//fusa:test REQ-CDR-003
+//fusa:test REQ-GUID-001
+//fusa:test REQ-GUID-002
+//fusa:test REQ-LOC-001
+//fusa:test REQ-LOC-002
+//fusa:test REQ-LOC-003
+//fusa:test REQ-FRAG-001
+//fusa:test REQ-FRAG-002
+//fusa:test REQ-FRAG-003
+//fusa:test REQ-FRAG-004
+//fusa:test REQ-FRAG-005
+
 import (
 	"bytes"
 	"net"

@@ -5,6 +5,10 @@
 
 package security_test
 
+//fusa:test REQ-SEC-014
+//fusa:test REQ-SEC-024
+//fusa:test REQ-SEC-025
+
 import (
 	"bytes"
 	"crypto/ecdsa"

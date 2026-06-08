@@ -13,6 +13,13 @@
 // broker-level correlation support.
 package rpc
 
+//fusa:req REQ-RPC-001
+//fusa:req REQ-RPC-002
+//fusa:req REQ-RPC-003
+//fusa:req REQ-RPC-004
+//fusa:req REQ-RPC-005
+//fusa:req REQ-RPC-006
+
 import (
 	"context"
 	"crypto/rand"

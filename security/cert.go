@@ -5,6 +5,10 @@
 
 package security
 
+//fusa:req REQ-SEC-014
+//fusa:req REQ-SEC-024
+//fusa:req REQ-SEC-025
+
 import (
 	"crypto/ecdsa"
 	"crypto/rand"

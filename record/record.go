@@ -18,6 +18,12 @@
 // DDS consumers without modifying the network or transport.
 package record
 
+//fusa:req REQ-RT-001
+//fusa:req REQ-REC-001
+//fusa:req REQ-REC-002
+//fusa:req REQ-REC-003
+//fusa:req REQ-REC-010
+
 import (
 	"context"
 	"encoding/json"
@@ -69,12 +75,13 @@ func (r *Recorder) AddTopic(sub dds.Subscriber) *Recorder {
 // Start launches one drain goroutine per registered subscriber. Returns r for
 // chaining.
 func (r *Recorder) Start() *Recorder {
+	done := r.done
 	for _, sub := range r.subs {
 		r.wg.Add(1)
-		go func() {
+		go func(sub dds.Subscriber, done <-chan struct{}) {
 			defer r.wg.Done()
 			r.drain(sub)
-		}()
+		}(sub, done)
 	}
 	return r
 }

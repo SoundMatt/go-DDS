@@ -5,6 +5,10 @@
 
 package rtps_test
 
+//fusa:test REQ-REL-004
+//fusa:test REQ-PUB-003
+//fusa:test REQ-RT-001
+
 import (
 	"context"
 	"errors"

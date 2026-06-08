@@ -5,6 +5,16 @@
 
 package safety_test
 
+//fusa:test REQ-SAFETY-001
+//fusa:test REQ-SAFETY-004
+//fusa:test REQ-SAFETY-005
+//fusa:test REQ-SAFETY-006
+//fusa:test REQ-SAFETY-007
+//fusa:test REQ-SAFETY-008
+//fusa:test REQ-SAFETY-009
+//fusa:test REQ-SAFETY-013
+//fusa:test REQ-SEOOC-002
+
 import (
 	"bytes"
 	"encoding/binary"

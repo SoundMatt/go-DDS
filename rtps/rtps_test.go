@@ -8,6 +8,36 @@
 
 package rtps_test
 
+//fusa:test REQ-REL-001
+//fusa:test REQ-REL-002
+//fusa:test REQ-REL-003
+//fusa:test REQ-RT-001
+//fusa:test REQ-PART-001
+//fusa:test REQ-PART-002
+//fusa:test REQ-PART-004
+//fusa:test REQ-PART-005
+//fusa:test REQ-PART-006
+//fusa:test REQ-PUB-001
+//fusa:test REQ-PUB-002
+//fusa:test REQ-PUB-004
+//fusa:test REQ-PUB-006
+//fusa:test REQ-SUB-001
+//fusa:test REQ-SUB-002
+//fusa:test REQ-SUB-003
+//fusa:test REQ-SUB-004
+//fusa:test REQ-SUB-005
+//fusa:test REQ-DISC-001
+//fusa:test REQ-DISC-004
+//fusa:test REQ-DISC-005
+//fusa:test REQ-DISC-008
+//fusa:test REQ-DISC-009
+//fusa:test REQ-QOS-001
+//fusa:test REQ-QOS-002
+//fusa:test REQ-SEOOC-001
+//fusa:test REQ-SEOOC-004
+//fusa:test REQ-SEOOC-005
+//fusa:test REQ-SEOOC-010
+
 import (
 	"bytes"
 	"context"

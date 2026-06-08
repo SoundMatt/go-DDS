@@ -5,6 +5,10 @@
 
 package rest_test
 
+//fusa:test REQ-BRIDGE-003
+//fusa:test REQ-BRIDGE-004
+//fusa:test REQ-BRIDGE-005
+
 import (
 	"bufio"
 	"context"

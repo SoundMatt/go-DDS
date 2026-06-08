@@ -5,6 +5,11 @@
 
 package rtps
 
+//fusa:req REQ-WILD-001
+//fusa:req REQ-WILD-002
+//fusa:req REQ-WILD-003
+//fusa:req REQ-WILD-004
+
 import "strings"
 
 // TopicMatches reports whether pattern (which may contain MQTT-style + and #

@@ -15,6 +15,13 @@
 
 package rtps
 
+//fusa:req REQ-REL-001
+//fusa:req REQ-REL-005
+//fusa:req REQ-REL-006
+//fusa:req REQ-REL-007
+//fusa:req REQ-REL-008
+//fusa:req REQ-REL-009
+
 import (
 	"sync"
 	"sync/atomic"

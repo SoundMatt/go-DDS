@@ -5,6 +5,13 @@
 
 package safety_test
 
+//fusa:test REQ-SAFETY-002
+//fusa:test REQ-SAFETY-010
+//fusa:test REQ-SAFETY-011
+//fusa:test REQ-SAFETY-012
+//fusa:test REQ-SAFETY-014
+//fusa:test REQ-SEOOC-007
+
 import (
 	"context"
 	"errors"

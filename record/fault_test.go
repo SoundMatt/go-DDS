@@ -5,6 +5,13 @@
 
 package record_test
 
+//fusa:test REQ-REC-004
+//fusa:test REQ-REC-005
+//fusa:test REQ-REC-006
+//fusa:test REQ-REC-007
+//fusa:test REQ-REC-008
+//fusa:test REQ-REC-009
+
 import (
 	"bytes"
 	"context"

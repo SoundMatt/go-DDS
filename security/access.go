@@ -5,6 +5,8 @@
 
 package security
 
+//fusa:req REQ-SEC-013
+
 import "path"
 
 // Permission is a bitfield of allowed operations on a topic.

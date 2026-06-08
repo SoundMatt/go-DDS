@@ -5,6 +5,9 @@
 
 package rtps
 
+//fusa:req REQ-GUID-001
+//fusa:req REQ-GUID-002
+
 import (
 	"crypto/rand"
 	"encoding/hex"

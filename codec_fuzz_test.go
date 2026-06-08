@@ -5,6 +5,10 @@
 
 package dds_test
 
+//fusa:test REQ-CODEC-001
+//fusa:test REQ-CODEC-002
+//fusa:test REQ-CODEC-003
+
 // Fuzz tests for dds.ProtoCodec[T].
 //
 // Run the fuzzer with:

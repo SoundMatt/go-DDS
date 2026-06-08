@@ -40,6 +40,13 @@
 //   - Renamed or type-changed fields are always incompatible.
 package xtypes
 
+//fusa:req REQ-XTYPE-001
+//fusa:req REQ-XTYPE-002
+//fusa:req REQ-XTYPE-003
+//fusa:req REQ-XTYPE-004
+//fusa:req REQ-XTYPE-005
+//fusa:req REQ-XTYPE-006
+
 import (
 	"crypto/sha256"
 	"encoding/json"

@@ -17,6 +17,10 @@
 //	http.ListenAndServe(":8090", bridge)
 package rest
 
+//fusa:req REQ-BRIDGE-003
+//fusa:req REQ-BRIDGE-004
+//fusa:req REQ-BRIDGE-005
+
 import (
 	"encoding/base64"
 	"encoding/json"

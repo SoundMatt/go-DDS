@@ -5,6 +5,12 @@
 
 package admin_test
 
+//fusa:test REQ-ADMIN-001
+//fusa:test REQ-ADMIN-002
+//fusa:test REQ-ADMIN-003
+//fusa:test REQ-ADMIN-004
+//fusa:test REQ-ADMIN-005
+
 import (
 	"bytes"
 	"context"

@@ -5,6 +5,10 @@
 
 package xtypes
 
+//fusa:req REQ-TREG-001
+//fusa:req REQ-TREG-002
+//fusa:req REQ-TREG-003
+
 import (
 	"reflect"
 	"sort"
