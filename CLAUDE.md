@@ -75,7 +75,7 @@ history expansion on `%`, `!`, and `(`.
 
 | Job            | What runs |
 |---|---|
-| test-mock      | ubuntu/macOS/Windows × Go 1.22/1.23, race detector |
+| test-mock      | ubuntu/macOS/Windows × Go 1.25/1.26, race detector |
 | test-rtps      | ubuntu, `-short` |
 | test-cyclone   | ubuntu-22.04, probe-and-skip if apt unavailable |
 | benchmark-smoke | ubuntu, 1 iter each |

@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        go: ["1.22", "1.23"]
+        go: ["1.25", "1.26"]
 
     steps:
       - uses: actions/checkout@v5
@@ -32,7 +32,7 @@ jobs:
         run: go test -race -count=1 -coverprofile=coverage.out ./...
 
       - name: Upload coverage
-        if: matrix.os == 'ubuntu-latest' && matrix.go == '1.22'
+        if: matrix.os == 'ubuntu-latest' && matrix.go == '1.25'
         uses: actions/upload-artifact@v6
         with:
           name: coverage-mock
@@ -50,7 +50,7 @@ jobs:
 
       - uses: actions/setup-go@v6
         with:
-          go-version: "1.22"
+          go-version: "1.25"
 
       - name: go test -bench (smoke, 1 iteration each)
         run: >
@@ -82,7 +82,7 @@ jobs:
 
       - uses: actions/setup-go@v6
         with:
-          go-version: "1.22"
+          go-version: "1.25"
 
       - name: FuzzPublish
         run: go test -fuzz=^FuzzPublish$ -fuzztime=10s ./mock/...
@@ -114,7 +114,7 @@ jobs:
 
       - uses: actions/setup-go@v6
         with:
-          go-version: "1.22"
+          go-version: "1.25"
 
       - name: go vet (rtps + security)
         run: go vet ./rtps/... ./security/...
@@ -136,7 +136,7 @@ jobs:
 
       - uses: actions/setup-go@v6
         with:
-          go-version: "1.22"
+          go-version: "1.25"
 
       - name: Install CycloneDDS
         id: install
@@ -184,7 +184,7 @@ jobs:
 
       - uses: actions/setup-go@v6
         with:
-          go-version: "1.22"
+          go-version: "1.25"
 
       - name: Probe Docker and CycloneDDS image
         id: probe
@@ -218,7 +218,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v6
         with:
-          go-version: "1.22"
+          go-version: "1.25"
       - name: go generate
         run: go generate ./...
       - name: Diff check (generated files must be committed)
@@ -232,7 +232,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v6
         with:
-          go-version: "1.22"
+          go-version: "1.25"
       - uses: golangci/golangci-lint-action@v9
         with:
           version: v2.1.6
