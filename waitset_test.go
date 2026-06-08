@@ -364,6 +364,94 @@ func TestHealthStatus_String_Down(t *testing.T) {
 
 // TestWaitSet_OneClosedOnePending verifies that Wait continues after a closed
 // channel is zeroed, and still delivers from the remaining open subscriber.
+// ── Attach / Detach ───────────────────────────────────────────────────────────
+
+func TestWaitSet_Attach_DeliversFromNewSub(t *testing.T) {
+	p := newMockParticipant(t)
+	sub1, _ := p.NewSubscriber("ws/attach1", dds.DefaultQoS)
+	sub2, _ := p.NewSubscriber("ws/attach2", dds.DefaultQoS)
+	pub2, _ := p.NewPublisher("ws/attach2", dds.DefaultQoS)
+	defer sub1.Close()
+	defer sub2.Close()
+	defer pub2.Close()
+
+	ws := dds.NewWaitSet(sub1)
+	ws.Attach(sub2) // attach before Wait
+
+	_ = pub2.Write([]byte("from-sub2"))
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	s, got, err := ws.Wait(ctx)
+	if err != nil {
+		t.Fatalf("Wait: %v", err)
+	}
+	if got != sub2 {
+		t.Error("expected sample from sub2 (the attached subscriber)")
+	}
+	if string(s.Payload) != "from-sub2" {
+		t.Errorf("payload: %q", s.Payload)
+	}
+}
+
+func TestWaitSet_Detach_RemovesSub(t *testing.T) {
+	p := newMockParticipant(t)
+	sub1, _ := p.NewSubscriber("ws/detach1", dds.DefaultQoS)
+	sub2, _ := p.NewSubscriber("ws/detach2", dds.DefaultQoS)
+	pub1, _ := p.NewPublisher("ws/detach1", dds.DefaultQoS)
+	pub2, _ := p.NewPublisher("ws/detach2", dds.DefaultQoS)
+	defer sub1.Close()
+	defer sub2.Close()
+	defer pub1.Close()
+	defer pub2.Close()
+
+	ws := dds.NewWaitSet(sub1, sub2)
+	ws.Detach(sub2) // remove sub2 before Wait
+
+	_ = pub1.Write([]byte("from-sub1"))
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	_, got, err := ws.Wait(ctx)
+	if err != nil {
+		t.Fatalf("Wait: %v", err)
+	}
+	if got != sub1 {
+		t.Errorf("expected sub1, got something else")
+	}
+}
+
+func TestWaitSet_Detach_Idempotent(t *testing.T) {
+	p := newMockParticipant(t)
+	sub, _ := p.NewSubscriber("ws/detach-idem", dds.DefaultQoS)
+	defer sub.Close()
+
+	ws := dds.NewWaitSet(sub)
+	ws.Detach(sub) // remove it
+	ws.Detach(sub) // must not panic
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
+	defer cancel()
+	_, _, err := ws.Wait(ctx) // empty WaitSet times out immediately
+	if err == nil {
+		t.Error("expected context error on empty WaitSet")
+	}
+}
+
+func TestWaitSet_Attach_ReturnsWaitSet(t *testing.T) {
+	p := newMockParticipant(t)
+	sub, _ := p.NewSubscriber("ws/chain", dds.DefaultQoS)
+	defer sub.Close()
+
+	ws := dds.NewWaitSet()
+	got := ws.Attach(sub)
+	if got != ws {
+		t.Error("Attach must return the WaitSet for chaining")
+	}
+}
+
 func TestWaitSet_OneClosedOnePending(t *testing.T) {
 	p := newMockParticipant(t)
 

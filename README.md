@@ -627,9 +627,13 @@ See [ROADMAP.md](ROADMAP.md) for per-milestone goals, sub-items, and success cri
 - [x] Fuzz targets for `rpc` wire format (reply/request dispatch robustness, round-trip)
 - [x] Fuzz targets for `ProtoCodec` (round-trip and arbitrary Unmarshal)
 
-**Planned — v0.10 — Routing and Protocol Bridge**
+**Released — v0.10 — Dynamic WaitSet, REST/SSE Bridge, Secure SEDP, TypeRegistry, Docker Quickstart**
 
-- [ ] Protocol bridge — DDS ↔ gRPC/REST gateway
+- [x] `WaitSet.Attach(subs...)` / `WaitSet.Detach(subs...)` — dynamically add/remove subscribers from an in-flight WaitSet (snapshot-safe, race-free)
+- [x] `bridge/rest` — HTTP/SSE gateway: `GET /topics` (list), `GET /topics/{t}` (SSE stream, base64 payload), `POST /topics/{t}` (publish); Bearer token auth; keepalive pings
+- [x] `rtps.EndpointPlugin` + `HMACDiscoveryPlugin.SignEndpoint`/`VerifyEndpoint` — HMAC-SHA-256 endpoint tags embedded in SEDP announcements (vendor PID 0x8002); unauthenticated endpoints are silently rejected
+- [x] `xtypes.TopicTypeRegistry` + `RegisterTopicCodec[T]` + `GlobalTopicRegistry` — map topic names to Go type names for codec autodiscovery
+- [x] Docker Quickstart — `cmd/monitor`, `examples/quickstart/{pub,sub}`, multi-stage `docker/Dockerfile`, `docker/docker-compose.yml` (`network_mode: host` for RTPS multicast)
 
 See [ROADMAP.md](ROADMAP.md) for goals and sub-items.
 

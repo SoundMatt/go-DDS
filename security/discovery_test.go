@@ -93,3 +93,84 @@ func TestHMACDiscoveryPlugin_DifferentPrefixesDifferentTags(t *testing.T) {
 func TestHMACDiscoveryPlugin_ImplementsDiscoveryPlugin(t *testing.T) {
 	var _ security.DiscoveryPlugin = security.NewHMACDiscoveryPlugin([]byte("k"))
 }
+
+// ── EndpointPlugin (SEDP signing) ─────────────────────────────────────────────
+
+func TestHMACDiscoveryPlugin_SignEndpoint_Valid(t *testing.T) {
+	plugin := security.NewHMACDiscoveryPlugin([]byte("endpoint-key"))
+	prefix := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
+	topic := "sensors/temperature"
+
+	tag := plugin.SignEndpoint(prefix, topic)
+	if len(tag) == 0 {
+		t.Fatal("SignEndpoint returned empty tag")
+	}
+	if !plugin.VerifyEndpoint(prefix, topic, tag) {
+		t.Error("VerifyEndpoint returned false for valid tag")
+	}
+}
+
+func TestHMACDiscoveryPlugin_VerifyEndpoint_WrongKey(t *testing.T) {
+	plug1 := security.NewHMACDiscoveryPlugin([]byte("key-a"))
+	plug2 := security.NewHMACDiscoveryPlugin([]byte("key-b"))
+	prefix := []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}
+	tag := plug1.SignEndpoint(prefix, "my/topic")
+	if plug2.VerifyEndpoint(prefix, "my/topic", tag) {
+		t.Error("VerifyEndpoint should reject tag from a different key")
+	}
+}
+
+func TestHMACDiscoveryPlugin_VerifyEndpoint_WrongTopic(t *testing.T) {
+	plugin := security.NewHMACDiscoveryPlugin([]byte("shared"))
+	prefix := []byte{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
+	tag := plugin.SignEndpoint(prefix, "topic/a")
+	if plugin.VerifyEndpoint(prefix, "topic/b", tag) {
+		t.Error("VerifyEndpoint should reject tag for different topic")
+	}
+}
+
+func TestHMACDiscoveryPlugin_VerifyEndpoint_WrongPrefix(t *testing.T) {
+	plugin := security.NewHMACDiscoveryPlugin([]byte("shared"))
+	prefix1 := []byte{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
+	prefix2 := []byte{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}
+	tag := plugin.SignEndpoint(prefix1, "my/topic")
+	if plugin.VerifyEndpoint(prefix2, "my/topic", tag) {
+		t.Error("VerifyEndpoint should reject tag for different prefix")
+	}
+}
+
+func TestHMACDiscoveryPlugin_VerifyEndpoint_EmptyTag(t *testing.T) {
+	plugin := security.NewHMACDiscoveryPlugin([]byte("key"))
+	prefix := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	if plugin.VerifyEndpoint(prefix, "t", []byte{}) {
+		t.Error("VerifyEndpoint should return false for empty tag")
+	}
+}
+
+func TestHMACDiscoveryPlugin_VerifyEndpoint_NilTag(t *testing.T) {
+	plugin := security.NewHMACDiscoveryPlugin([]byte("key"))
+	prefix := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	if plugin.VerifyEndpoint(prefix, "t", nil) {
+		t.Error("VerifyEndpoint should return false for nil tag")
+	}
+}
+
+func TestHMACDiscoveryPlugin_EndpointAndDiscovery_DifferentTags(t *testing.T) {
+	plugin := security.NewHMACDiscoveryPlugin([]byte("key"))
+	prefix := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
+	dTag := plugin.SignDiscovery(prefix)
+	eTag := plugin.SignEndpoint(prefix, "sensors/temp")
+	if string(dTag) == string(eTag) {
+		t.Error("SPDP and SEDP tags must differ (distinct HMAC contexts)")
+	}
+}
+
+func TestHMACDiscoveryPlugin_DifferentTopics_DifferentTags(t *testing.T) {
+	plugin := security.NewHMACDiscoveryPlugin([]byte("key"))
+	prefix := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
+	t1 := plugin.SignEndpoint(prefix, "topic/a")
+	t2 := plugin.SignEndpoint(prefix, "topic/b")
+	if string(t1) == string(t2) {
+		t.Error("different topics must produce different endpoint tags")
+	}
+}

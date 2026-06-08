@@ -65,3 +65,24 @@ func (h *HMACDiscoveryPlugin) VerifyDiscovery(guidPrefix, tag []byte) bool {
 	}
 	return hmac.Equal(h.sign(guidPrefix), tag)
 }
+
+const endpointContext = "go-dds-endpoint-v1"
+
+// SignEndpoint returns an HMAC-SHA-256 tag for the endpoint identified by
+// guidPrefix and topic. Implements rtps.EndpointPlugin.
+func (h *HMACDiscoveryPlugin) SignEndpoint(guidPrefix []byte, topic string) []byte {
+	mac := hmac.New(sha256.New, h.key)
+	_, _ = mac.Write([]byte(endpointContext))
+	_, _ = mac.Write(guidPrefix)
+	_, _ = mac.Write([]byte(topic))
+	return mac.Sum(nil)
+}
+
+// VerifyEndpoint returns true when tag matches the expected HMAC for the
+// endpoint identified by guidPrefix and topic. Implements rtps.EndpointPlugin.
+func (h *HMACDiscoveryPlugin) VerifyEndpoint(guidPrefix []byte, topic string, tag []byte) bool {
+	if len(tag) == 0 {
+		return false
+	}
+	return hmac.Equal(h.SignEndpoint(guidPrefix, topic), tag)
+}
