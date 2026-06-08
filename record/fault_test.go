@@ -7,6 +7,7 @@ package record_test
 
 import (
 	"bytes"
+	"context"
 	"testing"
 	"time"
 
@@ -244,4 +245,144 @@ func TestFaultPublisher_ZeroSeedIsNonDeterministic(t *testing.T) {
 		t.Fatalf("Write: %v", err)
 	}
 	_ = fp.Close()
+}
+
+func TestFaultPublisher_ReorderWindow_FlushesOnFull(t *testing.T) {
+	p := newPart(t)
+	topic := uniqueTopic("fault/reorder-full")
+	const window = 4
+	sub, _ := p.NewSubscriber(topic, dds.DefaultQoS, dds.WithChannelDepth(window*2))
+	defer sub.Close()
+	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+	defer pub.Close()
+
+	fp := record.NewFaultPublisher(pub, record.FaultOptions{ReorderWindow: window}, 42)
+	defer fp.Close()
+
+	// Write window-1 samples: none should arrive yet (buffered).
+	for i := 0; i < window-1; i++ {
+		if err := fp.Write([]byte{byte(i)}); err != nil {
+			t.Fatalf("Write(%d): %v", i, err)
+		}
+	}
+	select {
+	case <-sub.C():
+		t.Fatal("sample arrived before window was full")
+	case <-time.After(20 * time.Millisecond):
+	}
+
+	// Write the last sample: all window samples should now be emitted.
+	if err := fp.Write([]byte{byte(window - 1)}); err != nil {
+		t.Fatalf("Write(last): %v", err)
+	}
+	deadline := time.After(time.Second)
+	received := make(map[byte]bool)
+	for i := 0; i < window; i++ {
+		select {
+		case s := <-sub.C():
+			if len(s.Payload) != 1 {
+				t.Fatalf("unexpected payload %v", s.Payload)
+			}
+			received[s.Payload[0]] = true
+		case <-deadline:
+			t.Fatalf("timeout: only received %d/%d samples", i, window)
+		}
+	}
+	for i := 0; i < window; i++ {
+		if !received[byte(i)] {
+			t.Errorf("sample %d not delivered", i)
+		}
+	}
+}
+
+func TestFaultPublisher_ReorderWindow_FlushOnClose(t *testing.T) {
+	p := newPart(t)
+	topic := uniqueTopic("fault/reorder-close")
+	const window = 4
+	sub, _ := p.NewSubscriber(topic, dds.DefaultQoS, dds.WithChannelDepth(window))
+	defer sub.Close()
+	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+
+	fp := record.NewFaultPublisher(pub, record.FaultOptions{ReorderWindow: window}, 7)
+
+	// Write fewer than window samples then close.
+	for i := 0; i < window-1; i++ {
+		if err := fp.Write([]byte{byte(i)}); err != nil {
+			t.Fatalf("Write(%d): %v", i, err)
+		}
+	}
+	if err := fp.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+
+	// All buffered samples must arrive after Close.
+	deadline := time.After(time.Second)
+	received := make(map[byte]bool)
+	for i := 0; i < window-1; i++ {
+		select {
+		case s := <-sub.C():
+			if len(s.Payload) == 1 {
+				received[s.Payload[0]] = true
+			}
+		case <-deadline:
+			t.Fatalf("timeout: only %d/%d samples after Close", i, window-1)
+		}
+	}
+	for i := 0; i < window-1; i++ {
+		if !received[byte(i)] {
+			t.Errorf("sample %d not flushed on Close", i)
+		}
+	}
+}
+
+func TestFaultPublisher_WriteCtx_Delivers(t *testing.T) {
+	p := newPart(t)
+	topic := uniqueTopic("fault/writectx-ok")
+	sub, _ := p.NewSubscriber(topic, dds.DefaultQoS)
+	defer sub.Close()
+	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+	defer pub.Close()
+
+	fp := record.NewFaultPublisher(pub, record.FaultOptions{}, 1)
+	defer fp.Close()
+
+	ctx := context.Background()
+	if err := fp.WriteCtx(ctx, []byte("via-ctx")); err != nil {
+		t.Fatalf("WriteCtx: %v", err)
+	}
+	select {
+	case s := <-sub.C():
+		if string(s.Payload) != "via-ctx" {
+			t.Errorf("payload: got %q", s.Payload)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout")
+	}
+}
+
+func TestFaultPublisher_WriteCtx_CancelledDuringDelay(t *testing.T) {
+	p := newPart(t)
+	topic := uniqueTopic("fault/writectx-cancel")
+	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+	defer pub.Close()
+
+	const delay = 200 * time.Millisecond
+	fp := record.NewFaultPublisher(pub, record.FaultOptions{
+		DelayMin: delay,
+		DelayMax: delay,
+	}, 1)
+	defer fp.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+
+	start := time.Now()
+	err := fp.WriteCtx(ctx, []byte("delayed"))
+	elapsed := time.Since(start)
+	if err == nil {
+		t.Fatal("expected context error, got nil")
+	}
+	if elapsed >= delay {
+		t.Errorf("WriteCtx did not honour context cancellation: elapsed %v >= delay %v", elapsed, delay)
+	}
 }

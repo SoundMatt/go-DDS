@@ -26,9 +26,12 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
 	"sync"
 	"time"
+
+	"google.golang.org/protobuf/proto"
 )
 
 // ── Sentinel errors ───────────────────────────────────────────────────────────
@@ -628,4 +631,26 @@ func (GobCodec[T]) Marshal(v T) ([]byte, error) {
 func (GobCodec[T]) Unmarshal(data []byte) (T, error) {
 	var v T
 	return v, gob.NewDecoder(bytes.NewReader(data)).Decode(&v)
+}
+
+// ── ProtoCodec ────────────────────────────────────────────────────────────────
+
+// ProtoCodec[T] implements Codec[T] using google.golang.org/protobuf.
+// T must be a pointer to a protobuf-generated message struct (e.g. *mypkg.Msg).
+// The zero value is ready to use.
+type ProtoCodec[T proto.Message] struct{}
+
+// Marshal encodes v to protobuf wire format.
+func (ProtoCodec[T]) Marshal(v T) ([]byte, error) {
+	return proto.Marshal(v)
+}
+
+// Unmarshal decodes data from protobuf wire format into a new T.
+func (ProtoCodec[T]) Unmarshal(data []byte) (T, error) {
+	var zero T
+	msg, ok := reflect.New(reflect.TypeOf(zero).Elem()).Interface().(T)
+	if !ok {
+		return zero, fmt.Errorf("dds: ProtoCodec[%T]: type assertion failed", zero)
+	}
+	return msg, proto.Unmarshal(data, msg)
 }

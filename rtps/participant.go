@@ -85,6 +85,13 @@ func WithSecurity(plugin SecurityPlugin) Option {
 	return func(p *participant) { p.security = plugin }
 }
 
+// WithContext returns an Option that closes the participant when ctx is done.
+// This is the idiomatic Go shutdown pattern: pass a context with a cancel
+// function or deadline to tie the participant's lifetime to an outer scope.
+func WithContext(ctx context.Context) Option {
+	return func(p *participant) { p.cancelCtx = ctx }
+}
+
 // WithIPv6 enables the IPv6 multicast transport. When set, the participant
 // binds an additional pair of IPv6 UDP sockets and joins the RTPS IPv6
 // discovery group (FF03::1). IPv4 sockets are still created so the participant
@@ -203,6 +210,7 @@ type participant struct {
 	log          plog
 	livelinessCb func(dds.GUID, dds.LivelinessEvent)
 	tracer       dds.Tracer
+	cancelCtx    context.Context
 
 	// Configurable heartbeat period (0 = use package-level heartbeatPeriod constant).
 	heartbeatPeriodOverride time.Duration
@@ -373,6 +381,13 @@ func newParticipant(domain dds.Domain, opts ...Option) (*participant, error) {
 	p.sedp.start()
 
 	go p.dataReceiveLoop()
+
+	if p.cancelCtx != nil {
+		go func() {
+			<-p.cancelCtx.Done()
+			_ = p.Close()
+		}()
+	}
 
 	return p, nil
 }

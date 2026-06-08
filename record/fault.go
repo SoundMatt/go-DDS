@@ -6,6 +6,7 @@
 package record
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"sync"
@@ -30,6 +31,10 @@ type FaultOptions struct {
 	CorruptRate float64
 	// DuplicateRate is the probability that a sample is forwarded twice.
 	DuplicateRate float64
+	// ReorderWindow, when > 1, buffers up to ReorderWindow samples and emits
+	// them in randomised order when the window fills, simulating out-of-order
+	// delivery. Samples buffered at Close are flushed in shuffled order.
+	ReorderWindow int
 }
 
 // FaultPublisher wraps a dds.Publisher and injects faults on Write according
@@ -40,6 +45,7 @@ type FaultPublisher struct {
 	rng    *rand.Rand
 	mu     sync.Mutex
 	closed bool
+	window [][]byte // reorder buffer; non-nil only when ReorderWindow > 1
 }
 
 // NewFaultPublisher wraps pub with fault injection configured by opts.
@@ -58,6 +64,16 @@ func NewFaultPublisher(pub dds.Publisher, opts FaultOptions, seed int64) *FaultP
 // Write applies configured faults and then forwards to the underlying publisher.
 // The call may block if DelayMin > 0.
 func (f *FaultPublisher) Write(payload []byte) error {
+	return f.write(context.Background(), payload)
+}
+
+// WriteCtx applies configured faults and forwards to the underlying publisher,
+// honouring ctx cancellation during any configured delay.
+func (f *FaultPublisher) WriteCtx(ctx context.Context, payload []byte) error {
+	return f.write(ctx, payload)
+}
+
+func (f *FaultPublisher) write(ctx context.Context, payload []byte) error {
 	f.mu.Lock()
 	if f.closed {
 		f.mu.Unlock()
@@ -85,7 +101,11 @@ func (f *FaultPublisher) Write(payload []byte) error {
 		return nil
 	}
 	if delay > 0 {
-		time.Sleep(delay)
+		select {
+		case <-time.After(delay):
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}
 
 	data := payload
@@ -94,6 +114,23 @@ func (f *FaultPublisher) Write(payload []byte) error {
 		copy(cp, payload)
 		cp[corruptIdx] ^= 0xFF
 		data = cp
+	}
+
+	// Reorder: buffer and emit when the window fills.
+	if f.opts.ReorderWindow > 1 {
+		cp := make([]byte, len(data))
+		copy(cp, data)
+		f.mu.Lock()
+		f.window = append(f.window, cp)
+		if len(f.window) < f.opts.ReorderWindow {
+			f.mu.Unlock()
+			return nil
+		}
+		window := f.window
+		f.window = nil
+		f.rng.Shuffle(len(window), func(i, j int) { window[i], window[j] = window[j], window[i] })
+		f.mu.Unlock()
+		return f.emitWindow(window)
 	}
 
 	if err := f.pub.Write(data); err != nil {
@@ -105,10 +142,26 @@ func (f *FaultPublisher) Write(payload []byte) error {
 	return nil
 }
 
-// Close closes the underlying publisher.
+func (f *FaultPublisher) emitWindow(window [][]byte) error {
+	for _, w := range window {
+		if err := f.pub.Write(w); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Close flushes any buffered reorder window, then closes the underlying publisher.
 func (f *FaultPublisher) Close() error {
 	f.mu.Lock()
-	defer f.mu.Unlock()
 	f.closed = true
+	window := f.window
+	f.window = nil
+	if len(window) > 1 {
+		f.rng.Shuffle(len(window), func(i, j int) { window[i], window[j] = window[j], window[i] })
+	}
+	f.mu.Unlock()
+
+	_ = f.emitWindow(window)
 	return f.pub.Close()
 }
