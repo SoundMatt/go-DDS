@@ -1,0 +1,2521 @@
+{
+  "format": "go-FuSa TARA v1",
+  "generated_at": "2026-06-08T21:18:02.64466Z",
+  "module": "github.com/SoundMatt/go-DDS",
+  "entries": [
+    {
+      "id": "TARA-001",
+      "asset": "main.go",
+      "threat": "Predictable random values enable authentication bypass or token forgery",
+      "stride": [
+        "S",
+        "T"
+      ],
+      "cwe": "CWE-330",
+      "standard": "CERT MSC50",
+      "attack_vector": "Network",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 2,
+      "current_control": "Use crypto/rand",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER003",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/examples/quickstart/pub/main.go",
+      "source_line": 20
+    },
+    {
+      "id": "TARA-002",
+      "asset": "fault.go",
+      "threat": "Predictable random values enable authentication bypass or token forgery",
+      "stride": [
+        "S",
+        "T"
+      ],
+      "cwe": "CWE-330",
+      "standard": "CERT MSC50",
+      "attack_vector": "Network",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 2,
+      "current_control": "Use crypto/rand",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER003",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault.go",
+      "source_line": 18
+    },
+    {
+      "id": "TARA-003",
+      "asset": "spdp.go",
+      "threat": "Predictable random values enable authentication bypass or token forgery",
+      "stride": [
+        "S",
+        "T"
+      ],
+      "cwe": "CWE-330",
+      "standard": "CERT MSC50",
+      "attack_vector": "Network",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 2,
+      "current_control": "Use crypto/rand",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER003",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/spdp.go",
+      "source_line": 33
+    },
+    {
+      "id": "TARA-004",
+      "asset": "cyclone.go",
+      "threat": "Unsafe pointer usage causes undefined behaviour or memory corruption",
+      "stride": [
+        "E"
+      ],
+      "cwe": "CWE-242",
+      "standard": "MISRA Rule 11.3",
+      "attack_vector": "Local",
+      "likelihood": "Medium",
+      "impact": "High",
+      "security_level": 3,
+      "current_control": "Remove unsafe usage; use safe Go idioms",
+      "residual_risk": "Medium — requires code redesign",
+      "cyber_rule_id": "CYBER004",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/cyclone/cyclone.go",
+      "source_line": 116
+    },
+    {
+      "id": "TARA-005",
+      "asset": "traffic_linux.go",
+      "threat": "Unsafe pointer usage causes undefined behaviour or memory corruption",
+      "stride": [
+        "E"
+      ],
+      "cwe": "CWE-242",
+      "standard": "MISRA Rule 11.3",
+      "attack_vector": "Local",
+      "likelihood": "Medium",
+      "impact": "High",
+      "security_level": 3,
+      "current_control": "Remove unsafe usage; use safe Go idioms",
+      "residual_risk": "Medium — requires code redesign",
+      "cyber_rule_id": "CYBER004",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/traffic_linux.go",
+      "source_line": 15
+    },
+    {
+      "id": "TARA-006",
+      "asset": "testutil_test.go",
+      "threat": "Command injection from variable input enables arbitrary command execution",
+      "stride": [
+        "E",
+        "R"
+      ],
+      "cwe": "CWE-78",
+      "attack_vector": "Network",
+      "likelihood": "Medium",
+      "impact": "High",
+      "security_level": 3,
+      "current_control": "Use exec.Command with fixed command and sanitised args",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER005",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/testutil/testutil_test.go",
+      "source_line": 451
+    },
+    {
+      "id": "TARA-007",
+      "asset": "wan.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/wan/wan.go",
+      "source_line": 267
+    },
+    {
+      "id": "TARA-008",
+      "asset": "cdr.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/cdr/cdr.go",
+      "source_line": 97
+    },
+    {
+      "id": "TARA-009",
+      "asset": "cdr.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/cdr/cdr.go",
+      "source_line": 102
+    },
+    {
+      "id": "TARA-010",
+      "asset": "cdr.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/cdr/cdr.go",
+      "source_line": 114
+    },
+    {
+      "id": "TARA-011",
+      "asset": "cdr.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/cdr/cdr.go",
+      "source_line": 151
+    },
+    {
+      "id": "TARA-012",
+      "asset": "cdr.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/cdr/cdr.go",
+      "source_line": 159
+    },
+    {
+      "id": "TARA-013",
+      "asset": "cdr.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/cdr/cdr.go",
+      "source_line": 224
+    },
+    {
+      "id": "TARA-014",
+      "asset": "cdr.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/cdr/cdr.go",
+      "source_line": 233
+    },
+    {
+      "id": "TARA-015",
+      "asset": "cdr.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/cdr/cdr.go",
+      "source_line": 255
+    },
+    {
+      "id": "TARA-016",
+      "asset": "mock.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock.go",
+      "source_line": 579
+    },
+    {
+      "id": "TARA-017",
+      "asset": "mock_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go",
+      "source_line": 247
+    },
+    {
+      "id": "TARA-018",
+      "asset": "mock_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go",
+      "source_line": 252
+    },
+    {
+      "id": "TARA-019",
+      "asset": "pool_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/pool/pool_test.go",
+      "source_line": 89
+    },
+    {
+      "id": "TARA-020",
+      "asset": "pool_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/pool/pool_test.go",
+      "source_line": 101
+    },
+    {
+      "id": "TARA-021",
+      "asset": "fault_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go",
+      "source_line": 271
+    },
+    {
+      "id": "TARA-022",
+      "asset": "fault_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go",
+      "source_line": 282
+    },
+    {
+      "id": "TARA-023",
+      "asset": "fault_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go",
+      "source_line": 299
+    },
+    {
+      "id": "TARA-024",
+      "asset": "fault_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go",
+      "source_line": 317
+    },
+    {
+      "id": "TARA-025",
+      "asset": "fault_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go",
+      "source_line": 339
+    },
+    {
+      "id": "TARA-026",
+      "asset": "cdr.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/cdr.go",
+      "source_line": 64
+    },
+    {
+      "id": "TARA-027",
+      "asset": "cdr.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/cdr.go",
+      "source_line": 64
+    },
+    {
+      "id": "TARA-028",
+      "asset": "cdr.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/cdr.go",
+      "source_line": 73
+    },
+    {
+      "id": "TARA-029",
+      "asset": "cdr.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/cdr.go",
+      "source_line": 104
+    },
+    {
+      "id": "TARA-030",
+      "asset": "cdr.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/cdr.go",
+      "source_line": 117
+    },
+    {
+      "id": "TARA-031",
+      "asset": "cdr.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/cdr.go",
+      "source_line": 117
+    },
+    {
+      "id": "TARA-032",
+      "asset": "fragment.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
+      "source_line": 63
+    },
+    {
+      "id": "TARA-033",
+      "asset": "fragment.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
+      "source_line": 74
+    },
+    {
+      "id": "TARA-034",
+      "asset": "fragment.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
+      "source_line": 99
+    },
+    {
+      "id": "TARA-035",
+      "asset": "fragment.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
+      "source_line": 137
+    },
+    {
+      "id": "TARA-036",
+      "asset": "fragment.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
+      "source_line": 137
+    },
+    {
+      "id": "TARA-037",
+      "asset": "fragment.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
+      "source_line": 137
+    },
+    {
+      "id": "TARA-038",
+      "asset": "fragment.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
+      "source_line": 166
+    },
+    {
+      "id": "TARA-039",
+      "asset": "fragment.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
+      "source_line": 166
+    },
+    {
+      "id": "TARA-040",
+      "asset": "fragment.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
+      "source_line": 167
+    },
+    {
+      "id": "TARA-041",
+      "asset": "fragment.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
+      "source_line": 170
+    },
+    {
+      "id": "TARA-042",
+      "asset": "fragment.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
+      "source_line": 170
+    },
+    {
+      "id": "TARA-043",
+      "asset": "fragment.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
+      "source_line": 171
+    },
+    {
+      "id": "TARA-044",
+      "asset": "fragment.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
+      "source_line": 172
+    },
+    {
+      "id": "TARA-045",
+      "asset": "fragment.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
+      "source_line": 173
+    },
+    {
+      "id": "TARA-046",
+      "asset": "fragment.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
+      "source_line": 176
+    },
+    {
+      "id": "TARA-047",
+      "asset": "fragment.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
+      "source_line": 177
+    },
+    {
+      "id": "TARA-048",
+      "asset": "fragment.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
+      "source_line": 204
+    },
+    {
+      "id": "TARA-049",
+      "asset": "fragment.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
+      "source_line": 206
+    },
+    {
+      "id": "TARA-050",
+      "asset": "fragment.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
+      "source_line": 223
+    },
+    {
+      "id": "TARA-051",
+      "asset": "guid.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go",
+      "source_line": 61
+    },
+    {
+      "id": "TARA-052",
+      "asset": "guid.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go",
+      "source_line": 62
+    },
+    {
+      "id": "TARA-053",
+      "asset": "guid.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go",
+      "source_line": 63
+    },
+    {
+      "id": "TARA-054",
+      "asset": "guid.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go",
+      "source_line": 64
+    },
+    {
+      "id": "TARA-055",
+      "asset": "guid.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go",
+      "source_line": 65
+    },
+    {
+      "id": "TARA-056",
+      "asset": "guid.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go",
+      "source_line": 71
+    },
+    {
+      "id": "TARA-057",
+      "asset": "guid.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go",
+      "source_line": 71
+    },
+    {
+      "id": "TARA-058",
+      "asset": "guid.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go",
+      "source_line": 71
+    },
+    {
+      "id": "TARA-059",
+      "asset": "guid.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go",
+      "source_line": 76
+    },
+    {
+      "id": "TARA-060",
+      "asset": "guid.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go",
+      "source_line": 76
+    },
+    {
+      "id": "TARA-061",
+      "asset": "guid.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go",
+      "source_line": 76
+    },
+    {
+      "id": "TARA-062",
+      "asset": "locator.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/locator.go",
+      "source_line": 37
+    },
+    {
+      "id": "TARA-063",
+      "asset": "locator.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/locator.go",
+      "source_line": 49
+    },
+    {
+      "id": "TARA-064",
+      "asset": "locator.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/locator.go",
+      "source_line": 80
+    },
+    {
+      "id": "TARA-065",
+      "asset": "locator.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/locator.go",
+      "source_line": 92
+    },
+    {
+      "id": "TARA-066",
+      "asset": "message.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/message.go",
+      "source_line": 103
+    },
+    {
+      "id": "TARA-067",
+      "asset": "message.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/message.go",
+      "source_line": 112
+    },
+    {
+      "id": "TARA-068",
+      "asset": "message.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/message.go",
+      "source_line": 155
+    },
+    {
+      "id": "TARA-069",
+      "asset": "message.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/message.go",
+      "source_line": 183
+    },
+    {
+      "id": "TARA-070",
+      "asset": "message.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/message.go",
+      "source_line": 185
+    },
+    {
+      "id": "TARA-071",
+      "asset": "message.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/message.go",
+      "source_line": 187
+    },
+    {
+      "id": "TARA-072",
+      "asset": "message.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/message.go",
+      "source_line": 191
+    },
+    {
+      "id": "TARA-073",
+      "asset": "message.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/message.go",
+      "source_line": 204
+    },
+    {
+      "id": "TARA-074",
+      "asset": "message.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/message.go",
+      "source_line": 208
+    },
+    {
+      "id": "TARA-075",
+      "asset": "message.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/message.go",
+      "source_line": 211
+    },
+    {
+      "id": "TARA-076",
+      "asset": "message.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/message.go",
+      "source_line": 233
+    },
+    {
+      "id": "TARA-077",
+      "asset": "message.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/message.go",
+      "source_line": 237
+    },
+    {
+      "id": "TARA-078",
+      "asset": "message.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/message.go",
+      "source_line": 241
+    },
+    {
+      "id": "TARA-079",
+      "asset": "message.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/message.go",
+      "source_line": 254
+    },
+    {
+      "id": "TARA-080",
+      "asset": "message.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/message.go",
+      "source_line": 259
+    },
+    {
+      "id": "TARA-081",
+      "asset": "message.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/message.go",
+      "source_line": 283
+    },
+    {
+      "id": "TARA-082",
+      "asset": "message.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/message.go",
+      "source_line": 286
+    },
+    {
+      "id": "TARA-083",
+      "asset": "message.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/message.go",
+      "source_line": 292
+    },
+    {
+      "id": "TARA-084",
+      "asset": "message.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/message.go",
+      "source_line": 307
+    },
+    {
+      "id": "TARA-085",
+      "asset": "message.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/message.go",
+      "source_line": 308
+    },
+    {
+      "id": "TARA-086",
+      "asset": "message.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/message.go",
+      "source_line": 345
+    },
+    {
+      "id": "TARA-087",
+      "asset": "message.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/message.go",
+      "source_line": 345
+    },
+    {
+      "id": "TARA-088",
+      "asset": "packet_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go",
+      "source_line": 538
+    },
+    {
+      "id": "TARA-089",
+      "asset": "packet_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go",
+      "source_line": 1047
+    },
+    {
+      "id": "TARA-090",
+      "asset": "packet_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go",
+      "source_line": 1055
+    },
+    {
+      "id": "TARA-091",
+      "asset": "packet_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go",
+      "source_line": 1058
+    },
+    {
+      "id": "TARA-092",
+      "asset": "packet_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go",
+      "source_line": 1067
+    },
+    {
+      "id": "TARA-093",
+      "asset": "packet_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go",
+      "source_line": 1125
+    },
+    {
+      "id": "TARA-094",
+      "asset": "packet_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go",
+      "source_line": 1826
+    },
+    {
+      "id": "TARA-095",
+      "asset": "packet_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go",
+      "source_line": 1843
+    },
+    {
+      "id": "TARA-096",
+      "asset": "packet_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go",
+      "source_line": 2162
+    },
+    {
+      "id": "TARA-097",
+      "asset": "participant.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
+      "source_line": 481
+    },
+    {
+      "id": "TARA-098",
+      "asset": "persist.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/persist.go",
+      "source_line": 73
+    },
+    {
+      "id": "TARA-099",
+      "asset": "reliable.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/reliable.go",
+      "source_line": 59
+    },
+    {
+      "id": "TARA-100",
+      "asset": "rtps_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/rtps_test.go",
+      "source_line": 531
+    },
+    {
+      "id": "TARA-101",
+      "asset": "rtps_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/rtps_test.go",
+      "source_line": 538
+    },
+    {
+      "id": "TARA-102",
+      "asset": "wire_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/wire_test.go",
+      "source_line": 115
+    },
+    {
+      "id": "TARA-103",
+      "asset": "wire_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/wire_test.go",
+      "source_line": 115
+    },
+    {
+      "id": "TARA-104",
+      "asset": "wire_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/wire_test.go",
+      "source_line": 115
+    },
+    {
+      "id": "TARA-105",
+      "asset": "wire_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/wire_test.go",
+      "source_line": 115
+    },
+    {
+      "id": "TARA-106",
+      "asset": "e2e.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e.go",
+      "source_line": 297
+    },
+    {
+      "id": "TARA-107",
+      "asset": "e2e_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e_test.go",
+      "source_line": 122
+    },
+    {
+      "id": "TARA-108",
+      "asset": "e2e_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e_test.go",
+      "source_line": 447
+    },
+    {
+      "id": "TARA-109",
+      "asset": "cert.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert.go",
+      "source_line": 87
+    },
+    {
+      "id": "TARA-110",
+      "asset": "cert.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert.go",
+      "source_line": 90
+    },
+    {
+      "id": "TARA-111",
+      "asset": "cert_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert_test.go",
+      "source_line": 301
+    },
+    {
+      "id": "TARA-112",
+      "asset": "cert_test.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert_test.go",
+      "source_line": 304
+    },
+    {
+      "id": "TARA-113",
+      "asset": "shmem.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem.go",
+      "source_line": 240
+    },
+    {
+      "id": "TARA-114",
+      "asset": "shmem.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem.go",
+      "source_line": 622
+    },
+    {
+      "id": "TARA-115",
+      "asset": "diagnostics.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/diagnostics.go",
+      "source_line": 180
+    },
+    {
+      "id": "TARA-116",
+      "asset": "taprio.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio.go",
+      "source_line": 65
+    },
+    {
+      "id": "TARA-117",
+      "asset": "taprio_linux.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_linux.go",
+      "source_line": 73
+    },
+    {
+      "id": "TARA-118",
+      "asset": "taprio_linux.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_linux.go",
+      "source_line": 103
+    },
+    {
+      "id": "TARA-119",
+      "asset": "taprio_linux.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_linux.go",
+      "source_line": 104
+    },
+    {
+      "id": "TARA-120",
+      "asset": "taprio_linux.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_linux.go",
+      "source_line": 121
+    },
+    {
+      "id": "TARA-121",
+      "asset": "taprio_linux.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_linux.go",
+      "source_line": 153
+    },
+    {
+      "id": "TARA-122",
+      "asset": "taprio_linux.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_linux.go",
+      "source_line": 174
+    },
+    {
+      "id": "TARA-123",
+      "asset": "taprio_linux.go",
+      "threat": "Integer narrowing conversion causes silent data truncation",
+      "stride": [
+        "T",
+        "D"
+      ],
+      "cwe": "CWE-190",
+      "standard": "MISRA Rule 10.3",
+      "attack_vector": "Local",
+      "likelihood": "Low",
+      "impact": "Medium",
+      "security_level": 1,
+      "current_control": "Add range check before conversion",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER009",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_linux.go",
+      "source_line": 197
+    },
+    {
+      "id": "TARA-124",
+      "asset": "tsn_test.go",
+      "threat": "World-readable/writable file allows unauthorised data access or tampering",
+      "stride": [
+        "I",
+        "T"
+      ],
+      "cwe": "CWE-732",
+      "attack_vector": "Local",
+      "likelihood": "Medium",
+      "impact": "Medium",
+      "security_level": 2,
+      "current_control": "Create file with mode 0640 or stricter",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER017",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/tsn_test.go",
+      "source_line": 151
+    },
+    {
+      "id": "TARA-125",
+      "asset": "tsn_test.go",
+      "threat": "World-readable/writable file allows unauthorised data access or tampering",
+      "stride": [
+        "I",
+        "T"
+      ],
+      "cwe": "CWE-732",
+      "attack_vector": "Local",
+      "likelihood": "Medium",
+      "impact": "Medium",
+      "security_level": 2,
+      "current_control": "Create file with mode 0640 or stricter",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER017",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/tsn_test.go",
+      "source_line": 173
+    },
+    {
+      "id": "TARA-126",
+      "asset": "tsn_test.go",
+      "threat": "World-readable/writable file allows unauthorised data access or tampering",
+      "stride": [
+        "I",
+        "T"
+      ],
+      "cwe": "CWE-732",
+      "attack_vector": "Local",
+      "likelihood": "Medium",
+      "impact": "Medium",
+      "security_level": 2,
+      "current_control": "Create file with mode 0640 or stricter",
+      "residual_risk": "Low after remediation",
+      "cyber_rule_id": "CYBER017",
+      "source_file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/tsn_test.go",
+      "source_line": 187
+    }
+  ]
+}

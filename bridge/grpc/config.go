@@ -74,7 +74,8 @@ func ApplyConfig(b *Bridge, cfg *Config) error {
 			continue
 		}
 		q := tc.qos()
-		_, err := b.p.NewSubscriber(tc.Name, q)
+		ignoredRet, err := b.p.NewSubscriber(tc.Name, q)
+		_ = ignoredRet
 		if err != nil {
 			return fmt.Errorf("grpcbridge: pre-subscribe %q: %w", tc.Name, err)
 		}

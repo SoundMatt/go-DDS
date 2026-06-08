@@ -1,8 +1,8 @@
 {
   "format": "go-FuSa Safety Case v1",
-  "generatedAt": "2026-06-08T19:37:14.157789Z",
+  "generatedAt": "2026-06-08T21:18:02.745188Z",
   "module": "github.com/SoundMatt/go-DDS",
-  "standard": "iso26262",
+  "standard": "generic",
   "evidence": [
     {
       "id": "check",
@@ -15,7 +15,7 @@
       "description": "Requirements traceability matrix",
       "file": ".fusa-reqs.json",
       "status": "present",
-      "detail": "15 requirements"
+      "detail": "236 requirements"
     },
     {
       "id": "verify",
@@ -46,41 +46,41 @@
   ],
   "clauses": [
     {
-      "standard": "ISO 26262",
-      "clause": "Part 6 §6.4",
-      "title": "Software requirements specification",
-      "evidenceIds": [
-        "trace"
-      ]
-    },
-    {
-      "standard": "ISO 26262",
-      "clause": "Part 6 §6.6–6.7",
-      "title": "Software unit design and implementation",
+      "standard": "Generic",
+      "clause": "CS-1",
+      "title": "Coding standard compliance",
       "evidenceIds": [
         "check"
       ]
     },
     {
-      "standard": "ISO 26262",
-      "clause": "Part 6 §6.8",
-      "title": "Software unit verification",
+      "standard": "Generic",
+      "clause": "CS-2",
+      "title": "Requirements traceability",
+      "evidenceIds": [
+        "trace"
+      ]
+    },
+    {
+      "standard": "Generic",
+      "clause": "CS-3",
+      "title": "Test evidence",
       "evidenceIds": [
         "verify"
       ]
     },
     {
-      "standard": "ISO 26262",
-      "clause": "Part 8 §8.4.5",
+      "standard": "Generic",
+      "clause": "CS-4",
       "title": "Tool qualification",
       "evidenceIds": [
         "qualify"
       ]
     },
     {
-      "standard": "ISO 26262",
-      "clause": "Part 8 §8.3",
-      "title": "Release management",
+      "standard": "Generic",
+      "clause": "CS-5",
+      "title": "Release inventory",
       "evidenceIds": [
         "sbom",
         "provenance"

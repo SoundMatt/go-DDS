@@ -18,15 +18,27 @@ import (
 // polling loop. The WaitSet blocks until any attached subscriber delivers a
 // sample, then returns it together with the subscriber it arrived on.
 func ExampleNewWaitSet() {
-	p, _ := mock.New(dds.Domain(0))
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		panic("New: " + err.Error())
+	}
 	defer p.Close()
 
-	subTemp, _ := p.NewSubscriber("sensors/temp", dds.DefaultQoS)
-	subSpeed, _ := p.NewSubscriber("vehicle/speed", dds.DefaultQoS)
+	subTemp, err := p.NewSubscriber("sensors/temp", dds.DefaultQoS)
+	if err != nil {
+		panic("NewSubscriber: " + err.Error())
+	}
+	subSpeed, err := p.NewSubscriber("vehicle/speed", dds.DefaultQoS)
+	if err != nil {
+		panic("NewSubscriber: " + err.Error())
+	}
 	defer func() { _ = subTemp.Close() }()
 	defer func() { _ = subSpeed.Close() }()
 
-	pubTemp, _ := p.NewPublisher("sensors/temp", dds.DefaultQoS)
+	pubTemp, err := p.NewPublisher("sensors/temp", dds.DefaultQoS)
+	if err != nil {
+		panic("NewPublisher: " + err.Error())
+	}
 	defer func() { _ = pubTemp.Close() }()
 
 	_ = pubTemp.Write([]byte("21.5"))

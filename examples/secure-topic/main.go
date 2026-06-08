@@ -172,7 +172,8 @@ func demoTamper(p dds.Participant) {
 	}
 
 	raw := <-rawSub.C()
-	_, openErr := subPlugin.Open(raw.Payload)
+	ignoredRet, openErr := subPlugin.Open(raw.Payload)
+	_ = ignoredRet
 	if openErr != nil {
 		fmt.Printf("  tamper detected: %v\n", openErr)
 		fmt.Println("  payload rejected — wrong key cannot decrypt or verify")

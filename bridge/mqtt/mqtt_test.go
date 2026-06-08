@@ -126,7 +126,8 @@ func TestNewBridge_DisconnectedClient_Errors(t *testing.T) {
 	p := newMockPart(t)
 	client := newStubClient()
 	client.connected = false
-	_, err := mqttbridge.NewBridge(p, client, mqttbridge.Options{})
+	ignoredRet, err := mqttbridge.NewBridge(p, client, mqttbridge.Options{})
+	_ = ignoredRet
 	if err == nil {
 		t.Error("expected error for disconnected client")
 	}
@@ -143,7 +144,10 @@ func TestBridge_DDSToMQTT(t *testing.T) {
 	}
 	defer func() { _ = b.Close() }()
 
-	pub, _ := p.NewPublisher("vehicle/speed", dds.DefaultQoS)
+	pub, err := p.NewPublisher("vehicle/speed", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 	_ = pub.Write([]byte(`{"kmh":120}`))
 
@@ -169,7 +173,10 @@ func TestBridge_MQTTToDDS(t *testing.T) {
 	}
 	defer func() { _ = b.Close() }()
 
-	sub, _ := p.NewSubscriber("sensor/temp", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("sensor/temp", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
 
 	client.injectMQTT("sensor/temp", []byte("22.5"))
@@ -205,7 +212,8 @@ func TestPrefixMap_MQTTToDDS(t *testing.T) {
 
 func TestPrefixMap_MQTTToDDS_NoMatch(t *testing.T) {
 	m := mqttbridge.PrefixMap("signals/", "vehicle/signals/")
-	_, ok := m.MQTTToDDS("other/topic")
+	ignoredRet, ok := m.MQTTToDDS("other/topic")
+	_ = ignoredRet
 	if ok {
 		t.Error("expected no match for non-matching prefix")
 	}
@@ -270,7 +278,10 @@ func TestBridge_FromMQTT_NoTopicMatch(t *testing.T) {
 	}
 	defer func() { _ = b.Close() }()
 
-	sub, _ := p.NewSubscriber("signals/rpm", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("signals/rpm", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
 
 	// Inject a topic that does NOT match the mqtt prefix — should be discarded.
@@ -303,7 +314,8 @@ func (c *errSubscribeClient) Subscribe(topic string, qos byte, handler mqttbridg
 func TestNewBridge_MQTTSubscribeError(t *testing.T) {
 	p := newMockPart(t)
 	client := &errSubscribeClient{newStubClient()}
-	_, err := mqttbridge.NewBridge(p, client, mqttbridge.Options{})
+	ignoredRet, err := mqttbridge.NewBridge(p, client, mqttbridge.Options{})
+	_ = ignoredRet
 	if err == nil {
 		t.Fatal("expected error when MQTT subscribe fails")
 	}
@@ -331,7 +343,10 @@ func TestBridge_FromMQTT_PublisherCreateError(t *testing.T) {
 func TestBridge_Close_Idempotent(t *testing.T) {
 	p := newMockPart(t)
 	client := newStubClient()
-	b, _ := mqttbridge.NewBridge(p, client, mqttbridge.Options{})
+	b, err := mqttbridge.NewBridge(p, client, mqttbridge.Options{})
+	if err != nil {
+		t.Fatalf("NewBridge: %v", err)
+	}
 	b.Close()
 	b.Close() // must not panic
 }

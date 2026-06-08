@@ -124,7 +124,8 @@ func TestSampleBuffer_PushAndPop(t *testing.T) {
 
 func TestSampleBuffer_PopEmpty(t *testing.T) {
 	sb := pool.NewSampleBuffer(4)
-	_, ok := sb.Pop()
+	ignoredRet, ok := sb.Pop()
+	_ = ignoredRet
 	if ok {
 		t.Fatal("Pop on empty buffer should return false")
 	}
@@ -209,7 +210,8 @@ func TestSampleBuffer_Concurrent(t *testing.T) {
 	}
 	go func() {
 		for {
-			_, ok := sb.Pop()
+			ignoredRet, ok := sb.Pop()
+			_ = ignoredRet
 			if !ok {
 				time.Sleep(time.Microsecond)
 			}
@@ -236,7 +238,8 @@ func TestSampleBuffer_FullThenDrain(t *testing.T) {
 			t.Errorf("Pop[%d]: got %q, want %q", i, s.Topic, want)
 		}
 	}
-	_, ok := sb.Pop()
+	ignoredRet, ok := sb.Pop()
+	_ = ignoredRet
 	if ok {
 		t.Fatal("Pop after full drain should return false")
 	}

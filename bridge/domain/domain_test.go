@@ -80,13 +80,25 @@ func TestBridge_MultipleTopics(t *testing.T) {
 	topicA := uniqueTopic("bridge/multi/a")
 	topicB := uniqueTopic("bridge/multi/b")
 
-	subA, _ := dst.NewSubscriber(topicA, dds.DefaultQoS)
-	subB, _ := dst.NewSubscriber(topicB, dds.DefaultQoS)
+	subA, err := dst.NewSubscriber(topicA, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	subB, err := dst.NewSubscriber(topicB, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer subA.Close()
 	defer subB.Close()
 
-	pubA, _ := src.NewPublisher(topicA, dds.DefaultQoS)
-	pubB, _ := src.NewPublisher(topicB, dds.DefaultQoS)
+	pubA, err := src.NewPublisher(topicA, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	pubB, err := src.NewPublisher(topicB, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pubA.Close()
 	defer pubB.Close()
 
@@ -152,7 +164,8 @@ func TestBridge_New_ClosedSrc_Error(t *testing.T) {
 	src.Close()
 
 	topic := uniqueTopic("bridge/closedsrc")
-	_, err := domain.New(src, dst, domain.Options{Topics: []string{topic}})
+	ignoredRet, err := domain.New(src, dst, domain.Options{Topics: []string{topic}})
+	_ = ignoredRet
 	if err == nil {
 		t.Error("expected error when src is closed")
 	}
@@ -164,7 +177,8 @@ func TestBridge_New_ClosedDst_Error(t *testing.T) {
 	dst.Close()
 
 	topic := uniqueTopic("bridge/closeddst")
-	_, err := domain.New(src, dst, domain.Options{Topics: []string{topic}})
+	ignoredRet, err := domain.New(src, dst, domain.Options{Topics: []string{topic}})
+	_ = ignoredRet
 	if err == nil {
 		t.Error("expected error when dst is closed")
 	}

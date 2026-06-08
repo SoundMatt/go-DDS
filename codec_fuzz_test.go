@@ -75,7 +75,7 @@ func FuzzProtoCodecOpenArbitrary(f *testing.F) {
 	codec := dds.ProtoCodec[*wrapperspb.StringValue]{}
 
 	f.Fuzz(func(t *testing.T, data []byte) {
-		// Must not panic.
+		_ = t // Must not panic. Errors on invalid input are expected.
 		_, _ = codec.Unmarshal(data)
 	})
 }

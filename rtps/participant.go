@@ -331,7 +331,8 @@ func (p *participant) topicCounterFor(topic string) *topicCounter {
 		}
 	}
 	tc := &topicCounter{}
-	actual, _ := p.topicMetrics.LoadOrStore(topic, tc)
+	actual, loaded := p.topicMetrics.LoadOrStore(topic, tc)
+	_ = loaded
 	if tc2, ok := actual.(*topicCounter); ok {
 		return tc2
 	}

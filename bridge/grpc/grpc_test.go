@@ -81,7 +81,9 @@ func newTestBridge(t *testing.T, opts grpcbridge.Options) (grpcbridge.DDSBridgeC
 // ── Publish ───────────────────────────────────────────────────────────────────
 
 func TestBridge_Publish_ReturnsAck(t *testing.T) {
-	client, _, _ := newTestBridge(t, grpcbridge.Options{})
+	client, ret2, ret3 := newTestBridge(t, grpcbridge.Options{})
+	_ = ret2
+	_ = ret3
 
 	ack, err := client.Publish(context.Background(), &grpcbridge.PublishRequest{
 		Topic:   "grpc/test",
@@ -96,9 +98,12 @@ func TestBridge_Publish_ReturnsAck(t *testing.T) {
 }
 
 func TestBridge_Publish_EmptyTopic_InvalidArgument(t *testing.T) {
-	client, _, _ := newTestBridge(t, grpcbridge.Options{})
+	client, ret2, ret3 := newTestBridge(t, grpcbridge.Options{})
+	_ = ret2
+	_ = ret3
 
-	_, err := client.Publish(context.Background(), &grpcbridge.PublishRequest{Topic: ""})
+	ignoredRet, err := client.Publish(context.Background(), &grpcbridge.PublishRequest{Topic: ""})
+	_ = ignoredRet
 	if err == nil {
 		t.Fatal("expected error for empty topic")
 	}
@@ -110,7 +115,8 @@ func TestBridge_Publish_EmptyTopic_InvalidArgument(t *testing.T) {
 // ── Subscribe ─────────────────────────────────────────────────────────────────
 
 func TestBridge_Subscribe_ReceivesSample(t *testing.T) {
-	client, _, p := newTestBridge(t, grpcbridge.Options{})
+	client, bridge, p := newTestBridge(t, grpcbridge.Options{})
+	_ = bridge
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -123,7 +129,10 @@ func TestBridge_Subscribe_ReceivesSample(t *testing.T) {
 	// Give the subscription time to register.
 	time.Sleep(20 * time.Millisecond)
 
-	pub, _ := p.NewPublisher("grpc/sub", dds.DefaultQoS)
+	pub, err := p.NewPublisher("grpc/sub", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 	_ = pub.Write([]byte("grpc-sample"))
 
@@ -140,7 +149,9 @@ func TestBridge_Subscribe_ReceivesSample(t *testing.T) {
 }
 
 func TestBridge_Subscribe_EmptyTopic_InvalidArgument(t *testing.T) {
-	client, _, _ := newTestBridge(t, grpcbridge.Options{})
+	client, ret2, ret3 := newTestBridge(t, grpcbridge.Options{})
+	_ = ret2
+	_ = ret3
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -149,7 +160,8 @@ func TestBridge_Subscribe_EmptyTopic_InvalidArgument(t *testing.T) {
 	if err != nil {
 		return // some gRPC impls return the error at Subscribe time
 	}
-	_, err = stream.Recv()
+	ignoredRet, err := stream.Recv()
+	_ = ignoredRet
 	if err == nil {
 		t.Fatal("expected error for empty topic")
 	}
@@ -158,7 +170,9 @@ func TestBridge_Subscribe_EmptyTopic_InvalidArgument(t *testing.T) {
 // ── StreamPublish ─────────────────────────────────────────────────────────────
 
 func TestBridge_StreamPublish_ReturnsCount(t *testing.T) {
-	client, _, _ := newTestBridge(t, grpcbridge.Options{})
+	client, ret2, ret3 := newTestBridge(t, grpcbridge.Options{})
+	_ = ret2
+	_ = ret3
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -189,7 +203,8 @@ func TestBridge_Filter_DropsMatchingSamples(t *testing.T) {
 			return string(payload) != "drop-me"
 		},
 	}
-	client, _, p := newTestBridge(t, opts)
+	client, bridge, p := newTestBridge(t, opts)
+	_ = bridge
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -200,7 +215,10 @@ func TestBridge_Filter_DropsMatchingSamples(t *testing.T) {
 	}
 	time.Sleep(20 * time.Millisecond)
 
-	pub, _ := p.NewPublisher("grpc/filter", dds.DefaultQoS)
+	pub, err := p.NewPublisher("grpc/filter", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 	_ = pub.Write([]byte("drop-me")) // filtered out
 	_ = pub.Write([]byte("keep-me"))
@@ -220,7 +238,8 @@ func TestBridge_Transform_RewritesPayload(t *testing.T) {
 			return append([]byte("prefix:"), payload...), nil
 		},
 	}
-	client, _, p := newTestBridge(t, opts)
+	client, bridge, p := newTestBridge(t, opts)
+	_ = bridge
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -231,7 +250,10 @@ func TestBridge_Transform_RewritesPayload(t *testing.T) {
 	}
 	time.Sleep(20 * time.Millisecond)
 
-	pub, _ := p.NewPublisher("grpc/transform", dds.DefaultQoS)
+	pub, err := p.NewPublisher("grpc/transform", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 	_ = pub.Write([]byte("data"))
 
@@ -247,7 +269,10 @@ func TestBridge_Transform_RewritesPayload(t *testing.T) {
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
 func TestBridge_Auth_NoToken_Unauthenticated(t *testing.T) {
-	p, _ := mock.New(dds.Domain(0))
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
 	defer p.Close()
 	b := grpcbridge.New(p, grpcbridge.Options{AuthToken: "secret"})
 	lis := listenLocal(t)
@@ -261,7 +286,8 @@ func TestBridge_Auth_NoToken_Unauthenticated(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	_, err := client.Publish(ctx, &grpcbridge.PublishRequest{Topic: "t", Payload: []byte("x")})
+	ignoredRet, err := client.Publish(ctx, &grpcbridge.PublishRequest{Topic: "t", Payload: []byte("x")})
+	_ = ignoredRet
 	if err == nil {
 		t.Fatal("expected unauthenticated error")
 	}
@@ -271,7 +297,10 @@ func TestBridge_Auth_NoToken_Unauthenticated(t *testing.T) {
 }
 
 func TestBridge_Auth_CorrectToken_Passes(t *testing.T) {
-	p, _ := mock.New(dds.Domain(0))
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
 	defer p.Close()
 	b := grpcbridge.New(p, grpcbridge.Options{AuthToken: "secret"})
 	lis := listenLocal(t)
@@ -291,7 +320,8 @@ func TestBridge_Auth_CorrectToken_Passes(t *testing.T) {
 	defer conn.Close()
 
 	client := grpcbridge.NewRawClient(conn)
-	_, err = client.Publish(ctx, &grpcbridge.PublishRequest{Topic: "t", Payload: []byte("x")})
+	ignoredRet, err := client.Publish(ctx, &grpcbridge.PublishRequest{Topic: "t", Payload: []byte("x")})
+	_ = ignoredRet
 	if err != nil {
 		t.Fatalf("expected success with correct token, got: %v", err)
 	}
@@ -307,7 +337,10 @@ func (b bearerToken) RequireTransportSecurity() bool { return false }
 // ── Close ─────────────────────────────────────────────────────────────────────
 
 func TestBridge_Close_Idempotent(t *testing.T) {
-	p, _ := mock.New(dds.Domain(0))
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
 	defer p.Close()
 	b := grpcbridge.New(p, grpcbridge.Options{})
 	if err := b.Close(); err != nil {
@@ -353,7 +386,8 @@ topics:
 }
 
 func TestLoadConfig_NotFound(t *testing.T) {
-	_, err := grpcbridge.LoadConfig("/nonexistent/path.yaml")
+	ignoredRet, err := grpcbridge.LoadConfig("/nonexistent/path.yaml")
+	_ = ignoredRet
 	if err == nil {
 		t.Error("expected error for missing file")
 	}
@@ -364,7 +398,8 @@ func TestLoadConfig_InvalidYAML(t *testing.T) {
 	if err := os.WriteFile(f, []byte(":\ninvalid:::yaml"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, err := grpcbridge.LoadConfig(f)
+	ignoredRet, err := grpcbridge.LoadConfig(f)
+	_ = ignoredRet
 	if err == nil {
 		t.Error("expected error for invalid YAML")
 	}
@@ -404,9 +439,9 @@ func FuzzBridge_Publish(f *testing.F) {
 	f.Add("a/b/c", []byte{0x00, 0xFF})
 
 	f.Fuzz(func(t *testing.T, topic string, payload []byte) {
+		_ = t // Must not panic. Errors on invalid input are expected.
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		_, _ = client.Publish(ctx, &grpcbridge.PublishRequest{Topic: topic, Payload: payload})
-		// Must not panic.
 	})
 }

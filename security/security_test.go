@@ -55,7 +55,10 @@ func TestNullPlugin_RoundTrip(t *testing.T) {
 func TestNullPlugin_Identity(t *testing.T) {
 	p := security.NullPlugin{}
 	in := []byte("test")
-	out, _ := p.Seal(in)
+	out, err := p.Seal(in)
+	if err != nil {
+		t.Fatalf("Seal: %v", err)
+	}
 	if !bytes.Equal(out, in) {
 		t.Error("NullPlugin.Seal must be identity")
 	}
@@ -81,7 +84,10 @@ func TestHMACPlugin_TagApended(t *testing.T) {
 	key := security.NewRandomKey(32)
 	p := security.NewHMACPlugin(key)
 	plain := []byte("payload")
-	sealed, _ := p.Seal(plain)
+	sealed, err := p.Seal(plain)
+	if err != nil {
+		t.Fatalf("Seal: %v", err)
+	}
 	if len(sealed) != len(plain)+32 {
 		t.Errorf("sealed length: got %d, want %d", len(sealed), len(plain)+32)
 	}
@@ -90,7 +96,10 @@ func TestHMACPlugin_TagApended(t *testing.T) {
 func TestHMACPlugin_TamperDetected(t *testing.T) {
 	key := security.NewRandomKey(32)
 	p := security.NewHMACPlugin(key)
-	sealed, _ := p.Seal([]byte("important data"))
+	sealed, err := p.Seal([]byte("important data"))
+	if err != nil {
+		t.Fatalf("Seal: %v", err)
+	}
 	sealed[0] ^= 0xFF // flip first byte
 	if _, err := p.Open(sealed); err == nil {
 		t.Error("expected error on tampered payload, got nil")
@@ -102,7 +111,10 @@ func TestHMACPlugin_WrongKey(t *testing.T) {
 	key2 := security.NewRandomKey(32)
 	p1 := security.NewHMACPlugin(key1)
 	p2 := security.NewHMACPlugin(key2)
-	sealed, _ := p1.Seal([]byte("secret"))
+	sealed, err := p1.Seal([]byte("secret"))
+	if err != nil {
+		t.Fatalf("Seal: %v", err)
+	}
 	if _, err := p2.Open(sealed); err == nil {
 		t.Error("expected error opening with wrong key")
 	}
@@ -136,9 +148,18 @@ func TestAESGCMPlugin_RoundTrip(t *testing.T) {
 
 func TestAESGCMPlugin_DistinctNonces(t *testing.T) {
 	key := security.NewRandomKey(32)
-	p, _ := security.NewAESGCMPlugin(key)
-	a, _ := p.Seal([]byte("same plaintext"))
-	b, _ := p.Seal([]byte("same plaintext"))
+	p, err := security.NewAESGCMPlugin(key)
+	if err != nil {
+		t.Fatalf("NewAESGCMPlugin: %v", err)
+	}
+	a, err := p.Seal([]byte("same plaintext"))
+	if err != nil {
+		t.Fatalf("Seal: %v", err)
+	}
+	b, err := p.Seal([]byte("same plaintext"))
+	if err != nil {
+		t.Fatalf("Seal: %v", err)
+	}
 	// Two seals of identical plaintext must produce different ciphertexts
 	// because the nonce is random.
 	if bytes.Equal(a, b) {
@@ -148,8 +169,14 @@ func TestAESGCMPlugin_DistinctNonces(t *testing.T) {
 
 func TestAESGCMPlugin_TamperDetected(t *testing.T) {
 	key := security.NewRandomKey(32)
-	p, _ := security.NewAESGCMPlugin(key)
-	sealed, _ := p.Seal([]byte("sensitive"))
+	p, err := security.NewAESGCMPlugin(key)
+	if err != nil {
+		t.Fatalf("NewAESGCMPlugin: %v", err)
+	}
+	sealed, err := p.Seal([]byte("sensitive"))
+	if err != nil {
+		t.Fatalf("Seal: %v", err)
+	}
 	sealed[len(sealed)-1] ^= 0xFF // corrupt last byte of GCM tag
 	if _, err := p.Open(sealed); err == nil {
 		t.Error("expected error on tampered AES-GCM payload")
@@ -159,9 +186,18 @@ func TestAESGCMPlugin_TamperDetected(t *testing.T) {
 func TestAESGCMPlugin_WrongKey(t *testing.T) {
 	k1 := security.NewRandomKey(32)
 	k2 := security.NewRandomKey(32)
-	p1, _ := security.NewAESGCMPlugin(k1)
-	p2, _ := security.NewAESGCMPlugin(k2)
-	sealed, _ := p1.Seal([]byte("secret"))
+	p1, err := security.NewAESGCMPlugin(k1)
+	if err != nil {
+		t.Fatalf("NewAESGCMPlugin: %v", err)
+	}
+	p2, err := security.NewAESGCMPlugin(k2)
+	if err != nil {
+		t.Fatalf("NewAESGCMPlugin: %v", err)
+	}
+	sealed, err := p1.Seal([]byte("secret"))
+	if err != nil {
+		t.Fatalf("Seal: %v", err)
+	}
 	if _, err := p2.Open(sealed); err == nil {
 		t.Error("expected error decrypting with wrong key")
 	}
@@ -175,7 +211,10 @@ func TestAESGCMPlugin_BadKeyLength(t *testing.T) {
 
 func TestAESGCMPlugin_TooShort(t *testing.T) {
 	key := security.NewRandomKey(32)
-	p, _ := security.NewAESGCMPlugin(key)
+	p, err := security.NewAESGCMPlugin(key)
+	if err != nil {
+		t.Fatalf("NewAESGCMPlugin: %v", err)
+	}
 	if _, err := p.Open([]byte("short")); err == nil {
 		t.Error("expected error on payload shorter than nonce+tag")
 	}

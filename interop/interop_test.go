@@ -126,7 +126,8 @@ func TestInterop_CyclonePublisher_GoSubscriber(t *testing.T) {
 	defer cancel()
 
 	ws := dds.NewWaitSet(sub)
-	s, _, err := ws.Wait(ctx)
+	s, wsSub, err := ws.Wait(ctx)
+	_ = wsSub
 	if err != nil {
 		t.Skipf("no sample from CycloneDDS within %s — is the cyclone-pub service running? (%v)", testTimeout(), err)
 	}
@@ -163,7 +164,8 @@ func TestInterop_BidirectionalEcho(t *testing.T) {
 	defer cancel()
 
 	ws := dds.NewWaitSet(sub)
-	s, _, err := ws.Wait(ctx)
+	s, wsSub, err := ws.Wait(ctx)
+	_ = wsSub
 	if err != nil {
 		t.Skipf("no echo from CycloneDDS within timeout — is the cyclone-peer service running? (%v)", err)
 	}

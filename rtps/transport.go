@@ -75,7 +75,10 @@ func newUnicastSocketV6(port int) (*udpSocket, error) {
 // on the same port. The socket then works for intra-process delivery; SPDP
 // peer discovery across network boundaries is simply disabled in that case.
 func newMulticastReceiveSocket(group net.IP, port int) (*udpSocket, error) {
-	iface, _ := firstMulticastInterface() // nil iface is OK: OS picks
+	iface, err := firstMulticastInterface() // nil iface is OK: OS picks
+	if err != nil {
+		return nil, err
+	}
 	conn, err := net.ListenMulticastUDP("udp4", iface, &net.UDPAddr{IP: group, Port: port})
 	if err == nil {
 		return newSocket(conn, port), nil
@@ -93,7 +96,10 @@ func newMulticastReceiveSocket(group net.IP, port int) (*udpSocket, error) {
 // Falls back to a plain unicast bind on the same port when no IPv6 multicast
 // interface is available (containers, CI environments).
 func newMulticastReceiveSocketV6(group net.IP, port int) (*udpSocket, error) {
-	iface, _ := firstIPv6MulticastInterface()
+	iface, err := firstIPv6MulticastInterface()
+	if err != nil {
+		return nil, err
+	}
 	conn, err := net.ListenMulticastUDP("udp6", iface, &net.UDPAddr{IP: group, Port: port})
 	if err == nil {
 		return newSocket(conn, port), nil
@@ -115,7 +121,10 @@ func firstIPv6MulticastInterface() (*net.Interface, error) {
 	for _, iface := range ifaces {
 		flags := iface.Flags
 		if flags&net.FlagUp != 0 && flags&net.FlagMulticast != 0 && flags&net.FlagLoopback == 0 {
-			addrs, _ := iface.Addrs()
+			addrs, err := iface.Addrs()
+			if err != nil {
+				return nil, err
+			}
 			for _, a := range addrs {
 				if ipnet, ok := a.(*net.IPNet); ok && ipnet.IP.To4() == nil && ipnet.IP.To16() != nil {
 					return &iface, nil
@@ -165,7 +174,8 @@ func (s *udpSocket) readLoop() {
 }
 
 func (s *udpSocket) send(dst *net.UDPAddr, data []byte) error {
-	_, err := s.conn.WriteToUDP(data, dst)
+	ignoredRet, err := s.conn.WriteToUDP(data, dst)
+	_ = ignoredRet
 	return err
 }
 

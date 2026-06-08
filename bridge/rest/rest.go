@@ -197,10 +197,18 @@ func (b *Bridge) handleSubscribe(w http.ResponseWriter, r *http.Request, topic s
 			}
 			id := b.seq.Add(1)
 			encoded := base64.StdEncoding.EncodeToString(s.Payload)
-			_, _ = fmt.Fprintf(w, "id: %d\nevent: message\ndata: %s\n\n", id, encoded)
+			writeN, writeErr := fmt.Fprintf(w, "id: %d\nevent: message\ndata: %s\n\n", id, encoded)
+			_ = writeN
+			if writeErr != nil {
+				return
+			}
 			flusher.Flush()
 		case <-keepalive:
-			_, _ = fmt.Fprintf(w, ": keepalive\n\n")
+			writeN, writeErr := fmt.Fprintf(w, ": keepalive\n\n")
+			_ = writeN
+			if writeErr != nil {
+				return
+			}
 			flusher.Flush()
 		case <-r.Context().Done():
 			return

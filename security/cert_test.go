@@ -105,7 +105,10 @@ func TestCertPlugin_RoundTrip(t *testing.T) {
 
 func TestCertPlugin_TamperedPayload(t *testing.T) {
 	p := newCertPlugin(t)
-	sealed, _ := p.Seal([]byte("sensitive data"))
+	sealed, err := p.Seal([]byte("sensitive data"))
+	if err != nil {
+		t.Fatalf("Seal: %v", err)
+	}
 	sealed[0] ^= 0xFF
 	if _, err := p.Open(sealed); err == nil {
 		t.Error("expected error on tampered plaintext")
@@ -114,7 +117,10 @@ func TestCertPlugin_TamperedPayload(t *testing.T) {
 
 func TestCertPlugin_TamperedSignature(t *testing.T) {
 	p := newCertPlugin(t)
-	sealed, _ := p.Seal([]byte("data"))
+	sealed, err := p.Seal([]byte("data"))
+	if err != nil {
+		t.Fatalf("Seal: %v", err)
+	}
 	// Corrupt the last byte (part of the signature).
 	sealed[len(sealed)-1] ^= 0xFF
 	if _, err := p.Open(sealed); err == nil {
@@ -140,7 +146,10 @@ func TestCertPlugin_UntrustedCert(t *testing.T) {
 		t.Fatalf("pluginB: %v", err)
 	}
 
-	sealed, _ := pluginA.Seal([]byte("from A"))
+	sealed, err := pluginA.Seal([]byte("from A"))
+	if err != nil {
+		t.Fatalf("Seal: %v", err)
+	}
 	if _, err := pluginB.Open(sealed); err == nil {
 		t.Error("expected error: cert from CA-A should not be trusted by CA-B")
 	}
@@ -154,7 +163,8 @@ func TestCertPlugin_Open_TooShort(t *testing.T) {
 }
 
 func TestCertPlugin_New_BadCertPEM(t *testing.T) {
-	_, err := security.NewCertPlugin([]byte("not-pem"), []byte("x"), []byte("y"))
+	ignoredRet, err := security.NewCertPlugin([]byte("not-pem"), []byte("x"), []byte("y"))
+	_ = ignoredRet
 	if err == nil {
 		t.Error("expected error for invalid certPEM")
 	}
@@ -162,8 +172,10 @@ func TestCertPlugin_New_BadCertPEM(t *testing.T) {
 
 func TestCertPlugin_New_BadKeyPEM(t *testing.T) {
 	caPEM, caKey, caCert := genCA(t)
-	certPEM, _ := genLeaf(t, caKey, caCert)
-	_, err := security.NewCertPlugin(certPEM, []byte("not-pem"), caPEM)
+	certPEM, keyPEMUnused := genLeaf(t, caKey, caCert)
+	_ = keyPEMUnused
+	ignoredRet, err := security.NewCertPlugin(certPEM, []byte("not-pem"), caPEM)
+	_ = ignoredRet
 	if err == nil {
 		t.Error("expected error for invalid keyPEM")
 	}
@@ -171,10 +183,13 @@ func TestCertPlugin_New_BadKeyPEM(t *testing.T) {
 
 func TestCertPlugin_New_MismatchedKey(t *testing.T) {
 	caPEM, caKey, caCert := genCA(t)
-	certPEM, _ := genLeaf(t, caKey, caCert)
+	certPEM, keyPEMUnused := genLeaf(t, caKey, caCert)
+	_ = keyPEMUnused
 	// Generate a different leaf key (does not match certPEM's public key).
-	_, keyPEM2 := genLeaf(t, caKey, caCert)
-	_, err := security.NewCertPlugin(certPEM, keyPEM2, caPEM)
+	certPEMUnused, keyPEM2 := genLeaf(t, caKey, caCert)
+	_ = certPEMUnused
+	ignoredRet, err := security.NewCertPlugin(certPEM, keyPEM2, caPEM)
+	_ = ignoredRet
 	if err == nil {
 		t.Error("expected error for mismatched cert/key pair")
 	}
@@ -184,7 +199,8 @@ func TestCertPlugin_New_BadCAPEM(t *testing.T) {
 	caPEM, caKey, caCert := genCA(t)
 	certPEM, keyPEM := genLeaf(t, caKey, caCert)
 	_ = caPEM
-	_, err := security.NewCertPlugin(certPEM, keyPEM, []byte("not-a-ca"))
+	ignoredRet, err := security.NewCertPlugin(certPEM, keyPEM, []byte("not-a-ca"))
+	_ = ignoredRet
 	if err == nil {
 		t.Error("expected error for invalid CA PEM")
 	}
@@ -194,8 +210,14 @@ func TestCertPlugin_SealProducesDistinctOutputs(t *testing.T) {
 	// ECDSA signing uses a fresh random nonce, so two Seal calls on identical
 	// plaintext must produce different sealed bytes.
 	p := newCertPlugin(t)
-	a, _ := p.Seal([]byte("same"))
-	b, _ := p.Seal([]byte("same"))
+	a, err := p.Seal([]byte("same"))
+	if err != nil {
+		t.Fatalf("Seal: %v", err)
+	}
+	b, err := p.Seal([]byte("same"))
+	if err != nil {
+		t.Fatalf("Seal: %v", err)
+	}
 	if bytes.Equal(a, b) {
 		t.Error("two Seal calls on identical plaintext produced identical output (nonce reuse?)")
 	}
@@ -204,7 +226,9 @@ func TestCertPlugin_SealProducesDistinctOutputs(t *testing.T) {
 // TestCertPlugin_New_NonECDSACert exercises the branch in NewCertPlugin that
 // rejects a certificate whose public key is not *ecdsa.PublicKey.
 func TestCertPlugin_New_NonECDSACert(t *testing.T) {
-	caPEM, _, _ := genCA(t)
+	caPEM, ret2, ret3 := genCA(t)
+	_ = ret2
+	_ = ret3
 
 	// Create a self-signed RSA certificate.
 	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -234,7 +258,8 @@ func TestCertPlugin_New_NonECDSACert(t *testing.T) {
 	}
 	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER})
 
-	_, err = security.NewCertPlugin(certPEM, keyPEM, caPEM)
+	ignoredRet, err := security.NewCertPlugin(certPEM, keyPEM, caPEM)
+	_ = ignoredRet
 	if err == nil {
 		t.Error("expected error for RSA certificate (non-ECDSA public key)")
 	}
@@ -254,7 +279,8 @@ func TestCertPlugin_Open_CraftedLargeCertLen(t *testing.T) {
 		0x00, 0xFF, 0xFF, 0xFF, // certLen = 16,777,215 (too large)
 		0x00, 0x00, 0x00, 0x00, // sigLen = 0
 	}
-	_, err := p.Open(data)
+	ignoredRet, err := p.Open(data)
+	_ = ignoredRet
 	if err == nil {
 		t.Error("expected error for crafted payload with huge certLen")
 	}
@@ -303,7 +329,8 @@ func TestCertPlugin_Open_NonECDSASignerCert(t *testing.T) {
 	n += copy(payload[n:], sig)
 	binary.BigEndian.PutUint32(payload[n:], uint32(sigLen))
 
-	_, err = p.Open(payload)
+	ignoredRet, err := p.Open(payload)
+	_ = ignoredRet
 	if err == nil {
 		t.Error("expected error for non-ECDSA signer certificate in Open")
 	}
@@ -313,7 +340,8 @@ func TestCertPlugin_Open_NonECDSASignerCert(t *testing.T) {
 // where the PEM block exists but contains invalid EC key DER.
 func TestCertPlugin_ParseECKey_InvalidDER(t *testing.T) {
 	caPEM, caKey, caCert := genCA(t)
-	certPEM, _ := genLeaf(t, caKey, caCert)
+	certPEM, keyPEMUnused := genLeaf(t, caKey, caCert)
+	_ = keyPEMUnused
 
 	// Valid PEM type but garbage DER content.
 	badKeyPEM := pem.EncodeToMemory(&pem.Block{
@@ -321,7 +349,8 @@ func TestCertPlugin_ParseECKey_InvalidDER(t *testing.T) {
 		Bytes: []byte("not valid DER content"),
 	})
 
-	_, err := security.NewCertPlugin(certPEM, badKeyPEM, caPEM)
+	ignoredRet, err := security.NewCertPlugin(certPEM, badKeyPEM, caPEM)
+	_ = ignoredRet
 	if err == nil {
 		t.Error("expected error for valid PEM with invalid EC key DER")
 	}

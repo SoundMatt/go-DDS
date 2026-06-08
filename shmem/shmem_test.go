@@ -63,12 +63,18 @@ func TestPublishSubscribe_SameProcess(t *testing.T) {
 func TestTransientLocal_LateJoiner(t *testing.T) {
 	p := newPart(t)
 
-	pub, _ := p.NewPublisher("shmem/transient", dds.ReliableQoS)
+	pub, err := p.NewPublisher("shmem/transient", dds.ReliableQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	_ = pub.Write([]byte("state"))
 
-	sub, _ := p.NewSubscriber("shmem/transient", dds.ReliableQoS)
+	sub, err := p.NewSubscriber("shmem/transient", dds.ReliableQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
 
 	select {
@@ -92,7 +98,10 @@ func TestEmptyTopic_Errors(t *testing.T) {
 }
 
 func TestClosedParticipant_Errors(t *testing.T) {
-	p, _ := shmem.New(0)
+	p, err := shmem.New(0)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
 	p.Close()
 	if _, err := p.NewPublisher("x", dds.DefaultQoS); err == nil {
 		t.Error("expected error from closed participant")
@@ -101,7 +110,10 @@ func TestClosedParticipant_Errors(t *testing.T) {
 
 func TestPublisherClose_StopsWrites(t *testing.T) {
 	p := newPart(t)
-	pub, _ := p.NewPublisher("shmem/close", dds.DefaultQoS)
+	pub, err := p.NewPublisher("shmem/close", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	pub.Close()
 	if err := pub.Write([]byte("x")); err == nil {
 		t.Error("expected error writing to closed publisher")
@@ -114,8 +126,14 @@ func TestMetrics_ShmemParticipant(t *testing.T) {
 	if !ok {
 		t.Skip("shmem does not implement MetricsProvider")
 	}
-	pub, _ := p.NewPublisher("shmem/metrics", dds.DefaultQoS)
-	sub, _ := p.NewSubscriber("shmem/metrics", dds.DefaultQoS)
+	pub, err := p.NewPublisher("shmem/metrics", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	sub, err := p.NewSubscriber("shmem/metrics", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
 	defer pub.Close()
 
@@ -140,7 +158,10 @@ func TestChannelDepth_OptionAccepted(t *testing.T) {
 		t.Fatalf("NewSubscriber with WithChannelDepth: %v", err)
 	}
 	defer sub.Close()
-	pub, _ := p.NewPublisher("shmem/depth", dds.DefaultQoS)
+	pub, err := p.NewPublisher("shmem/depth", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	_ = pub.Write([]byte("x"))
@@ -155,13 +176,18 @@ func TestChannelDepth_OptionAccepted(t *testing.T) {
 }
 
 func TestSentinelErrors_ErrClosed_Wrapping(t *testing.T) {
-	p, _ := shmem.New(0)
+	p, err := shmem.New(0)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
 	p.Close()
-	_, err := p.NewPublisher("x", dds.DefaultQoS)
+	ignoredPub, err := p.NewPublisher("x", dds.DefaultQoS)
+	_ = ignoredPub
 	if !errors.Is(err, dds.ErrClosed) {
 		t.Errorf("closed participant: expected ErrClosed in chain, got %v", err)
 	}
-	_, err = p.NewSubscriber("x", dds.DefaultQoS)
+	ignoredSub, err := p.NewSubscriber("x", dds.DefaultQoS)
+	_ = ignoredSub
 	if !errors.Is(err, dds.ErrClosed) {
 		t.Errorf("closed participant subscriber: expected ErrClosed in chain, got %v", err)
 	}
@@ -169,11 +195,13 @@ func TestSentinelErrors_ErrClosed_Wrapping(t *testing.T) {
 
 func TestSentinelErrors_ErrTopicEmpty_Wrapping(t *testing.T) {
 	p := newPart(t)
-	_, err := p.NewPublisher("", dds.DefaultQoS)
+	ignoredPub, err := p.NewPublisher("", dds.DefaultQoS)
+	_ = ignoredPub
 	if !errors.Is(err, dds.ErrTopicEmpty) {
 		t.Errorf("empty topic publisher: expected ErrTopicEmpty in chain, got %v", err)
 	}
-	_, err = p.NewSubscriber("", dds.DefaultQoS)
+	ignoredSub, err := p.NewSubscriber("", dds.DefaultQoS)
+	_ = ignoredSub
 	if !errors.Is(err, dds.ErrTopicEmpty) {
 		t.Errorf("empty topic subscriber: expected ErrTopicEmpty in chain, got %v", err)
 	}
@@ -181,9 +209,12 @@ func TestSentinelErrors_ErrTopicEmpty_Wrapping(t *testing.T) {
 
 func TestSentinelErrors_ErrClosed_Write(t *testing.T) {
 	p := newPart(t)
-	pub, _ := p.NewPublisher("shmem/closedwrite", dds.DefaultQoS)
+	pub, err := p.NewPublisher("shmem/closedwrite", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	pub.Close()
-	err := pub.Write([]byte("x"))
+	err = pub.Write([]byte("x"))
 	if !errors.Is(err, dds.ErrClosed) {
 		t.Errorf("closed publisher write: expected ErrClosed in chain, got %v", err)
 	}
@@ -215,7 +246,10 @@ func TestMaxSampleSize_ZeroMeansUnlimited_Shmem(t *testing.T) {
 	p := newPart(t)
 	qos := dds.DefaultQoS
 	qos.MaxSampleSize = 0
-	pub, _ := p.NewPublisher("shmem/unlimited", qos)
+	pub, err := p.NewPublisher("shmem/unlimited", qos)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	large := make([]byte, 50_000)
@@ -243,10 +277,16 @@ func TestCloseWithDrain_Shmem(t *testing.T) {
 
 func TestSubscriberClose_RemovesFromBroker(t *testing.T) {
 	p := newPart(t)
-	pub, _ := p.NewPublisher("shmem/unsubscribe", dds.DefaultQoS)
+	pub, err := p.NewPublisher("shmem/unsubscribe", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
-	sub, _ := p.NewSubscriber("shmem/unsubscribe", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("shmem/unsubscribe", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 
 	// Close the subscriber — it must remove itself from the broker.
 	sub.Close()
@@ -270,7 +310,10 @@ func TestBackPressure_DropOldest_Shmem(t *testing.T) {
 	}
 	defer sub.Close()
 
-	pub, _ := p.NewPublisher("shmem/bp", dds.DefaultQoS)
+	pub, err := p.NewPublisher("shmem/bp", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	// Fill the channel and overflow — oldest should be dropped.
@@ -301,7 +344,10 @@ func TestContentFilter_Shmem(t *testing.T) {
 		t.Fatalf("NewSubscriber: %v", err)
 	}
 	defer sub.Close()
-	pub, _ := p.NewPublisher("shmem/filter", dds.DefaultQoS)
+	pub, err := p.NewPublisher("shmem/filter", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	_ = pub.Write([]byte("drop"))
@@ -319,9 +365,15 @@ func TestContentFilter_Shmem(t *testing.T) {
 
 func TestSampleTimestamp_Set(t *testing.T) {
 	p := newPart(t)
-	sub, _ := p.NewSubscriber("shmem/ts", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("shmem/ts", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
-	pub, _ := p.NewPublisher("shmem/ts", dds.DefaultQoS)
+	pub, err := p.NewPublisher("shmem/ts", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	before := time.Now()
@@ -448,10 +500,14 @@ func TestSubscriberUnsubscribe_Shmem(t *testing.T) {
 
 func TestTryRead_Empty_Shmem(t *testing.T) {
 	p := newPart(t)
-	sub, _ := p.NewSubscriber("shmem/tryread/empty", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("shmem/tryread/empty", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
 
-	_, ok := sub.TryRead()
+	ignoredRet, ok := sub.TryRead()
+	_ = ignoredRet
 	if ok {
 		t.Error("TryRead on empty channel must return false")
 	}
@@ -459,9 +515,15 @@ func TestTryRead_Empty_Shmem(t *testing.T) {
 
 func TestTryRead_HasSample_Shmem(t *testing.T) {
 	p := newPart(t)
-	sub, _ := p.NewSubscriber("shmem/tryread/has", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("shmem/tryread/has", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
-	pub, _ := p.NewPublisher("shmem/tryread/has", dds.DefaultQoS)
+	pub, err := p.NewPublisher("shmem/tryread/has", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	_ = pub.Write([]byte("ready"))
@@ -486,9 +548,15 @@ func TestTryRead_HasSample_Shmem(t *testing.T) {
 func TestSequenceNumber_Shmem(t *testing.T) {
 	p := newPart(t)
 	// WithChannelDepth large enough for in-process + cross-process duplicates.
-	sub, _ := p.NewSubscriber("shmem/seqnum", dds.DefaultQoS, dds.WithChannelDepth(8))
+	sub, err := p.NewSubscriber("shmem/seqnum", dds.DefaultQoS, dds.WithChannelDepth(8))
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
-	pub, _ := p.NewPublisher("shmem/seqnum", dds.DefaultQoS)
+	pub, err := p.NewPublisher("shmem/seqnum", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	_ = pub.Write([]byte("a"))
@@ -517,9 +585,15 @@ func TestSequenceNumber_Shmem(t *testing.T) {
 
 func TestWriterGUID_Shmem(t *testing.T) {
 	p := newPart(t)
-	sub, _ := p.NewSubscriber("shmem/writerguid", dds.DefaultQoS, dds.WithChannelDepth(8))
+	sub, err := p.NewSubscriber("shmem/writerguid", dds.DefaultQoS, dds.WithChannelDepth(8))
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
-	pub, _ := p.NewPublisher("shmem/writerguid", dds.DefaultQoS)
+	pub, err := p.NewPublisher("shmem/writerguid", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	_ = pub.Write([]byte("a"))
@@ -554,11 +628,20 @@ func TestWildcard_Shmem(t *testing.T) {
 	}
 	defer sub.Close()
 
-	pub1, _ := p.NewPublisher("shmem/1/val", dds.DefaultQoS)
+	pub1, err := p.NewPublisher("shmem/1/val", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub1.Close()
-	pub2, _ := p.NewPublisher("shmem/2/val", dds.DefaultQoS)
+	pub2, err := p.NewPublisher("shmem/2/val", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub2.Close()
-	pubNo, _ := p.NewPublisher("shmem/1/other", dds.DefaultQoS)
+	pubNo, err := p.NewPublisher("shmem/1/other", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pubNo.Close()
 
 	_ = pub1.Write([]byte("one"))

@@ -44,7 +44,10 @@ func newBridgeServer(t *testing.T, opts rest.Options) (*rest.Bridge, *httptest.S
 
 func doGet(t *testing.T, url string) *http.Response {
 	t.Helper()
-	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+	if err != nil {
+		t.Fatalf("NewRequestWithContext: %v", err)
+	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("GET %s: %v", url, err)
@@ -54,8 +57,11 @@ func doGet(t *testing.T, url string) *http.Response {
 
 func doPost(t *testing.T, url, body string) *http.Response {
 	t.Helper()
-	req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, url,
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, url,
 		strings.NewReader(body))
+	if err != nil {
+		t.Fatalf("NewRequestWithContext: %v", err)
+	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("POST %s: %v", url, err)
@@ -66,7 +72,8 @@ func doPost(t *testing.T, url, body string) *http.Response {
 // ── GET /topics ───────────────────────────────────────────────────────────────
 
 func TestBridge_ListTopics_Empty(t *testing.T) {
-	_, srv := newBridgeServer(t, rest.Options{})
+	ignoredRet, srv := newBridgeServer(t, rest.Options{})
+	_ = ignoredRet
 	resp := doGet(t, srv.URL+"/topics")
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
@@ -82,12 +89,16 @@ func TestBridge_ListTopics_Empty(t *testing.T) {
 }
 
 func TestBridge_ListTopics_AfterSubscribe(t *testing.T) {
-	_, srv := newBridgeServer(t, rest.Options{})
+	ignoredRet, srv := newBridgeServer(t, rest.Options{})
+	_ = ignoredRet
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL+"/topics/sensors/temp", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL+"/topics/sensors/temp", nil)
+	if err != nil {
+		t.Fatalf("NewRequestWithContext: %v", err)
+	}
 	go func() {
 		resp, err := http.DefaultClient.Do(req)
 		if err == nil {
@@ -114,7 +125,8 @@ func TestBridge_ListTopics_AfterSubscribe(t *testing.T) {
 // ── POST /topics/{t} ─────────────────────────────────────────────────────────
 
 func TestBridge_Publish_ReturnsNoContent(t *testing.T) {
-	_, srv := newBridgeServer(t, rest.Options{})
+	ignoredRet, srv := newBridgeServer(t, rest.Options{})
+	_ = ignoredRet
 	resp := doPost(t, srv.URL+"/topics/test/data", "hello-dds")
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNoContent {
@@ -123,12 +135,16 @@ func TestBridge_Publish_ReturnsNoContent(t *testing.T) {
 }
 
 func TestBridge_Publish_DeliveredToSubscriber(t *testing.T) {
-	_, srv := newBridgeServer(t, rest.Options{})
+	ignoredRet, srv := newBridgeServer(t, rest.Options{})
+	_ = ignoredRet
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL+"/topics/notify", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL+"/topics/notify", nil)
+	if err != nil {
+		t.Fatalf("NewRequestWithContext: %v", err)
+	}
 	sseResp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
@@ -138,8 +154,11 @@ func TestBridge_Publish_DeliveredToSubscriber(t *testing.T) {
 	time.Sleep(30 * time.Millisecond)
 
 	payload := "round-trip"
-	pubReq, _ := http.NewRequestWithContext(context.Background(), http.MethodPost,
+	pubReq, err := http.NewRequestWithContext(context.Background(), http.MethodPost,
 		srv.URL+"/topics/notify", strings.NewReader(payload))
+	if err != nil {
+		t.Fatalf("NewRequestWithContext: %v", err)
+	}
 	pubResp, err := http.DefaultClient.Do(pubReq)
 	if err != nil {
 		t.Fatal(err)
@@ -170,12 +189,16 @@ func TestBridge_Publish_DeliveredToSubscriber(t *testing.T) {
 // ── SSE stream structure ──────────────────────────────────────────────────────
 
 func TestBridge_SSE_EventFormat(t *testing.T) {
-	_, srv := newBridgeServer(t, rest.Options{})
+	ignoredRet, srv := newBridgeServer(t, rest.Options{})
+	_ = ignoredRet
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL+"/topics/fmt", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL+"/topics/fmt", nil)
+	if err != nil {
+		t.Fatalf("NewRequestWithContext: %v", err)
+	}
 	sseResp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
@@ -188,8 +211,11 @@ func TestBridge_SSE_EventFormat(t *testing.T) {
 
 	time.Sleep(20 * time.Millisecond)
 
-	postReq, _ := http.NewRequestWithContext(context.Background(), http.MethodPost,
+	postReq, err := http.NewRequestWithContext(context.Background(), http.MethodPost,
 		srv.URL+"/topics/fmt", strings.NewReader("x"))
+	if err != nil {
+		t.Fatalf("NewRequestWithContext: %v", err)
+	}
 	postResp, err := http.DefaultClient.Do(postReq)
 	if err != nil {
 		t.Fatal(err)
@@ -223,7 +249,8 @@ func TestBridge_SSE_EventFormat(t *testing.T) {
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
 func TestBridge_Auth_MissingToken(t *testing.T) {
-	_, srv := newBridgeServer(t, rest.Options{AuthToken: "secret"})
+	ignoredRet, srv := newBridgeServer(t, rest.Options{AuthToken: "secret"})
+	_ = ignoredRet
 	resp := doGet(t, srv.URL+"/topics")
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusUnauthorized {
@@ -232,8 +259,12 @@ func TestBridge_Auth_MissingToken(t *testing.T) {
 }
 
 func TestBridge_Auth_WrongToken(t *testing.T) {
-	_, srv := newBridgeServer(t, rest.Options{AuthToken: "secret"})
-	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, srv.URL+"/topics", nil)
+	ignoredRet, srv := newBridgeServer(t, rest.Options{AuthToken: "secret"})
+	_ = ignoredRet
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, srv.URL+"/topics", nil)
+	if err != nil {
+		t.Fatalf("NewRequestWithContext: %v", err)
+	}
 	req.Header.Set("Authorization", "Bearer wrong")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -246,8 +277,12 @@ func TestBridge_Auth_WrongToken(t *testing.T) {
 }
 
 func TestBridge_Auth_CorrectToken(t *testing.T) {
-	_, srv := newBridgeServer(t, rest.Options{AuthToken: "secret"})
-	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, srv.URL+"/topics", nil)
+	ignoredRet, srv := newBridgeServer(t, rest.Options{AuthToken: "secret"})
+	_ = ignoredRet
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, srv.URL+"/topics", nil)
+	if err != nil {
+		t.Fatalf("NewRequestWithContext: %v", err)
+	}
 	req.Header.Set("Authorization", "Bearer secret")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -262,8 +297,12 @@ func TestBridge_Auth_CorrectToken(t *testing.T) {
 // ── Method not allowed ────────────────────────────────────────────────────────
 
 func TestBridge_MethodNotAllowed_OnList(t *testing.T) {
-	_, srv := newBridgeServer(t, rest.Options{})
-	req, _ := http.NewRequestWithContext(context.Background(), http.MethodDelete, srv.URL+"/topics", nil)
+	ignoredRet, srv := newBridgeServer(t, rest.Options{})
+	_ = ignoredRet
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodDelete, srv.URL+"/topics", nil)
+	if err != nil {
+		t.Fatalf("NewRequestWithContext: %v", err)
+	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
@@ -275,8 +314,12 @@ func TestBridge_MethodNotAllowed_OnList(t *testing.T) {
 }
 
 func TestBridge_MethodNotAllowed_OnTopic(t *testing.T) {
-	_, srv := newBridgeServer(t, rest.Options{})
-	req, _ := http.NewRequestWithContext(context.Background(), http.MethodPut, srv.URL+"/topics/foo", nil)
+	ignoredRet, srv := newBridgeServer(t, rest.Options{})
+	_ = ignoredRet
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPut, srv.URL+"/topics/foo", nil)
+	if err != nil {
+		t.Fatalf("NewRequestWithContext: %v", err)
+	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
@@ -321,8 +364,11 @@ func FuzzBridge_Publish(f *testing.F) {
 	f.Add([]byte{0x00, 0xFF, 0xAB})
 
 	f.Fuzz(func(t *testing.T, payload []byte) {
-		req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost,
+		req, err := http.NewRequestWithContext(context.Background(), http.MethodPost,
 			srv.URL+"/topics/fuzz", strings.NewReader(string(payload)))
+		if err != nil {
+			t.Fatalf("NewRequestWithContext: %v", err)
+		}
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			return

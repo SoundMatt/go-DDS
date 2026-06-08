@@ -92,7 +92,7 @@ func FuzzHMACOpenArbitrary(f *testing.F) {
 	p := security.NewHMACPlugin(key)
 
 	f.Fuzz(func(t *testing.T, data []byte) {
-		// Must not panic. May return an error.
+		_ = t // Must not panic. Errors on invalid input are expected.
 		_, _ = p.Open(data)
 	})
 }
@@ -114,7 +114,7 @@ func FuzzAESGCMOpenArbitrary(f *testing.F) {
 	}
 
 	f.Fuzz(func(t *testing.T, data []byte) {
-		// Must not panic. May return an error.
+		_ = t // Must not panic. Errors on invalid input are expected.
 		_, _ = p.Open(data)
 	})
 }

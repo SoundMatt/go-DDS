@@ -238,8 +238,12 @@ func shmPublish(topic string, payload []byte) {
 	}
 	var lenBuf [4]byte
 	binary.LittleEndian.PutUint32(lenBuf[:], uint32(len(payload)))
-	_, _ = f.Write(lenBuf[:])
-	_, _ = f.Write(payload)
+	writeN, writeErr := f.Write(lenBuf[:])
+	_ = writeN
+	_ = writeErr
+	writeN, writeErr = f.Write(payload)
+	_ = writeN
+	_ = writeErr
 	f.Close()
 
 	// Notify subscribers.
@@ -248,7 +252,9 @@ func shmPublish(topic string, payload []byte) {
 	if err != nil {
 		return // no subscriber socket yet — that is fine
 	}
-	_, _ = conn.Write([]byte{0})
+	writeN, writeErr = conn.Write([]byte{0})
+	_ = writeN
+	_ = writeErr
 	_ = conn.Close()
 }
 
@@ -292,7 +298,8 @@ func (l *shmListener) loop() {
 	buf := make([]byte, 1)
 	for {
 		_ = l.conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
-		_, err := l.conn.Read(buf)
+		ignoredRet, err := l.conn.Read(buf)
+		_ = ignoredRet
 		select {
 		case <-l.done:
 			return

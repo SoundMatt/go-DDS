@@ -170,7 +170,9 @@ func (s *ReplayService) run(ctx context.Context) {
 		}
 		// Loop: seek back to start if Input is a Seeker.
 		if seeker, ok := s.opts.Input.(io.Seeker); ok {
-			if _, err := seeker.Seek(0, io.SeekStart); err != nil {
+			ignoredVal, err := seeker.Seek(0, io.SeekStart)
+			_ = ignoredVal
+			if err != nil {
 				s.err = err
 				return
 			}

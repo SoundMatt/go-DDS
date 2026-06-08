@@ -215,8 +215,14 @@ func TestMockTopicMetrics_MultipleTopic(t *testing.T) {
 	topicA := uniqueTopic("multi-a")
 	topicB := uniqueTopic("multi-b")
 
-	pubA, _ := p.NewPublisher(topicA, dds.DefaultQoS)
-	pubB, _ := p.NewPublisher(topicB, dds.DefaultQoS)
+	pubA, err := p.NewPublisher(topicA, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	pubB, err := p.NewPublisher(topicB, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pubA.Close()
 	defer pubB.Close()
 

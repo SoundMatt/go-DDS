@@ -95,11 +95,20 @@ func FuzzPublishIsolation(f *testing.F) {
 			return // nothing to mutate; skip
 		}
 
-		p, _ := mock.New(dds.Domain(0))
+		p, err := mock.New(dds.Domain(0))
+		if err != nil {
+			t.Fatalf("New: %v", err)
+		}
 		defer p.Close()
 
-		sub, _ := p.NewSubscriber("fuzz/isolation", dds.DefaultQoS)
-		pub, _ := p.NewPublisher("fuzz/isolation", dds.DefaultQoS)
+		sub, err := p.NewSubscriber("fuzz/isolation", dds.DefaultQoS)
+		if err != nil {
+			t.Fatalf("NewSubscriber: %v", err)
+		}
+		pub, err := p.NewPublisher("fuzz/isolation", dds.DefaultQoS)
+		if err != nil {
+			t.Fatalf("NewPublisher: %v", err)
+		}
 		defer sub.Close()
 		defer pub.Close()
 
@@ -149,7 +158,10 @@ func FuzzTopicName(f *testing.F) {
 			return
 		}
 
-		p, _ := mock.New(dds.Domain(0))
+		p, err := mock.New(dds.Domain(0))
+		if err != nil {
+			t.Fatalf("New: %v", err)
+		}
 		defer p.Close()
 
 		sub, err := p.NewSubscriber(topic, dds.DefaultQoS)
@@ -207,13 +219,22 @@ func FuzzNoRouting(f *testing.F) {
 			}
 		}
 
-		p, _ := mock.New(dds.Domain(0))
+		p, err := mock.New(dds.Domain(0))
+		if err != nil {
+			t.Fatalf("New: %v", err)
+		}
 		defer p.Close()
 
-		subB, _ := p.NewSubscriber(topicB, dds.DefaultQoS)
+		subB, err := p.NewSubscriber(topicB, dds.DefaultQoS)
+		if err != nil {
+			t.Fatalf("NewSubscriber: %v", err)
+		}
 		defer func() { _ = subB.Close() }()
 
-		pub, _ := p.NewPublisher(topicA, dds.DefaultQoS)
+		pub, err := p.NewPublisher(topicA, dds.DefaultQoS)
+		if err != nil {
+			t.Fatalf("NewPublisher: %v", err)
+		}
 		defer pub.Close()
 
 		_ = pub.Write(payload) // intentional: error irrelevant for routing check
@@ -247,18 +268,27 @@ func FuzzConcurrentPubSub(f *testing.F) {
 		}
 		n := int(nPubs)
 
-		p, _ := mock.New(dds.Domain(0))
+		p, err := mock.New(dds.Domain(0))
+		if err != nil {
+			t.Fatalf("New: %v", err)
+		}
 		defer p.Close()
 
 		const topic = "fuzz/concurrent"
-		sub, _ := p.NewSubscriber(topic, dds.DefaultQoS)
+		sub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+		if err != nil {
+			t.Fatalf("NewSubscriber: %v", err)
+		}
 		defer sub.Close()
 
 		done := make(chan struct{}, n)
 		for i := 0; i < n; i++ {
 			go func() {
 				defer func() { done <- struct{}{} }()
-				pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+				pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+				if err != nil {
+					t.Fatalf("NewPublisher: %v", err)
+				}
 				defer pub.Close()
 				// Any error here (e.g. closed participant) is a test bug, not a library bug.
 				_ = pub.Write(payload)
@@ -284,11 +314,20 @@ func FuzzDropOnFullChannel(f *testing.F) {
 	f.Add([]byte("aaaaaaaaa"), []byte("bbbbbbbbb"))
 
 	f.Fuzz(func(t *testing.T, fillPayload, overflowPayload []byte) {
-		p, _ := mock.New(dds.Domain(0))
+		p, err := mock.New(dds.Domain(0))
+		if err != nil {
+			t.Fatalf("New: %v", err)
+		}
 		defer p.Close()
 
-		sub, _ := p.NewSubscriber("fuzz/dropfull", dds.DefaultQoS)
-		pub, _ := p.NewPublisher("fuzz/dropfull", dds.DefaultQoS)
+		sub, err := p.NewSubscriber("fuzz/dropfull", dds.DefaultQoS)
+		if err != nil {
+			t.Fatalf("NewSubscriber: %v", err)
+		}
+		pub, err := p.NewPublisher("fuzz/dropfull", dds.DefaultQoS)
+		if err != nil {
+			t.Fatalf("NewPublisher: %v", err)
+		}
 		defer sub.Close()
 		defer pub.Close()
 

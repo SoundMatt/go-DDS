@@ -90,13 +90,25 @@ func TestRecorder_MultipleTopics(t *testing.T) {
 	ta := uniqueTopic("rec/multi/a")
 	tb := uniqueTopic("rec/multi/b")
 
-	subA, _ := p.NewSubscriber(ta, dds.DefaultQoS)
-	subB, _ := p.NewSubscriber(tb, dds.DefaultQoS)
+	subA, err := p.NewSubscriber(ta, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	subB, err := p.NewSubscriber(tb, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer subA.Close()
 	defer subB.Close()
 
-	pubA, _ := p.NewPublisher(ta, dds.DefaultQoS)
-	pubB, _ := p.NewPublisher(tb, dds.DefaultQoS)
+	pubA, err := p.NewPublisher(ta, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	pubB, err := p.NewPublisher(tb, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pubA.Close()
 	defer pubB.Close()
 
@@ -233,8 +245,14 @@ func TestPlayer_PlayFiltered(t *testing.T) {
 	buf := makeJSONL(t, samples)
 
 	p := newPart(t)
-	subA, _ := p.NewSubscriber(topicA, dds.DefaultQoS)
-	subB, _ := p.NewSubscriber(topicB, dds.DefaultQoS)
+	subA, err := p.NewSubscriber(topicA, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	subB, err := p.NewSubscriber(topicB, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer subA.Close()
 	defer subB.Close()
 
@@ -316,7 +334,10 @@ func TestPlayer_PlayScaled_ZeroSpeedClamped(t *testing.T) {
 	}
 	buf := makeJSONL(t, samples)
 	p := newPart(t)
-	sub, _ := p.NewSubscriber(topic, dds.DefaultQoS)
+	sub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
 
 	pl := record.NewPlayer(buf, p)

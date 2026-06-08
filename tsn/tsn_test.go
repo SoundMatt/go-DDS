@@ -108,7 +108,10 @@ func TestStream_MaxFragPayload(t *testing.T) {
 }
 
 func TestStreamConfig_StreamForTopic(t *testing.T) {
-	cfg, _ := tsn.ParseConfig([]byte(sampleJSON))
+	cfg, err := tsn.ParseConfig([]byte(sampleJSON))
+	if err != nil {
+		t.Fatalf("ParseConfig: %v", err)
+	}
 	s := cfg.StreamForTopic("vehicle/speed")
 	if s == nil {
 		t.Fatal("StreamForTopic(vehicle/speed) = nil")
@@ -132,7 +135,10 @@ func TestStreamConfig_NilSafe(t *testing.T) {
 }
 
 func TestStreamConfig_Topics(t *testing.T) {
-	cfg, _ := tsn.ParseConfig([]byte(sampleJSON))
+	cfg, err := tsn.ParseConfig([]byte(sampleJSON))
+	if err != nil {
+		t.Fatalf("ParseConfig: %v", err)
+	}
 	topics := cfg.Topics()
 	if len(topics) != 2 {
 		t.Fatalf("got %d topics, want 2", len(topics))
@@ -148,7 +154,7 @@ func TestStreamConfig_Topics(t *testing.T) {
 func TestLoadConfig_FromFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "tsn.json")
-	if err := os.WriteFile(path, []byte(sampleJSON), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(sampleJSON), 0o600); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	cfg, err := tsn.LoadConfig(path)
@@ -161,7 +167,8 @@ func TestLoadConfig_FromFile(t *testing.T) {
 }
 
 func TestLoadConfig_FileNotFound(t *testing.T) {
-	_, err := tsn.LoadConfig("/nonexistent/path/tsn.json")
+	ignoredRet, err := tsn.LoadConfig("/nonexistent/path/tsn.json")
+	_ = ignoredRet
 	if err == nil {
 		t.Error("expected error for missing file")
 	}
@@ -170,10 +177,11 @@ func TestLoadConfig_FileNotFound(t *testing.T) {
 func TestLoadConfig_DecodeError(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "bad.json")
-	if err := os.WriteFile(path, []byte(`{broken json`), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(`{broken json`), 0o600); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
-	_, err := tsn.LoadConfig(path)
+	ignoredRet, err := tsn.LoadConfig(path)
+	_ = ignoredRet
 	if err == nil {
 		t.Error("expected error for invalid JSON file")
 	}
@@ -184,17 +192,19 @@ func TestLoadConfig_ValidationError(t *testing.T) {
 	path := filepath.Join(dir, "invalid.json")
 	// Valid JSON but stream has empty topic → fails Validate.
 	data := `{"streams":[{"topic":"","pcp":1}]}`
-	if err := os.WriteFile(path, []byte(data), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(data), 0o600); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
-	_, err := tsn.LoadConfig(path)
+	ignoredRet, err := tsn.LoadConfig(path)
+	_ = ignoredRet
 	if err == nil {
 		t.Error("expected validation error from LoadConfig")
 	}
 }
 
 func TestParseConfig_InvalidJSON(t *testing.T) {
-	_, err := tsn.ParseConfig([]byte(`{broken`))
+	ignoredRet, err := tsn.ParseConfig([]byte(`{broken`))
+	_ = ignoredRet
 	if err == nil {
 		t.Error("expected error for invalid JSON")
 	}
@@ -202,7 +212,8 @@ func TestParseConfig_InvalidJSON(t *testing.T) {
 
 func TestParseConfig_EmptyTopic(t *testing.T) {
 	bad := `{"streams":[{"topic":"","pcp":1}]}`
-	_, err := tsn.ParseConfig([]byte(bad))
+	ignoredRet, err := tsn.ParseConfig([]byte(bad))
+	_ = ignoredRet
 	if err == nil {
 		t.Error("expected error for empty topic")
 	}
@@ -210,7 +221,8 @@ func TestParseConfig_EmptyTopic(t *testing.T) {
 
 func TestParseConfig_PCPOutOfRange(t *testing.T) {
 	bad := `{"streams":[{"topic":"x","pcp":8}]}`
-	_, err := tsn.ParseConfig([]byte(bad))
+	ignoredRet, err := tsn.ParseConfig([]byte(bad))
+	_ = ignoredRet
 	if err == nil {
 		t.Error("expected error for PCP > 7")
 	}
@@ -218,7 +230,8 @@ func TestParseConfig_PCPOutOfRange(t *testing.T) {
 
 func TestParseConfig_DSCPOutOfRange(t *testing.T) {
 	bad := `{"streams":[{"topic":"x","dscp":64}]}`
-	_, err := tsn.ParseConfig([]byte(bad))
+	ignoredRet, err := tsn.ParseConfig([]byte(bad))
+	_ = ignoredRet
 	if err == nil {
 		t.Error("expected error for DSCP > 63")
 	}
@@ -249,7 +262,8 @@ func TestParseConfig_RoundTrip(t *testing.T) {
 
 func TestParseConfig_NegativeMaxFrameSize(t *testing.T) {
 	bad := `{"streams":[{"topic":"x","max_frame_size":-1}]}`
-	_, err := tsn.ParseConfig([]byte(bad))
+	ignoredRet, err := tsn.ParseConfig([]byte(bad))
+	_ = ignoredRet
 	if err == nil {
 		t.Error("expected error for negative max_frame_size")
 	}
@@ -257,7 +271,8 @@ func TestParseConfig_NegativeMaxFrameSize(t *testing.T) {
 
 func TestParseConfig_NegativeMaxIntervalFrames(t *testing.T) {
 	bad := `{"streams":[{"topic":"x","max_interval_frames":-1}]}`
-	_, err := tsn.ParseConfig([]byte(bad))
+	ignoredRet, err := tsn.ParseConfig([]byte(bad))
+	_ = ignoredRet
 	if err == nil {
 		t.Error("expected error for negative max_interval_frames")
 	}
@@ -265,7 +280,8 @@ func TestParseConfig_NegativeMaxIntervalFrames(t *testing.T) {
 
 func TestParseConfig_NegativeIntervalUS(t *testing.T) {
 	bad := `{"streams":[{"topic":"x","interval_us":-1}]}`
-	_, err := tsn.ParseConfig([]byte(bad))
+	ignoredRet, err := tsn.ParseConfig([]byte(bad))
+	_ = ignoredRet
 	if err == nil {
 		t.Error("expected error for negative interval_us")
 	}
@@ -273,7 +289,8 @@ func TestParseConfig_NegativeIntervalUS(t *testing.T) {
 
 func TestParseConfig_NegativeTxOffsetUS(t *testing.T) {
 	bad := `{"streams":[{"topic":"x","tx_offset_us":-1}]}`
-	_, err := tsn.ParseConfig([]byte(bad))
+	ignoredRet, err := tsn.ParseConfig([]byte(bad))
+	_ = ignoredRet
 	if err == nil {
 		t.Error("expected error for negative tx_offset_us")
 	}

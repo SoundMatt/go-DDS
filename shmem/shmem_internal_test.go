@@ -233,12 +233,17 @@ func TestReadData_OversizeRejected(t *testing.T) {
 	}
 	var hdr [4]byte
 	binary.LittleEndian.PutUint32(hdr[:], maxPayload+1)
-	_, _ = f.Write(hdr[:])
+	writeN, writeErr := f.Write(hdr[:])
+	_ = writeN
+	if writeErr != nil {
+		t.Fatalf("Write: %v", writeErr)
+	}
 	_ = f.Close()
 	defer func() { _ = os.Remove(path) }()
 
 	l := &shmListener{topic: topic}
-	_, err = l.readData()
+	ignoredRet, err := l.readData()
+	_ = ignoredRet
 	if err == nil {
 		t.Error("expected error for payload exceeding maxPayload")
 	}
@@ -261,13 +266,22 @@ func TestReadData_TruncatedBody(t *testing.T) {
 	}
 	var hdr [4]byte
 	binary.LittleEndian.PutUint32(hdr[:], 100)
-	_, _ = f.Write(hdr[:])
-	_, _ = f.Write(make([]byte, 10)) // only 10 bytes
+	writeN, writeErr := f.Write(hdr[:])
+	_ = writeN
+	if writeErr != nil {
+		t.Fatalf("Write: %v", writeErr)
+	}
+	writeN, writeErr = f.Write(make([]byte, 10)) // only 10 bytes
+	_ = writeN
+	if writeErr != nil {
+		t.Fatalf("Write: %v", writeErr)
+	}
 	_ = f.Close()
 	defer func() { _ = os.Remove(path) }()
 
 	l := &shmListener{topic: topic}
-	_, err = l.readData()
+	ignoredRet, err := l.readData()
+	_ = ignoredRet
 	if err == nil {
 		t.Error("expected error for truncated data body")
 	}

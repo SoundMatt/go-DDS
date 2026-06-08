@@ -28,9 +28,15 @@ import (
 func TestDeterministicQueue_DeliversSamples(t *testing.T) {
 	p := newPart(t)
 	topic := uniqueTopic("queue/deliver")
-	sub, _ := p.NewSubscriber(topic, dds.DefaultQoS, dds.WithChannelDepth(10))
+	sub, err := p.NewSubscriber(topic, dds.DefaultQoS, dds.WithChannelDepth(10))
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
-	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 
 	q := safety.NewDeterministicQueue(pub, 16).Start()
 	defer q.Stop()
@@ -51,7 +57,10 @@ func TestDeterministicQueue_DeliversSamples(t *testing.T) {
 func TestDeterministicQueue_Full_ReturnsErrQueueFull(t *testing.T) {
 	p := newPart(t)
 	topic := uniqueTopic("queue/full")
-	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	// Depth 1, no Start — drain goroutine not running so channel fills immediately.
@@ -60,7 +69,7 @@ func TestDeterministicQueue_Full_ReturnsErrQueueFull(t *testing.T) {
 	if err := q.Enqueue([]byte("a")); err != nil {
 		t.Fatalf("first Enqueue: unexpected error: %v", err)
 	}
-	err := q.Enqueue([]byte("b"))
+	err = q.Enqueue([]byte("b"))
 	if !errors.Is(err, safety.ErrQueueFull) {
 		t.Errorf("second Enqueue: expected ErrQueueFull, got %v", err)
 	}
@@ -69,7 +78,10 @@ func TestDeterministicQueue_Full_ReturnsErrQueueFull(t *testing.T) {
 func TestDeterministicQueue_DefaultDepth(t *testing.T) {
 	p := newPart(t)
 	topic := uniqueTopic("queue/default-depth")
-	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	// depth <= 0 should default to 64
@@ -88,7 +100,10 @@ func TestDeterministicQueue_DefaultDepth(t *testing.T) {
 func TestDeterministicQueue_Stop(t *testing.T) {
 	p := newPart(t)
 	topic := uniqueTopic("queue/stop")
-	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	q := safety.NewDeterministicQueue(pub, 8).Start()
@@ -101,7 +116,10 @@ func TestDeterministicQueue_Stop(t *testing.T) {
 func TestDeterministicQueue_StopIdempotent(t *testing.T) {
 	p := newPart(t)
 	topic := uniqueTopic("queue/stop-idem")
-	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	q := safety.NewDeterministicQueue(pub, 8).Start()
@@ -153,9 +171,15 @@ func TestDeterministicQueue_ErrorsChannelReceivesWriteError(t *testing.T) {
 func TestDeterministicQueue_MultipleSamples(t *testing.T) {
 	p := newPart(t)
 	topic := uniqueTopic("queue/multi")
-	sub, _ := p.NewSubscriber(topic, dds.DefaultQoS, dds.WithChannelDepth(20))
+	sub, err := p.NewSubscriber(topic, dds.DefaultQoS, dds.WithChannelDepth(20))
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
-	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 
 	q := safety.NewDeterministicQueue(pub, 16).Start()
 	defer q.Stop()

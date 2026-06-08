@@ -128,7 +128,8 @@ type TypeIdentifier struct {
 // The hash is derived from a sorted, canonical JSON encoding of the descriptor
 // so that structurally identical types hash identically.
 func Identify(td *TypeDescriptor) TypeIdentifier {
-	b, _ := json.Marshal(canonical(td))
+	b, jsonErr := json.Marshal(canonical(td))
+	_ = jsonErr // json.Marshal on canonical descriptor never fails
 	sum := sha256.Sum256(b)
 	var h [8]byte
 	copy(h[:], sum[:])

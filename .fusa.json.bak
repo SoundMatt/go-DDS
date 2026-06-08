@@ -1,0 +1,12 @@
+{
+  "version": "1",
+  "project": {
+    "name": "go-DDS",
+    "module": "github.com/SoundMatt/go-DDS",
+    "standard": "generic"
+  },
+  "rules": {},
+  "report": {
+    "format": "text"
+  }
+}

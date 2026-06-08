@@ -17,6 +17,7 @@ import (
 	"encoding/binary"
 	"encoding/pem"
 	"errors"
+	"fmt"
 )
 
 // CertPlugin provides asymmetric signing and verification using X.509
@@ -147,7 +148,8 @@ func (p *CertPlugin) Open(data []byte) ([]byte, error) {
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 func parseCert(pemBytes []byte) (*x509.Certificate, error) {
-	block, _ := pem.Decode(pemBytes)
+	block, remaining := pem.Decode(pemBytes)
+	_ = remaining
 	if block == nil {
 		return nil, errors.New("security: no PEM block found in certPEM")
 	}
@@ -155,13 +157,14 @@ func parseCert(pemBytes []byte) (*x509.Certificate, error) {
 }
 
 func parseECKey(pemBytes []byte) (*ecdsa.PrivateKey, error) {
-	block, _ := pem.Decode(pemBytes)
+	block, remaining := pem.Decode(pemBytes)
+	_ = remaining
 	if block == nil {
 		return nil, errors.New("security: no PEM block found in keyPEM")
 	}
 	key, err := x509.ParseECPrivateKey(block.Bytes)
 	if err != nil {
-		return nil, errors.New("security: cannot parse EC private key: " + err.Error())
+		return nil, fmt.Errorf("security: cannot parse EC private key: %w", err)
 	}
 	return key, nil
 }

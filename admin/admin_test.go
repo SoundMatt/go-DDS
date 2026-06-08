@@ -207,7 +207,10 @@ func TestAdmin_Publish_InjectsSample(t *testing.T) {
 	defer sub.Close()
 
 	payload := base64.StdEncoding.EncodeToString([]byte("hello admin"))
-	body, _ := json.Marshal(map[string]string{"topic": topic, "payload": payload})
+	body, err := json.Marshal(map[string]string{"topic": topic, "payload": payload})
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
 
 	resp := post(t, "http://"+s.Addr()+"/admin/publish", body)
 	defer resp.Body.Close()
@@ -228,7 +231,10 @@ func TestAdmin_Publish_EmptyTopic_BadRequest(t *testing.T) {
 	p := newPart(t)
 	s := newServer(t, p, admin.Options{})
 
-	body, _ := json.Marshal(map[string]string{"topic": "", "payload": ""})
+	body, err := json.Marshal(map[string]string{"topic": "", "payload": ""})
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
 	resp := post(t, "http://"+s.Addr()+"/admin/publish", body)
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusBadRequest {
@@ -240,7 +246,10 @@ func TestAdmin_Publish_BadPayload_BadRequest(t *testing.T) {
 	p := newPart(t)
 	s := newServer(t, p, admin.Options{})
 
-	body, _ := json.Marshal(map[string]string{"topic": "some/topic", "payload": "not-base64!!!"})
+	body, err := json.Marshal(map[string]string{"topic": "some/topic", "payload": "not-base64!!!"})
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
 	resp := post(t, "http://"+s.Addr()+"/admin/publish", body)
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusBadRequest {
@@ -276,7 +285,10 @@ func TestAdmin_Publish_ClosedParticipant(t *testing.T) {
 	p.Close()
 
 	payload := base64.StdEncoding.EncodeToString([]byte("data"))
-	body, _ := json.Marshal(map[string]string{"topic": "any/topic", "payload": payload})
+	body, err := json.Marshal(map[string]string{"topic": "any/topic", "payload": payload})
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
 	resp := post(t, "http://"+s.Addr()+"/admin/publish", body)
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusServiceUnavailable {
@@ -337,7 +349,8 @@ func TestAdmin_Close_StopsServer(t *testing.T) {
 
 func TestAdmin_New_ListenError(t *testing.T) {
 	p := newPart(t)
-	_, err := admin.New(p, admin.Options{Addr: "127.0.0.1:99999"})
+	ignoredRet, err := admin.New(p, admin.Options{Addr: "127.0.0.1:99999"})
+	_ = ignoredRet
 	if err == nil {
 		t.Fatal("expected error for invalid port")
 	}

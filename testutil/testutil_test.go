@@ -462,7 +462,10 @@ func runFatalSubprocess(t *testing.T, env string, wantMsg string) {
 func TestAssertSample_Timeout_Fatal(t *testing.T) {
 	if os.Getenv("TESTUTIL_FATAL_CASE") == "TestAssertSample_Timeout_Fatal" {
 		p := testutil.NewParticipant(t, dds.Domain(0))
-		sub, _ := p.NewSubscriber(fmt.Sprintf("fatal/timeout/%d", time.Now().UnixNano()), dds.DefaultQoS)
+		sub, err := p.NewSubscriber(fmt.Sprintf("fatal/timeout/%d", time.Now().UnixNano()), dds.DefaultQoS)
+		if err != nil {
+			t.Fatalf("NewSubscriber: %v", err)
+		}
 		testutil.AssertSample(t, sub, []byte("x"), 10*time.Millisecond)
 		return
 	}
@@ -473,8 +476,14 @@ func TestAssertSample_Mismatch_Fatal(t *testing.T) {
 	if os.Getenv("TESTUTIL_FATAL_CASE") == "TestAssertSample_Mismatch_Fatal" {
 		p := testutil.NewParticipant(t, dds.Domain(0))
 		topic := fmt.Sprintf("fatal/mismatch/%d", time.Now().UnixNano())
-		sub, _ := p.NewSubscriber(topic, dds.DefaultQoS)
-		pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+		sub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+		if err != nil {
+			t.Fatalf("NewSubscriber: %v", err)
+		}
+		pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+		if err != nil {
+			t.Fatalf("NewPublisher: %v", err)
+		}
 		_ = pub.Write([]byte("wrong"))
 		testutil.AssertSample(t, sub, []byte("right"), time.Second)
 		return
@@ -486,8 +495,14 @@ func TestAssertNoSample_UnexpectedSample_Fatal(t *testing.T) {
 	if os.Getenv("TESTUTIL_FATAL_CASE") == "TestAssertNoSample_UnexpectedSample_Fatal" {
 		p := testutil.NewParticipant(t, dds.Domain(0))
 		topic := fmt.Sprintf("fatal/nosample/%d", time.Now().UnixNano())
-		sub, _ := p.NewSubscriber(topic, dds.DefaultQoS)
-		pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+		sub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+		if err != nil {
+			t.Fatalf("NewSubscriber: %v", err)
+		}
+		pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+		if err != nil {
+			t.Fatalf("NewPublisher: %v", err)
+		}
 		_ = pub.Write([]byte("unexpected"))
 		testutil.AssertNoSample(t, sub, time.Second)
 		return
