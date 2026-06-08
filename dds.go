@@ -436,9 +436,11 @@ type Subscriber interface {
 
 // ── WaitSet ───────────────────────────────────────────────────────────────────
 
-// WaitSet multiplexes over a set of subscribers, blocking until any one of
-// them delivers a sample.
+// WaitSet multiplexes over a dynamic set of Subscribers. Use NewWaitSet to
+// construct one and Attach/Detach to modify the set at any time. Wait blocks
+// until one of the attached subscribers delivers a sample.
 type WaitSet struct {
+	mu   sync.RWMutex
 	subs []Subscriber
 }
 
@@ -449,12 +451,43 @@ func NewWaitSet(subs ...Subscriber) *WaitSet {
 	return &WaitSet{subs: s}
 }
 
+// Attach adds subs to the WaitSet. Changes take effect on the next Wait call;
+// an in-progress Wait sees the snapshot taken at its start.
+func (ws *WaitSet) Attach(subs ...Subscriber) *WaitSet {
+	ws.mu.Lock()
+	ws.subs = append(ws.subs, subs...)
+	ws.mu.Unlock()
+	return ws
+}
+
+// Detach removes subs from the WaitSet. Changes take effect on the next Wait
+// call; an in-progress Wait sees the snapshot taken at its start.
+func (ws *WaitSet) Detach(subs ...Subscriber) *WaitSet {
+	ws.mu.Lock()
+	for _, target := range subs {
+		for i, s := range ws.subs {
+			if s == target {
+				ws.subs = append(ws.subs[:i], ws.subs[i+1:]...)
+				break
+			}
+		}
+	}
+	ws.mu.Unlock()
+	return ws
+}
+
 // Wait blocks until a sample is available on any attached subscriber, or until
-// ctx is cancelled.
+// ctx is cancelled. It snapshots the subscriber list at call time; Attach/Detach
+// calls from other goroutines take effect on the next Wait invocation.
 func (ws *WaitSet) Wait(ctx context.Context) (Sample, Subscriber, error) {
-	cases := make([]reflect.SelectCase, 1+len(ws.subs))
+	ws.mu.RLock()
+	snapshot := make([]Subscriber, len(ws.subs))
+	copy(snapshot, ws.subs)
+	ws.mu.RUnlock()
+
+	cases := make([]reflect.SelectCase, 1+len(snapshot))
 	cases[0] = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(ctx.Done())}
-	for i, sub := range ws.subs {
+	for i, sub := range snapshot {
 		cases[1+i] = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(sub.C())}
 	}
 	for {
@@ -485,7 +518,7 @@ func (ws *WaitSet) Wait(ctx context.Context) (Sample, Subscriber, error) {
 		if !ok2 {
 			continue
 		}
-		return s, ws.subs[chosen-1], nil
+		return s, snapshot[chosen-1], nil
 	}
 }
 

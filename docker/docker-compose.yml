@@ -1,0 +1,47 @@
+# go-DDS quickstart — multi-process DDS in under two minutes.
+#
+# All containers run on host networking so that RTPS UDP multicast discovery
+# works across processes without additional multicast routing configuration.
+#
+# Usage:
+#   docker compose -f docker/docker-compose.yml up --build
+#
+# Then open http://localhost:8080 to view the live monitor dashboard.
+# The pub container publishes a temperature reading every second; the sub
+# container logs each received sample to stdout.
+
+services:
+  monitor:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: monitor
+    network_mode: host
+    environment:
+      - MONITOR_ADDR=:8080
+      - DDS_DOMAIN=0
+    restart: unless-stopped
+
+  pub:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: pub
+    network_mode: host
+    environment:
+      - DDS_DOMAIN=0
+    restart: unless-stopped
+    depends_on:
+      - monitor
+
+  sub:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: sub
+    network_mode: host
+    environment:
+      - DDS_DOMAIN=0
+    restart: unless-stopped
+    depends_on:
+      - monitor

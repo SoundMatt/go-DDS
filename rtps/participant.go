@@ -68,6 +68,19 @@ type DiscoveryPlugin interface {
 	VerifyDiscovery(guidPrefix, tag []byte) bool
 }
 
+// EndpointPlugin optionally extends a DiscoveryPlugin to authenticate SEDP
+// endpoint announcements. Participants that implement this interface sign
+// outbound endpoint announcements and reject inbound announcements whose tag
+// does not verify. The built-in implementation is security.HMACDiscoveryPlugin.
+type EndpointPlugin interface {
+	// SignEndpoint returns a tag for the endpoint identified by guidPrefix and
+	// topicName. The tag is embedded in the SEDP announcement.
+	SignEndpoint(guidPrefix []byte, topic string) []byte
+	// VerifyEndpoint returns true when tag is a valid authentication tag for
+	// the given guidPrefix and topicName. A nil or empty tag must return false.
+	VerifyEndpoint(guidPrefix []byte, topic string, tag []byte) bool
+}
+
 // Option configures a Participant at creation time.
 type Option func(*participant)
 

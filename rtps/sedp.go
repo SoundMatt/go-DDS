@@ -151,6 +151,10 @@ func (s *sedpService) buildEndpointData(info *endpointInfo) []byte {
 	enc.addString(pidTypeName, "CDR_BLOB") // opaque type for raw byte payloads
 	userLocator := locatorFromUDP(&net.UDPAddr{IP: net.IPv4zero}, s.p.dataSock.port)
 	enc.addLocator(pidDefaultUnicastLocator, userLocator)
+	if ep, ok := s.p.discoveryPlugin.(EndpointPlugin); ok {
+		tag := ep.SignEndpoint(s.p.guidPrefix[:], info.topicName)
+		enc.addBytes(pidEndpointToken, tag)
+	}
 	return enc.finish()
 }
 
@@ -222,6 +226,7 @@ func (s *sedpService) handleEndpointAnnounce(remotePrefix GuidPrefix, payload []
 	info.guid.Prefix = remotePrefix
 
 	var dataLocator Locator
+	var endpointTag []byte
 	for {
 		p, ok := dec.next()
 		if !ok {
@@ -246,10 +251,21 @@ func (s *sedpService) handleEndpointAnnounce(remotePrefix GuidPrefix, payload []
 					}
 				}
 			}
+		case pidEndpointToken:
+			endpointTag = make([]byte, len(p.value))
+			copy(endpointTag, p.value)
 		}
 	}
 	if info.topicName == "" {
 		return
+	}
+
+	// Reject the announcement if the local participant enforces endpoint security
+	// and the tag is absent or invalid.
+	if ep, ok := s.p.discoveryPlugin.(EndpointPlugin); ok {
+		if !ep.VerifyEndpoint(remotePrefix[:], info.topicName, endpointTag) {
+			return
+		}
 	}
 
 	if isWriter {

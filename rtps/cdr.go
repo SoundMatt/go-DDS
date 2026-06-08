@@ -43,6 +43,9 @@ const (
 	// 0x8000–0xBFFF) used to carry the SPDP discovery authentication tag
 	// produced by a DiscoveryPlugin.
 	pidDiscoveryToken = uint16(0x8001)
+	// pidEndpointToken is a vendor-specific PID used to carry the SEDP endpoint
+	// authentication tag produced by an EndpointPlugin.
+	pidEndpointToken = uint16(0x8002)
 )
 
 // plCDREncoder builds a PL_CDR_LE encoded parameter list.
@@ -98,6 +101,11 @@ func (e *plCDREncoder) addString(pid uint16, s string) {
 	copy(raw[4:], s)
 	// null terminator already zero from make
 	e.addParam(pid, raw)
+}
+
+// addBytes appends an arbitrary byte-slice parameter.
+func (e *plCDREncoder) addBytes(pid uint16, v []byte) {
+	e.addParam(pid, v)
 }
 
 // finish appends the PID_SENTINEL and returns the encoded bytes.
