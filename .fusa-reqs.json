@@ -1546,6 +1546,111 @@
       "text": "Assumption of Use: The integrating application should create at most one Participant per domain per process. Multiple participants in the same domain are supported but incur additional port and goroutine overhead; the mock backend shares a global broker and does not isolate participants in the same domain.",
       "standard": "iso26262",
       "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-SAFETY-015",
+      "title": "Safety metrics counter atomicity",
+      "text": "The E2ESubscriber shall maintain per-topic violation counters (CRC failures, sequence gaps, stale samples, header-too-short, schema violations, valid samples) using atomic operations. Counters shall be monotonically non-decreasing and never reset.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SAFETY-016",
+      "title": "Safety metrics snapshot",
+      "text": "SafetyMetrics() shall return a point-in-time snapshot of all violation counters without acquiring a mutex. The snapshot may be briefly inconsistent across fields but each individual counter shall reflect its true value at the time of the atomic read.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SAFETY-017",
+      "title": "Safety event channel",
+      "text": "E2ESubscriber.SafetyEvents() shall return a buffered channel that receives one SafetyEvent for every E2E violation detected by the subscriber. When the channel is full, new events shall be dropped rather than blocking the pump goroutine.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-MON-006",
+      "title": "Monitor safety SSE event",
+      "text": "monitor.Monitor.WatchSafety() shall accept a channel of safety.SafetyEvent values and broadcast each event as an SSE 'safety' event to all connected browser clients. The watch goroutine shall stop when the monitor context is cancelled.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-MON-007",
+      "title": "Monitor PublishSafetyEvent",
+      "text": "monitor.Monitor.PublishSafetyEvent() shall broadcast a single safety.SafetyEvent as a JSON-encoded SSE 'safety' event containing kind, topic, counter, and message fields.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-TSN-005",
+      "title": "TAPRIO config validation",
+      "text": "TAPRIOConfig.Validate() shall reject configurations with empty Interface or empty Entries, and reject entries whose Interval is zero or negative.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-TSN-006",
+      "title": "TAPRIO cycle duration",
+      "text": "TAPRIOConfig.CycleDuration() shall return CycleTime when explicitly set, otherwise the sum of all entry intervals.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-TSN-007",
+      "title": "TAPRIO netlink Apply",
+      "text": "TAPRIOConfig.Apply() on Linux shall send an RTM_NEWQDISC NETLINK_ROUTE message encoding the TAPRIO qdisc with the configured gate control list. On non-Linux platforms Apply shall return ErrNotSupported without performing any system call.",
+      "standard": "iec61508",
+      "level": "SIL-2"
+    },
+    {
+      "id": "REQ-CDR-004",
+      "title": "CDR encoder alignment",
+      "text": "cdr.Encoder shall pad bytes between fields to enforce natural alignment: 2-byte for int16/uint16, 4-byte for int32/uint32/float32, 8-byte for int64/uint64/float64. The encapsulation header counts toward alignment.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-CDR-005",
+      "title": "CDR decoder alignment and underrun detection",
+      "text": "cdr.Decoder shall enforce the same alignment rules as the encoder and return a descriptive error on any buffer underrun rather than panicking.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-CDR-006",
+      "title": "CDR string and bytes encoding",
+      "text": "Strings shall be encoded as uint32 length (including null terminator) followed by UTF-8 bytes and a null byte. Byte sequences shall be encoded as uint32 count followed by raw bytes. Empty strings shall encode as length=1, null byte.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-IDL-001",
+      "title": "IDL parser: struct and module",
+      "text": "idl.ParseString shall parse IDL module and struct declarations, extracting field names and types. Nested modules shall be represented as sub-modules in the AST.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-IDL-002",
+      "title": "IDL parser: primitive types",
+      "text": "The IDL parser shall map boolean, octet, short, unsigned short, long, unsigned long, long long, unsigned long long, float, double, and string to their corresponding TypeKind values.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-IDL-003",
+      "title": "IDL parser: sequence types",
+      "text": "The IDL parser shall parse sequence<T> and sequence<T,N> (bounded) type specifications, representing them as KindSequence with a pointer to the element TypeSpec.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-IDL-004",
+      "title": "IDL code generator",
+      "text": "idl.Generate shall produce a valid Go source file containing: a package declaration derived from the top-level module name; a Go struct for every IDL struct with exported field names and JSON tags; and a Codec type per struct implementing CDR/XCDR1 encode/decode using the cdr package.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
     }
   ]
 }

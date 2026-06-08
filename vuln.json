@@ -1,0 +1,7 @@
+{
+  "format": "go-FuSa Vulnerability Report v1",
+  "generated_at": "2026-06-08T21:24:59.452806Z",
+  "module": "github.com/SoundMatt/go-DDS",
+  "scanned": 7,
+  "findings": null
+}

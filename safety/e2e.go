@@ -54,6 +54,8 @@ type E2EConfig struct {
 	// MaxAge is the maximum permitted age of a received sample, measured from
 	// the timestamp written by the publisher. Zero disables freshness checking.
 	MaxAge time.Duration
+	// Topic is the DDS topic name; used to label safety metrics. Optional.
+	Topic string
 }
 
 // E2EErrorKind categorises safety check failures reported by E2ESubscriber.
@@ -113,6 +115,10 @@ func (p *E2EPublisher) Close() error { return p.pub.Close() }
 //
 // The background pump goroutine starts on construction and exits when Close
 // is called or the underlying subscriber channel is closed.
+//
+// E2ESubscriber implements SafetyMetricsProvider; call SafetyMetrics() to
+// retrieve cumulative violation counters, and SafetyEvents() to receive a
+// channel of individual SafetyEvent values (e.g., for monitor integration).
 type E2ESubscriber struct {
 	sub         dds.Subscriber
 	cfg         E2EConfig
@@ -120,24 +126,37 @@ type E2ESubscriber struct {
 	hasFirst    bool
 	ch          chan dds.Sample
 	errCh       chan E2EError
+	safetyEvCh  chan SafetyEvent
 	done        chan struct{}
 	once        sync.Once
 	wg          sync.WaitGroup
+	m           *metrics
 }
 
 // NewE2ESubscriber wraps sub with E2E validation using cfg.
 func NewE2ESubscriber(sub dds.Subscriber, cfg E2EConfig) *E2ESubscriber {
 	s := &E2ESubscriber{
-		sub:   sub,
-		cfg:   cfg,
-		ch:    make(chan dds.Sample, 64),
-		errCh: make(chan E2EError, 32),
-		done:  make(chan struct{}),
+		sub:        sub,
+		cfg:        cfg,
+		ch:         make(chan dds.Sample, 64),
+		errCh:      make(chan E2EError, 32),
+		safetyEvCh: make(chan SafetyEvent, 64),
+		done:       make(chan struct{}),
+		m:          newMetrics(cfg.Topic),
 	}
 	s.wg.Add(1)
 	go s.pump()
 	return s
 }
+
+// SafetyMetrics returns a point-in-time snapshot of cumulative violation counters.
+// It implements SafetyMetricsProvider.
+func (s *E2ESubscriber) SafetyMetrics() Snapshot { return s.m.Snapshot() }
+
+// SafetyEvents returns a channel that receives one SafetyEvent per violation.
+// The channel is buffered (64); slow consumers cause events to be dropped.
+// Intended for integration with monitor.Monitor.WatchSafety.
+func (s *E2ESubscriber) SafetyEvents() <-chan SafetyEvent { return s.safetyEvCh }
 
 // C returns the channel that delivers validated, header-stripped samples.
 // It satisfies dds.Subscriber.
@@ -175,57 +194,60 @@ func (s *E2ESubscriber) pump() {
 
 func (s *E2ESubscriber) process(raw dds.Sample) {
 	if len(raw.Payload) < headerSize {
-		select {
-		case s.errCh <- E2EError{
-			Kind:    ErrHeaderTooShort,
-			Message: fmt.Sprintf("safety: payload %d bytes is shorter than header %d bytes", len(raw.Payload), headerSize),
-		}:
-		default:
-		}
+		msg := fmt.Sprintf("safety: payload %d bytes is shorter than header %d bytes", len(raw.Payload), headerSize)
+		s.m.headerTooShort.Add(1)
+		s.emitError(E2EError{Kind: ErrHeaderTooShort, Message: msg})
+		s.emitEvent(SafetyEvent{Kind: SafetyEventHeaderTooShort, Topic: raw.Topic, Message: msg})
 		return
 	}
 
 	counter, ts, payload, err := parseFrame(raw.Payload)
 	if err != nil {
-		select {
-		case s.errCh <- E2EError{Kind: ErrCRCMismatch, Counter: counter, Message: err.Error()}:
-		default:
-		}
+		s.m.crcFailures.Add(1)
+		s.emitError(E2EError{Kind: ErrCRCMismatch, Counter: counter, Message: err.Error()})
+		s.emitEvent(SafetyEvent{Kind: SafetyEventCRCFailure, Topic: raw.Topic, Counter: counter, Message: err.Error()})
 		return
 	}
 
 	if s.cfg.MaxAge > 0 {
 		age := time.Since(time.Unix(0, ts))
 		if age > s.cfg.MaxAge {
-			select {
-			case s.errCh <- E2EError{
-				Kind:    ErrStaleSample,
-				Counter: counter,
-				Message: fmt.Sprintf("safety: sample age %v exceeds MaxAge %v", age.Round(time.Microsecond), s.cfg.MaxAge),
-			}:
-			default:
-			}
+			msg := fmt.Sprintf("safety: sample age %v exceeds MaxAge %v", age.Round(time.Microsecond), s.cfg.MaxAge)
+			s.m.staleSamples.Add(1)
+			s.emitError(E2EError{Kind: ErrStaleSample, Counter: counter, Message: msg})
+			s.emitEvent(SafetyEvent{Kind: SafetyEventStaleSample, Topic: raw.Topic, Counter: counter, Message: msg})
 			return
 		}
 	}
 
 	if s.hasFirst && counter != s.lastCounter+1 {
-		select {
-		case s.errCh <- E2EError{
-			Kind:    ErrSequenceGap,
-			Counter: counter,
-			Message: fmt.Sprintf("safety: sequence gap — received %d, expected %d", counter, s.lastCounter+1),
-		}:
-		default:
-		}
+		msg := fmt.Sprintf("safety: sequence gap — received %d, expected %d", counter, s.lastCounter+1)
+		s.m.sequenceGaps.Add(1)
+		s.emitError(E2EError{Kind: ErrSequenceGap, Counter: counter, Message: msg})
+		s.emitEvent(SafetyEvent{Kind: SafetyEventSequenceGap, Topic: raw.Topic, Counter: counter, Message: msg})
 		// Still deliver the sample; the application decides how to handle gaps.
 	}
 	s.hasFirst = true
 	s.lastCounter = counter
+	s.m.validSamples.Add(1)
 
 	select {
 	case s.ch <- dds.Sample{Topic: raw.Topic, Payload: payload, Timestamp: raw.Timestamp}:
 	case <-s.done:
+	default:
+	}
+}
+
+func (s *E2ESubscriber) emitError(e E2EError) {
+	select {
+	case s.errCh <- e:
+	default:
+	}
+}
+
+func (s *E2ESubscriber) emitEvent(e SafetyEvent) {
+	select {
+	case s.safetyEvCh <- e:
 	default:
 	}
 }
