@@ -5,6 +5,8 @@
 
 package rtps
 
+//fusa:req REQ-REL-003
+
 import (
 	"encoding/binary"
 	"sync"

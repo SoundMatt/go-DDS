@@ -23,6 +23,8 @@
 // OS-assigned port (useful in tests).
 package admin
 
+//fusa:req REQ-RT-001
+
 import (
 	"encoding/base64"
 	"encoding/json"
@@ -46,10 +48,11 @@ type Options struct {
 // Server is an HTTP admin API server for a DDS participant.
 // It is safe for concurrent use from multiple goroutines.
 type Server struct {
-	p   dds.Participant
-	srv *http.Server
-	ln  net.Listener
-	key string
+	p    dds.Participant
+	srv  *http.Server
+	ln   net.Listener
+	key  string
+	done chan struct{}
 }
 
 // New creates and starts an admin Server for p.
@@ -63,22 +66,29 @@ func New(p dds.Participant, opts Options) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Server{p: p, ln: ln, key: opts.APIKey}
+	s := &Server{p: p, ln: ln, key: opts.APIKey, done: make(chan struct{})}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/admin/health", s.auth(s.handleHealth))
 	mux.HandleFunc("/admin/topics", s.auth(s.handleTopics))
 	mux.HandleFunc("/admin/discovery", s.auth(s.handleDiscovery))
 	mux.HandleFunc("/admin/publish", s.auth(s.handlePublish))
 	s.srv = &http.Server{Handler: mux}
-	go func() { _ = s.srv.Serve(ln) }()
+	go func(done chan<- struct{}) {
+		defer close(done)
+		_ = s.srv.Serve(ln)
+	}(s.done)
 	return s, nil
 }
 
 // Addr returns the TCP address the server is listening on.
 func (s *Server) Addr() string { return s.ln.Addr().String() }
 
-// Close shuts down the admin server.
-func (s *Server) Close() error { return s.srv.Close() }
+// Close shuts down the admin server and waits for the serve goroutine to exit.
+func (s *Server) Close() error {
+	err := s.srv.Close()
+	<-s.done
+	return err
+}
 
 // ── middleware ────────────────────────────────────────────────────────────────
 

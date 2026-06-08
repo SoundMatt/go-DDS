@@ -1,0 +1,1251 @@
+go-FuSa Safety Report
+Generated: 2026-06-08 19:32:12 UTC
+Project:   /Users/matt/Documents/Coding/SoundMatt/go-DDS
+
+[WARNING] ANA001  goroutine launched without visible termination signal (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc_test.go:60:2)
+  → pass a context.Context or done <-chan struct{} parameter to allow cancellation
+[WARNING] ANA001  goroutine launched without visible termination signal (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc_test.go:246:2)
+  → pass a context.Context or done <-chan struct{} parameter to allow cancellation
+[WARNING] ANA001  goroutine launched without visible termination signal (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc_test.go:270:2)
+  → pass a context.Context or done <-chan struct{} parameter to allow cancellation
+[WARNING] ANA001  goroutine launched without visible termination signal (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc_test.go:379:2)
+  → pass a context.Context or done <-chan struct{} parameter to allow cancellation
+[WARNING] ANA001  goroutine launched without visible termination signal (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/rest/rest_test.go:87:2)
+  → pass a context.Context or done <-chan struct{} parameter to allow cancellation
+[WARNING] ANA001  goroutine launched without visible termination signal (/Users/matt/Documents/Coding/SoundMatt/go-DDS/pool/pool_test.go:79:3)
+  → pass a context.Context or done <-chan struct{} parameter to allow cancellation
+[WARNING] ANA001  goroutine launched without visible termination signal (/Users/matt/Documents/Coding/SoundMatt/go-DDS/pool/pool_test.go:195:3)
+  → pass a context.Context or done <-chan struct{} parameter to allow cancellation
+[WARNING] ANA001  goroutine launched without visible termination signal (/Users/matt/Documents/Coding/SoundMatt/go-DDS/pool/pool_test.go:203:2)
+  → pass a context.Context or done <-chan struct{} parameter to allow cancellation
+[WARNING] ANA001  goroutine launched without visible termination signal (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rpc/fuzz_test.go:78:3)
+  → pass a context.Context or done <-chan struct{} parameter to allow cancellation
+[WARNING] ANA001  goroutine launched without visible termination signal (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rpc/fuzz_test.go:108:3)
+  → pass a context.Context or done <-chan struct{} parameter to allow cancellation
+[WARNING] ANA001  goroutine launched without visible termination signal (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rpc/rpc_test.go:54:2)
+  → pass a context.Context or done <-chan struct{} parameter to allow cancellation
+[WARNING] ANA001  goroutine launched without visible termination signal (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rpc/rpc_test.go:75:2)
+  → pass a context.Context or done <-chan struct{} parameter to allow cancellation
+[WARNING] ANA001  goroutine launched without visible termination signal (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rpc/rpc_test.go:77:4)
+  → pass a context.Context or done <-chan struct{} parameter to allow cancellation
+[WARNING] ANA001  goroutine launched without visible termination signal (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rpc/rpc_test.go:204:2)
+  → pass a context.Context or done <-chan struct{} parameter to allow cancellation
+[WARNING] ANA001  goroutine launched without visible termination signal (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rpc/rpc_test.go:206:4)
+  → pass a context.Context or done <-chan struct{} parameter to allow cancellation
+[WARNING] ANA002  goroutine spawned inside range loop — potential unbounded goroutine creation (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/domain/domain.go:95:2)
+  → use a semaphore, worker pool, or errgroup to bound concurrency
+[WARNING] ANA002  goroutine spawned inside range loop — potential unbounded goroutine creation (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/mqtt/mqtt.go:249:2)
+  → use a semaphore, worker pool, or errgroup to bound concurrency
+[WARNING] ANA002  goroutine spawned inside for loop — potential unbounded goroutine creation (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/wan/wan.go:172:2)
+  → use a semaphore, worker pool, or errgroup to bound concurrency
+[WARNING] ANA002  goroutine spawned inside range loop — potential unbounded goroutine creation (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/wan/wan.go:230:2)
+  → use a semaphore, worker pool, or errgroup to bound concurrency
+[WARNING] ANA002  goroutine spawned inside for loop — potential unbounded goroutine creation (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_fuzz_test.go:258:3)
+  → use a semaphore, worker pool, or errgroup to bound concurrency
+[WARNING] ANA002  goroutine spawned inside for loop — potential unbounded goroutine creation (/Users/matt/Documents/Coding/SoundMatt/go-DDS/pool/pool_test.go:77:2)
+  → use a semaphore, worker pool, or errgroup to bound concurrency
+[WARNING] ANA002  goroutine spawned inside for loop — potential unbounded goroutine creation (/Users/matt/Documents/Coding/SoundMatt/go-DDS/pool/pool_test.go:193:2)
+  → use a semaphore, worker pool, or errgroup to bound concurrency
+[WARNING] ANA002  goroutine spawned inside range loop — potential unbounded goroutine creation (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/record.go:73:2)
+  → use a semaphore, worker pool, or errgroup to bound concurrency
+[WARNING] ANA002  goroutine spawned inside for loop — potential unbounded goroutine creation (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rpc/rpc_test.go:91:2)
+  → use a semaphore, worker pool, or errgroup to bound concurrency
+[WARNING] ANA002  goroutine spawned inside range loop — potential unbounded goroutine creation (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rpc/rpc_test.go:76:3)
+  → use a semaphore, worker pool, or errgroup to bound concurrency
+[WARNING] ANA002  goroutine spawned inside range loop — potential unbounded goroutine creation (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rpc/rpc_test.go:205:3)
+  → use a semaphore, worker pool, or errgroup to bound concurrency
+[WARNING] ANA002  goroutine spawned inside range loop — potential unbounded goroutine creation (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rpc/rpc_test.go:216:2)
+  → use a semaphore, worker pool, or errgroup to bound concurrency
+[WARNING] ANA002  goroutine spawned inside for loop — potential unbounded goroutine creation (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/replay_test.go:91:2)
+  → use a semaphore, worker pool, or errgroup to bound concurrency
+[WARNING] ANA002  goroutine spawned inside for loop — potential unbounded goroutine creation (/Users/matt/Documents/Coding/SoundMatt/go-DDS/xtypes/topic_registry_test.go:142:2)
+  → use a semaphore, worker pool, or errgroup to bound concurrency
+[WARNING] ANA003  time.Sleep inside goroutine cannot be interrupted (/Users/matt/Documents/Coding/SoundMatt/go-DDS/pool/pool_test.go:199:5)
+  → replace time.Sleep with select { case <-time.After(d): ... case <-ctx.Done(): ... }
+[WARNING] ANA003  time.Sleep inside goroutine cannot be interrupted (/Users/matt/Documents/Coding/SoundMatt/go-DDS/pool/pool_test.go:207:5)
+  → replace time.Sleep with select { case <-time.After(d): ... case <-ctx.Done(): ... }
+[INFO] BOUNDARY001  boundary.mermaid not found — run 'gofusa boundary' to generate the component boundary diagram (boundary.mermaid)
+  → Run: gofusa boundary
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/admin/admin_test.go:204:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/admin/admin_test.go:225:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/admin/admin_test.go:237:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/admin/admin_test.go:273:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/admin/admin_test.go:334:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/domain/domain_test.go:78:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/domain/domain_test.go:79:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/domain/domain_test.go:83:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/domain/domain_test.go:84:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/domain/domain_test.go:150:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/domain/domain_test.go:162:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/config.go:77:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc_test.go:76:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc_test.go:91:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc_test.go:93:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc_test.go:105:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc_test.go:118:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc_test.go:135:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc_test.go:144:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc_test.go:153:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc_test.go:184:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc_test.go:195:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc_test.go:215:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc_test.go:226:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc_test.go:242:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc_test.go:256:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc_test.go:266:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc_test.go:286:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc_test.go:302:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc_test.go:348:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc_test.go:359:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc_test.go:401:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/mqtt/mqtt_test.go:124:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/mqtt/mqtt_test.go:141:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/mqtt/mqtt_test.go:167:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/mqtt/mqtt_test.go:203:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/mqtt/mqtt_test.go:268:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/mqtt/mqtt_test.go:301:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/mqtt/mqtt_test.go:329:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/rest/rest.go:196:4)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/rest/rest.go:199:4)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/rest/rest_test.go:43:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/rest/rest_test.go:53:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/rest/rest_test.go:65:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/rest/rest_test.go:81:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/rest/rest_test.go:86:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/rest/rest_test.go:113:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/rest/rest_test.go:122:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/rest/rest_test.go:127:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/rest/rest_test.go:137:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/rest/rest_test.go:169:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/rest/rest_test.go:174:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/rest/rest_test.go:187:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/rest/rest_test.go:222:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/rest/rest_test.go:231:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/rest/rest_test.go:232:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/rest/rest_test.go:245:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/rest/rest_test.go:246:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/rest/rest_test.go:261:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/rest/rest_test.go:262:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/rest/rest_test.go:274:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/rest/rest_test.go:275:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/rest/rest_test.go:320:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/wan/wan.go:265:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/wan/wan.go:268:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/wan/wan.go:274:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/wan/wan.go:282:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/wan/wan_test.go:118:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/wan/wan_test.go:119:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/wan/wan_test.go:184:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/wan/wan_test.go:193:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/wan/wan_test.go:204:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/wan/wan_test.go:215:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/wan/wan_test.go:238:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/wan/wan_test.go:299:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/codec_fuzz_test.go:75:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/config/config_test.go:70:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/config/config_test.go:77:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/config/config_test.go:85:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/config/config_test.go:119:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/config/config_test.go:326:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/cyclone/cyclone_test.go:117:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/cyclone/cyclone_test.go:120:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/example_test.go:21:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/example_test.go:24:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/example_test.go:25:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/example_test.go:29:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/examples/secure-topic/main.go:175:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/interop/interop_test.go:129:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/interop/interop_test.go:166:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock.go:84:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:35:4)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:38:4)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:39:4)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:67:4)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:72:4)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:73:4)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:96:4)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:102:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:109:4)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:135:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:144:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:155:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:164:4)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:165:4)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:182:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:189:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:194:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:201:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:206:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:217:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:220:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:221:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:243:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:248:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:257:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:264:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:265:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_ctx_test.go:30:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_ctx_test.go:39:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_ctx_test.go:64:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_fuzz_test.go:98:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_fuzz_test.go:101:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_fuzz_test.go:102:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_fuzz_test.go:152:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_fuzz_test.go:210:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_fuzz_test.go:213:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_fuzz_test.go:216:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_fuzz_test.go:250:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_fuzz_test.go:254:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_fuzz_test.go:261:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_fuzz_test.go:287:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_fuzz_test.go:290:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_fuzz_test.go:291:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:66:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:69:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:86:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:87:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:91:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:112:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:114:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:133:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:147:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:154:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:162:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:164:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:167:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:177:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:178:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:182:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:206:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:213:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:221:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:222:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:231:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:295:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:299:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:314:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:324:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:337:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:338:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:342:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:344:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:365:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:394:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:416:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:457:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:460:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:466:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:468:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:471:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:553:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:586:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:612:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:638:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:692:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:694:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:719:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:720:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:747:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:748:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:770:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:783:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:785:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:791:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:793:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:825:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:970:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:972:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:975:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:977:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:996:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:997:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:1021:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:1023:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:1052:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:1054:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:1084:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:1086:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:1091:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:1203:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:1205:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:1207:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:1239:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:1242:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:1250:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_test.go:1252:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_v06_test.go:218:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_v06_test.go:219:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/monitor/monitor.go:127:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/monitor/monitor.go:141:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/monitor/monitor.go:170:4)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/monitor/monitor.go:185:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/monitor/monitor.go:193:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/monitor/monitor.go:197:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/monitor/monitor.go:204:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/monitor/monitor.go:211:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/monitor/monitor.go:212:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/monitor/monitor.go:241:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/monitor/monitor.go:242:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/monitor/monitor.go:275:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/monitor/monitor.go:293:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/monitor/monitor_test.go:148:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/pool/pool_test.go:120:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/pool/pool_test.go:205:4)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/pool/pool_test.go:232:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go:23:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go:25:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go:47:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go:49:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go:71:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go:73:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go:101:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go:103:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go:126:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go:128:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go:143:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go:145:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go:174:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go:198:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go:212:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go:225:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go:242:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go:254:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go:256:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go:302:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go:304:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go:341:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go:343:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/fault_test.go:366:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/record_test.go:88:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/record_test.go:89:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/record_test.go:93:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/record_test.go:94:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/record_test.go:231:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/record_test.go:232:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/record/record_test.go:314:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rpc/rpc.go:41:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rpc/rpc.go:111:4)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rpc/rpc.go:155:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rpc/rpc_test.go:112:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rpc/rpc_test.go:117:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rpc/rpc_test.go:127:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rpc/rpc_test.go:132:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go:54:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go:120:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go:1207:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go:1210:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go:1286:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go:1294:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go:1459:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go:1510:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go:1512:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go:1561:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go:1563:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go:1594:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go:1596:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go:1626:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go:1631:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go:1671:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go:1689:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go:1710:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go:1822:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go:1835:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go:2014:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go:2116:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go:2118:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go:299:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go:843:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/persist.go:49:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/persist.go:69:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/persist.go:70:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/rtps_ctx_test.go:30:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/rtps_ctx_test.go:39:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/rtps_ctx_test.go:64:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/rtps_test.go:200:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/rtps_test.go:203:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/rtps_test.go:310:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/rtps_test.go:311:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/rtps_test.go:315:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/rtps_test.go:340:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/rtps_test.go:341:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/rtps_test.go:345:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/rtps_test.go:370:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/rtps_test.go:377:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/rtps_test.go:386:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/rtps_test.go:396:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/rtps_test.go:461:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/rtps_test.go:471:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/rtps_test.go:563:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/rtps_test.go:564:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/rtps_test.go:591:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/rtps_test.go:592:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/rtps_test.go:622:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/rtps_test.go:623:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/rtps_test.go:774:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/traffic_linux.go:77:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/traffic_linux.go:101:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/traffic_linux.go:132:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/traffic_linux.go:139:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/traffic_other.go:26:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/transport.go:74:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/transport.go:92:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/transport.go:114:4)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/transport.go:164:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/wire_test.go:82:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/wire_test.go:175:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/wire_test.go:182:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/wire_test.go:257:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/wire_test.go:332:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/wire_test.go:365:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/wire_test.go:396:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/wire_test.go:419:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/wire_test.go:451:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/wire_test.go:478:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e_test.go:84:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e_test.go:85:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e_test.go:121:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e_test.go:122:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e_test.go:157:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e_test.go:158:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e_test.go:186:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e_test.go:187:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e_test.go:214:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e_test.go:215:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e_test.go:261:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e_test.go:262:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e_test.go:290:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e_test.go:291:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e_test.go:322:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e_test.go:323:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e_test.go:349:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e_test.go:359:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e_test.go:368:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e_test.go:388:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/queue_test.go:24:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/queue_test.go:26:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/queue_test.go:47:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/queue_test.go:65:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/queue_test.go:84:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/queue_test.go:97:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/queue_test.go:149:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/queue_test.go:151:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert.go:127:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert.go:146:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert.go:154:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert_test.go:104:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert_test.go:106:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert_test.go:113:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert_test.go:116:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert_test.go:139:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert_test.go:140:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert_test.go:147:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert_test.go:153:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert_test.go:161:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert_test.go:162:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert_test.go:170:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert_test.go:172:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert_test.go:173:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert_test.go:183:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert_test.go:193:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert_test.go:194:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert_test.go:203:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert_test.go:233:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert_test.go:253:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert_test.go:302:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert_test.go:312:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert_test.go:320:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/discovery.go:67:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/discovery.go:68:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/discovery.go:94:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/discovery.go:95:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/discovery.go:96:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/fuzz_test.go:93:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/fuzz_test.go:115:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security.go:141:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security.go:164:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security_test.go:49:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security_test.go:75:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security_test.go:84:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security_test.go:86:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security_test.go:96:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security_test.go:97:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security_test.go:105:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security_test.go:130:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security_test.go:131:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security_test.go:132:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security_test.go:142:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security_test.go:143:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security_test.go:145:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security_test.go:153:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security_test.go:154:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security_test.go:155:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security_test.go:156:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security_test.go:162:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security_test.go:169:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security_test.go:170:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security_test.go:210:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/services/services.go:169:7)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/services/services_test.go:265:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/services/services_test.go:266:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/services/services_test.go:348:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem.go:236:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem.go:237:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem.go:246:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem.go:290:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem.go:322:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem.go:330:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem.go:418:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_internal_test.go:236:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_internal_test.go:241:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_internal_test.go:264:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_internal_test.go:265:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_internal_test.go:270:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:61:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:66:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:81:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:84:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:90:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:92:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:99:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:112:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:113:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:138:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:153:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:155:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:159:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:167:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:171:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:179:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:213:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:241:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:244:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:268:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:299:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:317:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:319:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:446:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:449:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:457:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:459:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:484:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:486:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:515:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:517:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:552:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:554:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem_test.go:556:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/testutil/testutil_test.go:465:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/testutil/testutil_test.go:476:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/testutil/testutil_test.go:477:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/testutil/testutil_test.go:489:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/testutil/testutil_test.go:490:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/diagnostics_test.go:213:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/diagnostics_test.go:221:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/diagnostics_test.go:231:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/tsn_test.go:106:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/tsn_test.go:130:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/tsn_test.go:159:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/tsn_test.go:171:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/tsn_test.go:185:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/tsn_test.go:192:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/tsn_test.go:200:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/tsn_test.go:208:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/tsn_test.go:216:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/tsn_test.go:247:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/tsn_test.go:255:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/tsn_test.go:263:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/tsn_test.go:271:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:31:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:32:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:56:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:63:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:75:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:89:3)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:107:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:114:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:215:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:229:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:230:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:253:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:254:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:274:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:295:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:320:5)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:333:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:371:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:372:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:373:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:400:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:401:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:402:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:403:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:417:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:428:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:437:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:445:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:458:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:459:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:460:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:485:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:488:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:489:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:509:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:512:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:524:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:527:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:587:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:609:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/waitset_test.go:610:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/xtypes/topic_registry_test.go:48:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/xtypes/topic_registry_test.go:115:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/xtypes/topic_registry_test.go:179:6)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/xtypes/xtypes.go:124:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/xtypes/xtypes_test.go:212:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/xtypes/xtypes_test.go:243:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/xtypes/xtypes_test.go:271:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT001  return value discarded with blank identifier in multi-value call (/Users/matt/Documents/Coding/SoundMatt/go-DDS/xtypes/xtypes_test.go:338:2)
+  → assign all return values to named variables and handle each explicitly
+[WARNING] LINT002  panic() call detected (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/queue_test.go:175:72)
+  → replace panic with an explicit error return; document any remaining panic usage
+[WARNING] LINT002  panic() call detected (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security.go:165:3)
+  → replace panic with an explicit error return; document any remaining panic usage
+[INFO] LINT003  recover() call inventoried — verify it is inside a deferred function (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/domain/domain.go:116:21)
+  → ensure recover() is called only inside a function passed to defer
+[INFO] LINT003  recover() call inventoried — verify it is inside a deferred function (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/queue.go:104:11)
+  → ensure recover() is called only inside a function passed to defer
+[WARNING] LINT004  import of "unsafe" package detected (/Users/matt/Documents/Coding/SoundMatt/go-DDS/cyclone/cyclone.go:116:2)
+  → document justification for unsafe usage; avoid in safety-critical code paths
+[WARNING] LINT004  import of "unsafe" package detected (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/traffic_linux.go:15:2)
+  → document justification for unsafe usage; avoid in safety-critical code paths
+[INFO] LINT005  import of "reflect" package inventoried (/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go:30:2)
+  → prefer explicit type handling over reflection in safety-critical code
+[INFO] LINT005  import of "reflect" package inventoried (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go:23:2)
+  → prefer explicit type handling over reflection in safety-critical code
+[INFO] LINT005  import of "reflect" package inventoried (/Users/matt/Documents/Coding/SoundMatt/go-DDS/xtypes/topic_registry.go:9:2)
+  → prefer explicit type handling over reflection in safety-critical code
+[INFO] LINT006  package-level var _serviceDesc introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc.go:91:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var DefaultQoSMap introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/mqtt/mqtt.go:102:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var IdentityMap introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/mqtt/mqtt.go:139:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var ErrFrameTooLarge introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/wan/wan.go:36:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var cycloneBenchSizes introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/cyclone/cyclone_bench_test.go:165:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var ErrClosed introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go:40:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var ErrTopicEmpty introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go:43:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var ErrPayloadTooLarge introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go:47:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var ErrQoSMismatch introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go:50:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var ErrDeadlineMissed introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go:53:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var ErrSampleRejected introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go:56:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var ErrResourceLimits introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go:59:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var DefaultQoS introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go:124:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var ReliableQoS introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go:132:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var NoopTracer introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go:222:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var globalBroker introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock.go:45:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var payloadSizes introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock_bench_test.go:17:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var indexHTML introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/monitor/monitor.go:33:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var ErrNoReply introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rpc/rpc.go:27:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var EntityIdParticipant introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go:29:2)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var EntityIdSPDPWriter introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go:30:2)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var EntityIdSPDPReader introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go:31:2)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var EntityIdSEDPPubWriter introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go:32:2)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var EntityIdSEDPPubReader introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go:33:2)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var EntityIdSEDPSubWriter introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go:34:2)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var EntityIdSEDPSubReader introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go:35:2)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var EntityIdUnknown introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go:36:2)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var EntityIdBuiltinParticipant introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go:37:2)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var spdpMulticastAddr introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/locator.go:95:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var spdpMulticastAddrV6 introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/locator.go:98:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var userDataMulticastAddr introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/locator.go:103:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var rtpsMagic introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/message.go:18:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var goVendorId introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/message.go:21:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var loopbackAddr introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/packet_test.go:40:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var seqCounter introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/sedp.go:332:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var ErrQueueFull introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/queue.go:18:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var ErrReplay introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/replay.go:16:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var sharedBrokerMu introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem.go:57:2)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var sharedBrokers introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem.go:58:2)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var ErrNoStream introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/tsn.go:46:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var GlobalTopicRegistry introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/xtypes/topic_registry.go:42:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] LINT006  package-level var ErrTypeMismatch introduces global mutable state (/Users/matt/Documents/Coding/SoundMatt/go-DDS/xtypes/xtypes.go:260:5)
+  → prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)
+[INFO] TRACE001  no .fusa-reqs.json requirements manifest found (.fusa-reqs.json)
+  → create .fusa-reqs.json to enable requirements traceability
+
+Summary: 622 total  0 errors  573 warnings  49 infos
+Result:  PASS

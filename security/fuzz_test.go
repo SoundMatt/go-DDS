@@ -5,6 +5,9 @@
 
 package security_test
 
+//fusa:test REQ-SEC-001
+//fusa:test REQ-SEC-002
+
 // Fuzz tests for the security package plugins.
 //
 // Run the fuzzer with e.g.:

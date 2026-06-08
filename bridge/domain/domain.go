@@ -17,6 +17,9 @@
 // bidirectional bridging, create two Bridge instances with swapped src/dst.
 package domain
 
+//fusa:req REQ-RT-001
+//fusa:req REQ-SAFETY-003
+
 import (
 	"fmt"
 	"sync"
@@ -91,14 +94,13 @@ func New(src, dst dds.Participant, opts Options) (*Bridge, error) {
 //
 // Start is idempotent: calling it more than once has no effect.
 func (b *Bridge) Start() {
+	done := b.done
 	for i := range b.subs {
-		sub := b.subs[i]
-		pub := b.pubs[i]
 		b.wg.Add(1)
-		go func() {
+		go func(sub dds.Subscriber, pub dds.Publisher, done <-chan struct{}) {
 			defer b.wg.Done()
 			b.forward(sub, pub)
-		}()
+		}(b.subs[i], b.pubs[i], done)
 	}
 }
 

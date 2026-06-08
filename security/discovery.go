@@ -5,6 +5,10 @@
 
 package security
 
+//fusa:req REQ-SEC-001
+//fusa:req REQ-SEC-004
+//fusa:req REQ-SEC-005
+
 import (
 	"crypto/hmac"
 	"crypto/sha256"

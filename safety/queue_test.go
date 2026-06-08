@@ -5,6 +5,8 @@
 
 package safety_test
 
+//fusa:test REQ-SAFETY-002
+
 import (
 	"context"
 	"errors"

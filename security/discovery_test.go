@@ -5,6 +5,10 @@
 
 package security_test
 
+//fusa:test REQ-SEC-001
+//fusa:test REQ-SEC-004
+//fusa:test REQ-SEC-005
+
 import (
 	"testing"
 

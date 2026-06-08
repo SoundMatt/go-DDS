@@ -5,6 +5,8 @@
 
 package security
 
+//fusa:req REQ-SEC-003
+
 import (
 	"errors"
 	"sync"

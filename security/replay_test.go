@@ -5,6 +5,8 @@
 
 package security_test
 
+//fusa:test REQ-SEC-003
+
 import (
 	"errors"
 	"testing"

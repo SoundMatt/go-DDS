@@ -5,6 +5,8 @@
 
 package safety
 
+//fusa:req REQ-SAFETY-002
+
 import (
 	"errors"
 	"fmt"

@@ -15,6 +15,9 @@
 //	p, err := rtps.New(dds.Domain(0), rtps.WithSecurity(myPlugin))
 package rtps
 
+//fusa:req REQ-RT-001
+//fusa:req REQ-REL-004
+
 import (
 	"context"
 	"fmt"
@@ -396,10 +399,11 @@ func newParticipant(domain dds.Domain, opts ...Option) (*participant, error) {
 	go p.dataReceiveLoop()
 
 	if p.cancelCtx != nil {
-		go func() {
-			<-p.cancelCtx.Done()
+		done := p.cancelCtx.Done()
+		go func(done <-chan struct{}) {
+			<-done
 			_ = p.Close()
-		}()
+		}(done)
 	}
 
 	return p, nil

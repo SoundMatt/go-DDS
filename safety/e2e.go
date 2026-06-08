@@ -22,6 +22,10 @@
 // The CRC slot is treated as zero when computing the CRC.
 package safety
 
+//fusa:req REQ-SAFETY-001
+//fusa:req REQ-SAFETY-003
+//fusa:req REQ-SAFETY-004
+
 import (
 	"encoding/binary"
 	"fmt"

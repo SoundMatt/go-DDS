@@ -1,0 +1,91 @@
+{
+  "format": "go-FuSa Safety Case v1",
+  "generatedAt": "2026-06-08T19:37:14.157789Z",
+  "module": "github.com/SoundMatt/go-DDS",
+  "standard": "iso26262",
+  "evidence": [
+    {
+      "id": "check",
+      "description": "Coding standard and static analysis checks",
+      "file": "check-report.json",
+      "status": "present"
+    },
+    {
+      "id": "trace",
+      "description": "Requirements traceability matrix",
+      "file": ".fusa-reqs.json",
+      "status": "present",
+      "detail": "15 requirements"
+    },
+    {
+      "id": "verify",
+      "description": "Test evidence bundle",
+      "file": ".fusa-evidence.json",
+      "status": "present",
+      "detail": "786/829 tests passed"
+    },
+    {
+      "id": "qualify",
+      "description": "Tool qualification report",
+      "file": "qualify-report.json",
+      "status": "present",
+      "detail": "44/44 cases passed"
+    },
+    {
+      "id": "sbom",
+      "description": "SBOM (SPDX 3.0.1)",
+      "file": "sbom.json",
+      "status": "present"
+    },
+    {
+      "id": "provenance",
+      "description": "Build provenance",
+      "file": "provenance.json",
+      "status": "present"
+    }
+  ],
+  "clauses": [
+    {
+      "standard": "ISO 26262",
+      "clause": "Part 6 §6.4",
+      "title": "Software requirements specification",
+      "evidenceIds": [
+        "trace"
+      ]
+    },
+    {
+      "standard": "ISO 26262",
+      "clause": "Part 6 §6.6–6.7",
+      "title": "Software unit design and implementation",
+      "evidenceIds": [
+        "check"
+      ]
+    },
+    {
+      "standard": "ISO 26262",
+      "clause": "Part 6 §6.8",
+      "title": "Software unit verification",
+      "evidenceIds": [
+        "verify"
+      ]
+    },
+    {
+      "standard": "ISO 26262",
+      "clause": "Part 8 §8.4.5",
+      "title": "Tool qualification",
+      "evidenceIds": [
+        "qualify"
+      ]
+    },
+    {
+      "standard": "ISO 26262",
+      "clause": "Part 8 §8.3",
+      "title": "Release management",
+      "evidenceIds": [
+        "sbom",
+        "provenance"
+      ]
+    }
+  ],
+  "gaps": null
+}

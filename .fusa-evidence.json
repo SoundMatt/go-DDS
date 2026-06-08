@@ -1,0 +1,4987 @@
+{
+  "generatedAt": "2026-06-08T19:40:35.750637Z",
+  "projectRoot": "/Users/matt/Documents/Coding/SoundMatt/go-DDS",
+  "goVersion": "go1.26.3",
+  "results": [
+    {
+      "name": "TestWaitSet_DeliversSample",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWaitSet_ContextCancelled",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0.03
+    },
+    {
+      "name": "TestWaitSet_AllChannelsClosed",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWaitSet_AllChannelsClosed_ContextCancelled",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWithFilter_AppliedInConfig",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWithChannelDepth_AppliedInConfig",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWithBackPressure_AppliedInConfig",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestApplySubscriberOpts_Empty",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestChanDepth_Default",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestChanDepth_Custom",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCloseWithDrain_WithDrainer",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCloseWithDrain_WithoutDrainer",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestNoopTracer_Start",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTypedPublisher_WriteAndClose",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTypedSubscriber_DeliversDecodedValue",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTypedSubscriber_DecodeErrorDropped",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0.1
+    },
+    {
+      "name": "TestTypedSubscriber_ClosedRawSub",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTypedSubscriber_Close_StopsPump",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestJSONCodec_MarshalUnmarshal",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestJSONCodec_Unmarshal_InvalidJSON",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTypedPublisher_MarshalError_Propagated",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHealthStatus_String_OK",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHealthStatus_String_Degraded",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHealthStatus_String_Down",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWaitSet_Attach_DeliversFromNewSub",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWaitSet_Detach_RemovesSub",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWaitSet_Detach_Idempotent",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0.03
+    },
+    {
+      "name": "TestWaitSet_Attach_ReturnsWaitSet",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWaitSet_OneClosedOnePending",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTypedPublisher_WriteCtx_ValidContext",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTypedPublisher_WriteCtx_CancelledContext",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTypedPublisher_WriteCtx_MarshalError",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestGobCodec_RoundTrip",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestGobCodec_ImplementsCodec",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestNewSentinels_ErrorsIs",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTryRead_Interface",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWithDeadlineMissed_Option",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTypedSample_MetadataForwarded",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzProtoCodecRoundTrip/seed#0",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzProtoCodecRoundTrip/seed#1",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzProtoCodecRoundTrip/seed#2",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzProtoCodecRoundTrip/seed#3",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzProtoCodecRoundTrip",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzProtoCodecOpenArbitrary/seed#0",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzProtoCodecOpenArbitrary/seed#1",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzProtoCodecOpenArbitrary/seed#2",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzProtoCodecOpenArbitrary/seed#3",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzProtoCodecOpenArbitrary/seed#4",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzProtoCodecOpenArbitrary",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "ExampleNewWaitSet",
+      "package": "github.com/SoundMatt/go-DDS",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAdmin_Addr_NonEmpty",
+      "package": "github.com/SoundMatt/go-DDS/admin",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAdmin_Health_OK",
+      "package": "github.com/SoundMatt/go-DDS/admin",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAdmin_Health_Down",
+      "package": "github.com/SoundMatt/go-DDS/admin",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAdmin_Health_NoProvider",
+      "package": "github.com/SoundMatt/go-DDS/admin",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAdmin_Topics_ReturnsArray",
+      "package": "github.com/SoundMatt/go-DDS/admin",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAdmin_Topics_NoProvider_ReturnsEmptyArray",
+      "package": "github.com/SoundMatt/go-DDS/admin",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAdmin_Discovery_ReturnsJSON",
+      "package": "github.com/SoundMatt/go-DDS/admin",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAdmin_Publish_InjectsSample",
+      "package": "github.com/SoundMatt/go-DDS/admin",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAdmin_Publish_EmptyTopic_BadRequest",
+      "package": "github.com/SoundMatt/go-DDS/admin",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAdmin_Publish_BadPayload_BadRequest",
+      "package": "github.com/SoundMatt/go-DDS/admin",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAdmin_Publish_BadJSON_BadRequest",
+      "package": "github.com/SoundMatt/go-DDS/admin",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAdmin_Publish_MethodNotAllowed",
+      "package": "github.com/SoundMatt/go-DDS/admin",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAdmin_Publish_ClosedParticipant",
+      "package": "github.com/SoundMatt/go-DDS/admin",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAdmin_APIKey_Required",
+      "package": "github.com/SoundMatt/go-DDS/admin",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAdmin_APIKey_ValidBearer",
+      "package": "github.com/SoundMatt/go-DDS/admin",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAdmin_APIKey_WrongKey",
+      "package": "github.com/SoundMatt/go-DDS/admin",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAdmin_Close_StopsServer",
+      "package": "github.com/SoundMatt/go-DDS/admin",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAdmin_New_ListenError",
+      "package": "github.com/SoundMatt/go-DDS/admin",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAdmin_New_DefaultAddr",
+      "package": "github.com/SoundMatt/go-DDS/admin",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAdmin_ContentType_JSON",
+      "package": "github.com/SoundMatt/go-DDS/admin",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBridge_ForwardsSample",
+      "package": "github.com/SoundMatt/go-DDS/bridge/domain",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBridge_MultipleTopics",
+      "package": "github.com/SoundMatt/go-DDS/bridge/domain",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBridge_EmptyTopics",
+      "package": "github.com/SoundMatt/go-DDS/bridge/domain",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBridge_Close_Idempotent",
+      "package": "github.com/SoundMatt/go-DDS/bridge/domain",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBridge_New_ClosedSrc_Error",
+      "package": "github.com/SoundMatt/go-DDS/bridge/domain",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBridge_New_ClosedDst_Error",
+      "package": "github.com/SoundMatt/go-DDS/bridge/domain",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBridge_DstClosed_ForwardExits",
+      "package": "github.com/SoundMatt/go-DDS/bridge/domain",
+      "status": "pass",
+      "elapsedSeconds": 0.03
+    },
+    {
+      "name": "TestBridge_SrcSubscriberClosed",
+      "package": "github.com/SoundMatt/go-DDS/bridge/domain",
+      "status": "pass",
+      "elapsedSeconds": 0.03
+    },
+    {
+      "name": "TestBridge_Publish_ReturnsAck",
+      "package": "github.com/SoundMatt/go-DDS/bridge/grpc",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBridge_Publish_EmptyTopic_InvalidArgument",
+      "package": "github.com/SoundMatt/go-DDS/bridge/grpc",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBridge_Subscribe_ReceivesSample",
+      "package": "github.com/SoundMatt/go-DDS/bridge/grpc",
+      "status": "pass",
+      "elapsedSeconds": 0.02
+    },
+    {
+      "name": "TestBridge_Subscribe_EmptyTopic_InvalidArgument",
+      "package": "github.com/SoundMatt/go-DDS/bridge/grpc",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBridge_StreamPublish_ReturnsCount",
+      "package": "github.com/SoundMatt/go-DDS/bridge/grpc",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBridge_Filter_DropsMatchingSamples",
+      "package": "github.com/SoundMatt/go-DDS/bridge/grpc",
+      "status": "pass",
+      "elapsedSeconds": 0.02
+    },
+    {
+      "name": "TestBridge_Transform_RewritesPayload",
+      "package": "github.com/SoundMatt/go-DDS/bridge/grpc",
+      "status": "pass",
+      "elapsedSeconds": 0.02
+    },
+    {
+      "name": "TestBridge_Auth_NoToken_Unauthenticated",
+      "package": "github.com/SoundMatt/go-DDS/bridge/grpc",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBridge_Auth_CorrectToken_Passes",
+      "package": "github.com/SoundMatt/go-DDS/bridge/grpc",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBridge_Close_Idempotent",
+      "package": "github.com/SoundMatt/go-DDS/bridge/grpc",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestLoadConfig_ValidYAML",
+      "package": "github.com/SoundMatt/go-DDS/bridge/grpc",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestLoadConfig_NotFound",
+      "package": "github.com/SoundMatt/go-DDS/bridge/grpc",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestLoadConfig_InvalidYAML",
+      "package": "github.com/SoundMatt/go-DDS/bridge/grpc",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzBridge_Publish/seed#0",
+      "package": "github.com/SoundMatt/go-DDS/bridge/grpc",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzBridge_Publish/seed#1",
+      "package": "github.com/SoundMatt/go-DDS/bridge/grpc",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzBridge_Publish/seed#2",
+      "package": "github.com/SoundMatt/go-DDS/bridge/grpc",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzBridge_Publish",
+      "package": "github.com/SoundMatt/go-DDS/bridge/grpc",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestNewBridge_ConnectedClient",
+      "package": "github.com/SoundMatt/go-DDS/bridge/mqtt",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestNewBridge_DisconnectedClient_Errors",
+      "package": "github.com/SoundMatt/go-DDS/bridge/mqtt",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBridge_DDSToMQTT",
+      "package": "github.com/SoundMatt/go-DDS/bridge/mqtt",
+      "status": "pass",
+      "elapsedSeconds": 0.05
+    },
+    {
+      "name": "TestBridge_MQTTToDDS",
+      "package": "github.com/SoundMatt/go-DDS/bridge/mqtt",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestPrefixMap_DDSToMQTT",
+      "package": "github.com/SoundMatt/go-DDS/bridge/mqtt",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestPrefixMap_MQTTToDDS",
+      "package": "github.com/SoundMatt/go-DDS/bridge/mqtt",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestPrefixMap_MQTTToDDS_NoMatch",
+      "package": "github.com/SoundMatt/go-DDS/bridge/mqtt",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestIdentityMap",
+      "package": "github.com/SoundMatt/go-DDS/bridge/mqtt",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDefaultQoSMap_DDSToMQTT",
+      "package": "github.com/SoundMatt/go-DDS/bridge/mqtt",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDefaultQoSMap_MQTTToDDS",
+      "package": "github.com/SoundMatt/go-DDS/bridge/mqtt",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDefaultQoSMap_MQTTToDDS_ReliableNotRetained",
+      "package": "github.com/SoundMatt/go-DDS/bridge/mqtt",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBridge_FromMQTT_NoTopicMatch",
+      "package": "github.com/SoundMatt/go-DDS/bridge/mqtt",
+      "status": "pass",
+      "elapsedSeconds": 0.08
+    },
+    {
+      "name": "TestNewBridge_MQTTSubscribeError",
+      "package": "github.com/SoundMatt/go-DDS/bridge/mqtt",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBridge_FromMQTT_PublisherCreateError",
+      "package": "github.com/SoundMatt/go-DDS/bridge/mqtt",
+      "status": "pass",
+      "elapsedSeconds": 0.03
+    },
+    {
+      "name": "TestBridge_Close_Idempotent",
+      "package": "github.com/SoundMatt/go-DDS/bridge/mqtt",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBridge_ListTopics_Empty",
+      "package": "github.com/SoundMatt/go-DDS/bridge/rest",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBridge_ListTopics_AfterSubscribe",
+      "package": "github.com/SoundMatt/go-DDS/bridge/rest",
+      "status": "pass",
+      "elapsedSeconds": 0.05
+    },
+    {
+      "name": "TestBridge_Publish_ReturnsNoContent",
+      "package": "github.com/SoundMatt/go-DDS/bridge/rest",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBridge_Publish_DeliveredToSubscriber",
+      "package": "github.com/SoundMatt/go-DDS/bridge/rest",
+      "status": "pass",
+      "elapsedSeconds": 0.03
+    },
+    {
+      "name": "TestBridge_SSE_EventFormat",
+      "package": "github.com/SoundMatt/go-DDS/bridge/rest",
+      "status": "pass",
+      "elapsedSeconds": 0.02
+    },
+    {
+      "name": "TestBridge_Auth_MissingToken",
+      "package": "github.com/SoundMatt/go-DDS/bridge/rest",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBridge_Auth_WrongToken",
+      "package": "github.com/SoundMatt/go-DDS/bridge/rest",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBridge_Auth_CorrectToken",
+      "package": "github.com/SoundMatt/go-DDS/bridge/rest",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBridge_MethodNotAllowed_OnList",
+      "package": "github.com/SoundMatt/go-DDS/bridge/rest",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBridge_MethodNotAllowed_OnTopic",
+      "package": "github.com/SoundMatt/go-DDS/bridge/rest",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBridge_Close_Idempotent",
+      "package": "github.com/SoundMatt/go-DDS/bridge/rest",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzBridge_Publish/seed#0",
+      "package": "github.com/SoundMatt/go-DDS/bridge/rest",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzBridge_Publish/seed#1",
+      "package": "github.com/SoundMatt/go-DDS/bridge/rest",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzBridge_Publish/seed#2",
+      "package": "github.com/SoundMatt/go-DDS/bridge/rest",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzBridge_Publish",
+      "package": "github.com/SoundMatt/go-DDS/bridge/rest",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzBridge_TopicPath/seed#0",
+      "package": "github.com/SoundMatt/go-DDS/bridge/rest",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzBridge_TopicPath/seed#1",
+      "package": "github.com/SoundMatt/go-DDS/bridge/rest",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzBridge_TopicPath/seed#2",
+      "package": "github.com/SoundMatt/go-DDS/bridge/rest",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzBridge_TopicPath/seed#3",
+      "package": "github.com/SoundMatt/go-DDS/bridge/rest",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzBridge_TopicPath",
+      "package": "github.com/SoundMatt/go-DDS/bridge/rest",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWANBridge_ForwardsSample",
+      "package": "github.com/SoundMatt/go-DDS/bridge/wan",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWANBridge_MultipleTopics",
+      "package": "github.com/SoundMatt/go-DDS/bridge/wan",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWANBridge_Serve_Addr_NonEmpty",
+      "package": "github.com/SoundMatt/go-DDS/bridge/wan",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWANBridge_Connect_Addr_Empty",
+      "package": "github.com/SoundMatt/go-DDS/bridge/wan",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWANBridge_Close_Idempotent",
+      "package": "github.com/SoundMatt/go-DDS/bridge/wan",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWANBridge_Serve_ListenError",
+      "package": "github.com/SoundMatt/go-DDS/bridge/wan",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWANBridge_Connect_DialError",
+      "package": "github.com/SoundMatt/go-DDS/bridge/wan",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWANBridge_Connect_DialError_WithTopics",
+      "package": "github.com/SoundMatt/go-DDS/bridge/wan",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWANBridge_Connect_ClosedParticipant",
+      "package": "github.com/SoundMatt/go-DDS/bridge/wan",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWANBridge_LargeFrame_Rejected",
+      "package": "github.com/SoundMatt/go-DDS/bridge/wan",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWANBridge_ErrFrameTooLarge_Sentinel",
+      "package": "github.com/SoundMatt/go-DDS/bridge/wan",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWANBridge_Server_ClosedParticipant",
+      "package": "github.com/SoundMatt/go-DDS/bridge/wan",
+      "status": "pass",
+      "elapsedSeconds": 0.05
+    },
+    {
+      "name": "TestParseConfig_MinimalJSON",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestParseConfig_AllFields",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestParseConfig_InvalidJSON",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestParseConfig_EmptyReader",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestParseConfig_ValidationError",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestLoadConfig_HappyPath",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestLoadConfig_FileNotFound",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestValidate_Domain_Zero",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestValidate_Domain_MaxValid",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestValidate_Domain_Negative",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestValidate_Domain_TooHigh",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestValidate_HeartbeatPeriod_Valid",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestValidate_HeartbeatPeriod_Zero",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestValidate_HeartbeatPeriod_Negative",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestValidate_HeartbeatPeriod_BadSyntax",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestValidate_HeartbeatPeriod_Empty_OK",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestValidate_SPDPInterval_Valid",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestValidate_SPDPInterval_Zero",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestValidate_SPDPInterval_BadSyntax",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestValidate_SPDPJitter_Valid",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestValidate_SPDPJitter_ZeroOK",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestValidate_SPDPJitter_Negative",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestValidate_SPDPJitter_BadSyntax",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestValidate_LogLevel_AllValid",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestValidate_LogLevel_Invalid",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestParseConfig_JSONRoundTrip",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestParseConfig_ResolvedDursNotInJSON",
+      "package": "github.com/SoundMatt/go-DDS/config",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestStub_New",
+      "package": "github.com/SoundMatt/go-DDS/cyclone",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestStub_NewWithOptions",
+      "package": "github.com/SoundMatt/go-DDS/cyclone",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWithContext_CancelsParticipant",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0.01
+    },
+    {
+      "name": "TestWithContext_AlreadyCancelledContext",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0.01
+    },
+    {
+      "name": "TestWithContext_NilContextNoOp",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestPublishSubscribe_SameTopic",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestPublishSubscribe_DifferentTopic",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0.05
+    },
+    {
+      "name": "TestPublishSubscribe_MultipleSubscribers",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestPayloadIsolation",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSubscriberClose_ClosesChannel",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSubscriberClose_Idempotent",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestPublisherWrite_AfterClose",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestParticipantClose_BlocksNewEndpoints",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWaitSet_DeliversSample",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWaitSet_Timeout",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0.03
+    },
+    {
+      "name": "TestWaitSet_MultipleWaits",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTransientLocal_LateJoiner",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTransientLocal_NoSample",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0.03
+    },
+    {
+      "name": "TestTransientLocal_VolatileNotDelivered",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0.03
+    },
+    {
+      "name": "TestWaitSet_AllChannelsClosed",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMultipleDomains_ShareBroker",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestContentFilter_DeliverMatchingOnly",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWildcard_SingleLevel",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWildcard_MultiLevel",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWildcard_PatternLongerThanTopic",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0.05
+    },
+    {
+      "name": "TestSentinelErrors_EmptyTopic",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSentinelErrors_ClosedParticipant",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMonitor_ServesIndexHTML",
+      "package": "github.com/SoundMatt/go-DDS/monitor",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMonitor_AddrReturnsListenAddr",
+      "package": "github.com/SoundMatt/go-DDS/monitor",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDeadlineCallback_Fires",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0.05
+    },
+    {
+      "name": "TestBytePool_GetReturnsCorrectCapacity",
+      "package": "github.com/SoundMatt/go-DDS/pool",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBytePool_PutAndGetReusesBuffer",
+      "package": "github.com/SoundMatt/go-DDS/pool",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBytePool_PutDiscardsUndersizedBuffer",
+      "package": "github.com/SoundMatt/go-DDS/pool",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBytePool_ZeroSizeDefaulted",
+      "package": "github.com/SoundMatt/go-DDS/pool",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBytePool_NegativeSizeDefaulted",
+      "package": "github.com/SoundMatt/go-DDS/pool",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBytePool_Concurrent",
+      "package": "github.com/SoundMatt/go-DDS/pool",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBytePool_AppendWithinCapacity",
+      "package": "github.com/SoundMatt/go-DDS/pool",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSampleBuffer_PushAndPop",
+      "package": "github.com/SoundMatt/go-DDS/pool",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSampleBuffer_PopEmpty",
+      "package": "github.com/SoundMatt/go-DDS/pool",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSampleBuffer_PushFull",
+      "package": "github.com/SoundMatt/go-DDS/pool",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSampleBuffer_Wraparound",
+      "package": "github.com/SoundMatt/go-DDS/pool",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSampleBuffer_Len",
+      "package": "github.com/SoundMatt/go-DDS/pool",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSampleBuffer_Cap",
+      "package": "github.com/SoundMatt/go-DDS/pool",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSampleBuffer_DefaultCapacity",
+      "package": "github.com/SoundMatt/go-DDS/pool",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSampleBuffer_Concurrent",
+      "package": "github.com/SoundMatt/go-DDS/pool",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSampleBuffer_FullThenDrain",
+      "package": "github.com/SoundMatt/go-DDS/pool",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDeadlineCallback_ResetOnWrite",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0.17
+    },
+    {
+      "name": "TestChannelDepth_ConfigurableSize",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0.05
+    },
+    {
+      "name": "TestBackPressure_DropOldest",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBackPressure_Block",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestLogger_MockLogsToHandler",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestLiveliness_GainedOnNew",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCloseWithDrain_Mock",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSampleTimestamp_SetOnPublish",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTypedPublisherSubscriber_JSONCodec",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTypedSubscriber_DecodeErrorDropped",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0.05
+    },
+    {
+      "name": "TestCloseWithDrain_NonDrainer",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSentinelErrors_Wrapping",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMaxSampleSize_EnforcedInMock",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMaxSampleSize_ZeroMeansUnlimited_Mock",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDomain_MockParticipant",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWriteCtx_CancelledBeforeWrite",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWriteCtx_ValidContext",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestFaultPublisher_NoFaults_Delivers",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSubscriberUnsubscribe_StopsDelivery",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0.05
+    },
+    {
+      "name": "TestSubscriberUnsubscribe_Idempotent",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSubscriberClose_AfterUnsubscribe",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestFaultPublisher_LossRate100_DropsAll",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0.06
+    },
+    {
+      "name": "TestIsolatedBroker_NoEcho",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0.05
+    },
+    {
+      "name": "TestMetrics_MockParticipant",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSequenceNumber_Monotonic",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWriterGUID_Set",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTwoPublishers_DifferentGUIDs",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDeadline_SubscriberMissed",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0.05
+    },
+    {
+      "name": "TestRPC_BasicRequestReply",
+      "package": "github.com/SoundMatt/go-DDS/rpc",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRPC_MultipleInFlight",
+      "package": "github.com/SoundMatt/go-DDS/rpc",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRPC_ContextTimeout",
+      "package": "github.com/SoundMatt/go-DDS/rpc",
+      "status": "pass",
+      "elapsedSeconds": 0.05
+    },
+    {
+      "name": "TestRPC_ContextCancelBeforeSend",
+      "package": "github.com/SoundMatt/go-DDS/rpc",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRPC_CloseRequester",
+      "package": "github.com/SoundMatt/go-DDS/rpc",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRPC_CloseReplier",
+      "package": "github.com/SoundMatt/go-DDS/rpc",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRPC_CorrelationIsolation",
+      "package": "github.com/SoundMatt/go-DDS/rpc",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzRPCReplyDispatch/seed#0",
+      "package": "github.com/SoundMatt/go-DDS/rpc",
+      "status": "pass",
+      "elapsedSeconds": 0.01
+    },
+    {
+      "name": "FuzzRPCReplyDispatch/seed#1",
+      "package": "github.com/SoundMatt/go-DDS/rpc",
+      "status": "pass",
+      "elapsedSeconds": 0.01
+    },
+    {
+      "name": "FuzzRPCReplyDispatch/seed#2",
+      "package": "github.com/SoundMatt/go-DDS/rpc",
+      "status": "pass",
+      "elapsedSeconds": 0.01
+    },
+    {
+      "name": "FuzzRPCReplyDispatch/seed#3",
+      "package": "github.com/SoundMatt/go-DDS/rpc",
+      "status": "pass",
+      "elapsedSeconds": 0.01
+    },
+    {
+      "name": "FuzzRPCReplyDispatch/seed#4",
+      "package": "github.com/SoundMatt/go-DDS/rpc",
+      "status": "pass",
+      "elapsedSeconds": 0.01
+    },
+    {
+      "name": "FuzzRPCReplyDispatch",
+      "package": "github.com/SoundMatt/go-DDS/rpc",
+      "status": "pass",
+      "elapsedSeconds": 0.03
+    },
+    {
+      "name": "FuzzRPCRequestDispatch/seed#0",
+      "package": "github.com/SoundMatt/go-DDS/rpc",
+      "status": "pass",
+      "elapsedSeconds": 0.01
+    },
+    {
+      "name": "FuzzRPCRequestDispatch/seed#1",
+      "package": "github.com/SoundMatt/go-DDS/rpc",
+      "status": "pass",
+      "elapsedSeconds": 0.01
+    },
+    {
+      "name": "FuzzRPCRequestDispatch/seed#2",
+      "package": "github.com/SoundMatt/go-DDS/rpc",
+      "status": "pass",
+      "elapsedSeconds": 0.01
+    },
+    {
+      "name": "FuzzRPCRequestDispatch/seed#3",
+      "package": "github.com/SoundMatt/go-DDS/rpc",
+      "status": "pass",
+      "elapsedSeconds": 0.01
+    },
+    {
+      "name": "FuzzRPCRequestDispatch/seed#4",
+      "package": "github.com/SoundMatt/go-DDS/rpc",
+      "status": "pass",
+      "elapsedSeconds": 0.01
+    },
+    {
+      "name": "FuzzRPCRequestDispatch",
+      "package": "github.com/SoundMatt/go-DDS/rpc",
+      "status": "pass",
+      "elapsedSeconds": 0.03
+    },
+    {
+      "name": "FuzzRPCRoundTrip/seed#0",
+      "package": "github.com/SoundMatt/go-DDS/rpc",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzRPCRoundTrip/seed#1",
+      "package": "github.com/SoundMatt/go-DDS/rpc",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzRPCRoundTrip/seed#2",
+      "package": "github.com/SoundMatt/go-DDS/rpc",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzRPCRoundTrip/seed#3",
+      "package": "github.com/SoundMatt/go-DDS/rpc",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzRPCRoundTrip",
+      "package": "github.com/SoundMatt/go-DDS/rpc",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDeadline_SubscriberReset",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0.19
+    },
+    {
+      "name": "TestWildcard_Subscription",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTryRead_Empty",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTryRead_HasSample",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMockDiscoveryMetrics_ReturnsZero",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMockTopicMetrics_WriteCountIncremented",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMockTopicMetrics_DeliverCountIncremented",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMockTopicMetrics_DropCountIncremented",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMockTopicMetrics_MultipleTopic",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMockHealth_OK_WhenOpen",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMockHealth_Down_AfterClose",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMockHealth_StatusString",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzPublish/seed#0",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzPublish/seed#1",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzPublish/seed#2",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzPublish/seed#3",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzPublish/seed#4",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzPublish/seed#5",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzPublish/seed#6",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzPublish/seed#7",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzPublish/seed#8",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzPublish",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzPublishIsolation/seed#0",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzPublishIsolation/seed#1",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzPublishIsolation/seed#2",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzPublishIsolation/seed#3",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzPublishIsolation",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzTopicName/seed#0",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzTopicName/seed#1",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzTopicName/seed#2",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzTopicName/seed#3",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzTopicName/seed#4",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzTopicName/seed#5",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzTopicName/seed#6",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzTopicName/seed#7",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzTopicName/seed#8",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzTopicName/seed#9",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzTopicName",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzNoRouting/seed#0",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzNoRouting/seed#1",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzNoRouting/seed#2",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzNoRouting/seed#3",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzNoRouting/seed#4",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzNoRouting/seed#5",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzNoRouting",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzConcurrentPubSub/seed#0",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzConcurrentPubSub/seed#1",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzConcurrentPubSub/seed#2",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzConcurrentPubSub/seed#3",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzConcurrentPubSub",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzDropOnFullChannel/seed#0",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzDropOnFullChannel/seed#1",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzDropOnFullChannel/seed#2",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzDropOnFullChannel",
+      "package": "github.com/SoundMatt/go-DDS/mock",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHandleDataPacket_DispatchesToSubscriber",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHandleDataPacket_TruncatedHeader",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHandleDataPacket_UnknownSubmessage",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHandleDataPacket_HeartbeatSubmessage",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestNotifyReliableReaders_NoReaders",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestNotifyReliableReaders_BestEffortReader",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestNotifyReliableReaders_ReliableReader_NilAddr",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHandleHeartbeat_NoReaders",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHandleHeartbeat_ReliableReader_SetsExpected",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHandleHeartbeat_ReliableReader_WithAddr",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHandleAckNack_NoWriter",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHandleAckNack_BestEffortWriter",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHandleAckNack_ReliableWriter_RetransmitsHistory",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHandleAckNack_HistoryMiss",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSPDP_ParseParticipantData_RoundTrip",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSPDP_ParseParticipantData_ZeroAddr_FilledFromSender",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSPDP_ParseParticipantData_Truncated",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSPDP_StorePeer",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSPDP_HandlePacket_OwnPrefix_Ignored",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSPDP_HandlePacket_ValidRemote_StoresPeer",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSEDP_HandleEndpointAnnounce_RemoteWriter_Stored",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSEDP_HandleEndpointAnnounce_MatchesLocalReader",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSEDP_HandleEndpointAnnounce_EmptyTopic_Ignored",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSEDP_HandlePacket_OwnPrefix_Ignored",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSEDP_OnNewPeer_SendsAnnouncements",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSEDP_HandlePacket_ValidRemote_PubWriter",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSEDP_HandlePacket_ValidRemote_SubWriter",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSEDP_HandlePacket_TruncatedHeader",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHandleDataPacket_ACKNACKSubmessage",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMarshalGAP_Format",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHandleAckNack_EvictedHistory_SendsGAP",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMatchedReaderLocators_EmptyReturnsNone",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMatchedReaderLocators_TopicFiltered",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMatchedReaderLocators_DeduplicatesSharedLocator",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSPDP_StorePeer_SetsLastSeen",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSPDP_StorePeer_DefaultsLease",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSPDP_EvictExpired_RemovesStalePeer",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSPDP_EvictExpired_KeepsFreshPeer",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSPDP_ParseParticipantData_LeaseDuration",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSEDP_OnRemoteReader_Stored",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSEDP_OnPeerEvicted_ClearsRemoteEndpoints",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSEDP_HandleEndpointAnnounce_RemoteReader_Stored",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSEDP_RegisterReader_PreExistingRemoteWriter",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTopicMatches_Exact",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTopicMatches_SingleLevel",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTopicMatches_MultiLevel",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTopicMatches_NoMatch",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMarshalParseDataFrag_RoundTrip",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSplitIntoFragments_SmallPayload",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSplitIntoFragments_LargePayload_MultipleFragments",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestFragmentAssembler_Reassembles",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestFragmentAssembler_PartialNoResult",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestFragmentAssembler_OversizeDataSize_Rejected",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestFragmentAssembler_OutOfOrder",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestFragmentAssembler_StaleEviction",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestFragmentAssembler_ZeroDataSize_Rejected",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestFragmentAssembler_ZeroFragmentSize_Rejected",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestPersistFlushLoad_RoundTrip",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestPersistLoad_MissingFile_ReturnsNil",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestPersistFlush_EmptyDir_NoOp",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestPersistLoad_OversizePayload_Rejected",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWithPersistentHistory_LateJoinerGetsPersistedSample",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestPlog_Warn_WithNonNilLogger",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestPlog_Warn_NilLogger",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestPlog_Debug_WithNonNilLogger",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestNewPublisher_EmptyTopic_ErrTopicEmpty",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestNewSubscriber_EmptyTopic_ErrTopicEmpty",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWrite_AfterClose_ErrClosed",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMetrics_WritesAndDelivers",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDeadline_CallbackFires_WhenNoWrite",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0.05
+    },
+    {
+      "name": "TestE2E_RoundTrip_ValidFrame",
+      "package": "github.com/SoundMatt/go-DDS/safety",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestE2EPublisher_CounterIncrements",
+      "package": "github.com/SoundMatt/go-DDS/safety",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestE2EPublisher_HeaderPresent",
+      "package": "github.com/SoundMatt/go-DDS/safety",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestE2ESubscriber_CRCMismatch_ReportsError",
+      "package": "github.com/SoundMatt/go-DDS/safety",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestE2ESubscriber_ShortPayload_ReportsError",
+      "package": "github.com/SoundMatt/go-DDS/safety",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestE2ESubscriber_SequenceGap_ReportsError",
+      "package": "github.com/SoundMatt/go-DDS/safety",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestE2ESubscriber_FreshnessCheck_StaleReportsError",
+      "package": "github.com/SoundMatt/go-DDS/safety",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestE2ESubscriber_FreshnessCheck_FreshPasses",
+      "package": "github.com/SoundMatt/go-DDS/safety",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestE2ESubscriber_DisabledFreshness_AcceptsOld",
+      "package": "github.com/SoundMatt/go-DDS/safety",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestE2ESubscriber_Close",
+      "package": "github.com/SoundMatt/go-DDS/safety",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestE2ESubscriber_CloseIdempotent",
+      "package": "github.com/SoundMatt/go-DDS/safety",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestE2EPublisher_Close",
+      "package": "github.com/SoundMatt/go-DDS/safety",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestE2EError_Error",
+      "package": "github.com/SoundMatt/go-DDS/safety",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestE2ESubscriber_ClosedRawSub",
+      "package": "github.com/SoundMatt/go-DDS/safety",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDeterministicQueue_DeliversSamples",
+      "package": "github.com/SoundMatt/go-DDS/safety",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDeterministicQueue_Full_ReturnsErrQueueFull",
+      "package": "github.com/SoundMatt/go-DDS/safety",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDeterministicQueue_DefaultDepth",
+      "package": "github.com/SoundMatt/go-DDS/safety",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDeterministicQueue_Stop",
+      "package": "github.com/SoundMatt/go-DDS/safety",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDeterministicQueue_StopIdempotent",
+      "package": "github.com/SoundMatt/go-DDS/safety",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDeterministicQueue_PanicContainment",
+      "package": "github.com/SoundMatt/go-DDS/safety",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDeterministicQueue_ErrorsChannelReceivesWriteError",
+      "package": "github.com/SoundMatt/go-DDS/safety",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDeterministicQueue_MultipleSamples",
+      "package": "github.com/SoundMatt/go-DDS/safety",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestFaultPublisher_DuplicateRate100_Duplicates",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0.5
+    },
+    {
+      "name": "TestFaultPublisher_CorruptRate100_FlipsByte",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestFaultPublisher_CorruptRate_EmptyPayload_NoCorruption",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestFaultPublisher_FixedDelay",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0.04
+    },
+    {
+      "name": "TestDeadline_CallbackNotFired_AfterWrite",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0.17
+    },
+    {
+      "name": "TestContentFilter_OnlyMatchingDelivered",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWithNoMulticast_ParticipantStarts",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWithPeerLocators_Accepted",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMarshalParseInfoTS_RoundTrip",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestInfoTS_WriteCarriesTimestamp",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWithLogger_AcceptedAndUsed",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWithTracer_AcceptedAndUsed",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestFaultPublisher_RandomDelay_WithinRange",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0.02
+    },
+    {
+      "name": "TestFaultPublisher_WriteAfterClose_ReturnsError",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestFaultPublisher_CloseIdempotent",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestFaultPublisher_UnderlyingWriteError",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestFaultPublisher_ZeroSeedIsNonDeterministic",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestFaultPublisher_ReorderWindow_FlushesOnFull",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0.02
+    },
+    {
+      "name": "TestFaultPublisher_ReorderWindow_FlushOnClose",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestFaultPublisher_WriteCtx_Delivers",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestChannelDepth_RTPS",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0.05
+    },
+    {
+      "name": "TestBackPressure_DropOldest_RTPS",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestLiveliness_RTPS_CallbackSetup",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCloseWithDrain_RTPS_BestEffort",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestFaultPublisher_WriteCtx_CancelledDuringDelay",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0.02
+    },
+    {
+      "name": "TestRecorder_WritesJSONL",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0.05
+    },
+    {
+      "name": "TestAccessPolicy_ExactMatch_Read",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAccessPolicy_ExactMatch_Write",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAccessPolicy_ReadWrite",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAccessPolicy_GlobMatch_SingleSegment",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAccessPolicy_GlobMatch_AllTopLevel",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAccessPolicy_NoMatch_DenyAll",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAccessPolicy_EmptyPolicy_DenyAll",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAccessPolicy_FirstMatchWins",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAccessPolicy_MalformedPattern_Skipped",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCertPlugin_RoundTrip",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCertPlugin_TamperedPayload",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCertPlugin_TamperedSignature",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCertPlugin_UntrustedCert",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCertPlugin_Open_TooShort",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCertPlugin_New_BadCertPEM",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCertPlugin_New_BadKeyPEM",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCertPlugin_New_MismatchedKey",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCertPlugin_New_BadCAPEM",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCertPlugin_SealProducesDistinctOutputs",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCloseWithDrain_RTPS_Reliable_NoRemoteReaders",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0.1
+    },
+    {
+      "name": "TestAdvanceAcked_SignalsDrainCh",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestUserMulticastPort",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMaxSampleSize_Rejects_OversizePayload",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMaxSampleSize_Accepts_ExactLimit",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMaxSampleSize_ZeroMeansUnlimited",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSplitIntoFragmentsN_CustomSize",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSplitIntoFragmentsN_ZeroSizeFallback",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWriter_FragmentSize_NoTSNStream",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWriter_SendSock_NoTSN_IsDataSock",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWithSPDPInterval_Stored",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWithSPDPJitter_Stored",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWithStaticPeers_SameAsPeerLocators",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWithTSNConfig_MatchesTopic",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWithTSNConfig_NonMatchingTopic_NoTSN",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTransportPriority_QoS_CreatesTSNSock",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTransportPriority_Zero_NoTSNSock",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestClockTAINow_ReturnsPlausibleTime",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTSNConfig_FragSizePropagated",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestEnableTxTime_WhenTxOffsetPositive",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestScheduledSend_TriggeredOnWrite",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWrite_FragmentedPath_LargePayload",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCDR_StringRoundTrip/hello",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCDR_StringRoundTrip/#00",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCDR_StringRoundTrip/unicode/日本語",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCDR_StringRoundTrip/a/b/c/d",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCDR_StringRoundTrip/topic_with_spaces",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCDR_StringRoundTrip",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCDR_GUIDRoundTrip",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCDR_Uint32RoundTrip",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestLocator_MarshalUnmarshal",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestLocator_FromUDP",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestLocator_UDPAddr_Roundtrip",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_HeaderMarshalParse",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_Header_InvalidMagic",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_Header_TooShort",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_DataSubmessageRoundTrip",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCDR_WrapUnwrap",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCDR_UnwrapInvalidScheme",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestEntityID_WriterKind",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestEntityID_ReaderKind",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestPortFormula",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_FullMessageRoundTrip",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_HeartbeatRoundTrip",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_Heartbeat_TooShort",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_AckNackRoundTrip",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_AckNack_TooShort",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSendHistory_StoreGet",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSendHistory_FirstLast",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSendHistory_PayloadIsolation",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRecvTracker_Sequential",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRecvTracker_Gap",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRecvTracker_Duplicate",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestGUID_String",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestLocator_UDPAddr_Invalid",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestLocator_IPv6_RoundTrip",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestLocator_FromUDP_IPv4inIPv6",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRecvTracker_NextAckCount",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRtpsReader_AddSourceAndAccept",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRtpsReader_TrackerFor_Stable",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestParticipant_ReaderByEID",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestParticipant_AddWriterLocator",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestNewGuidPrefix_Unique",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestNewGuidPrefix_PIDBytes",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPSWithContext_CancelsParticipant",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPSWithContext_AlreadyCancelledContext",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_IntraProcess_PubSub",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_IntraProcess_MultipleSubscribers",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_IntraProcess_TopicIsolation",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_PayloadIsolation",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_ParticipantClose_BlocksNewEndpoints",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_WriterClose_ReturnsError",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_SubscriberClose_ClosesChannel",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_SubscriberClose_Idempotent",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_TwoParticipants_SameHost",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWaitSet_ReceiveFromFirst",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWaitSet_ReceiveFromSecond",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWaitSet_ContextCancellation",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWaitSet_ClosedSubscriber",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_TransientLocal",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_TransientLocal_NoSample",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWaitSet_AllChannelsClosed",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_Reliable_IntraProcess",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_WithIPv6_StartsCleanly",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_Security_NullPlugin",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_Security_HMAC",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_Security_AESGCM",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_Domain_Accessor",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_WriteCtx_CancelledBeforeWrite",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_WriteCtx_ValidContext",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRTPS_SubscriberUnsubscribe",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTryRead_RTPS",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSequenceNumber_RTPS",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWriterGUID_RTPS",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWildcard_RTPS",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRecorder_MultipleTopics",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0.06
+    },
+    {
+      "name": "TestRecorder_StopIdempotent",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRecorder_StopBeforeStart",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestPlayer_Play",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCertPlugin_New_NonECDSACert",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0.06
+    },
+    {
+      "name": "TestCertPlugin_Open_CraftedLargeCertLen",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDeadline_Subscriber_RTPS",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0.05
+    },
+    {
+      "name": "TestRTPS_DiscoverySecurity_HMAC",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWithHeartbeatPeriod_ReliableWriter",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWithConfig_AppliesOptions",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWithConfig_PeerLocators",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTopicMetrics_WritesTracked",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTopicMetrics_DeliversTracked",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTopicMetrics_EmptyBeforeWrite",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDiscoveryMetrics_AnnouncesCountUp",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDiscoveryMetrics_Fields",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHealth_OK_WhenOpen",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHealth_Down_AfterClose",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHealth_Details_ContainWritersReaders",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "skip",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHealthStatus_String",
+      "package": "github.com/SoundMatt/go-DDS/rtps",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCertPlugin_Open_NonECDSASignerCert",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0.02
+    },
+    {
+      "name": "TestCertPlugin_ParseECKey_InvalidDER",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACDiscoveryPlugin_SignVerify",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACDiscoveryPlugin_WrongKey",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACDiscoveryPlugin_WrongPrefix",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACDiscoveryPlugin_NilTag",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACDiscoveryPlugin_EmptyTag",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACDiscoveryPlugin_KeyIsNotShared",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACDiscoveryPlugin_DifferentPrefixesDifferentTags",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACDiscoveryPlugin_ImplementsDiscoveryPlugin",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACDiscoveryPlugin_SignEndpoint_Valid",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACDiscoveryPlugin_VerifyEndpoint_WrongKey",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACDiscoveryPlugin_VerifyEndpoint_WrongTopic",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACDiscoveryPlugin_VerifyEndpoint_WrongPrefix",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACDiscoveryPlugin_VerifyEndpoint_EmptyTag",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACDiscoveryPlugin_VerifyEndpoint_NilTag",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACDiscoveryPlugin_EndpointAndDiscovery_DifferentTags",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACDiscoveryPlugin_DifferentTopics_DifferentTags",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACDiscoveryPlugin_Rekey_ChangesOutput",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACDiscoveryPlugin_Rekey_VerifyWithNewKey",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACDiscoveryPlugin_Rekey_OldTagInvalid",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACDiscoveryPlugin_Rekey_Endpoint",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACDiscoveryPlugin_Rekey_CopiesKey",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestReplayGuard_FirstSeenAllowed",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestReplayGuard_ReplayDetected",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestReplayGuard_DifferentSeqAllowed",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestReplayGuard_Purge_RemovesExpiredEntries",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestReplayGuard_ExpiredSeq_AllowedAfterWindow",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestReplayGuard_DefaultWindow",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestReplayGuard_Len_TracksCount",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestReplayGuard_Concurrent",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestNullPlugin_RoundTrip",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestNullPlugin_Identity",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACPlugin_RoundTrip",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACPlugin_TagApended",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACPlugin_TamperDetected",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACPlugin_WrongKey",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACPlugin_TooShort",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAESGCMPlugin_RoundTrip",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAESGCMPlugin_DistinctNonces",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAESGCMPlugin_TamperDetected",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAESGCMPlugin_WrongKey",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAESGCMPlugin_BadKeyLength",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAESGCMPlugin_TooShort",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestNewRandomKey_Length",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestNewRandomKey_Unique",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHMACPlugin_KeyIsolation",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzHMACRoundTrip/seed#0",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzHMACRoundTrip/seed#1",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzHMACRoundTrip/seed#2",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzHMACRoundTrip/seed#3",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzHMACRoundTrip/seed#4",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzHMACRoundTrip",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzAESGCMRoundTrip/seed#0",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzAESGCMRoundTrip/seed#1",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzAESGCMRoundTrip/seed#2",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzAESGCMRoundTrip/seed#3",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzAESGCMRoundTrip/seed#4",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzAESGCMRoundTrip",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzHMACOpenArbitrary/seed#0",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzHMACOpenArbitrary/seed#1",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzHMACOpenArbitrary/seed#2",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzHMACOpenArbitrary/seed#3",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzHMACOpenArbitrary/seed#4",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzHMACOpenArbitrary",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzAESGCMOpenArbitrary/seed#0",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzAESGCMOpenArbitrary/seed#1",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzAESGCMOpenArbitrary/seed#2",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzAESGCMOpenArbitrary/seed#3",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzAESGCMOpenArbitrary/seed#4",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzAESGCMOpenArbitrary/seed#5",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzAESGCMOpenArbitrary",
+      "package": "github.com/SoundMatt/go-DDS/security",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestPlayer_PlayScaled_SpeedTwo",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0.1
+    },
+    {
+      "name": "TestPlayer_PlayFiltered",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0.06
+    },
+    {
+      "name": "TestPlayer_EmptyRecording",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestPlayer_DecodeError",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRecorderService_StartStop",
+      "package": "github.com/SoundMatt/go-DDS/services",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRecorderService_CapturesSamples",
+      "package": "github.com/SoundMatt/go-DDS/services",
+      "status": "pass",
+      "elapsedSeconds": 0.05
+    },
+    {
+      "name": "TestRecorderService_StartIdempotent",
+      "package": "github.com/SoundMatt/go-DDS/services",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRecorderService_StopIdempotent",
+      "package": "github.com/SoundMatt/go-DDS/services",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRecorderService_NoTopics_NoError",
+      "package": "github.com/SoundMatt/go-DDS/services",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRecorderService_ClosedParticipant_StartError",
+      "package": "github.com/SoundMatt/go-DDS/services",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestReplayService_Plays",
+      "package": "github.com/SoundMatt/go-DDS/services",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestReplayService_Done_ClosedAfterStop",
+      "package": "github.com/SoundMatt/go-DDS/services",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestReplayService_StartIdempotent",
+      "package": "github.com/SoundMatt/go-DDS/services",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestReplayService_Loop_SeekableInput",
+      "package": "github.com/SoundMatt/go-DDS/services",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestPlayer_ContextCancel",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0.1
+    },
+    {
+      "name": "TestPlayer_PlayScaled_ZeroSpeedClamped",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestReplayService_FilteredTopics",
+      "package": "github.com/SoundMatt/go-DDS/services",
+      "status": "pass",
+      "elapsedSeconds": 0.06
+    },
+    {
+      "name": "TestMonitorService_New",
+      "package": "github.com/SoundMatt/go-DDS/services",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMonitorService_Addr_NonEmpty",
+      "package": "github.com/SoundMatt/go-DDS/services",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMonitorService_Mon_NotNil",
+      "package": "github.com/SoundMatt/go-DDS/services",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMonitorService_Close",
+      "package": "github.com/SoundMatt/go-DDS/services",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMonitorService_New_ListenError",
+      "package": "github.com/SoundMatt/go-DDS/services",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestReplayService_ScaledSpeed",
+      "package": "github.com/SoundMatt/go-DDS/services",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestReplayService_SeekError",
+      "package": "github.com/SoundMatt/go-DDS/services",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestReplayService_Loop_NonSeekable",
+      "package": "github.com/SoundMatt/go-DDS/services",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRecorder_Drain_ClosedSubscriber",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0.03
+    },
+    {
+      "name": "TestPlayer_PlayFiltered_CancelledContext",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestPlayer_Play_WriteError",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestRecordedSample_JSONRoundTrip",
+      "package": "github.com/SoundMatt/go-DDS/record",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestShmListener_ReceivesPublishedData",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0.01
+    },
+    {
+      "name": "TestShmListener_Filter_DropsNonMatching",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0.04
+    },
+    {
+      "name": "TestCloseWithDrain_ShmemParticipant",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestPump_CrossProcessPath",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0.01
+    },
+    {
+      "name": "TestPump_CrossProcessChannel_Closed",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0.06
+    },
+    {
+      "name": "TestDeliverSub_BlockPolicy",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDeliverSub_DefaultDrop",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestReadData_OversizeRejected",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestReadData_TruncatedBody",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestPublishSubscribe_SameProcess",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTransientLocal_LateJoiner",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestEmptyTopic_Errors",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestClosedParticipant_Errors",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestPublisherClose_StopsWrites",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMetrics_ShmemParticipant",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestChannelDepth_OptionAccepted",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSentinelErrors_ErrClosed_Wrapping",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSentinelErrors_ErrTopicEmpty_Wrapping",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSentinelErrors_ErrClosed_Write",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMaxSampleSize_EnforcedInShmem",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMaxSampleSize_ZeroMeansUnlimited_Shmem",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCloseWithDrain_Shmem",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSubscriberClose_RemovesFromBroker",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBackPressure_DropOldest_Shmem",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestContentFilter_Shmem",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSampleTimestamp_Set",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDomain_ShmemParticipant",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWriteCtx_Shmem_CancelledBeforeWrite",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWriteCtx_Shmem_ValidContext",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestSubscriberUnsubscribe_Shmem",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTryRead_Empty_Shmem",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTryRead_HasSample_Shmem",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0.01
+    },
+    {
+      "name": "TestSequenceNumber_Shmem",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWriterGUID_Shmem",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestWildcard_Shmem",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestNewParticipant_ReturnsParticipant",
+      "package": "github.com/SoundMatt/go-DDS/testutil",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestNewParticipant_CleanupCloses",
+      "package": "github.com/SoundMatt/go-DDS/testutil",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAssertSample_Match",
+      "package": "github.com/SoundMatt/go-DDS/testutil",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAssertSample_PayloadMismatch",
+      "package": "github.com/SoundMatt/go-DDS/testutil",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDeadline_Shmem",
+      "package": "github.com/SoundMatt/go-DDS/shmem",
+      "status": "pass",
+      "elapsedSeconds": 0.05
+    },
+    {
+      "name": "TestAssertNoSample_Empty",
+      "package": "github.com/SoundMatt/go-DDS/testutil",
+      "status": "pass",
+      "elapsedSeconds": 0.03
+    },
+    {
+      "name": "TestBurstPublish_AllDelivered",
+      "package": "github.com/SoundMatt/go-DDS/testutil",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBurstPublish_ClosedPublisher",
+      "package": "github.com/SoundMatt/go-DDS/testutil",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestBurstPublish_ZeroCount",
+      "package": "github.com/SoundMatt/go-DDS/testutil",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestPeriodicPublish_DeliversSamples",
+      "package": "github.com/SoundMatt/go-DDS/testutil",
+      "status": "pass",
+      "elapsedSeconds": 0.06
+    },
+    {
+      "name": "TestPeriodicPublish_WriteError",
+      "package": "github.com/SoundMatt/go-DDS/testutil",
+      "status": "pass",
+      "elapsedSeconds": 0.01
+    },
+    {
+      "name": "TestPeriodicPublish_StopsOnClosedStop",
+      "package": "github.com/SoundMatt/go-DDS/testutil",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTopicRecorder_RecordsSamples",
+      "package": "github.com/SoundMatt/go-DDS/testutil",
+      "status": "pass",
+      "elapsedSeconds": 0.01
+    },
+    {
+      "name": "TestTopicRecorder_Count",
+      "package": "github.com/SoundMatt/go-DDS/testutil",
+      "status": "pass",
+      "elapsedSeconds": 0.01
+    },
+    {
+      "name": "TestTopicRecorder_Samples_ReturnsCopy",
+      "package": "github.com/SoundMatt/go-DDS/testutil",
+      "status": "pass",
+      "elapsedSeconds": 0.01
+    },
+    {
+      "name": "TestTopicRecorder_DrainSamples",
+      "package": "github.com/SoundMatt/go-DDS/testutil",
+      "status": "pass",
+      "elapsedSeconds": 0.01
+    },
+    {
+      "name": "TestTopicRecorder_Loop_ClosedSub",
+      "package": "github.com/SoundMatt/go-DDS/testutil",
+      "status": "pass",
+      "elapsedSeconds": 0.05
+    },
+    {
+      "name": "TestTopicRecorder_StopIdempotent",
+      "package": "github.com/SoundMatt/go-DDS/testutil",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAssertSample_Timeout_Fatal",
+      "package": "github.com/SoundMatt/go-DDS/testutil",
+      "status": "pass",
+      "elapsedSeconds": 0.01
+    },
+    {
+      "name": "TestAssertSample_Mismatch_Fatal",
+      "package": "github.com/SoundMatt/go-DDS/testutil",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestAssertNoSample_UnexpectedSample_Fatal",
+      "package": "github.com/SoundMatt/go-DDS/testutil",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTopicRecorder_WaitFor_ReturnsFalseOnTimeout",
+      "package": "github.com/SoundMatt/go-DDS/testutil",
+      "status": "pass",
+      "elapsedSeconds": 0.03
+    },
+    {
+      "name": "TestHealthTracker_NoWrites_IsHealthy",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHealthTracker_OnTimeWrites_IsHealthy",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHealthTracker_ManyLateWrites_IsUnhealthy",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHealthTracker_Fields_Populated",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHealthTracker_Reset_ClearsHistory",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHealthTracker_WindowSize_LimitsHistory",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHealthTracker_DefaultWindowSize",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHealthTracker_ZeroInterval_NocrashNoLate",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHealthTracker_MaxLateness_Tracked",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHealthTracker_ScheduledAdjustment",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestHealthTracker_NegativeLateness_Clamped",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTAPRIOFromStreams_NilConfig",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTAPRIOFromStreams_EmptyStreams",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTAPRIOFromStreams_AllZeroIntervals",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTAPRIOFromStreams_SingleStream",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTAPRIOFromStreams_MultiStream",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTAPRIOFromStreams_SkipsZeroInterval",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTCCommand_ContainsIface",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTCCommand_ContainsTaprio",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTCCommand_ContainsSchedEntry",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTCCommand_GateMaskEncoded",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTCCommand_MultipleEntries",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestParseConfig_Valid",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestStream_DurationHelpers",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestStream_MaxFragPayload",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestStreamConfig_StreamForTopic",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestStreamConfig_NilSafe",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestStreamConfig_Topics",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestLoadConfig_FromFile",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestLoadConfig_FileNotFound",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestLoadConfig_DecodeError",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestLoadConfig_ValidationError",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestParseConfig_InvalidJSON",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestParseConfig_EmptyTopic",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestParseConfig_PCPOutOfRange",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestParseConfig_DSCPOutOfRange",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestParseConfig_RoundTrip",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestParseConfig_NegativeMaxFrameSize",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestParseConfig_NegativeMaxIntervalFrames",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestParseConfig_NegativeIntervalUS",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestParseConfig_NegativeTxOffsetUS",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestParseConfig_EmptyStreams",
+      "package": "github.com/SoundMatt/go-DDS/tsn",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMonitor_SSEDeliversSampleEvent",
+      "package": "github.com/SoundMatt/go-DDS/monitor",
+      "status": "pass",
+      "elapsedSeconds": 2.05
+    },
+    {
+      "name": "TestMonitor_MetricsProvider_PushesMetrics",
+      "package": "github.com/SoundMatt/go-DDS/monitor",
+      "status": "pass",
+      "elapsedSeconds": 0.05
+    },
+    {
+      "name": "TestMonitor_New_ListenError",
+      "package": "github.com/SoundMatt/go-DDS/monitor",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMonitor_DefaultAddr_Listens",
+      "package": "github.com/SoundMatt/go-DDS/monitor",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMonitor_NoMetricsProvider_NoLoop",
+      "package": "github.com/SoundMatt/go-DDS/monitor",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMonitor_Close_StopsServer",
+      "package": "github.com/SoundMatt/go-DDS/monitor",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMonitor_Health_OK",
+      "package": "github.com/SoundMatt/go-DDS/monitor",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMonitor_Health_NoProvider_Returns501",
+      "package": "github.com/SoundMatt/go-DDS/monitor",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMonitor_APITopics_ReturnsJSON",
+      "package": "github.com/SoundMatt/go-DDS/monitor",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMonitor_APIDiagnostics_ReturnsJSON",
+      "package": "github.com/SoundMatt/go-DDS/monitor",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMonitor_APITopics_NilTopicsSlice",
+      "package": "github.com/SoundMatt/go-DDS/monitor",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMonitor_APITopics_NilProvider",
+      "package": "github.com/SoundMatt/go-DDS/monitor",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMonitor_Health_Down",
+      "package": "github.com/SoundMatt/go-DDS/monitor",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestMonitor_DiscoveryMetrics_PushedOverSSE",
+      "package": "github.com/SoundMatt/go-DDS/monitor",
+      "status": "pass",
+      "elapsedSeconds": 0.05
+    },
+    {
+      "name": "TestTopicTypeRegistry_RegisterAndLookup",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTopicTypeRegistry_LookupUnregistered",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTopicTypeRegistry_OverwriteRegistration",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTopicTypeRegistry_All_Empty",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTopicTypeRegistry_All_Sorted",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTopicTypeRegistry_All_FieldsPopulated",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTopicTypeRegistry_Deregister",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTopicTypeRegistry_Deregister_Idempotent",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestGlobalTopicRegistry_NotNil",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTopicTypeRegistry_ConcurrentAccess",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTypeKind_String",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestIdentify_Deterministic",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestIdentify_DifferentTypes_DifferentHash",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestIdentify_FieldOrderIndependent",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestIdentify_StructField",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestIdentify_SeqField",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestNewTypeObject_SetsID",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDynamicData_SetGet",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDynamicData_UnknownField_Error",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDynamicData_Get_UnsetField_ReturnsFalse",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDynamicData_ToJSON",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDynamicData_FromJSON_RoundTrip",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDynamicData_FromJSON_UnknownFieldsIgnored",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDynamicData_FromJSON_InvalidJSON",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestDynamicData_TypeDescriptor",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTypeRegistry_Register_And_Lookup",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTypeRegistry_Register_IdempotentSameHash",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTypeRegistry_Register_NameConflict_DifferentHash",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTypeRegistry_Lookup_Missing",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestTypeRegistry_All_SortedByName",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCompatibility_SameType",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCompatibility_AddedOptionalField",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCompatibility_AddedRequiredField_Incompatible",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCompatibility_FieldAbsentFromWriterOptionalInReader",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCompatibility_TypeMismatch_Incompatible",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "TestCompatibility_ExtraWriterField_OK",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzTopicTypeRegistry_RegisterLookup/seed#0",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzTopicTypeRegistry_RegisterLookup/seed#1",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzTopicTypeRegistry_RegisterLookup/seed#2",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzTopicTypeRegistry_RegisterLookup/seed#3",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzTopicTypeRegistry_RegisterLookup/seed#4",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "FuzzTopicTypeRegistry_RegisterLookup",
+      "package": "github.com/SoundMatt/go-DDS/xtypes",
+      "status": "pass",
+      "elapsedSeconds": 0
+    }
+  ],
+  "summary": {
+    "total": 829,
+    "passed": 786,
+    "failed": 0,
+    "skipped": 43
+  }
+}

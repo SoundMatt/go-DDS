@@ -5,6 +5,9 @@
 
 package safety_test
 
+//fusa:test REQ-SAFETY-001
+//fusa:test REQ-SAFETY-004
+
 import (
 	"bytes"
 	"encoding/binary"

@@ -1,0 +1,142 @@
+{
+  "@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+  "@graph": [
+    {
+      "type": "CreationInfo",
+      "spdxId": "_:creationInfo0",
+      "specVersion": "SPDX-3.0.1",
+      "created": "2026-06-08T19:31:56Z",
+      "createdBy": [
+        "_:tool0"
+      ]
+    },
+    {
+      "type": "Tool",
+      "spdxId": "_:tool0",
+      "name": "go-FuSa/0.12.0",
+      "creationInfo": "_:creationInfo0"
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/google.golang.org/protobuf@v1.34.2",
+      "name": "google.golang.org/protobuf",
+      "creationInfo": "_:creationInfo0",
+      "software_packageVersion": "v1.34.2",
+      "verifiedUsing": [
+        {
+          "type": "Hash",
+          "algorithm": "SHA-256",
+          "hashValue": "eb157a953b027e9183db55cae3d87b321b5c0299cbaa47d880f71d1dfb5fea18"
+        }
+      ]
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/golang.org/x/net@v0.29.0",
+      "name": "golang.org/x/net",
+      "creationInfo": "_:creationInfo0",
+      "software_packageVersion": "v0.29.0",
+      "verifiedUsing": [
+        {
+          "type": "Hash",
+          "algorithm": "SHA-256",
+          "hashValue": "e4e45fa41a42b381f30d8a287420c16f01f3751e54acb059dec3a7509985a07a"
+        }
+      ]
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/golang.org/x/sys@v0.25.0",
+      "name": "golang.org/x/sys",
+      "creationInfo": "_:creationInfo0",
+      "software_packageVersion": "v0.25.0",
+      "verifiedUsing": [
+        {
+          "type": "Hash",
+          "algorithm": "SHA-256",
+          "hashValue": "afef1efa5a221f146a857565e8c2f59cede5d7ea05a166e796ed848629a68b7e"
+        }
+      ]
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/golang.org/x/text@v0.18.0",
+      "name": "golang.org/x/text",
+      "creationInfo": "_:creationInfo0",
+      "software_packageVersion": "v0.18.0",
+      "verifiedUsing": [
+        {
+          "type": "Hash",
+          "algorithm": "SHA-256",
+          "hashValue": "5ef30388dccf025d23af5eece96f6571a2211947d439174608db2e2e63c6db6e"
+        }
+      ]
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/google.golang.org/genproto/googleapis/rpc@v0.0.0-20240903143218-8af14fe29dc1",
+      "name": "google.golang.org/genproto/googleapis/rpc",
+      "creationInfo": "_:creationInfo0",
+      "software_packageVersion": "v0.0.0-20240903143218-8af14fe29dc1",
+      "verifiedUsing": [
+        {
+          "type": "Hash",
+          "algorithm": "SHA-256",
+          "hashValue": "a4f265b573715734f8a4af720fcbd1f57ef90da5986262c632c12f05f1506734"
+        }
+      ]
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/google.golang.org/grpc@v1.68.1",
+      "name": "google.golang.org/grpc",
+      "creationInfo": "_:creationInfo0",
+      "software_packageVersion": "v1.68.1",
+      "verifiedUsing": [
+        {
+          "type": "Hash",
+          "algorithm": "SHA-256",
+          "hashValue": "a08e684dad75fa783cafc5cc30dee300e9967cf6566d8a4215a3144c00b190cd"
+        }
+      ]
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/gopkg.in/yaml.v3@v3.0.1",
+      "name": "gopkg.in/yaml.v3",
+      "creationInfo": "_:creationInfo0",
+      "software_packageVersion": "v3.0.1",
+      "verifiedUsing": [
+        {
+          "type": "Hash",
+          "algorithm": "SHA-256",
+          "hashValue": "7f1566fc6cc0cc45aa2c7baf72d23dd4a4bd8613669963a85aed174d8252ec20"
+        }
+      ]
+    },
+    {
+      "type": "SpdxDocument",
+      "spdxId": "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS",
+      "name": "github.com/SoundMatt/go-DDS",
+      "creationInfo": "_:creationInfo0",
+      "element": [
+        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/google.golang.org/protobuf@v1.34.2",
+        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/golang.org/x/net@v0.29.0",
+        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/golang.org/x/sys@v0.25.0",
+        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/golang.org/x/text@v0.18.0",
+        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/google.golang.org/genproto/googleapis/rpc@v0.0.0-20240903143218-8af14fe29dc1",
+        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/google.golang.org/grpc@v1.68.1",
+        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/gopkg.in/yaml.v3@v3.0.1"
+      ],
+      "rootElement": [
+        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/google.golang.org/protobuf@v1.34.2",
+        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/golang.org/x/net@v0.29.0",
+        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/golang.org/x/sys@v0.25.0",
+        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/golang.org/x/text@v0.18.0",
+        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/google.golang.org/genproto/googleapis/rpc@v0.0.0-20240903143218-8af14fe29dc1",
+        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/google.golang.org/grpc@v1.68.1",
+        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/gopkg.in/yaml.v3@v3.0.1"
+      ]
+    }
+  ]
+}

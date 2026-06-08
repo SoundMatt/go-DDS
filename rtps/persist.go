@@ -5,6 +5,8 @@
 
 package rtps
 
+//fusa:req REQ-REL-002
+
 import (
 	"encoding/binary"
 	"fmt"

@@ -13,6 +13,9 @@
 // is required.
 package mock
 
+//fusa:req REQ-RT-001
+//fusa:req REQ-REL-004
+
 import (
 	"context"
 	"fmt"
@@ -266,10 +269,11 @@ func New(domain dds.Domain, opts ...Option) (dds.Participant, error) {
 	}
 	p.logf("new mock participant guid=%x domain=%d", p.guid, domain)
 	if p.cancelCtx != nil {
-		go func() {
-			<-p.cancelCtx.Done()
+		done := p.cancelCtx.Done()
+		go func(done <-chan struct{}) {
+			<-done
 			_ = p.Close()
-		}()
+		}(done)
 	}
 	return p, nil
 }

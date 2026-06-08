@@ -1,0 +1,109 @@
+{
+  "requirements": [
+    {
+      "id": "REQ-SAFETY-001",
+      "title": "E2E protection header",
+      "text": "Every safety-critical sample shall carry an E2E protection header containing: data ID, source ID, sequence counter, CRC-32, and freshness timestamp. The receiver shall reject samples with invalid CRC, stale sequence counter, or exceeded freshness window.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SAFETY-002",
+      "title": "Deterministic bounded queue",
+      "text": "The deterministic queue shall provide bounded capacity, FIFO ordering, O(1) enqueue and dequeue, and shall not allocate after initialisation. Overflow shall be reported via ErrQueueFull and shall not silently discard samples.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SAFETY-003",
+      "title": "Panic containment in dispatch paths",
+      "text": "Goroutines on the data-forwarding path (domain bridge, WAN bridge) shall recover from panics via a deferred recover() call, log the event, and exit cleanly without crashing the participant.",
+      "standard": "iec61508",
+      "level": "SIL-2"
+    },
+    {
+      "id": "REQ-SAFETY-004",
+      "title": "Safety event callbacks",
+      "text": "The E2E subscriber shall invoke the registered SafetyEventCallback for every E2E violation (bad CRC, sequence error, freshness timeout, source ID mismatch) with a typed SafetyEvent carrying the violating sample metadata.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SEC-001",
+      "title": "HMAC-authenticated SPDP/SEDP discovery",
+      "text": "Every SPDP and SEDP announcement shall carry an HMAC-SHA-256 tag computed over the serialised participant data. Participants configured with a DiscoveryPlugin shall reject any announcement whose tag is absent or does not verify.",
+      "standard": "iso21434",
+      "level": "CAL-3"
+    },
+    {
+      "id": "REQ-SEC-002",
+      "title": "AES-256-GCM topic payload encryption",
+      "text": "When an encryption plugin is configured, every published payload shall be encrypted with AES-256-GCM before transmission and decrypted on receipt. Authenticated decryption failures shall be reported as errors and the sample shall be discarded.",
+      "standard": "iso21434",
+      "level": "CAL-3"
+    },
+    {
+      "id": "REQ-SEC-003",
+      "title": "Cryptographic replay protection",
+      "text": "The ReplayGuard shall reject any sample whose (topic, counter) pair has been seen before, or whose timestamp falls outside the configured freshness window. The counter shall be monotonically increasing per writer GUID.",
+      "standard": "iso21434",
+      "level": "CAL-3"
+    },
+    {
+      "id": "REQ-SEC-004",
+      "title": "SEDP endpoint identity signing",
+      "text": "Each SEDP endpoint announcement shall include a vendor PID 0x8002 carrying an HMAC-SHA-256 tag over the endpoint's topic name, type, GUID, and QoS. Participants shall reject endpoint announcements that fail verification.",
+      "standard": "iso21434",
+      "level": "CAL-3"
+    },
+    {
+      "id": "REQ-SEC-005",
+      "title": "Atomic key rotation",
+      "text": "The HMACDiscoveryPlugin shall support Rekey(newKey) to atomically swap the signing key under a read-write mutex without restarting the participant. After Rekey, all subsequent sign and verify operations shall use the new key exclusively.",
+      "standard": "iso21434",
+      "level": "CAL-2"
+    },
+    {
+      "id": "REQ-REL-001",
+      "title": "RTPS reliable delivery",
+      "text": "The RTPS writer shall retransmit unacknowledged samples on HEARTBEAT timeout and respond to NACK requests. The RTPS reader shall send ACKNACK for every received HEARTBEAT and request gaps for missing sequence numbers.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-REL-002",
+      "title": "Transient-local durability",
+      "text": "A subscriber that joins after a publisher with TransientLocal QoS has already published samples shall receive the complete retained history on first match, without requiring any republication from the publisher.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-REL-003",
+      "title": "DATA_FRAG fragmentation and reassembly",
+      "text": "Payloads exceeding the configured MTU shall be split into DATA_FRAG submessages and sent in order. The receiver shall reassemble fragments in sequence-number order and deliver the complete sample atomically only when all fragments are present.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-REL-004",
+      "title": "Context cancellation propagation",
+      "text": "All blocking API calls (WaitSet.Wait, WriteCtx, participant creation via WithContext) shall respect context.Context deadlines and cancellation, returning a wrapped context.DeadlineExceeded or context.Canceled error within one scheduling quantum.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-RT-001",
+      "title": "Goroutine lifecycle management",
+      "text": "Every goroutine started by a public API (participant, recorder, bridge) shall receive a termination signal — either a done <-chan struct{} or context.Context — as an explicit parameter at launch. The goroutine shall exit within a finite time after the signal is fired.",
+      "standard": "iec61508",
+      "level": "SIL-2"
+    },
+    {
+      "id": "REQ-RT-002",
+      "title": "WaitSet thread-safe attach/detach",
+      "text": "WaitSet.Attach and WaitSet.Detach shall be safe to call concurrently from multiple goroutines. Changes shall take effect on the next call to WaitSet.Wait. WaitSet.Wait shall respect the supplied context deadline and return context.DeadlineExceeded when it expires.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    }
+  ]
+}

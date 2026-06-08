@@ -436,6 +436,9 @@ type Subscriber interface {
 
 // ── WaitSet ───────────────────────────────────────────────────────────────────
 
+//fusa:req REQ-RT-002
+//fusa:req REQ-REL-004
+
 // WaitSet multiplexes over a dynamic set of Subscribers. Use NewWaitSet to
 // construct one and Attach/Detach to modify the set at any time. Wait blocks
 // until one of the attached subscribers delivers a sample.

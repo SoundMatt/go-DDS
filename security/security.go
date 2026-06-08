@@ -24,6 +24,8 @@
 //     bytes (nonce) + 16 bytes (GCM tag) = 28 bytes.
 package security
 
+//fusa:req REQ-SEC-002
+
 import (
 	"crypto/aes"
 	"crypto/cipher"

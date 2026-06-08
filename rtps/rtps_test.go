@@ -8,6 +8,11 @@
 
 package rtps_test
 
+//fusa:test REQ-REL-001
+//fusa:test REQ-REL-002
+//fusa:test REQ-REL-003
+//fusa:test REQ-RT-001
+
 import (
 	"bytes"
 	"context"
