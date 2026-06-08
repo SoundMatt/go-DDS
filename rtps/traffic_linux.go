@@ -75,8 +75,6 @@ func enableTxTime(conn *net.UDPConn) error {
 	cfg := sockTxTime{Clockid: clockTAI, Flags: 0}
 	return withFd(conn, func(fd int) error {
 		ret1, ret2, errno := syscall.RawSyscall6(
-		_ = ret1
-		_ = ret2
 			syscall.SYS_SETSOCKOPT,
 			uintptr(fd),
 			syscall.SOL_SOCKET,
@@ -85,6 +83,8 @@ func enableTxTime(conn *net.UDPConn) error {
 			unsafe.Sizeof(cfg),
 			0,
 		)
+		_ = ret1
+		_ = ret2
 		if errno != 0 {
 			return errno
 		}
@@ -101,9 +101,9 @@ func clockTAINow() (time.Time, error) {
 	// syscall.ClockGettime is not available on all Linux build configurations;
 	// use a raw syscall instead for portability across Go toolchain versions.
 	ret1, ret2, errno := syscall.RawSyscall(syscall.SYS_CLOCK_GETTIME,
+		uintptr(clockTAI), uintptr(unsafe.Pointer(&ts)), 0)
 	_ = ret1
 	_ = ret2
-		uintptr(clockTAI), uintptr(unsafe.Pointer(&ts)), 0)
 	if errno != 0 {
 		return time.Now(), errno
 	}
