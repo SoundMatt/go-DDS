@@ -17,6 +17,38 @@ package rtps
 
 //fusa:req REQ-RT-001
 //fusa:req REQ-REL-004
+//fusa:req REQ-PART-002
+//fusa:req REQ-PART-004
+//fusa:req REQ-PART-005
+//fusa:req REQ-PART-006
+//fusa:req REQ-PART-007
+//fusa:req REQ-PART-008
+//fusa:req REQ-PART-009
+//fusa:req REQ-PART-010
+//fusa:req REQ-PART-011
+//fusa:req REQ-PUB-001
+//fusa:req REQ-PUB-002
+//fusa:req REQ-PUB-003
+//fusa:req REQ-PUB-004
+//fusa:req REQ-PUB-005
+//fusa:req REQ-PUB-006
+//fusa:req REQ-PUB-007
+//fusa:req REQ-SUB-001
+//fusa:req REQ-SUB-002
+//fusa:req REQ-SUB-003
+//fusa:req REQ-SUB-004
+//fusa:req REQ-SUB-005
+//fusa:req REQ-SUB-006
+//fusa:req REQ-QOS-001
+//fusa:req REQ-QOS-002
+//fusa:req REQ-QOS-003
+//fusa:req REQ-QOS-004
+//fusa:req REQ-GUID-001
+//fusa:req REQ-GUID-002
+//fusa:req REQ-SEOOC-001
+//fusa:req REQ-SEOOC-004
+//fusa:req REQ-SEOOC-005
+//fusa:req REQ-SEOOC-010
 
 import (
 	"context"

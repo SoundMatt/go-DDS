@@ -5,6 +5,14 @@
 
 package grpcbridge_test
 
+//fusa:test REQ-BRIDGE-006
+//fusa:test REQ-BRIDGE-007
+//fusa:test REQ-BRIDGE-008
+//fusa:test REQ-BRIDGE-009
+//fusa:test REQ-BRIDGE-010
+//fusa:test REQ-BRIDGE-011
+//fusa:test REQ-BRIDGE-012
+
 import (
 	"context"
 	"net"

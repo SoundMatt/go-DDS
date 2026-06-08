@@ -1,32 +1,529 @@
 {
   "requirements": [
     {
-      "id": "REQ-SAFETY-001",
-      "title": "E2E protection header",
-      "text": "Every safety-critical sample shall carry an E2E protection header containing: data ID, source ID, sequence counter, CRC-32, and freshness timestamp. The receiver shall reject samples with invalid CRC, stale sequence counter, or exceeded freshness window.",
+      "id": "REQ-PART-001",
+      "title": "Participant GUID uniqueness",
+      "text": "Each participant shall be assigned a GUID that is unique within its domain at creation time. The GUID shall persist for the lifetime of the participant.",
       "standard": "iso26262",
-      "level": "ASIL-B"
+      "level": "ASIL-A"
     },
     {
-      "id": "REQ-SAFETY-002",
-      "title": "Deterministic bounded queue",
-      "text": "The deterministic queue shall provide bounded capacity, FIFO ordering, O(1) enqueue and dequeue, and shall not allocate after initialisation. Overflow shall be reported via ErrQueueFull and shall not silently discard samples.",
+      "id": "REQ-PART-002",
+      "title": "Participant.Close idempotency",
+      "text": "Participant.Close() shall be safe to call multiple times. Subsequent calls after the first shall be no-ops returning nil.",
       "standard": "iso26262",
-      "level": "ASIL-B"
+      "level": "ASIL-A"
     },
     {
-      "id": "REQ-SAFETY-003",
-      "title": "Panic containment in dispatch paths",
-      "text": "Goroutines on the data-forwarding path (domain bridge, WAN bridge) shall recover from panics via a deferred recover() call, log the event, and exit cleanly without crashing the participant.",
+      "id": "REQ-PART-003",
+      "title": "Participant goroutine cleanup on close",
+      "text": "All goroutines started by a participant shall have exited by the time Participant.Close() returns.",
       "standard": "iec61508",
       "level": "SIL-2"
     },
     {
-      "id": "REQ-SAFETY-004",
-      "title": "Safety event callbacks",
-      "text": "The E2E subscriber shall invoke the registered SafetyEventCallback for every E2E violation (bad CRC, sequence error, freshness timeout, source ID mismatch) with a typed SafetyEvent carrying the violating sample metadata.",
+      "id": "REQ-PART-004",
+      "title": "Context-scoped participant lifetime",
+      "text": "A participant created with WithContext shall close automatically when the supplied context is cancelled or its deadline expires.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-PART-005",
+      "title": "Post-close API rejection",
+      "text": "After Participant.Close(), calls to NewPublisher() and NewSubscriber() shall return dds.ErrClosed.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-PART-006",
+      "title": "Participant domain identity",
+      "text": "Participant.Domain() shall return exactly the domain ID passed at creation. Participants on different domains shall not discover each other.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-PART-007",
+      "title": "Payload size enforcement",
+      "text": "Publisher.Write() shall return dds.ErrPayloadTooLarge when the payload exceeds the configured or default MaxSampleSize.",
       "standard": "iso26262",
       "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-PART-008",
+      "title": "QoS mismatch error",
+      "text": "The participant shall return dds.ErrQoSMismatch when a publisher and subscriber are matched but have incompatible QoS policies that cannot be reconciled.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-PART-009",
+      "title": "Port retry on bind failure",
+      "text": "When binding a UDP socket, the RTPS participant shall try up to 16 sequential port offsets before returning an error, to tolerate port contention from concurrent participant startup.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-PART-010",
+      "title": "IPv6 socket failure is soft",
+      "text": "Failure to open an IPv6 socket shall not prevent participant creation; the participant shall continue with IPv4-only transport.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-PART-011",
+      "title": "Multicast socket failure fallback",
+      "text": "Failure to join a data multicast group shall not prevent participant creation; the participant shall fall back to unicast-only delivery.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-DISC-001",
+      "title": "SPDP initial announcement",
+      "text": "A participant shall send an SPDP announcement within one heartbeat period of startup to advertise its presence to peers.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-DISC-002",
+      "title": "SPDP periodic repeat",
+      "text": "SPDP announcements shall be repeated at the configured heartbeat interval (default 2 seconds) for the full lifetime of the participant.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-DISC-003",
+      "title": "Participant lease expiry eviction",
+      "text": "A remote participant not heard from within its declared lease duration (default 10 seconds) shall be evicted from the known-participants table and its endpoints removed from all routing tables.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-DISC-004",
+      "title": "LivelinessGained callback",
+      "text": "When a new remote participant is discovered, the LivelinessGained callback (if registered) shall be invoked exactly once with the participant's GUID.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-DISC-005",
+      "title": "LivelinessLost callback",
+      "text": "When a remote participant is evicted (lease expired or explicit bye), the LivelinessLost callback (if registered) shall be invoked exactly once with the participant's GUID.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-DISC-006",
+      "title": "SPDP HMAC rejection",
+      "text": "When an HMACDiscoveryPlugin is configured, SPDP messages with an absent or invalid HMAC tag shall be silently discarded. The participant shall not crash or return an error to the caller.",
+      "standard": "iso21434",
+      "level": "CAL-3"
+    },
+    {
+      "id": "REQ-DISC-007",
+      "title": "SPDP short-message rejection",
+      "text": "SPDP messages shorter than the minimum parseable length shall be discarded without crashing.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-DISC-008",
+      "title": "SEDP endpoint matching trigger",
+      "text": "SEDP endpoint matching and subscription delivery shall be triggered only after the corresponding remote participant's SPDP announcement has been confirmed.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-DISC-009",
+      "title": "SEDP topic exact match",
+      "text": "SEDP endpoint matching shall use exact, case-sensitive string comparison of topic names. Wildcard patterns in subscription patterns shall not affect SEDP wire matching.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-DISC-010",
+      "title": "SEDP endpoint HMAC rejection",
+      "text": "When an endpoint signing plugin is configured, SEDP announcements with absent or invalid endpoint HMAC tags shall be discarded and not added to any routing table.",
+      "standard": "iso21434",
+      "level": "CAL-3"
+    },
+    {
+      "id": "REQ-DISC-011",
+      "title": "SPDP multicast group address",
+      "text": "SPDP announcements shall use multicast group 239.255.0.1 (IPv4) or FF03::1 (IPv6) with the domain-specific RTPS port.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-DISC-012",
+      "title": "Peer eviction check interval",
+      "text": "The participant shall check for expired leases and evict stale peers at most once per second, independent of the SPDP announcement period.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-DISC-013",
+      "title": "Local endpoints announced to new peer",
+      "text": "When a new remote participant is discovered via SPDP, the local participant shall immediately send SEDP announcements for all currently registered writers and readers to that peer.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-DISC-014",
+      "title": "Remote writer matched to local reader",
+      "text": "An SEDP announcement for a remote writer shall be matched against all local readers for the same topic; matching pairs shall have samples forwarded from the remote writer to the local reader.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-DISC-015",
+      "title": "Static peer unicast discovery",
+      "text": "When configured with WithStaticPeers, the participant shall send SPDP announcements directly to those unicast addresses in addition to (or instead of) multicast.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-PUB-001",
+      "title": "Publisher fan-out delivery",
+      "text": "Publisher.Write() shall deliver the payload to all currently matched and active subscribers for the topic.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-PUB-002",
+      "title": "Publisher post-close rejection",
+      "text": "Publisher.Write() and Publisher.WriteCtx() shall return dds.ErrClosed after Publisher.Close() is called.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-PUB-003",
+      "title": "WriteCtx context cancellation",
+      "text": "Publisher.WriteCtx() shall return a wrapped context.Canceled or context.DeadlineExceeded error when the supplied context expires before the write completes.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-PUB-004",
+      "title": "Publisher.Close idempotency",
+      "text": "Publisher.Close() shall be safe to call multiple times. Subsequent calls after the first shall be no-ops returning nil.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-PUB-005",
+      "title": "Empty topic rejection at NewPublisher",
+      "text": "NewPublisher() with an empty topic string shall return an error. The publisher shall not be created.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-PUB-006",
+      "title": "BestEffort non-blocking write",
+      "text": "With BestEffort QoS, Publisher.Write() shall not block waiting for acknowledgment from any subscriber.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-PUB-007",
+      "title": "Immediate HEARTBEAT on reliable write",
+      "text": "The RTPS participant shall send a HEARTBEAT submessage immediately after each reliable Write to prompt ACKNACK responses from readers.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-SUB-001",
+      "title": "Subscriber channel close on Close",
+      "text": "The channel returned by Subscriber.C() shall be closed when Subscriber.Close() is called, unblocking any goroutine ranging or selecting on it.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SUB-002",
+      "title": "Subscriber.Close idempotency",
+      "text": "Subscriber.Close() shall be safe to call multiple times. Subsequent calls after the first shall be no-ops.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-SUB-003",
+      "title": "TryRead non-blocking",
+      "text": "Subscriber.TryRead() shall return (zero, false) immediately when no sample is available, without blocking.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-SUB-004",
+      "title": "TryRead sample drain",
+      "text": "Subscriber.TryRead() shall return (sample, true) and remove the sample from the channel when one is available.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-SUB-005",
+      "title": "TransientLocal late-joiner history",
+      "text": "A subscriber with TransientLocal QoS shall receive the full retained history from all currently matched publishers on first connection, without requiring republication.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SUB-006",
+      "title": "Deadline-missed callback",
+      "text": "A subscriber created with deadline QoS shall invoke the deadline-missed callback if no sample is received within the configured period. The callback shall not fire before the period elapses.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SUB-007",
+      "title": "TypedSubscriber decode-error drop",
+      "text": "TypedSubscriber shall silently drop any sample whose payload cannot be decoded by the Codec and shall not propagate the decode error to the subscriber channel.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-QOS-001",
+      "title": "DefaultQoS behaviour",
+      "text": "DefaultQoS shall use BestEffort reliability and Volatile durability. It shall be usable as a zero-allocation value without initialisation.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-QOS-002",
+      "title": "ReliableQoS behaviour",
+      "text": "ReliableQoS shall use Reliable reliability and TransientLocal durability.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-QOS-003",
+      "title": "QoS mismatch reliability downgrade",
+      "text": "A Reliable publisher paired with a BestEffort subscriber shall deliver at BestEffort for that subscriber; no HEARTBEAT/ACKNACK exchange is required.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-QOS-004",
+      "title": "History depth enforcement",
+      "text": "A QoS History depth shall limit the number of retained samples per writer; when the limit is exceeded, the oldest sample shall be evicted before storing the new sample.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-QOS-005",
+      "title": "Overflow policy — DropOldest",
+      "text": "When a subscriber queue is full and QoS DropOldest policy is active, the oldest queued sample shall be evicted to make room for the incoming sample.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-QOS-006",
+      "title": "Overflow policy — DropNewest",
+      "text": "When a subscriber queue is full and QoS DropNewest policy is active, the incoming sample shall be silently discarded. The existing queue contents shall not be modified.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-QOS-007",
+      "title": "Overflow policy — Block",
+      "text": "When a subscriber queue is full and QoS Block policy is active, the publisher shall block until queue capacity is available.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-RTPS-001",
+      "title": "RTPS message magic bytes",
+      "text": "Every outgoing RTPS message shall begin with the four-byte magic sequence 'R','T','P','S' (0x52, 0x54, 0x50, 0x53).",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-RTPS-002",
+      "title": "RTPS protocol version",
+      "text": "The protocolVersion field in all outgoing RTPS message headers shall be set to major=2, minor=3.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-RTPS-003",
+      "title": "Invalid magic byte rejection",
+      "text": "Received RTPS messages with incorrect magic bytes shall be discarded. The participant shall not crash, return an error, or modify internal state.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-RTPS-004",
+      "title": "Short message rejection",
+      "text": "Received RTPS messages shorter than the minimum header length (20 bytes) shall be discarded without crashing.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-RTPS-005",
+      "title": "GAP submessage semantics",
+      "text": "A received GAP submessage shall mark the specified sequence-number range as permanently unavailable, suppressing further NACKs for those sequence numbers.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-RTPS-006",
+      "title": "Submessage parse safety",
+      "text": "Parsing any submessage type (DATA, HEARTBEAT, ACKNACK, GAP, DATA_FRAG) with truncated or malformed content shall return an error and skip the submessage without panicking.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-RTPS-007",
+      "title": "HEARTBEAT sequence number advertisement",
+      "text": "The HEARTBEAT submessage shall advertise the writer's current FirstSN and LastSN from its send history, enabling readers to compute missing sequence numbers.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-RTPS-008",
+      "title": "ACKNACK bitmap coverage",
+      "text": "The ACKNACK base shall be the first missing sequence number; the bitmap shall cover up to 32 gaps ahead of the base to represent the receiver's knowledge.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-RTPS-009",
+      "title": "INFO_TS NTP64 timestamp format",
+      "text": "INFO_TS submessage timestamps shall use the NTP64 format: 32-bit seconds since 1900-01-01 UTC plus 32-bit fractional second.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-RTPS-010",
+      "title": "CDR encapsulation header",
+      "text": "DATA submessages shall include a 4-byte CDR encapsulation header with scheme 0x0001 (cdrLE) and options 0x0000, preceding the serialised payload.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-RTPS-011",
+      "title": "DATA octetsToInlineQos value",
+      "text": "The octetsToInlineQos field in DATA and DATA_FRAG submessages shall be set to 16, reflecting the fixed header layout.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-FRAG-001",
+      "title": "MTU fragmentation trigger",
+      "text": "A payload whose serialised size exceeds the configured MTU (default 1200 bytes) shall be split into DATA_FRAG submessages. Payloads at or below the MTU shall be sent as a single DATA submessage.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-FRAG-002",
+      "title": "Fragment numbering",
+      "text": "Fragment numbers shall start at 1 and be contiguous. Each DATA_FRAG submessage shall carry the correct fragmentsInSubmessage count and a totalFragmentCount matching the full payload size.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-FRAG-003",
+      "title": "Fragment reassembly completeness",
+      "text": "A reassembled sample shall only be delivered to the subscriber once all expected fragment numbers, and no duplicates, have been received.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-FRAG-004",
+      "title": "Stale fragment set cleanup",
+      "text": "Incomplete fragment reassemblies older than 5 seconds shall be discarded and their memory freed, preventing resource exhaustion from lost fragments.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-FRAG-005",
+      "title": "Oversized payload rejection",
+      "text": "DATA_FRAG submessages claiming a total reassembled payload larger than 16 MiB (16,777,216 bytes) shall be rejected to prevent memory exhaustion.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-REL-001",
+      "title": "RTPS reliable delivery",
+      "text": "The RTPS writer shall retransmit unacknowledged samples upon HEARTBEAT timeout and upon NACK receipt. The reader shall send ACKNACK for every received HEARTBEAT and request gaps for missing sequence numbers.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-REL-002",
+      "title": "Transient-local durability",
+      "text": "A subscriber that joins after a publisher with TransientLocal QoS has already published samples shall receive the complete retained history on first match, without requiring any republication from the publisher.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-REL-003",
+      "title": "DATA_FRAG fragmentation and reassembly",
+      "text": "Payloads exceeding the configured MTU shall be split into DATA_FRAG submessages and sent in order. The receiver shall reassemble fragments in sequence-number order and deliver the complete sample atomically only when all fragments are present.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-REL-004",
+      "title": "Context cancellation propagation",
+      "text": "All blocking API calls (WaitSet.Wait, WriteCtx, participant creation via WithContext) shall respect context.Context deadlines and cancellation, returning a wrapped context error.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-REL-005",
+      "title": "Configurable heartbeat period",
+      "text": "The HEARTBEAT retransmit period shall be configurable via WithHeartbeatPeriod. The default period shall be 200 ms.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-REL-006",
+      "title": "ACKNACK duplicate suppression",
+      "text": "ACKNACK messages with a count field equal to or less than the last acknowledged count shall be silently ignored to prevent redundant retransmissions.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-REL-007",
+      "title": "NACK-targeted retransmission",
+      "text": "sendHistory shall retransmit only the specific sequence numbers listed in the NACK bitmap, not the complete writer history.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-REL-008",
+      "title": "TransientLocal history depth bound",
+      "text": "TransientLocal history shall be bounded by the QoS History depth. When the limit is exceeded, the oldest entry shall be evicted before storing the new sample.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-REL-009",
+      "title": "Reliable writer history depth",
+      "text": "The RTPS reliable writer shall retain up to 256 samples in its send history for retransmission. Samples beyond this limit shall be evicted oldest-first.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-REL-010",
+      "title": "Persistent history disk load on startup",
+      "text": "When WithPersistentHistory is configured, the participant shall load previously persisted TransientLocal history from disk on subscriber creation before accepting new samples.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-REL-011",
+      "title": "Persistent history oversized payload rejection",
+      "text": "During persistent history disk load, payloads larger than 64 MiB shall be rejected to prevent memory exhaustion.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-REL-012",
+      "title": "Persistent history topic filename sanitization",
+      "text": "Topic names with characters unsafe for filenames (/, \\, :) shall be sanitized to underscores when constructing persistent history filenames.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
     },
     {
       "id": "REQ-SEC-001",
@@ -59,35 +556,399 @@
     {
       "id": "REQ-SEC-005",
       "title": "Atomic key rotation",
-      "text": "The HMACDiscoveryPlugin shall support Rekey(newKey) to atomically swap the signing key under a read-write mutex without restarting the participant. After Rekey, all subsequent sign and verify operations shall use the new key exclusively.",
+      "text": "The HMACDiscoveryPlugin shall support Rekey(newKey) to atomically swap the signing key under a read-write mutex without restarting the participant. After Rekey returns, all subsequent sign and verify operations shall use the new key exclusively.",
       "standard": "iso21434",
       "level": "CAL-2"
     },
     {
-      "id": "REQ-REL-001",
-      "title": "RTPS reliable delivery",
-      "text": "The RTPS writer shall retransmit unacknowledged samples on HEARTBEAT timeout and respond to NACK requests. The RTPS reader shall send ACKNACK for every received HEARTBEAT and request gaps for missing sequence numbers.",
+      "id": "REQ-SEC-006",
+      "title": "HMAC minimum key length",
+      "text": "The HMAC key supplied at plugin creation shall be at minimum 16 bytes. A shorter key shall cause creation to return an error; the plugin shall not be created.",
+      "standard": "iso21434",
+      "level": "CAL-3"
+    },
+    {
+      "id": "REQ-SEC-007",
+      "title": "HMAC tag fixed size",
+      "text": "The HMAC-SHA-256 tag shall always be exactly 32 bytes. A received tag of any other length shall fail verification and the associated message shall be discarded.",
+      "standard": "iso21434",
+      "level": "CAL-3"
+    },
+    {
+      "id": "REQ-SEC-008",
+      "title": "AES-GCM unique nonce per encryption",
+      "text": "Each AES-256-GCM encryption operation shall use a random 12-byte nonce prepended to the ciphertext. The same nonce shall never be reused for the same key.",
+      "standard": "iso21434",
+      "level": "CAL-3"
+    },
+    {
+      "id": "REQ-SEC-009",
+      "title": "AES-GCM authentication tag failure",
+      "text": "AES-256-GCM decryption that fails authentication shall return a wrapped error. No plaintext bytes shall be forwarded or made visible to the caller.",
+      "standard": "iso21434",
+      "level": "CAL-3"
+    },
+    {
+      "id": "REQ-SEC-010",
+      "title": "AES key length enforcement",
+      "text": "AES-256-GCM key material shall be exactly 32 bytes. Keys of any other length shall be rejected with an error at plugin creation time.",
+      "standard": "iso21434",
+      "level": "CAL-3"
+    },
+    {
+      "id": "REQ-SEC-011",
+      "title": "ReplayGuard configurable freshness window",
+      "text": "The ReplayGuard freshness window shall be configurable at construction. A zero or negative window shall default to 30 seconds.",
+      "standard": "iso21434",
+      "level": "CAL-3"
+    },
+    {
+      "id": "REQ-SEC-012",
+      "title": "ReplayGuard concurrency safety",
+      "text": "ReplayGuard shall be safe for concurrent use from multiple goroutines representing different writers.",
+      "standard": "iso21434",
+      "level": "CAL-2"
+    },
+    {
+      "id": "REQ-SEC-013",
+      "title": "Access policy topic enforcement",
+      "text": "AccessPolicy.Allow() shall evaluate rules in order; the first matching rule wins. Topics matching no rule shall be denied. Pattern matching uses path.Match semantics (*, ?, [...]).",
+      "standard": "iso21434",
+      "level": "CAL-3"
+    },
+    {
+      "id": "REQ-SEC-014",
+      "title": "Certificate-based participant authentication",
+      "text": "CertPlugin shall verify that every remote participant's certificate is signed by the configured CA before accepting it. An expired, self-signed (when CA pinning is active), or tampered certificate shall cause rejection.",
+      "standard": "iso21434",
+      "level": "CAL-3"
+    },
+    {
+      "id": "REQ-SEC-015",
+      "title": "Rekey atomicity",
+      "text": "No sign or verify call that begins after Rekey() returns shall use the old key. No sign or verify call that began before Rekey() was called shall see the new key mid-operation.",
+      "standard": "iso21434",
+      "level": "CAL-3"
+    },
+    {
+      "id": "REQ-SEC-016",
+      "title": "HMAC SignDiscovery input",
+      "text": "SignDiscovery shall compute the HMAC-SHA-256 tag over the concatenation of the context string and the 12-byte GuidPrefix.",
+      "standard": "iso21434",
+      "level": "CAL-3"
+    },
+    {
+      "id": "REQ-SEC-017",
+      "title": "HMAC nil/empty tag rejection",
+      "text": "VerifyDiscovery and VerifyEndpoint shall return false immediately for nil or empty tag input without performing any hash computation.",
+      "standard": "iso21434",
+      "level": "CAL-3"
+    },
+    {
+      "id": "REQ-SEC-018",
+      "title": "HMAC SignEndpoint input",
+      "text": "SignEndpoint shall compute the HMAC-SHA-256 tag over the concatenation of the context string, the 12-byte GuidPrefix, and the topic name.",
+      "standard": "iso21434",
+      "level": "CAL-3"
+    },
+    {
+      "id": "REQ-SEC-019",
+      "title": "NullPlugin identity transform",
+      "text": "NullPlugin.Seal() shall return the input payload unchanged. NullPlugin.Open() shall return the input ciphertext unchanged. No key material is required.",
+      "standard": "iso21434",
+      "level": "CAL-1"
+    },
+    {
+      "id": "REQ-SEC-020",
+      "title": "HMACPlugin tag append",
+      "text": "HMACPlugin.Seal() shall append a 32-byte HMAC-SHA-256 tag to the payload. HMACPlugin.Open() shall verify the tag and return the payload without the tag.",
+      "standard": "iso21434",
+      "level": "CAL-2"
+    },
+    {
+      "id": "REQ-SEC-021",
+      "title": "HMACPlugin truncated tag rejection",
+      "text": "HMACPlugin.Open() shall return an error if the ciphertext is shorter than 32 bytes or if the HMAC verification fails.",
+      "standard": "iso21434",
+      "level": "CAL-2"
+    },
+    {
+      "id": "REQ-SEC-022",
+      "title": "AESGCMPlugin wire format",
+      "text": "AESGCMPlugin.Seal() wire format shall be: random 12-byte nonce | AES-256-GCM ciphertext | 16-byte GCM authentication tag.",
+      "standard": "iso21434",
+      "level": "CAL-3"
+    },
+    {
+      "id": "REQ-SEC-023",
+      "title": "ReplayGuard automatic purge",
+      "text": "ReplayGuard shall automatically purge entries older than the freshness window on each call to Check, bounding memory growth.",
+      "standard": "iso21434",
+      "level": "CAL-2"
+    },
+    {
+      "id": "REQ-SEC-024",
+      "title": "CertPlugin wire format",
+      "text": "CertPlugin.Seal() wire format shall be: plaintext | certDER | certLen(4 bytes BE) | sigDER | sigLen(4 bytes BE).",
+      "standard": "iso21434",
+      "level": "CAL-3"
+    },
+    {
+      "id": "REQ-SEC-025",
+      "title": "CertPlugin signature algorithm",
+      "text": "CertPlugin shall sign SHA-256(plaintext) using ECDSA with the configured private key. CertPlugin.Open() shall verify the signature against the signer's certificate and the CA pool.",
+      "standard": "iso21434",
+      "level": "CAL-3"
+    },
+    {
+      "id": "REQ-SAFETY-001",
+      "title": "E2E protection header structure",
+      "text": "Every safety-critical sample shall carry an 18-byte E2E protection header: DataID(2) + SourceID(2) + Counter(4) + Timestamp(8) + CRC-16(2). The receiver shall reject samples with invalid CRC, stale counter, or exceeded freshness window.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SAFETY-002",
+      "title": "Deterministic bounded queue",
+      "text": "The deterministic queue shall provide bounded capacity, FIFO ordering, O(1) enqueue and dequeue, and shall not allocate after initialisation. Overflow shall be reported via ErrQueueFull and shall not silently discard samples.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SAFETY-003",
+      "title": "Panic containment in dispatch paths",
+      "text": "Goroutines on the data-forwarding path (domain bridge, WAN bridge) shall recover from panics via a deferred recover() call and exit cleanly without crashing the participant.",
+      "standard": "iec61508",
+      "level": "SIL-2"
+    },
+    {
+      "id": "REQ-SAFETY-004",
+      "title": "Safety event callbacks",
+      "text": "The E2E subscriber shall invoke the registered SafetyEventCallback for every E2E violation (bad CRC, sequence error, freshness timeout, source ID mismatch) with a typed SafetyEvent carrying the violating sample metadata.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SAFETY-005",
+      "title": "E2E CRC algorithm",
+      "text": "The E2E CRC shall use the CRC-16/CCITT-FALSE algorithm (polynomial 0x1021, initial value 0xFFFF, no reflection). The CRC slot (bytes 16–17) shall be treated as zero during CRC computation.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SAFETY-006",
+      "title": "E2E sequence counter monotonicity",
+      "text": "The E2E sequence counter shall be monotonically increasing per publisher. A counter value equal to or lower than the last accepted value from the same source shall be treated as a sequence error and the sample discarded.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SAFETY-007",
+      "title": "E2E source ID mismatch",
+      "text": "A source ID in the E2E header that does not match the expected source ID shall raise a SafetyEvent with kind SourceIDMismatch. The sample shall be discarded.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SAFETY-008",
+      "title": "E2E header minimum length",
+      "text": "Samples shorter than 18 bytes (the E2E header size) shall be treated as a format error; a SafetyEvent shall be raised and the sample discarded.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SAFETY-009",
+      "title": "E2E freshness window configuration",
+      "text": "The E2E freshness window shall be configurable at E2ESubscriber construction. A zero window shall disable timestamp checking entirely.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SAFETY-010",
+      "title": "DeterministicQueue O(1) operations",
+      "text": "DeterministicQueue.Enqueue() and Dequeue() shall complete in O(1) time using a ring-buffer. No heap allocation shall occur after queue creation.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SAFETY-011",
+      "title": "DeterministicQueue synchronous overflow",
+      "text": "DeterministicQueue.Enqueue() shall return ErrQueueFull synchronously when the buffer is full. It shall not block, drop silently, or overwrite an existing entry.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SAFETY-012",
+      "title": "DeterministicQueue publisher panic containment",
+      "text": "DeterministicQueue.Start() shall recover from panics in the downstream Publisher.Write() call and report them on the Errors channel rather than crashing the goroutine.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SAFETY-013",
+      "title": "E2E subscriber header stripping",
+      "text": "Valid samples delivered by E2ESubscriber to its C() channel shall have the 18-byte E2E header stripped; the payload shall be the original application data only.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SAFETY-014",
+      "title": "DeterministicQueue publisher errors forwarded",
+      "text": "Non-panic errors returned by the downstream Publisher.Write() call shall be forwarded to the DeterministicQueue Errors channel.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-MEM-001",
+      "title": "BytePool correct-size allocation",
+      "text": "BytePool.Get(n) shall return a byte slice of length exactly n with capacity at least n.",
+      "standard": "iec61508",
+      "level": "SIL-1"
+    },
+    {
+      "id": "REQ-MEM-002",
+      "title": "BytePool nil safety",
+      "text": "BytePool.Put() shall not panic when called with a nil slice.",
+      "standard": "iec61508",
+      "level": "SIL-1"
+    },
+    {
+      "id": "REQ-MEM-003",
+      "title": "BytePool concurrency safety",
+      "text": "BytePool shall be safe for concurrent use from multiple goroutines.",
+      "standard": "iec61508",
+      "level": "SIL-1"
+    },
+    {
+      "id": "REQ-MEM-004",
+      "title": "SampleBuffer push/pop contract",
+      "text": "SampleBuffer.Push() shall return false when the buffer is at capacity and true when the sample was stored. Pop() shall return (zero, false) when the buffer is empty.",
+      "standard": "iec61508",
+      "level": "SIL-1"
+    },
+    {
+      "id": "REQ-MEM-005",
+      "title": "SampleBuffer slot zeroing after pop",
+      "text": "SampleBuffer.Pop() shall zero the sample slot after removal to release GC references to payload slices.",
+      "standard": "iec61508",
+      "level": "SIL-1"
+    },
+    {
+      "id": "REQ-MEM-006",
+      "title": "BytePool undersized put discard",
+      "text": "BytePool.Put() shall discard slices smaller than the pool's configured buffer size rather than returning them to the pool.",
+      "standard": "iec61508",
+      "level": "SIL-1"
+    },
+    {
+      "id": "REQ-REC-001",
+      "title": "Recorder JSONL format",
+      "text": "Recorder shall write each sample as a single JSONL line containing: topic name, base64-encoded payload, original sample timestamp, and recorded-at timestamp.",
       "standard": "iso26262",
       "level": "ASIL-A"
     },
     {
-      "id": "REQ-REL-002",
-      "title": "Transient-local durability",
-      "text": "A subscriber that joins after a publisher with TransientLocal QoS has already published samples shall receive the complete retained history on first match, without requiring any republication from the publisher.",
+      "id": "REQ-REC-002",
+      "title": "Player delivery order",
+      "text": "Player shall re-publish samples in the order they appear in the recording, preserving the original inter-sample timing.",
       "standard": "iso26262",
       "level": "ASIL-A"
     },
     {
-      "id": "REQ-REL-003",
-      "title": "DATA_FRAG fragmentation and reassembly",
-      "text": "Payloads exceeding the configured MTU shall be split into DATA_FRAG submessages and sent in order. The receiver shall reassemble fragments in sequence-number order and deliver the complete sample atomically only when all fragments are present.",
+      "id": "REQ-REC-003",
+      "title": "Player time scaling",
+      "text": "Player.PlayScaled() shall scale all inter-sample delays by 1/SpeedFactor. SpeedFactor 2.0 halves delays; SpeedFactor 0.5 doubles them. The first sample is always published immediately.",
       "standard": "iso26262",
       "level": "ASIL-A"
     },
     {
-      "id": "REQ-REL-004",
-      "title": "Context cancellation propagation",
-      "text": "All blocking API calls (WaitSet.Wait, WriteCtx, participant creation via WithContext) shall respect context.Context deadlines and cancellation, returning a wrapped context.DeadlineExceeded or context.Canceled error within one scheduling quantum.",
+      "id": "REQ-REC-004",
+      "title": "FaultPublisher loss probability bounds",
+      "text": "FaultPublisher LossRate shall be in [0.0, 1.0]. A rate of 0.0 shall forward all samples; 1.0 shall drop all samples.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-REC-005",
+      "title": "FaultPublisher delay context awareness",
+      "text": "FaultPublisher.WriteCtx() shall abort the configured delay and return the context error if the context is cancelled or expires while the delay is in progress.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-REC-006",
+      "title": "FaultPublisher payload corruption isolation",
+      "text": "FaultPublisher corruption shall operate on a copy of the payload; the caller's original byte slice shall not be mutated.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-REC-007",
+      "title": "FaultPublisher byte flip corruption",
+      "text": "FaultPublisher corruption shall flip exactly one byte in the payload copy using XOR 0xFF, applied at a random byte position.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-REC-008",
+      "title": "FaultPublisher duplication",
+      "text": "FaultPublisher DuplicateRate shall cause the sample to be forwarded twice to the downstream publisher; both writes shall use the same payload.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-REC-009",
+      "title": "FaultPublisher reorder window",
+      "text": "FaultPublisher ReorderWindow shall buffer samples and emit them in randomised order when the window is full. Samples buffered at Close() shall be flushed in shuffled order.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-REC-010",
+      "title": "Player filtered replay",
+      "text": "Player.PlayFiltered() shall replay only samples whose topic matches one of the specified topics; all other samples shall be skipped.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-RPC-001",
+      "title": "Requester timeout",
+      "text": "Requester.Request() shall return dds.ErrNoReply if no matching reply arrives within the configured timeout duration.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-RPC-002",
+      "title": "Requester context cancellation",
+      "text": "Requester.RequestCtx() shall return a context error if the supplied context is cancelled or its deadline expires before a reply arrives.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-RPC-003",
+      "title": "Reply correlation by ID",
+      "text": "Replier shall route each reply to the request that matches by correlation ID. A reply with an unrecognised correlation ID shall be silently discarded.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-RPC-004",
+      "title": "Concurrent request isolation",
+      "text": "Simultaneous outstanding requests from the same Requester shall be correlated independently. A reply for request A shall never be delivered to a waiter for request B.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-RPC-005",
+      "title": "RPC wire format",
+      "text": "RPC messages shall be framed as: 16-byte random CorrelationID prepended to the codec-serialised request or reply payload.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-RPC-006",
+      "title": "RPC topic naming convention",
+      "text": "Requester shall publish requests on topic base+\"/request\" and subscribe for replies on topic base+\"/reply\". Replier shall subscribe on base+\"/request\" and publish on base+\"/reply\".",
       "standard": "iso26262",
       "level": "ASIL-A"
     },
@@ -101,7 +962,588 @@
     {
       "id": "REQ-RT-002",
       "title": "WaitSet thread-safe attach/detach",
-      "text": "WaitSet.Attach and WaitSet.Detach shall be safe to call concurrently from multiple goroutines. Changes shall take effect on the next call to WaitSet.Wait. WaitSet.Wait shall respect the supplied context deadline and return context.DeadlineExceeded when it expires.",
+      "text": "WaitSet.Attach and WaitSet.Detach shall be safe to call concurrently from multiple goroutines. Changes shall take effect on the next call to WaitSet.Wait.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-RT-003",
+      "title": "WaitSet context cancellation",
+      "text": "WaitSet.Wait() with a cancelled or expired context shall return immediately with the context error. It shall not block on subscriber channels.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-RT-004",
+      "title": "WaitSet all-closed detection",
+      "text": "WaitSet.Wait() shall return dds.ErrAllClosed when all attached subscribers are closed and no sample is available.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-RT-005",
+      "title": "WaitSet dynamic membership visible on next Wait",
+      "text": "A subscriber Attached or Detached between two calls to WaitSet.Wait() shall be included in or excluded from the next Wait's select set.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-CODEC-001",
+      "title": "Codec round-trip correctness",
+      "text": "For all well-formed values of T, Codec[T].Marshal followed by Unmarshal shall produce a value equal to the original.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-CODEC-002",
+      "title": "Codec malformed input safety",
+      "text": "Codec[T].Unmarshal shall return a non-nil error for malformed or truncated input. It shall not panic, corrupt memory, or return a partially initialised value.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-CODEC-003",
+      "title": "ProtoCodec wire compatibility",
+      "text": "ProtoCodec[T] output shall be wire-format compatible with standard proto.Marshal from google.golang.org/protobuf.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-BRIDGE-001",
+      "title": "Domain bridge sample forwarding",
+      "text": "The domain bridge shall forward every sample received from a bridged topic on src to the matching topic on dst.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-BRIDGE-002",
+      "title": "Domain bridge stop on close",
+      "text": "After Bridge.Close() is called, no further samples shall be forwarded. All forwarding goroutines shall have exited by the time Close() returns.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-BRIDGE-003",
+      "title": "REST bridge empty topic rejection",
+      "text": "REST bridge POST /topics/{t} and GET /topics/{t} with an empty or missing topic name shall return HTTP 400.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-BRIDGE-004",
+      "title": "REST bridge SSE sample delivery",
+      "text": "REST bridge GET /topics/{t} shall stream arriving samples as server-sent events. Each event shall include the base64-encoded payload and the topic name.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-BRIDGE-005",
+      "title": "REST bridge bearer token authentication",
+      "text": "When AuthToken is configured, the REST bridge shall return HTTP 401 for any request missing or carrying an incorrect Bearer token.",
+      "standard": "iso21434",
+      "level": "CAL-2"
+    },
+    {
+      "id": "REQ-BRIDGE-006",
+      "title": "gRPC bridge empty topic rejection",
+      "text": "gRPC bridge Publish and Subscribe RPCs with an empty topic string shall return gRPC status InvalidArgument.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-BRIDGE-007",
+      "title": "gRPC bridge bearer token authentication",
+      "text": "When AuthToken is configured, the gRPC bridge shall return gRPC status Unauthenticated for any RPC missing or carrying an incorrect Bearer token.",
+      "standard": "iso21434",
+      "level": "CAL-2"
+    },
+    {
+      "id": "REQ-BRIDGE-008",
+      "title": "gRPC bridge filter hook",
+      "text": "A configured FilterFunc returning false for a sample shall prevent that sample from being sent to the gRPC subscriber.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-BRIDGE-009",
+      "title": "gRPC bridge sample metadata",
+      "text": "gRPC bridge Subscribe events shall include the sequence number, source timestamp, and writer GUID from the DDS sample.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-BRIDGE-010",
+      "title": "gRPC StreamPublish cumulative count",
+      "text": "gRPC bridge StreamPublish shall return a PublishAck with the cumulative count of all successfully published samples when the client stream closes (io.EOF).",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-BRIDGE-011",
+      "title": "gRPC bridge transform hook",
+      "text": "A configured TransformFunc shall be applied to every sample payload before sending on the gRPC Subscribe stream. The original DDS payload shall not be modified.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-BRIDGE-012",
+      "title": "gRPC YAML config QoS mapping",
+      "text": "gRPC bridge config topic QoS string \"reliable\" shall map to ReliableQoS; \"best_effort\" or empty shall map to DefaultQoS.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-BRIDGE-013",
+      "title": "WAN bridge frame size limit",
+      "text": "WAN bridge shall reject incoming frames larger than 16 MiB with ErrFrameTooLarge to prevent memory exhaustion.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-BRIDGE-014",
+      "title": "WAN bridge wire format",
+      "text": "WAN bridge wire format shall be: 4-byte big-endian frame length followed by JSON object with fields \"t\" (topic) and \"p\" (base64-encoded payload).",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-WILD-001",
+      "title": "Single-level wildcard matching",
+      "text": "A '+' segment in a topic pattern shall match exactly one non-empty topic segment. It shall not match an empty segment or a segment containing '/'.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-WILD-002",
+      "title": "Multi-level wildcard matching",
+      "text": "A '#' segment in a topic pattern shall match zero or more remaining segments. '#' shall only be valid as the last segment of a pattern.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-WILD-003",
+      "title": "Wildcard matching concurrency safety",
+      "text": "The wildcard matching function shall be safe for concurrent use from multiple goroutines without external synchronisation.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-WILD-004",
+      "title": "Trailing slash topic distinction",
+      "text": "Topics \"foo\" and \"foo/\" shall be treated as distinct (two-segment vs one-segment), consistent with MQTT topic hierarchy semantics.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-MON-001",
+      "title": "Monitor HTML dashboard",
+      "text": "Monitor shall serve the embedded HTML dashboard at GET / and return HTTP 200 with Content-Type text/html.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-MON-002",
+      "title": "Monitor SSE event stream",
+      "text": "Monitor GET /events shall return a server-sent event stream carrying sample, metrics, discovery, and health event types.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-MON-003",
+      "title": "Monitor metrics push interval",
+      "text": "Monitor shall push metrics events to all connected SSE clients at the configured interval (default 2 seconds).",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-MON-004",
+      "title": "Monitor health endpoint 503",
+      "text": "Monitor GET /health shall return HTTP 503 when the participant reports HealthDown.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-MON-005",
+      "title": "Monitor non-blocking SSE broadcast",
+      "text": "Monitor SSE broadcast shall be non-blocking; events shall be dropped for slow clients rather than blocking the publishing path.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-ADMIN-001",
+      "title": "Admin health endpoint",
+      "text": "GET /admin/health shall return HTTP 200 with JSON health data when the participant is healthy, and HTTP 503 when HealthDown.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-ADMIN-002",
+      "title": "Admin topics endpoint",
+      "text": "GET /admin/topics shall return JSON per-topic metrics from the participant's TopicMetricsProvider interface.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-ADMIN-003",
+      "title": "Admin publish endpoint",
+      "text": "POST /admin/publish shall accept a JSON body with topic and base64-encoded payload, and publish the decoded payload on the specified topic.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-ADMIN-004",
+      "title": "Admin bearer token authentication",
+      "text": "When APIKey is configured, all admin endpoints shall return HTTP 401 for requests missing or carrying an incorrect Bearer token.",
+      "standard": "iso21434",
+      "level": "CAL-2"
+    },
+    {
+      "id": "REQ-ADMIN-005",
+      "title": "Admin server goroutine lifecycle",
+      "text": "Admin Server.Close() shall stop the HTTP server and wait for the serve goroutine to exit before returning.",
+      "standard": "iec61508",
+      "level": "SIL-1"
+    },
+    {
+      "id": "REQ-CONF-001",
+      "title": "Config domain range",
+      "text": "ParticipantConfig Domain shall be validated in the range 0–232 inclusive. Out-of-range values shall cause Validate() to return an error.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-CONF-002",
+      "title": "Config duration string parsing",
+      "text": "Duration fields (HeartbeatPeriod, SPDPInterval, SPDPJitter) shall be parsed as Go duration strings. Invalid strings shall cause Validate() to return an error.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-CONF-003",
+      "title": "Config log level validation",
+      "text": "LogLevel shall be validated as one of: empty string, \"debug\", \"info\", \"warn\", or \"error\". Any other value shall cause Validate() to return an error.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-CONF-004",
+      "title": "Config SPDP jitter non-negative",
+      "text": "SPDPJitter shall be non-negative. A negative value shall cause Validate() to return an error.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-SVC-001",
+      "title": "RecorderService.Start idempotency",
+      "text": "RecorderService.Start() shall be idempotent. Subsequent calls after the first shall return nil without starting additional goroutines.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-SVC-002",
+      "title": "ReplayService loop mode",
+      "text": "When opts.Loop is true, ReplayService shall restart replay from the beginning after each complete pass through the recording.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-SVC-003",
+      "title": "ReplayService.Start idempotency",
+      "text": "ReplayService.Start() shall be idempotent. Subsequent calls after the first shall return nil without starting additional replay goroutines.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-TSN-001",
+      "title": "TSN max fragment payload calculation",
+      "text": "Stream.MaxFragPayload() shall return MaxFrameSize minus 48 bytes of RTPS/UDP/IP overhead, representing the maximum DATA_FRAG payload for this TSN stream.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-TSN-002",
+      "title": "TSN PCP and DSCP range validation",
+      "text": "TSN stream PCP shall be validated in range 0–7. DSCP shall be validated in range 0–63. Out-of-range values shall cause LoadConfig to return an error.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-TSN-003",
+      "title": "TSN stream mandatory fields",
+      "text": "TSN stream topic shall be non-empty and IntervalUS shall be positive. Violations shall cause LoadConfig to return an error.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-TSN-004",
+      "title": "TSN StreamForTopic exact match",
+      "text": "StreamForTopic shall return the first stream whose topic exactly matches the supplied string, or nil if no stream matches.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-XTYPE-001",
+      "title": "TypeIdentifier deterministic hash",
+      "text": "Identify() shall produce the same TypeIdentifier for the same TypeDescriptor structure on every call, using SHA-256 over the canonical JSON representation.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-XTYPE-002",
+      "title": "DynamicData field access restriction",
+      "text": "DynamicData.Set() and Get() shall only operate on fields declared in the associated TypeDescriptor. Accesses to undeclared fields shall return an error.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-XTYPE-003",
+      "title": "DynamicData forward compatibility",
+      "text": "DynamicData.FromJSON() shall silently ignore fields present in the JSON but not declared in the TypeDescriptor, enabling forward compatibility.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-XTYPE-004",
+      "title": "Type compatibility missing required field",
+      "text": "CheckCompatibility shall return incompatible when the reader requires a field that is absent from the writer's TypeDescriptor and the field is not marked Optional.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-XTYPE-005",
+      "title": "Type compatibility kind mismatch",
+      "text": "CheckCompatibility shall return incompatible when reader and writer have a field with the same name but different Kind values.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-XTYPE-006",
+      "title": "TypeRegistry conflict detection",
+      "text": "TypeRegistry.Register() shall return ErrTypeMismatch if a type with the same name but a different hash is already registered.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-TREG-001",
+      "title": "TopicTypeRegistry codec registration",
+      "text": "RegisterTopicCodec shall record the association between a topic name and its Go type for codec autodiscovery via LookupTopicType.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-TREG-002",
+      "title": "TopicTypeRegistry sorted snapshot",
+      "text": "TopicTypeRegistry.All() shall return a snapshot of all topic→type pairs sorted lexicographically by topic name.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-TREG-003",
+      "title": "TopicTypeRegistry deregister no-op",
+      "text": "TopicTypeRegistry.Deregister() shall be a no-op if the specified topic is not currently registered.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-SHMEM-001",
+      "title": "Shared memory same-host delivery",
+      "text": "Shmem participants on the same host shall deliver samples via memory-mapped files, avoiding UDP loopback overhead.",
+      "standard": "iec61508",
+      "level": "SIL-1"
+    },
+    {
+      "id": "REQ-SHMEM-002",
+      "title": "Shmem cross-process signalling",
+      "text": "Cross-process shmem delivery shall use a Unix domain socket for delivery notification; the payload is read from the shared memory-mapped file.",
+      "standard": "iec61508",
+      "level": "SIL-1"
+    },
+    {
+      "id": "REQ-SHMEM-003",
+      "title": "Shmem topic filename sanitization",
+      "text": "Shmem topic names with characters unsafe for filenames (/, \\) shall be sanitized to underscores when constructing shared memory file paths.",
+      "standard": "iec61508",
+      "level": "SIL-1"
+    },
+    {
+      "id": "REQ-SHMEM-004",
+      "title": "Shmem payload size limit",
+      "text": "Shmem shall reject payloads larger than 16 MiB to prevent shared memory exhaustion.",
+      "standard": "iec61508",
+      "level": "SIL-2"
+    },
+    {
+      "id": "REQ-GUID-001",
+      "title": "RTPS GUID prefix generation",
+      "text": "GuidPrefix shall be 12 bytes: 8 bytes from crypto/rand followed by 4 bytes of the process PID, ensuring uniqueness across processes on the same host.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-GUID-002",
+      "title": "RTPS entity ID kind bytes",
+      "text": "Writer EntityIds shall use kind byte 0x03 (user-defined writer, no key). Reader EntityIds shall use kind byte 0x04 (user-defined reader, no key), per RTPS 2.3 Table 9.1.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-LOC-001",
+      "title": "RTPS port formula",
+      "text": "RTPS unicast and multicast port numbers shall be computed using the formula: PB + DG*domainID + offset, where PB=7400, DG=250, per the RTPS 2.3 specification.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-LOC-002",
+      "title": "SPDP multicast addresses",
+      "text": "SPDP shall use multicast group 239.255.0.1 (IPv4, LocatorKind=1) and FF03::1 (IPv6, LocatorKind=2) as defined by the RTPS specification.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-LOC-003",
+      "title": "User data multicast address",
+      "text": "User data multicast shall use group 239.255.0.2 (IPv4).",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-CDR-001",
+      "title": "PL_CDR_LE encapsulation header",
+      "text": "Parameter List CDR headers shall be 4 bytes: scheme 0x0003 (plCDRLE, little-endian) followed by 2 zero option bytes.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-CDR-002",
+      "title": "Parameter list sentinel",
+      "text": "CDR parameter lists shall be terminated by the PID_SENTINEL parameter (PID=0x0001) to mark end of list.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-CDR-003",
+      "title": "CDR parameter alignment",
+      "text": "CDR parameter values shall be padded to 4-byte alignment in the wire format.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-TRANS-001",
+      "title": "UDP receive buffer size",
+      "text": "UDP receive loops shall allocate a 65535-byte receive buffer, matching the maximum UDP datagram size.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-TRANS-002",
+      "title": "UDP read deadline for liveness",
+      "text": "UDP readLoop shall set a 250ms read deadline to enable clean goroutine shutdown; a timeout shall not be treated as an error.",
+      "standard": "iec61508",
+      "level": "SIL-2"
+    },
+    {
+      "id": "REQ-TRANS-003",
+      "title": "UDP recv channel overflow drop",
+      "text": "When the UDP recv channel is full, incoming packets shall be dropped rather than blocking the readLoop goroutine.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-MQTT-001",
+      "title": "MQTT bridge bidirectional forwarding",
+      "text": "MQTT bridge shall forward DDS samples to the MQTT broker (fromDDS) and MQTT messages to DDS (fromMQTT), independently and concurrently.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-MQTT-002",
+      "title": "MQTT QoS mapping",
+      "text": "DDS BestEffort reliability shall map to MQTT QoS 0; DDS Reliable reliability shall map to MQTT QoS 1.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-MQTT-003",
+      "title": "MQTT publisher on demand",
+      "text": "MQTT bridge shall create DDS publishers on demand when the first message for a topic arrives from the MQTT broker.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-MQTT-004",
+      "title": "MQTT default topic subscription",
+      "text": "When no MQTT topics are configured, the MQTT bridge shall subscribe to \"#\" (all topics) on the MQTT broker.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-SEOOC-001",
+      "title": "AoU: Participant.Close before process exit",
+      "text": "Assumption of Use: The integrating application shall call Participant.Close() before process termination to ensure all internal goroutines exit and resources are released. Failure to close may result in goroutine leaks and incomplete delivery of in-flight samples.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SEOOC-002",
+      "title": "AoU: E2E protection required for ASIL-B topics",
+      "text": "Assumption of Use: The integrating application shall wrap ASIL-B topic publishers and subscribers with E2EPublisher and E2ESubscriber from the safety package. The raw DDS transport provides no end-to-end integrity guarantee; E2E protection is mandatory for safety-critical data paths.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SEOOC-003",
+      "title": "AoU: DiscoveryPlugin in untrusted networks",
+      "text": "Assumption of Use: When go-DDS is deployed in a network that may contain untrusted or malicious participants, the integrating application shall configure an HMACDiscoveryPlugin or equivalent with a key of at least 16 bytes. Without a plugin, any participant on the multicast group can inject fake discovery messages.",
+      "standard": "iso21434",
+      "level": "CAL-3"
+    },
+    {
+      "id": "REQ-SEOOC-004",
+      "title": "AoU: No payload mutation after Write",
+      "text": "Assumption of Use: The integrating application shall not modify or free the payload byte slice passed to Publisher.Write() or Publisher.WriteCtx() after the call returns. go-DDS may hold a reference to the slice for asynchronous retransmission on Reliable topics.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SEOOC-005",
+      "title": "AoU: Cryptographically secure entropy source",
+      "text": "Assumption of Use: The platform shall provide a cryptographically secure random number generator accessible via Go's crypto/rand package. go-DDS uses crypto/rand for GUID prefix generation and AES-GCM nonce generation. A weak or predictable entropy source will compromise GUID uniqueness and AEAD security.",
+      "standard": "iso21434",
+      "level": "CAL-3"
+    },
+    {
+      "id": "REQ-SEOOC-006",
+      "title": "AoU: Context deadline discipline",
+      "text": "Assumption of Use: The integrating application shall supply context.Context values with appropriate deadlines or cancellation to all blocking operations (WriteCtx, WaitSet.Wait). Unbounded blocking in a safety-critical context violates real-time guarantees.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SEOOC-007",
+      "title": "AoU: DeterministicQueue for real-time paths",
+      "text": "Assumption of Use: The integrating application shall use DeterministicQueue for any data path with bounded-latency requirements. Standard Go channel delivery is subject to runtime scheduler jitter; DeterministicQueue provides the allocation-free O(1) queuing required for ASIL-B real-time paths.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SEOOC-008",
+      "title": "AoU: Participant re-creation after unrecoverable failure",
+      "text": "Assumption of Use: The integrating application is responsible for detecting participant failure (e.g., via the HealthProvider interface) and re-creating the participant when an unrecoverable error occurs. go-DDS does not automatically restart a failed participant.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SEOOC-009",
+      "title": "AoU: Application-level panic handling",
+      "text": "Assumption of Use: The integrating application shall install a recover() handler at every goroutine boundary it owns. go-DDS recovers panics on its own forwarding goroutines (REQ-SAFETY-003) but cannot protect application goroutines that call DDS APIs.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SEOOC-010",
+      "title": "AoU: Single participant per domain per process",
+      "text": "Assumption of Use: The integrating application should create at most one Participant per domain per process. Multiple participants in the same domain are supported but incur additional port and goroutine overhead; the mock backend shares a global broker and does not isolate participants in the same domain.",
       "standard": "iso26262",
       "level": "ASIL-A"
     }

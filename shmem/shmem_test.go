@@ -5,6 +5,11 @@
 
 package shmem_test
 
+//fusa:test REQ-SHMEM-001
+//fusa:test REQ-SHMEM-002
+//fusa:test REQ-SHMEM-003
+//fusa:test REQ-SHMEM-004
+
 import (
 	"context"
 	"errors"

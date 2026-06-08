@@ -5,6 +5,16 @@
 
 package xtypes_test
 
+//fusa:test REQ-XTYPE-001
+//fusa:test REQ-XTYPE-002
+//fusa:test REQ-XTYPE-003
+//fusa:test REQ-XTYPE-004
+//fusa:test REQ-XTYPE-005
+//fusa:test REQ-XTYPE-006
+//fusa:test REQ-TREG-001
+//fusa:test REQ-TREG-002
+//fusa:test REQ-TREG-003
+
 import (
 	"encoding/json"
 	"errors"

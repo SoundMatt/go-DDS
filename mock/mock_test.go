@@ -5,6 +5,23 @@
 
 package mock_test
 
+//fusa:test REQ-PART-001
+//fusa:test REQ-PART-002
+//fusa:test REQ-PART-004
+//fusa:test REQ-PART-005
+//fusa:test REQ-PUB-001
+//fusa:test REQ-PUB-002
+//fusa:test REQ-PUB-004
+//fusa:test REQ-PUB-006
+//fusa:test REQ-SUB-001
+//fusa:test REQ-SUB-002
+//fusa:test REQ-SUB-003
+//fusa:test REQ-SUB-004
+//fusa:test REQ-QOS-001
+//fusa:test REQ-QOS-002
+//fusa:test REQ-QOS-005
+//fusa:test REQ-QOS-006
+
 import (
 	"context"
 	"errors"

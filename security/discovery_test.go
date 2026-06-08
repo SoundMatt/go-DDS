@@ -8,6 +8,14 @@ package security_test
 //fusa:test REQ-SEC-001
 //fusa:test REQ-SEC-004
 //fusa:test REQ-SEC-005
+//fusa:test REQ-SEC-006
+//fusa:test REQ-SEC-007
+//fusa:test REQ-SEC-015
+//fusa:test REQ-SEC-016
+//fusa:test REQ-SEC-017
+//fusa:test REQ-SEC-018
+//fusa:test REQ-SEOOC-003
+//fusa:test REQ-SEOOC-006
 
 import (
 	"testing"

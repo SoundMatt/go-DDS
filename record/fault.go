@@ -5,6 +5,13 @@
 
 package record
 
+//fusa:req REQ-REC-004
+//fusa:req REQ-REC-005
+//fusa:req REQ-REC-006
+//fusa:req REQ-REC-007
+//fusa:req REQ-REC-008
+//fusa:req REQ-REC-009
+
 import (
 	"context"
 	"fmt"

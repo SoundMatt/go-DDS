@@ -5,6 +5,10 @@
 
 package rtps
 
+//fusa:req REQ-LOC-001
+//fusa:req REQ-LOC-002
+//fusa:req REQ-LOC-003
+
 import (
 	"encoding/binary"
 	"net"

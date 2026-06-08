@@ -25,6 +25,13 @@ package safety
 //fusa:req REQ-SAFETY-001
 //fusa:req REQ-SAFETY-003
 //fusa:req REQ-SAFETY-004
+//fusa:req REQ-SAFETY-005
+//fusa:req REQ-SAFETY-006
+//fusa:req REQ-SAFETY-007
+//fusa:req REQ-SAFETY-008
+//fusa:req REQ-SAFETY-009
+//fusa:req REQ-SAFETY-013
+//fusa:req REQ-SEOOC-002
 
 import (
 	"encoding/binary"

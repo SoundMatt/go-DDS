@@ -36,6 +36,11 @@
 // cross the boundary in either direction.
 package mqtt
 
+//fusa:req REQ-MQTT-001
+//fusa:req REQ-MQTT-002
+//fusa:req REQ-MQTT-003
+//fusa:req REQ-MQTT-004
+
 import (
 	"fmt"
 	"strings"

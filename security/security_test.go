@@ -6,6 +6,13 @@
 package security_test
 
 //fusa:test REQ-SEC-002
+//fusa:test REQ-SEC-008
+//fusa:test REQ-SEC-009
+//fusa:test REQ-SEC-010
+//fusa:test REQ-SEC-019
+//fusa:test REQ-SEC-020
+//fusa:test REQ-SEC-021
+//fusa:test REQ-SEC-022
 
 import (
 	"bytes"

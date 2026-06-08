@@ -17,6 +17,9 @@
 // For bidirectional bridging, create one server/client pair in each direction.
 package wan
 
+//fusa:req REQ-BRIDGE-013
+//fusa:req REQ-BRIDGE-014
+
 import (
 	"encoding/binary"
 	"encoding/json"

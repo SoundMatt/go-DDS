@@ -8,6 +8,18 @@
 
 package rtps
 
+//fusa:req REQ-RTPS-001
+//fusa:req REQ-RTPS-002
+//fusa:req REQ-RTPS-003
+//fusa:req REQ-RTPS-004
+//fusa:req REQ-RTPS-005
+//fusa:req REQ-RTPS-006
+//fusa:req REQ-RTPS-007
+//fusa:req REQ-RTPS-008
+//fusa:req REQ-RTPS-009
+//fusa:req REQ-RTPS-010
+//fusa:req REQ-RTPS-011
+
 import (
 	"encoding/binary"
 	"fmt"

@@ -5,6 +5,10 @@
 
 package rtps
 
+//fusa:req REQ-TRANS-001
+//fusa:req REQ-TRANS-002
+//fusa:req REQ-TRANS-003
+
 import (
 	"fmt"
 	"net"

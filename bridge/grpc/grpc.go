@@ -26,6 +26,14 @@
 //	b.Server().Serve(lis)
 package grpcbridge
 
+//fusa:req REQ-BRIDGE-006
+//fusa:req REQ-BRIDGE-007
+//fusa:req REQ-BRIDGE-008
+//fusa:req REQ-BRIDGE-009
+//fusa:req REQ-BRIDGE-010
+//fusa:req REQ-BRIDGE-011
+//fusa:req REQ-BRIDGE-012
+
 import (
 	"context"
 	"encoding/json"

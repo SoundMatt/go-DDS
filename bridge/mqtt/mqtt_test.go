@@ -5,6 +5,11 @@
 
 package mqtt_test
 
+//fusa:test REQ-MQTT-001
+//fusa:test REQ-MQTT-002
+//fusa:test REQ-MQTT-003
+//fusa:test REQ-MQTT-004
+
 import (
 	"fmt"
 	"sync"

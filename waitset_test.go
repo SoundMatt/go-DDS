@@ -6,6 +6,9 @@
 package dds_test
 
 //fusa:test REQ-RT-002
+//fusa:test REQ-RT-003
+//fusa:test REQ-RT-004
+//fusa:test REQ-RT-005
 //fusa:test REQ-REL-004
 
 import (

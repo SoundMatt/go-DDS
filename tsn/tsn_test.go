@@ -5,6 +5,11 @@
 
 package tsn_test
 
+//fusa:test REQ-TSN-001
+//fusa:test REQ-TSN-002
+//fusa:test REQ-TSN-003
+//fusa:test REQ-TSN-004
+
 import (
 	"encoding/json"
 	"os"

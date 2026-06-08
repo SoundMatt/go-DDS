@@ -5,6 +5,11 @@
 
 package domain_test
 
+//fusa:test REQ-BRIDGE-001
+//fusa:test REQ-BRIDGE-002
+//fusa:test REQ-SEOOC-008
+//fusa:test REQ-SEOOC-009
+
 import (
 	"fmt"
 	"testing"

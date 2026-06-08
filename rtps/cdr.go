@@ -10,6 +10,10 @@
 
 package rtps
 
+//fusa:req REQ-CDR-001
+//fusa:req REQ-CDR-002
+//fusa:req REQ-CDR-003
+
 import (
 	"encoding/binary"
 )

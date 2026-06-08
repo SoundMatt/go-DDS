@@ -26,6 +26,11 @@
 // rendez-vous directory for cross-process delivery.
 package shmem
 
+//fusa:req REQ-SHMEM-001
+//fusa:req REQ-SHMEM-002
+//fusa:req REQ-SHMEM-003
+//fusa:req REQ-SHMEM-004
+
 import (
 	"context"
 	"encoding/binary"

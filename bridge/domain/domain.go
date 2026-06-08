@@ -19,6 +19,10 @@ package domain
 
 //fusa:req REQ-RT-001
 //fusa:req REQ-SAFETY-003
+//fusa:req REQ-BRIDGE-001
+//fusa:req REQ-BRIDGE-002
+//fusa:req REQ-SEOOC-008
+//fusa:req REQ-SEOOC-009
 
 import (
 	"fmt"

@@ -34,6 +34,11 @@
 //	}
 package tsn
 
+//fusa:req REQ-TSN-001
+//fusa:req REQ-TSN-002
+//fusa:req REQ-TSN-003
+//fusa:req REQ-TSN-004
+
 import (
 	"encoding/json"
 	"errors"

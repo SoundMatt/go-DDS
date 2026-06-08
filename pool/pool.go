@@ -15,6 +15,13 @@
 // area between a subscriber channel and an application processing loop.
 package pool
 
+//fusa:req REQ-MEM-001
+//fusa:req REQ-MEM-002
+//fusa:req REQ-MEM-003
+//fusa:req REQ-MEM-004
+//fusa:req REQ-MEM-005
+//fusa:req REQ-MEM-006
+
 import (
 	"sync"
 

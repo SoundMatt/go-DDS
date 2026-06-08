@@ -22,6 +22,11 @@
 //	}
 package config
 
+//fusa:req REQ-CONF-001
+//fusa:req REQ-CONF-002
+//fusa:req REQ-CONF-003
+//fusa:req REQ-CONF-004
+
 import (
 	"encoding/json"
 	"errors"

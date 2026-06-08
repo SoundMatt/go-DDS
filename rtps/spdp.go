@@ -12,6 +12,22 @@
 
 package rtps
 
+//fusa:req REQ-DISC-001
+//fusa:req REQ-DISC-002
+//fusa:req REQ-DISC-003
+//fusa:req REQ-DISC-004
+//fusa:req REQ-DISC-005
+//fusa:req REQ-DISC-006
+//fusa:req REQ-DISC-007
+//fusa:req REQ-DISC-011
+//fusa:req REQ-DISC-012
+//fusa:req REQ-DISC-015
+//fusa:req REQ-PART-001
+//fusa:req REQ-PART-003
+//fusa:req REQ-LOC-001
+//fusa:req REQ-LOC-002
+//fusa:req REQ-LOC-003
+
 import (
 	"encoding/binary"
 	"math/rand"

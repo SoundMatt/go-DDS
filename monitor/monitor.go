@@ -15,6 +15,12 @@
 //	// browse http://localhost:8080
 package monitor
 
+//fusa:req REQ-MON-001
+//fusa:req REQ-MON-002
+//fusa:req REQ-MON-003
+//fusa:req REQ-MON-004
+//fusa:req REQ-MON-005
+
 import (
 	"context"
 	"encoding/json"

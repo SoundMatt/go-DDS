@@ -5,6 +5,9 @@
 
 package wan_test
 
+//fusa:test REQ-BRIDGE-013
+//fusa:test REQ-BRIDGE-014
+
 import (
 	"encoding/binary"
 	"errors"

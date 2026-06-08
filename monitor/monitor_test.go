@@ -5,6 +5,12 @@
 
 package monitor_test
 
+//fusa:test REQ-MON-001
+//fusa:test REQ-MON-002
+//fusa:test REQ-MON-003
+//fusa:test REQ-MON-004
+//fusa:test REQ-MON-005
+
 import (
 	"bufio"
 	"context"

@@ -5,6 +5,11 @@
 
 package config_test
 
+//fusa:test REQ-CONF-001
+//fusa:test REQ-CONF-002
+//fusa:test REQ-CONF-003
+//fusa:test REQ-CONF-004
+
 import (
 	"bytes"
 	"encoding/json"

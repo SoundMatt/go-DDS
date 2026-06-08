@@ -67,6 +67,14 @@ type Domain int
 
 // ── QoS ──────────────────────────────────────────────────────────────────────
 
+//fusa:req REQ-QOS-001
+//fusa:req REQ-QOS-002
+//fusa:req REQ-QOS-003
+//fusa:req REQ-QOS-004
+//fusa:req REQ-QOS-005
+//fusa:req REQ-QOS-006
+//fusa:req REQ-QOS-007
+
 // ReliabilityKind controls delivery guarantees for a topic endpoint.
 type ReliabilityKind int
 
@@ -391,6 +399,30 @@ func CloseWithDrain(ctx context.Context, p Participant) error {
 
 // ── Interfaces ────────────────────────────────────────────────────────────────
 
+//fusa:req REQ-PART-001
+//fusa:req REQ-PART-002
+//fusa:req REQ-PART-004
+//fusa:req REQ-PART-005
+//fusa:req REQ-PART-006
+//fusa:req REQ-PART-007
+//fusa:req REQ-PART-008
+//fusa:req REQ-PUB-001
+//fusa:req REQ-PUB-002
+//fusa:req REQ-PUB-003
+//fusa:req REQ-PUB-004
+//fusa:req REQ-PUB-005
+//fusa:req REQ-PUB-006
+//fusa:req REQ-SUB-001
+//fusa:req REQ-SUB-002
+//fusa:req REQ-SUB-003
+//fusa:req REQ-SUB-004
+//fusa:req REQ-SUB-005
+//fusa:req REQ-SUB-006
+//fusa:req REQ-SUB-007
+//fusa:req REQ-CODEC-001
+//fusa:req REQ-CODEC-002
+//fusa:req REQ-CODEC-003
+
 // Participant is the DDS domain participant — the root factory for all DDS
 // entities. Create one per process per domain. A Participant is safe for
 // concurrent use from multiple goroutines.
@@ -437,7 +469,11 @@ type Subscriber interface {
 // ── WaitSet ───────────────────────────────────────────────────────────────────
 
 //fusa:req REQ-RT-002
+//fusa:req REQ-RT-003
+//fusa:req REQ-RT-004
+//fusa:req REQ-RT-005
 //fusa:req REQ-REL-004
+//fusa:req REQ-SEOOC-006
 
 // WaitSet multiplexes over a dynamic set of Subscribers. Use NewWaitSet to
 // construct one and Attach/Detach to modify the set at any time. Wait blocks

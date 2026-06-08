@@ -6,6 +6,11 @@
 package rtps
 
 //fusa:req REQ-REL-003
+//fusa:req REQ-FRAG-001
+//fusa:req REQ-FRAG-002
+//fusa:req REQ-FRAG-003
+//fusa:req REQ-FRAG-004
+//fusa:req REQ-FRAG-005
 
 import (
 	"encoding/binary"

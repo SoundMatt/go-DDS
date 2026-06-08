@@ -15,6 +15,23 @@ package mock
 
 //fusa:req REQ-RT-001
 //fusa:req REQ-REL-004
+//fusa:req REQ-PART-002
+//fusa:req REQ-PART-004
+//fusa:req REQ-PART-005
+//fusa:req REQ-PART-006
+//fusa:req REQ-PUB-001
+//fusa:req REQ-PUB-002
+//fusa:req REQ-PUB-004
+//fusa:req REQ-PUB-005
+//fusa:req REQ-PUB-006
+//fusa:req REQ-SUB-001
+//fusa:req REQ-SUB-002
+//fusa:req REQ-SUB-003
+//fusa:req REQ-SUB-004
+//fusa:req REQ-QOS-001
+//fusa:req REQ-QOS-002
+//fusa:req REQ-QOS-005
+//fusa:req REQ-QOS-006
 
 import (
 	"context"

@@ -5,6 +5,10 @@
 
 package services_test
 
+//fusa:test REQ-SVC-001
+//fusa:test REQ-SVC-002
+//fusa:test REQ-SVC-003
+
 import (
 	"bytes"
 	"context"

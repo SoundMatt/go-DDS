@@ -19,6 +19,10 @@
 package record
 
 //fusa:req REQ-RT-001
+//fusa:req REQ-REC-001
+//fusa:req REQ-REC-002
+//fusa:req REQ-REC-003
+//fusa:req REQ-REC-010
 
 import (
 	"context"

@@ -6,6 +6,9 @@
 package rtps
 
 //fusa:req REQ-REL-002
+//fusa:req REQ-REL-010
+//fusa:req REQ-REL-011
+//fusa:req REQ-REL-012
 
 import (
 	"encoding/binary"

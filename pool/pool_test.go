@@ -5,6 +5,13 @@
 
 package pool_test
 
+//fusa:test REQ-MEM-001
+//fusa:test REQ-MEM-002
+//fusa:test REQ-MEM-003
+//fusa:test REQ-MEM-004
+//fusa:test REQ-MEM-005
+//fusa:test REQ-MEM-006
+
 import (
 	"fmt"
 	"sync"

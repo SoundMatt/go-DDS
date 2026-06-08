@@ -24,6 +24,11 @@
 package admin
 
 //fusa:req REQ-RT-001
+//fusa:req REQ-ADMIN-001
+//fusa:req REQ-ADMIN-002
+//fusa:req REQ-ADMIN-003
+//fusa:req REQ-ADMIN-004
+//fusa:req REQ-ADMIN-005
 
 import (
 	"encoding/base64"

@@ -25,6 +25,13 @@
 package security
 
 //fusa:req REQ-SEC-002
+//fusa:req REQ-SEC-008
+//fusa:req REQ-SEC-009
+//fusa:req REQ-SEC-010
+//fusa:req REQ-SEC-019
+//fusa:req REQ-SEC-020
+//fusa:req REQ-SEC-021
+//fusa:req REQ-SEC-022
 
 import (
 	"crypto/aes"

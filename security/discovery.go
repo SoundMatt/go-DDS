@@ -8,6 +8,13 @@ package security
 //fusa:req REQ-SEC-001
 //fusa:req REQ-SEC-004
 //fusa:req REQ-SEC-005
+//fusa:req REQ-SEC-006
+//fusa:req REQ-SEC-007
+//fusa:req REQ-SEC-015
+//fusa:req REQ-SEC-016
+//fusa:req REQ-SEC-017
+//fusa:req REQ-SEC-018
+//fusa:req REQ-SEOOC-003
 
 import (
 	"crypto/hmac"

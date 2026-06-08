@@ -12,6 +12,12 @@
 
 package rtps
 
+//fusa:req REQ-DISC-008
+//fusa:req REQ-DISC-009
+//fusa:req REQ-DISC-010
+//fusa:req REQ-DISC-013
+//fusa:req REQ-DISC-014
+
 import (
 	"net"
 	"sync"
