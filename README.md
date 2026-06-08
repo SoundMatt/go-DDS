@@ -635,6 +635,15 @@ See [ROADMAP.md](ROADMAP.md) for per-milestone goals, sub-items, and success cri
 - [x] `xtypes.TopicTypeRegistry` + `RegisterTopicCodec[T]` + `GlobalTopicRegistry` — map topic names to Go type names for codec autodiscovery
 - [x] Docker Quickstart — `cmd/monitor`, `examples/quickstart/{pub,sub}`, multi-stage `docker/Dockerfile`, `docker/docker-compose.yml` (`network_mode: host` for RTPS multicast)
 
+**Released — v0.11 — gRPC Bridge, Key Rotation, Bridge Networking, Interop, DevContainer, GHCR**
+
+- [x] `bridge/grpc` — gRPC gateway (JSON codec): `Subscribe` server-streaming, `Publish` unary, `StreamPublish` client-streaming; Bearer token auth interceptors; per-topic filter and transform hooks; YAML config (`LoadConfig`/`ApplyConfig`)
+- [x] `HMACDiscoveryPlugin.Rekey(newKey)` — atomic key rotation; RWMutex-safe; old tags are immediately invalidated for both SPDP and SEDP
+- [x] Docker bridge networking — `DDS_PEERS` + `WithNoMulticast` across all quickstart binaries; `docker/docker-compose.yml` updated to bridge network (works on macOS/Windows Docker Desktop); `docker/docker-compose.host.yml` overlay for Linux host networking
+- [x] `docker/compose.interop.yml` — CycloneDDS peer containers on the same bridge network for cross-implementation wire-compat testing
+- [x] `.devcontainer/devcontainer.json` — Go 1.22 dev container with golangci-lint, Docker-in-Docker, and VS Code Go extension; works in GitHub Codespaces
+- [x] `.github/workflows/docker-publish.yml` — multi-arch (`linux/amd64`, `linux/arm64`) GHCR publish on push to main and version tags
+
 See [ROADMAP.md](ROADMAP.md) for goals and sub-items.
 
 ## Example use cases

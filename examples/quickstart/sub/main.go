@@ -5,12 +5,20 @@
 
 // Command sub subscribes to DDS topic "sensors/temperature" and logs samples.
 // Part of the Docker Quickstart (Milestone 13).
+//
+// Environment variables:
+//
+//	DDS_DOMAIN   DDS domain ID (default: 0)
+//	DDS_PEERS    Comma-separated static peer addresses for bridge networking
+//	             (e.g. "monitor:7400,pub:7400"). When set, multicast is
+//	             disabled so this works on Docker bridge networks.
 package main
 
 import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	dds "github.com/SoundMatt/go-DDS"
@@ -18,7 +26,14 @@ import (
 )
 
 func main() {
-	p, err := rtps.New(dds.Domain(0))
+	var opts []rtps.Option
+	if peers := os.Getenv("DDS_PEERS"); peers != "" {
+		addrs := strings.Split(peers, ",")
+		opts = append(opts, rtps.WithNoMulticast(), rtps.WithStaticPeers(addrs...))
+		log.Printf("unicast mode, peers: %v", addrs)
+	}
+
+	p, err := rtps.New(dds.Domain(0), opts...)
 	if err != nil {
 		log.Fatalf("rtps.New: %v", err)
 	}

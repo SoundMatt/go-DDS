@@ -1,0 +1,39 @@
+{
+    "name": "go-DDS",
+    "image": "mcr.microsoft.com/devcontainers/go:1.22",
+
+    "features": {
+        "ghcr.io/devcontainers-contrib/features/golangci-lint:1": {
+            "version": "2.1.6"
+        },
+        "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+    },
+
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "golang.go",
+                "ms-azuretools.vscode-docker",
+                "EditorConfig.EditorConfig",
+                "eamodio.gitlens",
+                "streetsidesoftware.code-spell-checker"
+            ],
+            "settings": {
+                "go.toolsManagement.checkForUpdates": "local",
+                "go.useLanguageServer": true,
+                "go.testFlags": ["-race", "-count=1", "-short"],
+                "go.coverOnSave": false,
+                "editor.formatOnSave": true,
+                "[go]": {
+                    "editor.defaultFormatter": "golang.go"
+                }
+            }
+        }
+    },
+
+    "postCreateCommand": "go mod download && go build ./...",
+
+    "remoteUser": "vscode",
+
+    "forwardPorts": [8080]
+}
