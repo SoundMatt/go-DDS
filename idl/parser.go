@@ -264,18 +264,18 @@ func (p *parser) parseStruct() (*Struct, error) {
 		if t.kind == tokRBrace || t.kind == tokEOF {
 			break
 		}
-		typeSpec, err := p.parseTypeSpec()
-		if err != nil {
-			return nil, err
+		typeSpec, ferr := p.parseTypeSpec()
+		if ferr != nil {
+			return nil, ferr
 		}
-		fieldName, err := p.expect(tokIdent, "field name")
-		if err != nil {
-			return nil, err
+		fieldName, ferr := p.expect(tokIdent, "field name")
+		if ferr != nil {
+			return nil, ferr
 		}
-		semi, err := p.expect(tokSemi, ";")
+		semi, ferr := p.expect(tokSemi, ";")
 		_ = semi
-		if err != nil {
-			return nil, err
+		if ferr != nil {
+			return nil, ferr
 		}
 		s.Fields = append(s.Fields, Field{Name: fieldName.val, Type: typeSpec})
 	}

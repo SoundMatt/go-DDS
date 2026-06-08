@@ -46,11 +46,11 @@ func (c *TAPRIOConfig) Apply() error {
 	if err != nil {
 		return fmt.Errorf("tsn: taprio: netlink socket: %w", err)
 	}
-	defer unix.Close(fd)
+	defer unix.Close(fd) //nolint:errcheck
 
 	sa := &unix.SockaddrNetlink{Family: unix.AF_NETLINK}
-	if err := unix.Bind(fd, sa); err != nil {
-		return fmt.Errorf("tsn: taprio: bind: %w", err)
+	if bindErr := unix.Bind(fd, sa); bindErr != nil {
+		return fmt.Errorf("tsn: taprio: bind: %w", bindErr)
 	}
 
 	written, err := unix.Write(fd, msg)

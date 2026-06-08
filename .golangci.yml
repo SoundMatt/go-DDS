@@ -36,6 +36,12 @@ linters:
       - path: examples/
         text: "Close.*is not checked"
         linters: [errcheck]
+      # noctx: pre-existing uses of net.Listen/net.Dial/exec.Command without a
+      # context in admin, bridge/wan, monitor, and testutil. These are
+      # functionally correct; threading context through the listener/dialer API
+      # is tracked as a follow-up refactor.
+      - path: "(admin|bridge/wan|monitor|testutil)/"
+        linters: [noctx]
 
 formatters:
   enable:
