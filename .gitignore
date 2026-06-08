@@ -2,3 +2,10 @@
 /testpersist-*/
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
+/memory/
+/audit-pack.zip
+*.json.bak
+/boundary.dot
+/boundary.mermaid
+/tara.json
+/tara.md
