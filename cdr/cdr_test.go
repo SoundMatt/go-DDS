@@ -197,10 +197,10 @@ func TestAlignment(t *testing.T) {
 			e.WriteInt32(42)
 		},
 		func(d *cdr.Decoder) {
-			b, _ := d.ReadBool()
-			n, err := d.ReadInt32()
-			if !b || n != 42 || err != nil {
-				t.Errorf("alignment: got bool=%v int32=%v err=%v", b, n, err)
+			b, bErr := d.ReadBool()
+			n, nErr := d.ReadInt32()
+			if bErr != nil || !b || n != 42 || nErr != nil {
+				t.Errorf("alignment: got bool=%v bErr=%v int32=%v nErr=%v", b, bErr, n, nErr)
 			}
 		},
 	)
@@ -217,11 +217,26 @@ func TestMultiField(t *testing.T) {
 			e.WriteUint32(7)
 		},
 		func(d *cdr.Decoder) {
-			s, _ := d.ReadString()
-			f, _ := d.ReadFloat64()
-			ts, _ := d.ReadInt64()
-			ok, _ := d.ReadBool()
-			n, _ := d.ReadUint32()
+			s, err := d.ReadString()
+			if err != nil {
+				t.Fatalf("ReadString: %v", err)
+			}
+			f, err := d.ReadFloat64()
+			if err != nil {
+				t.Fatalf("ReadFloat64: %v", err)
+			}
+			ts, err := d.ReadInt64()
+			if err != nil {
+				t.Fatalf("ReadInt64: %v", err)
+			}
+			ok, err := d.ReadBool()
+			if err != nil {
+				t.Fatalf("ReadBool: %v", err)
+			}
+			n, err := d.ReadUint32()
+			if err != nil {
+				t.Fatalf("ReadUint32: %v", err)
+			}
 			if s != "ECU-1" || math.Abs(f-95.5) > 1e-9 || ts != 1749000000000 || !ok || n != 7 {
 				t.Errorf("multi-field: got s=%q f=%v ts=%v ok=%v n=%v", s, f, ts, ok, n)
 			}
@@ -230,14 +245,20 @@ func TestMultiField(t *testing.T) {
 }
 
 func TestDecoder_TooShort(t *testing.T) {
-	_, err := cdr.NewDecoder([]byte{0x00}) // shorter than 4-byte header
+	d, err := cdr.NewDecoder([]byte{0x00}) // shorter than 4-byte header
+	if d != nil {
+		t.Error("expected nil decoder on error")
+	}
 	if err == nil {
 		t.Error("expected error for short buffer")
 	}
 }
 
 func TestDecoder_BadScheme(t *testing.T) {
-	_, err := cdr.NewDecoder([]byte{0xFF, 0xFF, 0x00, 0x00})
+	d, err := cdr.NewDecoder([]byte{0xFF, 0xFF, 0x00, 0x00})
+	if d != nil {
+		t.Error("expected nil decoder on error")
+	}
 	if err == nil {
 		t.Error("expected error for unsupported scheme")
 	}
@@ -251,10 +272,13 @@ func TestDecoder_Underrun(t *testing.T) {
 	if newErr != nil {
 		t.Fatalf("NewDecoder: %v", newErr)
 	}
-	if _, readErr := d.ReadInt32(); readErr != nil {
+	v, readErr := d.ReadInt32()
+	_ = v
+	if readErr != nil {
 		t.Fatalf("first ReadInt32: %v", readErr)
 	}
-	_, err := d.ReadInt32() // underrun
+	v2, err := d.ReadInt32() // underrun
+	_ = v2
 	if err == nil {
 		t.Error("expected error on underrun")
 	}

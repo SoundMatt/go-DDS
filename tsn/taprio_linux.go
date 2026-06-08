@@ -12,6 +12,7 @@ package tsn
 import (
 	"encoding/binary"
 	"fmt"
+	"math"
 	"net"
 	"syscall"
 
@@ -32,6 +33,9 @@ func (c *TAPRIOConfig) Apply() error {
 	if err != nil {
 		return fmt.Errorf("tsn: taprio: interface %q: %w", c.Interface, err)
 	}
+	if iface.Index > math.MaxUint32 {
+		return fmt.Errorf("tsn: taprio: interface index %d overflows uint32", iface.Index)
+	}
 
 	msg, err := buildTAPRIOMsg(c, iface.Index)
 	if err != nil {
@@ -49,7 +53,9 @@ func (c *TAPRIOConfig) Apply() error {
 		return fmt.Errorf("tsn: taprio: bind: %w", err)
 	}
 
-	if _, err := unix.Write(fd, msg); err != nil {
+	written, err := unix.Write(fd, msg)
+	_ = written
+	if err != nil {
 		return fmt.Errorf("tsn: taprio: send: %w", err)
 	}
 
@@ -63,10 +69,10 @@ func buildTAPRIOMsg(c *TAPRIOConfig, ifindex int) ([]byte, error) {
 	// tcmsg: family=AF_UNSPEC, ifindex, handle=0x00010000, parent=TC_H_ROOT
 	const tcHRoot = uint32(0xFFFFFFFF)
 	tcmsg := make([]byte, 20)
-	tcmsg[0] = unix.AF_UNSPEC                               // family
+	tcmsg[0] = unix.AF_UNSPEC                                 // family
 	binary.LittleEndian.PutUint32(tcmsg[4:], uint32(ifindex)) // ifindex
-	binary.LittleEndian.PutUint32(tcmsg[8:], 0x00010000)    // handle: 1:0
-	binary.LittleEndian.PutUint32(tcmsg[12:], tcHRoot)      // parent: root
+	binary.LittleEndian.PutUint32(tcmsg[8:], 0x00010000)      // handle: 1:0
+	binary.LittleEndian.PutUint32(tcmsg[12:], tcHRoot)        // parent: root
 	nb.addRaw(tcmsg)
 
 	// TCA_KIND = "taprio\x00"
@@ -104,11 +110,11 @@ func buildTAPRIOMsg(c *TAPRIOConfig, ifindex int) ([]byte, error) {
 
 	// Wrap in nlmsghdr
 	const (
-		rtmNewQdisc  = 36
-		nlmFRequest  = 0x01
-		nlmFAck      = 0x04
-		nlmFCreate   = 0x400
-		nlmFReplace  = 0x100
+		rtmNewQdisc = 36
+		nlmFRequest = 0x01
+		nlmFAck     = 0x04
+		nlmFCreate  = 0x400
+		nlmFReplace = 0x100
 	)
 	payload := nb.bytes()
 	hdr := make([]byte, 16)
@@ -116,7 +122,7 @@ func buildTAPRIOMsg(c *TAPRIOConfig, ifindex int) ([]byte, error) {
 	binary.LittleEndian.PutUint32(hdr[0:], total)
 	binary.LittleEndian.PutUint16(hdr[4:], rtmNewQdisc)
 	binary.LittleEndian.PutUint16(hdr[6:], nlmFRequest|nlmFAck|nlmFCreate|nlmFReplace)
-	binary.LittleEndian.PutUint32(hdr[8:], 1) // seq
+	binary.LittleEndian.PutUint32(hdr[8:], 1)  // seq
 	binary.LittleEndian.PutUint32(hdr[12:], 0) // pid (kernel)
 	return append(hdr, payload...), nil
 }

@@ -10,8 +10,14 @@ package tsn
 
 import (
 	"errors"
+	"math"
 	"time"
 )
+
+// maxEntryIntervalNS is the maximum TAPRIO gate entry interval expressible in
+// the kernel's uint32 nanosecond field (~4.295 s). Linux TAPRIO rejects larger
+// values anyway; we validate early to produce a clear error.
+const maxEntryIntervalNS = math.MaxUint32
 
 // ErrNotSupported is returned by TAPRIOConfig.Apply on platforms other than Linux.
 var ErrNotSupported = errors.New("tsn: TAPRIO qdisc requires Linux")
@@ -40,6 +46,9 @@ func (c *TAPRIOConfig) Validate() error {
 	for i, e := range c.Entries {
 		if e.Interval <= 0 {
 			return errors.New("tsn: TAPRIOConfig: entry[" + itoa(i) + "].Interval must be > 0")
+		}
+		if e.Interval.Nanoseconds() > maxEntryIntervalNS {
+			return errors.New("tsn: TAPRIOConfig: entry[" + itoa(i) + "].Interval exceeds uint32 ns limit (~4.295 s)")
 		}
 	}
 	return nil

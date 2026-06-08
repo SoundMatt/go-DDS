@@ -100,12 +100,15 @@ func TestTAPRIOConfig_Apply_NonLinux(t *testing.T) {
 }
 
 func TestTAPRIOFromStreams_DerivesTAPRIO(t *testing.T) {
-	cfg, _ := tsn.ParseConfig([]byte(`{
+	cfg, err := tsn.ParseConfig([]byte(`{
 		"streams":[
 			{"topic":"a","pcp":5,"interval_us":1000},
 			{"topic":"b","pcp":3,"interval_us":2000}
 		]
 	}`))
+	if err != nil {
+		t.Fatalf("ParseConfig: %v", err)
+	}
 	tc, err := tsn.TAPRIOFromStreams(cfg)
 	if err != nil {
 		t.Fatalf("TAPRIOFromStreams: %v", err)

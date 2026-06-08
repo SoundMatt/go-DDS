@@ -55,7 +55,10 @@ func TestParseString_BasicModule(t *testing.T) {
 }
 
 func TestParseString_StructFields(t *testing.T) {
-	m, _ := idl.ParseString(vehicleIDL)
+	m, err := idl.ParseString(vehicleIDL)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
 	speed := m.Modules[0].Structs[0]
 	if speed.Name != "Speed" {
 		t.Fatalf("struct name = %q, want Speed", speed.Name)
@@ -81,7 +84,10 @@ func TestParseString_StructFields(t *testing.T) {
 }
 
 func TestParseString_UnsignedTypes(t *testing.T) {
-	m, _ := idl.ParseString(vehicleIDL)
+	m, err := idl.ParseString(vehicleIDL)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
 	eng := m.Modules[0].Structs[1]
 	if eng.Fields[1].Type.Kind != idl.KindULong {
 		t.Errorf("rpm: got %v, want KindULong", eng.Fields[1].Type.Kind)
@@ -114,7 +120,10 @@ func TestParseString_Sequence(t *testing.T) {
 
 func TestParseString_OctetSequence(t *testing.T) {
 	src := `struct Blob { sequence<octet> data; };`
-	m, _ := idl.ParseString(src)
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
 	f := m.Structs[0].Fields[0]
 	if f.Type.Kind != idl.KindSequence {
 		t.Errorf("type kind = %v, want KindSequence", f.Type.Kind)
@@ -125,7 +134,10 @@ func TestParseString_OctetSequence(t *testing.T) {
 }
 
 func TestGenerate_ContainsStruct(t *testing.T) {
-	m, _ := idl.ParseString(vehicleIDL)
+	m, err := idl.ParseString(vehicleIDL)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
 	src, err := idl.Generate(m)
 	if err != nil {
 		t.Fatalf("Generate: %v", err)
@@ -139,8 +151,14 @@ func TestGenerate_ContainsStruct(t *testing.T) {
 }
 
 func TestGenerate_ContainsCodec(t *testing.T) {
-	m, _ := idl.ParseString(vehicleIDL)
-	src, _ := idl.Generate(m)
+	m, err := idl.ParseString(vehicleIDL)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	src, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
 	if !strings.Contains(src, "type SpeedCodec struct") {
 		t.Error("generated source missing SpeedCodec")
 	}
@@ -153,8 +171,14 @@ func TestGenerate_ContainsCodec(t *testing.T) {
 }
 
 func TestGenerate_PackageName(t *testing.T) {
-	m, _ := idl.ParseString(vehicleIDL)
-	src, _ := idl.Generate(m)
+	m, err := idl.ParseString(vehicleIDL)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	src, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
 	// Top-level module is VehicleData, so package is the outer (empty) wrapper;
 	// structs are emitted from the sub-module, package is "vehicledata".
 	if !strings.Contains(src, "package vehicledata") && !strings.Contains(src, "package idlgen") {
@@ -163,8 +187,14 @@ func TestGenerate_PackageName(t *testing.T) {
 }
 
 func TestGenerate_FieldNames(t *testing.T) {
-	m, _ := idl.ParseString(vehicleIDL)
-	src, _ := idl.Generate(m)
+	m, err := idl.ParseString(vehicleIDL)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	src, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
 	if !strings.Contains(src, "VehicleId") {
 		t.Error("expected exported field VehicleId")
 	}

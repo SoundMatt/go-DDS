@@ -19,13 +19,22 @@ import (
 )
 
 func TestE2ESubscriber_SafetyMetrics_CRCFailure(t *testing.T) {
-	p, _ := mock.New(dds.Domain(0))
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
 	defer p.Close()
 
-	pub, _ := p.NewPublisher("metrics/crc", dds.DefaultQoS)
+	pub, err := p.NewPublisher("metrics/crc", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
-	sub, _ := p.NewSubscriber("metrics/crc", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("metrics/crc", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
 
 	cfg := safety.E2EConfig{DataID: 1, SourceID: 1, Topic: "metrics/crc"}
@@ -46,13 +55,22 @@ func TestE2ESubscriber_SafetyMetrics_CRCFailure(t *testing.T) {
 }
 
 func TestE2ESubscriber_SafetyMetrics_ValidSamples(t *testing.T) {
-	p, _ := mock.New(dds.Domain(0))
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
 	defer p.Close()
 
-	pub, _ := p.NewPublisher("metrics/valid", dds.DefaultQoS)
+	pub, err := p.NewPublisher("metrics/valid", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
-	sub, _ := p.NewSubscriber("metrics/valid", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("metrics/valid", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
 
 	cfg := safety.E2EConfig{DataID: 5, SourceID: 5, Topic: "metrics/valid"}
@@ -82,13 +100,22 @@ func TestE2ESubscriber_SafetyMetrics_ValidSamples(t *testing.T) {
 }
 
 func TestE2ESubscriber_SafetyEvents_Channel(t *testing.T) {
-	p, _ := mock.New(dds.Domain(0))
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
 	defer p.Close()
 
-	pub, _ := p.NewPublisher("metrics/events", dds.DefaultQoS)
+	pub, err := p.NewPublisher("metrics/events", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
-	sub, _ := p.NewSubscriber("metrics/events", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("metrics/events", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
 
 	cfg := safety.E2EConfig{DataID: 9, SourceID: 9, Topic: "metrics/events"}
@@ -130,9 +157,15 @@ func TestSafetyEventKind_String(t *testing.T) {
 }
 
 func TestE2ESubscriber_ImplementsSafetyMetricsProvider(t *testing.T) {
-	p, _ := mock.New(dds.Domain(0))
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
 	defer p.Close()
-	sub, _ := p.NewSubscriber("t", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("t", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
 	esub := safety.NewE2ESubscriber(sub, safety.E2EConfig{})
 	defer esub.Close()

@@ -226,7 +226,9 @@ func (p *parser) parseNamedModule() (*Module, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, braceErr := p.expect(tokLBrace, "{"); braceErr != nil {
+	lbrace, braceErr := p.expect(tokLBrace, "{")
+	_ = lbrace
+	if braceErr != nil {
 		return nil, braceErr
 	}
 	m, err := p.parseModule()
@@ -234,7 +236,9 @@ func (p *parser) parseNamedModule() (*Module, error) {
 		return nil, err
 	}
 	m.Name = nameTok.val
-	if _, rbErr := p.expect(tokRBrace, "}"); rbErr != nil {
+	rbrace, rbErr := p.expect(tokRBrace, "}")
+	_ = rbrace
+	if rbErr != nil {
 		return nil, rbErr
 	}
 	// Optional trailing semicolon
@@ -249,7 +253,9 @@ func (p *parser) parseStruct() (*Struct, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, err := p.expect(tokLBrace, "{"); err != nil {
+	slbrace, err := p.expect(tokLBrace, "{")
+	_ = slbrace
+	if err != nil {
 		return nil, err
 	}
 	s := &Struct{Name: nameTok.val}
@@ -266,15 +272,21 @@ func (p *parser) parseStruct() (*Struct, error) {
 		if err != nil {
 			return nil, err
 		}
-		if _, err := p.expect(tokSemi, ";"); err != nil {
+		semi, err := p.expect(tokSemi, ";")
+		_ = semi
+		if err != nil {
 			return nil, err
 		}
 		s.Fields = append(s.Fields, Field{Name: fieldName.val, Type: typeSpec})
 	}
-	if _, err := p.expect(tokRBrace, "}"); err != nil {
+	srbrace, err := p.expect(tokRBrace, "}")
+	_ = srbrace
+	if err != nil {
 		return nil, err
 	}
-	if _, err := p.expect(tokSemi, ";"); err != nil {
+	ssemi, err := p.expect(tokSemi, ";")
+	_ = ssemi
+	if err != nil {
 		return nil, err
 	}
 	return s, nil
@@ -323,7 +335,9 @@ func (p *parser) parseTypeSpec() (TypeSpec, error) {
 			return TypeSpec{}, fmt.Errorf("idl: line %d: unknown unsigned type %q", next.line, next.val)
 		}
 	case "sequence":
-		if _, err := p.expect(tokLAngle, "<"); err != nil {
+		langle, err := p.expect(tokLAngle, "<")
+		_ = langle
+		if err != nil {
 			return TypeSpec{}, err
 		}
 		elem, err := p.parseTypeSpec()
@@ -335,7 +349,9 @@ func (p *parser) parseTypeSpec() (TypeSpec, error) {
 			p.consume()
 			p.consume() // bound value — ignored
 		}
-		if _, err := p.expect(tokRAngle, ">"); err != nil {
+		rangle, err := p.expect(tokRAngle, ">")
+		_ = rangle
+		if err != nil {
 			return TypeSpec{}, err
 		}
 		return TypeSpec{Kind: KindSequence, ElemType: &elem}, nil
