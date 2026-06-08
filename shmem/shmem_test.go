@@ -480,7 +480,8 @@ func TestTryRead_HasSample_Shmem(t *testing.T) {
 
 func TestSequenceNumber_Shmem(t *testing.T) {
 	p := newPart(t)
-	sub, _ := p.NewSubscriber("shmem/seqnum", dds.DefaultQoS)
+	// WithChannelDepth large enough for in-process + cross-process duplicates.
+	sub, _ := p.NewSubscriber("shmem/seqnum", dds.DefaultQoS, dds.WithChannelDepth(8))
 	defer sub.Close()
 	pub, _ := p.NewPublisher("shmem/seqnum", dds.DefaultQoS)
 	defer pub.Close()
@@ -488,29 +489,30 @@ func TestSequenceNumber_Shmem(t *testing.T) {
 	_ = pub.Write([]byte("a"))
 	_ = pub.Write([]byte("b"))
 
-	recv := func() dds.Sample {
+	// Collect samples for up to 500 ms; the shmem subscriber delivers each
+	// write twice (in-process broker + cross-process shmListener), so we may
+	// receive 4 samples total. Only in-process broker samples carry a non-zero
+	// SequenceNumber; filter to those and verify monotonic increase.
+	deadline := time.After(500 * time.Millisecond)
+	var numbered []uint64
+	for len(numbered) < 2 {
 		select {
 		case s := <-sub.C():
-			return s
-		case <-time.After(time.Second):
-			t.Fatal("timeout")
-			return dds.Sample{}
+			if s.SequenceNumber > 0 {
+				numbered = append(numbered, s.SequenceNumber)
+			}
+		case <-deadline:
+			t.Fatalf("timeout: only collected %d numbered samples", len(numbered))
 		}
 	}
-	s1 := recv()
-	s2 := recv()
-
-	if s1.SequenceNumber == 0 {
-		t.Error("first SequenceNumber must be non-zero")
-	}
-	if s2.SequenceNumber <= s1.SequenceNumber {
-		t.Errorf("SequenceNumber must increase: %d then %d", s1.SequenceNumber, s2.SequenceNumber)
+	if numbered[1] <= numbered[0] {
+		t.Errorf("SequenceNumber must increase: %d then %d", numbered[0], numbered[1])
 	}
 }
 
 func TestWriterGUID_Shmem(t *testing.T) {
 	p := newPart(t)
-	sub, _ := p.NewSubscriber("shmem/writerguid", dds.DefaultQoS, dds.WithChannelDepth(4))
+	sub, _ := p.NewSubscriber("shmem/writerguid", dds.DefaultQoS, dds.WithChannelDepth(8))
 	defer sub.Close()
 	pub, _ := p.NewPublisher("shmem/writerguid", dds.DefaultQoS)
 	defer pub.Close()
@@ -518,24 +520,23 @@ func TestWriterGUID_Shmem(t *testing.T) {
 	_ = pub.Write([]byte("a"))
 	_ = pub.Write([]byte("b"))
 
-	recv := func() dds.Sample {
+	// Cross-process shmem re-deliveries arrive with WriterGUID=zero; filter to
+	// in-process broker samples which carry the real GUID.
+	var zero dds.GUID
+	deadline := time.After(500 * time.Millisecond)
+	var guids []dds.GUID
+	for len(guids) < 2 {
 		select {
 		case s := <-sub.C():
-			return s
-		case <-time.After(time.Second):
-			t.Fatal("timeout")
-			return dds.Sample{}
+			if s.WriterGUID != zero {
+				guids = append(guids, s.WriterGUID)
+			}
+		case <-deadline:
+			t.Fatalf("timeout: only collected %d GUID samples", len(guids))
 		}
 	}
-	s1 := recv()
-	s2 := recv()
-
-	var zero dds.GUID
-	if s1.WriterGUID == zero {
-		t.Error("WriterGUID must not be zero")
-	}
-	if s1.WriterGUID != s2.WriterGUID {
-		t.Error("WriterGUID must be consistent per publisher")
+	if guids[0] != guids[1] {
+		t.Errorf("WriterGUID must be consistent per publisher: %x vs %x", guids[0], guids[1])
 	}
 }
 
