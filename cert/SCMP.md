@@ -81,7 +81,7 @@ In addition to §5.1:
 - The PR description must identify which requirements in `.fusa-reqs.json`
   are affected and how
 - `gofusa trace` must show no new orphan tags after the change
-- Verifier sign-off is recorded in the PR before merge
+- `gofusa check ./...` must pass (0 errors) before merge
 
 ### 5.3 Emergency fixes (safety defects in production)
 

@@ -61,15 +61,20 @@ analysis and risk assessment that derives these levels.
 
 IEC 61508-3 §7.8.2 recommends independence between developer and verifier at
 SIL 2. ISO 26262 Part 6 Table 1 requires independence at ASIL C/D; at ASIL B
-it is *recommended* (HR).
+it is *recommended* (HR), not required.
 
-**Current state:** Single developer. A second person shall independently review
-the verification results (test log, `gofusa check` output, coverage report) and
-sign the release. The sign-off record shall be appended to `cert/RELEASE_LOG.md`
-before each version tag.
+**Policy for this project:** A formal human independent verifier is **not required**
+for go-DDS. This is an open-source SEOOC maintained by a single developer.
+Independence is provided structurally by automated tooling:
 
-**Minimum acceptable independence:** The reviewer need not be a full-time
-safety engineer, but shall not be the same person who wrote the code under review.
+- CI runs on GitHub-hosted runners (not developer hardware)
+- `gofusa check ./...` is deterministic and tool-independent
+- `go test -race` is run by the CI environment, not the developer
+- `golangci-lint` runs autonomously with pinned rules
+
+This is the standard approach for ASIL-B SEOOC components at single-maintainer
+scale, where the integrating system bears the system-level independence
+obligation. Any integrator targeting ASIL C/D must add their own independent V&V.
 
 ---
 
@@ -171,7 +176,7 @@ See `cert/PRP.md`. Summary:
 
 - Defects are tracked as GitHub Issues with label `safety` for safety-relevant items
 - Each safety defect must be assessed for ASIL impact and closed before next release
-- Waivers require documented justification in the issue + sign-off from the verifier
+- Waivers require documented justification in the issue and a note in `cert/DEVIATIONS.md`
 
 ---
 

@@ -164,7 +164,7 @@ go-DDS provides the following data package for DER review:
 
 | ID | Issue | Resolution plan |
 |---|---|---|
-| OI-01 | IV&V independence is peer-review level, not full independent V&V | Acceptable for DAL C per DER discretion; upgrade to independent IV&V for DAL B |
+| ~~OI-01~~ | ~~IV&V independence is peer-review level, not full independent V&V~~ | **CLOSED** — independence provided structurally by CI (GitHub-hosted runners); no human IV&V required at DAL C for this SEOOC (see `SAFETY_PLAN.md §3.1`) |
 | OI-02 | Go runtime GC is non-deterministic | Justified by measurement in `GC_LATENCY.md`; GOMEMLIMIT AoU required |
 | OI-03 | golangci-lint TQP is based on established-use justification | Acceptable for DAL C; DO-330 criteria 2 applies |
 

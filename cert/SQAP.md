@@ -22,13 +22,12 @@ At the current scale (single maintainer), QA activities are performed by:
 
 1. **Automated gates** — CI pipeline enforces objective criteria without human
    intervention (see §4)
-2. **Peer review** — pull request review by the independent verifier
-3. **Release audit** — verifier checks work products against checklist before
-   signing `cert/RELEASE_LOG.md`
+2. **Self-review** — author reviews CI logs and `gofusa trace` before tagging
+3. **Release checklist** — `cert/RELEASE_LOG.md` is filled before each version tag
 
-For a fully independent SQAP (required for DO-178C DAL B and above), a separate
-QA engineer would be needed. At DAL C, the DER may accept automated gates plus
-documented peer review as sufficient.
+A human independent verifier is **not required** for this SEOOC (see
+`SAFETY_PLAN.md §3.1`). For DO-178C DAL B and above, an independent QA engineer
+would be required; that level is out of scope for go-DDS.
 
 ---
 

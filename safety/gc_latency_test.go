@@ -185,12 +185,12 @@ func TestGCLatencyProfile(t *testing.T) {
 	publish := func(pub dds.Publisher, hz int, size int) {
 		ticker := time.NewTicker(time.Second / time.Duration(hz))
 		defer ticker.Stop()
-		payload := make([]byte, size)
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
+				payload := make([]byte, size)
 				binary.LittleEndian.PutUint64(payload[:8], uint64(time.Now().UnixNano()))
 				if err := pub.Write(payload); err != nil {
 					return
