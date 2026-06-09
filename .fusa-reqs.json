@@ -1569,6 +1569,20 @@
       "level": "ASIL-B"
     },
     {
+      "id": "REQ-SAFETY-018",
+      "title": "Violation rate monitoring",
+      "text": "RateMonitor shall poll a SafetyMetricsProvider at a configurable interval and invoke an alert callback whenever a per-topic violation rate (CRC failures, sequence gaps, stale samples, or schema violations per second) exceeds its configured threshold. A threshold of zero shall disable that check.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
+      "id": "REQ-SAFETY-019",
+      "title": "Rate monitor lifecycle",
+      "text": "RateMonitor.Start() shall launch a background polling goroutine that stops when the provided context is cancelled or when Stop() is called. Calling Stop() shall block until the goroutine has exited. Calling Start() more than once without an intervening Stop() shall have no effect.",
+      "standard": "iso26262",
+      "level": "ASIL-B"
+    },
+    {
       "id": "REQ-MON-006",
       "title": "Monitor safety SSE event",
       "text": "monitor.Monitor.WatchSafety() shall accept a channel of safety.SafetyEvent values and broadcast each event as an SSE 'safety' event to all connected browser clients. The watch goroutine shall stop when the monitor context is cancelled.",
