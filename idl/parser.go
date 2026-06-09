@@ -30,6 +30,7 @@ const (
 	tokSemi                  // ;
 	tokComma                 // ,
 	tokDoubleColon           // ::
+	tokAt                    // @
 )
 
 type token struct {
@@ -142,6 +143,9 @@ func (l *lexer) next() token {
 		// single colon — skip
 		l.advance()
 		return l.next()
+	case '@':
+		l.advance()
+		return token{kind: tokAt, val: "@", line: ln}
 	}
 	if unicode.IsDigit(r) {
 		var b strings.Builder
@@ -244,6 +248,13 @@ func (p *parser) parseModule() (*Module, error) {
 				return nil, err
 			}
 			m.Enums = append(m.Enums, *e)
+		case "typedef":
+			p.consume()
+			td, err := p.parseTypedef()
+			if err != nil {
+				return nil, err
+			}
+			m.Typedefs = append(m.Typedefs, *td)
 		default:
 			// Unknown keyword or annotation — skip to next ';' or '}'
 			p.consume()
@@ -305,6 +316,24 @@ func (p *parser) parseStruct() (*Struct, error) {
 		if t.kind == tokRBrace || t.kind == tokEOF {
 			break
 		}
+		// Consume leading annotations: @key, @optional, @id(...), etc.
+		isKey := false
+		for p.peek().kind == tokAt {
+			p.consume() // @
+			annot := p.consume()
+			if annot.val == "key" {
+				isKey = true
+			}
+			// Ignore annotation arguments: @id(N) → consume (N)
+			if p.peek().kind == tokLBrace {
+				for p.peek().kind != tokRBrace && p.peek().kind != tokEOF {
+					p.consume()
+				}
+				if p.peek().kind == tokRBrace {
+					p.consume()
+				}
+			}
+		}
 		typeSpec, ferr := p.parseTypeSpec()
 		if ferr != nil {
 			return nil, ferr
@@ -332,7 +361,7 @@ func (p *parser) parseStruct() (*Struct, error) {
 		if ferr != nil {
 			return nil, ferr
 		}
-		s.Fields = append(s.Fields, Field{Name: fieldName.val, Type: typeSpec})
+		s.Fields = append(s.Fields, Field{Name: fieldName.val, Type: typeSpec, Key: isKey})
 	}
 	srbrace, err := p.expect(tokRBrace, "}")
 	_ = srbrace
@@ -377,6 +406,21 @@ func (p *parser) parseEnum() (*Enum, error) {
 		return nil, err
 	}
 	return e, nil
+}
+
+func (p *parser) parseTypedef() (*Typedef, error) {
+	underlying, err := p.parseTypeSpec()
+	if err != nil {
+		return nil, err
+	}
+	nameTok, err := p.expect(tokIdent, "typedef alias name")
+	if err != nil {
+		return nil, err
+	}
+	if _, err = p.expect(tokSemi, ";"); err != nil {
+		return nil, err
+	}
+	return &Typedef{Name: nameTok.val, Type: underlying}, nil
 }
 
 func (p *parser) parseTypeSpec() (TypeSpec, error) {

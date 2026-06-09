@@ -38,6 +38,7 @@ type TypeSpec struct {
 type Field struct {
 	Name string   // IDL identifier (original case)
 	Type TypeSpec // field type
+	Key  bool     // true when the field carries an @key annotation
 }
 
 // Struct is an IDL struct declaration.
@@ -52,11 +53,18 @@ type Enum struct {
 	Values []string // enumerator names in declaration order
 }
 
+// Typedef is an IDL typedef declaration: typedef BaseType AliasName.
+type Typedef struct {
+	Name string   // alias name
+	Type TypeSpec // underlying type
+}
+
 // Module is the top-level container returned by ParseString / ParseFile.
 // It may contain both structs defined directly at module scope and sub-modules.
 type Module struct {
-	Name    string    // module name (empty for file-level scope)
-	Enums   []Enum    // enums defined in this module
-	Structs []Struct  // structs defined in this module
-	Modules []*Module // nested sub-modules
+	Name     string    // module name (empty for file-level scope)
+	Typedefs []Typedef // typedef aliases defined in this module
+	Enums    []Enum    // enums defined in this module
+	Structs  []Struct  // structs defined in this module
+	Modules  []*Module // nested sub-modules
 }

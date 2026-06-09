@@ -1,0 +1,21 @@
+// schema.idl — round-trip test fixture for the go-DDS IDL compiler.
+// Exercises: primitives, string, boolean, array, sequence, enum, nested struct,
+// typedef, and @key annotation.
+
+typedef unsigned long TopicID;
+
+enum Priority { LOW, MEDIUM, HIGH, CRITICAL };
+
+struct Header {
+    @key string   topic_id;
+    long long     timestamp_ns;
+    Priority      priority;
+};
+
+struct Telemetry {
+    Header        header;
+    double        values[4];
+    float         temperature;
+    boolean       valid;
+    sequence<double> extras;
+};

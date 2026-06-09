@@ -7,6 +7,7 @@ package idl
 
 import (
 	"fmt"
+	"go/format"
 	"strconv"
 	"strings"
 	"unicode"
@@ -39,7 +40,11 @@ func (g *generator) generate() (string, error) {
 	g.line("")
 
 	g.emitModule(g.root)
-	return g.sb.String(), nil
+	formatted, err := format.Source([]byte(g.sb.String()))
+	if err != nil {
+		return "", fmt.Errorf("idl: format generated source: %w", err)
+	}
+	return string(formatted), nil
 }
 
 func (g *generator) packageName(m *Module) string {
@@ -50,6 +55,9 @@ func (g *generator) packageName(m *Module) string {
 }
 
 func (g *generator) emitModule(m *Module) {
+	for _, td := range m.Typedefs {
+		g.emitTypedef(td)
+	}
 	for _, e := range m.Enums {
 		g.emitEnum(e)
 	}
@@ -60,6 +68,14 @@ func (g *generator) emitModule(m *Module) {
 		// Sub-module structs are emitted in the same package for simplicity.
 		g.emitModule(sub)
 	}
+}
+
+func (g *generator) emitTypedef(td Typedef) {
+	goName := toGoName(td.Name)
+	goUnderlying := g.goType(td.Type)
+	g.line("// " + goName + " is a type alias generated from IDL typedef " + td.Name + ".")
+	g.line("type " + goName + " = " + goUnderlying)
+	g.line("")
 }
 
 func (g *generator) emitEnum(e Enum) {
@@ -148,9 +164,31 @@ func (g *generator) emitCodec(s Struct) {
 	g.line("\treturn v, nil")
 	g.line("}")
 	g.line("")
+
+	// KeyFields returns the field names annotated with @key in the IDL source.
+	var keyFields []string
+	for _, f := range s.Fields {
+		if f.Key {
+			keyFields = append(keyFields, toGoName(f.Name))
+		}
+	}
+	g.line("// KeyFields returns the exported field names marked @key in the IDL source.")
+	g.line("func (" + codecName + ") KeyFields() []string {")
+	if len(keyFields) == 0 {
+		g.line("\treturn nil")
+	} else {
+		parts := make([]string, len(keyFields))
+		for i, k := range keyFields {
+			parts[i] = `"` + k + `"`
+		}
+		g.line("\treturn []string{" + strings.Join(parts, ", ") + "}")
+	}
+	g.line("}")
+	g.line("")
 }
 
 func (g *generator) goType(ts TypeSpec) string {
+	ts = g.resolveTypedef(ts)
 	switch ts.Kind {
 	case KindBoolean:
 		return "bool"
@@ -197,6 +235,7 @@ func (g *generator) encodeField(f Field) string {
 }
 
 func (g *generator) encodeExpr(ts TypeSpec, ref string) string {
+	ts = g.resolveTypedef(ts)
 	switch ts.Kind {
 	case KindBoolean:
 		return "e.WriteBool(" + ref + ")"
@@ -263,6 +302,7 @@ func (g *generator) decodeField(f Field) string {
 }
 
 func (g *generator) decodeExpr(ts TypeSpec, dest string) string {
+	ts = g.resolveTypedef(ts)
 	switch ts.Kind {
 	case KindBoolean:
 		return fmt.Sprintf("if %s, err = d.ReadBool(); err != nil { return v, err }", dest)
@@ -358,6 +398,48 @@ func searchStruct(m *Module, name string) *Struct {
 	for _, sub := range m.Modules {
 		if s := searchStruct(sub, name); s != nil {
 			return s
+		}
+	}
+	return nil
+}
+
+func (g *generator) findTypedef(name string) *Typedef {
+	return searchTypedef(g.root, name)
+}
+
+// resolveTypedef expands a KindStruct TypeSpec if its RefName is a typedef alias.
+// Leaves all other TypeSpecs unchanged.
+func (g *generator) resolveTypedef(ts TypeSpec) TypeSpec {
+	if ts.Kind != KindStruct {
+		return ts
+	}
+	td := g.findTypedef(bareRefName(ts.RefName))
+	if td == nil {
+		return ts
+	}
+	return td.Type
+}
+
+// searchTypedef searches m for a typedef by alias name (simple or qualified).
+func searchTypedef(m *Module, name string) *Typedef {
+	if idx := strings.Index(name, "::"); idx >= 0 {
+		modName := name[:idx]
+		rest := name[idx+2:]
+		for _, sub := range m.Modules {
+			if sub.Name == modName {
+				return searchTypedef(sub, rest)
+			}
+		}
+		return nil
+	}
+	for i := range m.Typedefs {
+		if m.Typedefs[i].Name == name {
+			return &m.Typedefs[i]
+		}
+	}
+	for _, sub := range m.Modules {
+		if td := searchTypedef(sub, name); td != nil {
+			return td
 		}
 	}
 	return nil

@@ -597,6 +597,179 @@ func TestParseString_BoundedString(t *testing.T) {
 	}
 }
 
+// ── go/format ─────────────────────────────────────────────────────────────────
+
+func TestGenerate_OutputIsGofmtFormatted(t *testing.T) {
+	m, err := idl.ParseString(vehicleIDL)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	src, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	// After go/format, a second pass should produce identical output.
+	m2, err := idl.ParseString(vehicleIDL)
+	if err != nil {
+		t.Fatalf("ParseString (2): %v", err)
+	}
+	src2, err := idl.Generate(m2)
+	if err != nil {
+		t.Fatalf("Generate (2): %v", err)
+	}
+	if src != src2 {
+		t.Error("Generate is not idempotent — output changed on second call")
+	}
+}
+
+// ── @key annotation ───────────────────────────────────────────────────────────
+
+const keyIDL = `
+struct Sensor {
+    @key string  sensor_id;
+    @key long    zone;
+    double       reading;
+};
+`
+
+func TestParseString_KeyAnnotation(t *testing.T) {
+	m, err := idl.ParseString(keyIDL)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	s := m.Structs[0]
+	if !s.Fields[0].Key {
+		t.Errorf("sensor_id: Key = false, want true")
+	}
+	if !s.Fields[1].Key {
+		t.Errorf("zone: Key = false, want true")
+	}
+	if s.Fields[2].Key {
+		t.Errorf("reading: Key = true, want false")
+	}
+}
+
+func TestGenerate_KeyFields_Method(t *testing.T) {
+	m, err := idl.ParseString(keyIDL)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	src, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if !strings.Contains(src, `"SensorId"`) {
+		t.Errorf("expected SensorId in KeyFields, got:\n%s", src)
+	}
+	if !strings.Contains(src, `"Zone"`) {
+		t.Errorf("expected Zone in KeyFields, got:\n%s", src)
+	}
+	if !strings.Contains(src, "func (SensorCodec) KeyFields()") {
+		t.Errorf("expected KeyFields method, got:\n%s", src)
+	}
+}
+
+func TestGenerate_NoKeyFields_ReturnsNil(t *testing.T) {
+	src := `struct Plain { long x; double y; };`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	out, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if !strings.Contains(out, "return nil") {
+		t.Errorf("expected 'return nil' in KeyFields for struct with no @key fields")
+	}
+}
+
+// ── typedef support ───────────────────────────────────────────────────────────
+
+const typedefIDL = `
+typedef unsigned long   NodeID;
+typedef double          Meters;
+struct Position {
+    NodeID node;
+    Meters x;
+    Meters y;
+};
+`
+
+func TestParseString_Typedef(t *testing.T) {
+	m, err := idl.ParseString(typedefIDL)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	if len(m.Typedefs) != 2 {
+		t.Fatalf("want 2 typedefs, got %d", len(m.Typedefs))
+	}
+	if m.Typedefs[0].Name != "NodeID" {
+		t.Errorf("typedef[0].Name = %q, want NodeID", m.Typedefs[0].Name)
+	}
+	if m.Typedefs[0].Type.Kind != idl.KindULong {
+		t.Errorf("NodeID underlying = %v, want KindULong", m.Typedefs[0].Type.Kind)
+	}
+}
+
+func TestGenerate_Typedef_TypeAlias(t *testing.T) {
+	m, err := idl.ParseString(typedefIDL)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	src, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if !strings.Contains(src, "type NodeID = uint32") {
+		t.Errorf("expected 'type NodeID = uint32', got:\n%s", src)
+	}
+	if !strings.Contains(src, "type Meters = float64") {
+		t.Errorf("expected 'type Meters = float64', got:\n%s", src)
+	}
+}
+
+func TestGenerate_Typedef_ExpandedInStruct(t *testing.T) {
+	m, err := idl.ParseString(typedefIDL)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	src, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	// The struct fields should use the expanded (underlying) types in the codec.
+	if strings.Contains(src, "// TODO:") {
+		t.Errorf("typedef resolution left TODO stubs:\n%s", src)
+	}
+}
+
+// ── committed round-trip fixture ──────────────────────────────────────────────
+
+func TestGenerate_MatchesCommitted(t *testing.T) {
+	committed, err := os.ReadFile("roundtrip/schema_gen.go")
+	if err != nil {
+		t.Fatalf("read committed file: %v", err)
+	}
+	idlSrc, err := os.ReadFile("roundtrip/schema.idl")
+	if err != nil {
+		t.Fatalf("read IDL: %v", err)
+	}
+	m, err := idl.ParseString(string(idlSrc))
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	got, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if got != string(committed) {
+		t.Errorf("generated output differs from idl/roundtrip/schema_gen.go — run:\n"+
+			"  go run ./cmd/ddstool idl -out idl/roundtrip/schema_gen.go"+
+			" idl/roundtrip/schema.idl\nto regenerate.\n\ngot:\n%s", got)
+	}
+}
+
 func min(a, b int) int {
 	if a < b {
 		return a

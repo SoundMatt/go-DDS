@@ -205,11 +205,12 @@ func runSub(args []string) int {
 func runIDL(args []string) int {
 	fs := flag.NewFlagSet("idl", flag.ContinueOnError)
 	out := fs.String("out", "", "output file path (default: print to stdout)")
+	pkg := fs.String("package", "", "override package name in generated output")
 	if err := fs.Parse(args); err != nil {
 		return 1
 	}
 	if fs.NArg() != 1 {
-		fmt.Fprintln(os.Stderr, "idl: usage: ddstool idl [-out <file>] <input.idl>")
+		fmt.Fprintln(os.Stderr, "idl: usage: ddstool idl [-out <file>] [-package <name>] <input.idl>")
 		return 1
 	}
 	input := fs.Arg(0)
@@ -218,6 +219,9 @@ func runIDL(args []string) int {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "idl: parse %s: %v\n", input, err)
 		return 1
+	}
+	if *pkg != "" {
+		m.Name = *pkg
 	}
 	src, err := idl.Generate(m)
 	if err != nil {

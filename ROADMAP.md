@@ -53,7 +53,8 @@ API parity does not.
 | v0.12 | 2 (partial), 6, 7 (partial), 13 | Examples, Safety completeness (schema validation, metrics, monitor SSE), IDL/CDR, TAPRIO ✅ |
 | v0.13.0 | 2, 6, 7 | IDL factory codegen, safety RateMonitor + SSE, TSN health dashboard ✅ |
 | v0.13.1 | — | IDL nested struct CDR fix, stale rtps doc removed ✅ |
-| v0.13.2 | 2 | IDL array + enum support, ParseFile tests, qualified names, `ddstool idl` CLI |
+| v0.13.2 | 2 | IDL array + enum support, ParseFile tests, qualified names, `ddstool idl` CLI ✅ |
+| v0.14.0 | 2 | IDL go/format output, @key annotation, typedef, end-to-end round-trip, `--package` flag, IDL fuzz targets |
 
 ### Released — v0.1 – v0.8
 
