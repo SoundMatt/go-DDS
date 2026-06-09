@@ -60,9 +60,8 @@ func ParseString(src string) (*Module, error) {
 	return p.parseModule()
 }
 
-// Generate produces a Go source file from m. The returned string is a complete
-// Go source file ready to be written to disk (run gofmt over it for canonical
-// formatting).
+// Generate produces a Go source file from m. The returned string is a complete,
+// gofmt-formatted Go source file ready to be written to disk.
 func Generate(m *Module) (string, error) {
 	g := newGenerator(m)
 	return g.generate()
