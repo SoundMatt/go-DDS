@@ -7,6 +7,7 @@ package idl
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"unicode"
 )
@@ -49,12 +50,30 @@ func (g *generator) packageName(m *Module) string {
 }
 
 func (g *generator) emitModule(m *Module) {
+	for _, e := range m.Enums {
+		g.emitEnum(e)
+	}
 	for _, s := range m.Structs {
 		g.emitStruct(s)
 	}
 	for _, sub := range m.Modules {
 		// Sub-module structs are emitted in the same package for simplicity.
 		g.emitModule(sub)
+	}
+}
+
+func (g *generator) emitEnum(e Enum) {
+	goName := toGoName(e.Name)
+	g.line("// " + goName + " is generated from IDL enum " + e.Name + ".")
+	g.line("type " + goName + " int32")
+	g.line("")
+	if len(e.Values) > 0 {
+		g.line("const (")
+		for i, v := range e.Values {
+			g.line("\t" + goName + toGoName(v) + " " + goName + " = " + strconv.Itoa(i))
+		}
+		g.line(")")
+		g.line("")
 	}
 }
 
@@ -160,8 +179,13 @@ func (g *generator) goType(ts TypeSpec) string {
 			return "[]byte"
 		}
 		return "[]" + g.goType(*ts.ElemType)
-	case KindStruct:
-		return toGoName(ts.RefName)
+	case KindArray:
+		if ts.ElemType == nil {
+			return "[]byte"
+		}
+		return fmt.Sprintf("[%d]%s", ts.ArraySize, g.goType(*ts.ElemType))
+	case KindStruct, KindEnum:
+		return toGoName(bareRefName(ts.RefName))
 	default:
 		return "interface{}"
 	}
@@ -200,12 +224,21 @@ func (g *generator) encodeExpr(ts TypeSpec, ref string) string {
 		if ts.ElemType != nil && ts.ElemType.Kind == KindOctet {
 			return "e.WriteBytes(" + ref + ")"
 		}
-		// General sequence: write length then elements
 		return fmt.Sprintf(
 			"e.WriteUint32(uint32(len(%s))); for _, _elem := range %s { %s }",
 			ref, ref, g.encodeExpr(*ts.ElemType, "_elem"),
 		)
+	case KindArray:
+		// CDR arrays have no length prefix — write each element contiguously.
+		if ts.ElemType == nil {
+			return "// TODO: encode " + ref + " (nil array elem type)"
+		}
+		return fmt.Sprintf("for _i := range %s { %s }", ref, g.encodeExpr(*ts.ElemType, ref+"[_i]"))
 	case KindStruct:
+		// Check if RefName refers to an enum (encoded as int32 in CDR).
+		if g.findEnum(ts.RefName) != nil {
+			return "e.WriteInt32(int32(" + ref + "))"
+		}
 		// Nested structs are inlined in CDR — no length prefix, no encapsulation
 		// header. Recursively expand the referenced struct's fields at the call site.
 		s := g.findStruct(ts.RefName)
@@ -217,6 +250,8 @@ func (g *generator) encodeExpr(ts TypeSpec, ref string) string {
 			parts = append(parts, g.encodeExpr(f.Type, ref+"."+toGoName(f.Name)))
 		}
 		return strings.Join(parts, "; ")
+	case KindEnum:
+		return "e.WriteInt32(int32(" + ref + "))"
 	default:
 		return "// TODO: encode " + ref
 	}
@@ -259,7 +294,18 @@ func (g *generator) decodeExpr(ts TypeSpec, dest string) string {
 			"{ var _n uint32; if _n, err = d.ReadUint32(); err != nil { return v, err }; %s = make(%s, _n); for _i := range %s { %s } }",
 			dest, g.goType(ts), dest, g.decodeExpr(*ts.ElemType, dest+"[_i]"),
 		)
+	case KindArray:
+		// CDR arrays have no length prefix — read each element contiguously.
+		if ts.ElemType == nil {
+			return fmt.Sprintf("// TODO: decode %s (nil array elem type)", dest)
+		}
+		return fmt.Sprintf("for _i := range %s { %s }", dest, g.decodeExpr(*ts.ElemType, dest+"[_i]"))
 	case KindStruct:
+		// Check if RefName refers to an enum (encoded as int32 in CDR).
+		if g.findEnum(ts.RefName) != nil {
+			return fmt.Sprintf("{ var _ev int32; if _ev, err = d.ReadInt32(); err != nil { return v, err }; %s = %s(_ev) }",
+				dest, toGoName(bareRefName(ts.RefName)))
+		}
 		// Nested structs are inlined in CDR — expand the referenced struct's
 		// fields at the call site, sharing the parent's decoder and err variable.
 		s := g.findStruct(ts.RefName)
@@ -271,6 +317,9 @@ func (g *generator) decodeExpr(ts TypeSpec, dest string) string {
 			parts = append(parts, g.decodeExpr(f.Type, dest+"."+toGoName(f.Name)))
 		}
 		return strings.Join(parts, "; ")
+	case KindEnum:
+		return fmt.Sprintf("{ var _ev int32; if _ev, err = d.ReadInt32(); err != nil { return v, err }; %s = %s(_ev) }",
+			dest, toGoName(bareRefName(ts.RefName)))
 	default:
 		return fmt.Sprintf("// TODO: decode %s", dest)
 	}
@@ -281,13 +330,26 @@ func (g *generator) line(s string) {
 	g.sb.WriteByte('\n')
 }
 
-// findStruct searches the module tree for a struct by its IDL name.
-// Returns nil when the name is not defined in the current module.
+// ── Module-tree lookups ───────────────────────────────────────────────────────
+
 func (g *generator) findStruct(name string) *Struct {
 	return searchStruct(g.root, name)
 }
 
+// searchStruct searches m for a struct by IDL name.
+// name may be a simple name ("Speed") or a qualified name ("VehicleData::Speed").
 func searchStruct(m *Module, name string) *Struct {
+	if idx := strings.Index(name, "::"); idx >= 0 {
+		// Qualified: descend into the named sub-module first.
+		modName := name[:idx]
+		rest := name[idx+2:]
+		for _, sub := range m.Modules {
+			if sub.Name == modName {
+				return searchStruct(sub, rest)
+			}
+		}
+		return nil
+	}
 	for i := range m.Structs {
 		if m.Structs[i].Name == name {
 			return &m.Structs[i]
@@ -299,6 +361,44 @@ func searchStruct(m *Module, name string) *Struct {
 		}
 	}
 	return nil
+}
+
+func (g *generator) findEnum(name string) *Enum {
+	return searchEnum(g.root, name)
+}
+
+// searchEnum searches m for an enum by IDL name (simple or qualified).
+func searchEnum(m *Module, name string) *Enum {
+	if idx := strings.Index(name, "::"); idx >= 0 {
+		modName := name[:idx]
+		rest := name[idx+2:]
+		for _, sub := range m.Modules {
+			if sub.Name == modName {
+				return searchEnum(sub, rest)
+			}
+		}
+		return nil
+	}
+	for i := range m.Enums {
+		if m.Enums[i].Name == name {
+			return &m.Enums[i]
+		}
+	}
+	for _, sub := range m.Modules {
+		if e := searchEnum(sub, name); e != nil {
+			return e
+		}
+	}
+	return nil
+}
+
+// bareRefName strips any module prefix from a qualified name.
+// "VehicleData::Speed" → "Speed", "Speed" → "Speed".
+func bareRefName(name string) string {
+	if idx := strings.LastIndex(name, "::"); idx >= 0 {
+		return name[idx+2:]
+	}
+	return name
 }
 
 // ── Name helpers ──────────────────────────────────────────────────────────────

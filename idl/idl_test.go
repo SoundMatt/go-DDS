@@ -11,6 +11,7 @@ package idl_test
 //fusa:test REQ-IDL-004
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -328,6 +329,271 @@ module Foo {
 	}
 	if len(m.Modules) != 1 || len(m.Modules[0].Structs) != 1 {
 		t.Errorf("unexpected structure: %+v", m)
+	}
+}
+
+// ── ParseFile ──────────────────────────────────────────────────────────────────
+
+func TestParseFile_RoundTrip(t *testing.T) {
+	f, err := os.CreateTemp(t.TempDir(), "test*.idl")
+	if err != nil {
+		t.Fatalf("create temp: %v", err)
+	}
+	_, _ = f.WriteString(`struct Temp { double celsius; };`)
+	f.Close()
+
+	m, err := idl.ParseFile(f.Name())
+	if err != nil {
+		t.Fatalf("ParseFile: %v", err)
+	}
+	if len(m.Structs) != 1 || m.Structs[0].Name != "Temp" {
+		t.Errorf("unexpected module: %+v", m)
+	}
+}
+
+func TestParseFile_NotFound(t *testing.T) {
+	_, err := idl.ParseFile("/nonexistent/path/to/file.idl")
+	if err == nil {
+		t.Fatal("expected error for missing file, got nil")
+	}
+}
+
+func TestParseFile_Generate(t *testing.T) {
+	f, err := os.CreateTemp(t.TempDir(), "test*.idl")
+	if err != nil {
+		t.Fatalf("create temp: %v", err)
+	}
+	_, _ = f.WriteString(`struct Sensor { string id; float value; };`)
+	f.Close()
+
+	m, err := idl.ParseFile(f.Name())
+	if err != nil {
+		t.Fatalf("ParseFile: %v", err)
+	}
+	src, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if !strings.Contains(src, "type Sensor struct") {
+		t.Errorf("generated code missing Sensor struct:\n%s", src)
+	}
+}
+
+// ── Array support ─────────────────────────────────────────────────────────────
+
+const arrayIDL = `
+struct Matrix {
+    float data[16];
+    long  dims[4];
+    boolean flags[8];
+};
+`
+
+func TestParseString_Array(t *testing.T) {
+	m, err := idl.ParseString(arrayIDL)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	if len(m.Structs) != 1 {
+		t.Fatalf("want 1 struct, got %d", len(m.Structs))
+	}
+	s := m.Structs[0]
+	if len(s.Fields) != 3 {
+		t.Fatalf("want 3 fields, got %d", len(s.Fields))
+	}
+	f := s.Fields[0]
+	if f.Type.Kind != idl.KindArray {
+		t.Errorf("data: kind = %v, want KindArray", f.Type.Kind)
+	}
+	if f.Type.ArraySize != 16 {
+		t.Errorf("data: size = %d, want 16", f.Type.ArraySize)
+	}
+	if f.Type.ElemType == nil || f.Type.ElemType.Kind != idl.KindFloat {
+		t.Errorf("data: elem = %v, want KindFloat", f.Type.ElemType)
+	}
+}
+
+func TestGenerate_Array_GoType(t *testing.T) {
+	m, err := idl.ParseString(arrayIDL)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	src, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if !strings.Contains(src, "[16]float32") {
+		t.Errorf("expected [16]float32 field, got:\n%s", src)
+	}
+	if !strings.Contains(src, "[4]int32") {
+		t.Errorf("expected [4]int32 field, got:\n%s", src)
+	}
+	if !strings.Contains(src, "[8]bool") {
+		t.Errorf("expected [8]bool field, got:\n%s", src)
+	}
+}
+
+func TestGenerate_Array_NoTODO(t *testing.T) {
+	m, err := idl.ParseString(arrayIDL)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	src, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if strings.Contains(src, "// TODO:") {
+		t.Errorf("array codegen has TODO stubs:\n%s", src)
+	}
+}
+
+func TestGenerate_Array_ContainsRangeLoop(t *testing.T) {
+	m, err := idl.ParseString(arrayIDL)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	src, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if !strings.Contains(src, "for _i := range") {
+		t.Errorf("expected range loop in array codec, got:\n%s", src)
+	}
+}
+
+// ── Enum support ──────────────────────────────────────────────────────────────
+
+const enumIDL = `
+enum Gear { PARK, REVERSE, NEUTRAL, DRIVE, SPORT };
+struct Transmission {
+    Gear  current_gear;
+    long  rpm;
+};
+`
+
+func TestParseString_Enum(t *testing.T) {
+	m, err := idl.ParseString(enumIDL)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	if len(m.Enums) != 1 {
+		t.Fatalf("want 1 enum, got %d", len(m.Enums))
+	}
+	e := m.Enums[0]
+	if e.Name != "Gear" {
+		t.Errorf("enum name = %q, want Gear", e.Name)
+	}
+	if len(e.Values) != 5 {
+		t.Errorf("enum values = %v, want 5 items", e.Values)
+	}
+}
+
+func TestGenerate_Enum_TypeDecl(t *testing.T) {
+	m, err := idl.ParseString(enumIDL)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	src, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if !strings.Contains(src, "type Gear int32") {
+		t.Errorf("expected 'type Gear int32', got:\n%s", src)
+	}
+	if !strings.Contains(src, "GearPARK") {
+		t.Errorf("expected GearPARK constant, got:\n%s", src)
+	}
+	if !strings.Contains(src, "GearDRIVE") {
+		t.Errorf("expected GearDRIVE constant, got:\n%s", src)
+	}
+}
+
+func TestGenerate_Enum_InStruct_NoTODO(t *testing.T) {
+	m, err := idl.ParseString(enumIDL)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	src, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if strings.Contains(src, "// TODO:") {
+		t.Errorf("enum-in-struct codegen has TODO stubs:\n%s", src)
+	}
+}
+
+func TestGenerate_Enum_UsesInt32Codec(t *testing.T) {
+	m, err := idl.ParseString(enumIDL)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	src, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if !strings.Contains(src, "WriteInt32(int32(") {
+		t.Errorf("expected int32 encoder for enum, got:\n%s", src)
+	}
+	if !strings.Contains(src, "ReadInt32()") {
+		t.Errorf("expected int32 decoder for enum, got:\n%s", src)
+	}
+}
+
+// ── Qualified names ───────────────────────────────────────────────────────────
+
+const qualifiedIDL = `
+module Vehicles {
+    struct Wheel { double radius; };
+    struct Car {
+        Vehicles::Wheel front_left;
+        Vehicles::Wheel front_right;
+        long speed;
+    };
+};
+`
+
+func TestGenerate_QualifiedName_NoTODO(t *testing.T) {
+	m, err := idl.ParseString(qualifiedIDL)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	src, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if strings.Contains(src, "// TODO:") {
+		t.Errorf("qualified name lookup has TODO stubs:\n%s", src)
+	}
+}
+
+func TestGenerate_QualifiedName_InlinesNestedFields(t *testing.T) {
+	m, err := idl.ParseString(qualifiedIDL)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	src, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if !strings.Contains(src, "v.FrontLeft.Radius") {
+		t.Errorf("expected v.FrontLeft.Radius in codec, got:\n%s", src)
+	}
+}
+
+// ── Bounded string ────────────────────────────────────────────────────────────
+
+func TestParseString_BoundedString(t *testing.T) {
+	src := `struct Tag { string<64> label; long value; };`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	if len(m.Structs) != 1 {
+		t.Fatalf("want 1 struct, got %d", len(m.Structs))
+	}
+	f := m.Structs[0].Fields[0]
+	if f.Type.Kind != idl.KindString {
+		t.Errorf("bounded string kind = %v, want KindString", f.Type.Kind)
 	}
 }
 

@@ -4,13 +4,14 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 // Command ddstool is a command-line interface for DDS publish/subscribe
-// operations and participant diagnostics.
+// operations, participant diagnostics, and IDL code generation.
 //
 // Usage:
 //
-//	ddstool pub  -topic <name> [-payload <str>] [-count N] [-domain N] [-mock]
-//	ddstool sub  -topic <name> [-count N] [-timeout D] [-domain N] [-mock]
+//	ddstool pub      -topic <name> [-payload <str>] [-count N] [-domain N] [-mock]
+//	ddstool sub      -topic <name> [-count N] [-timeout D] [-domain N] [-mock]
 //	ddstool discover [-wait D] [-domain N] [-mock]
+//	ddstool idl      [-out <file>] <input.idl>
 //	ddstool help
 package main
 
@@ -22,6 +23,7 @@ import (
 	"time"
 
 	dds "github.com/SoundMatt/go-DDS"
+	"github.com/SoundMatt/go-DDS/idl"
 	"github.com/SoundMatt/go-DDS/mock"
 	"github.com/SoundMatt/go-DDS/rtps"
 )
@@ -38,6 +40,8 @@ func main() {
 		os.Exit(runSub(os.Args[2:]))
 	case "discover":
 		os.Exit(runDiscover(os.Args[2:]))
+	case "idl":
+		os.Exit(runIDL(os.Args[2:]))
 	case "help", "-h", "--help":
 		printUsage()
 	default:
@@ -57,9 +61,10 @@ SUBCOMMANDS
   pub       Publish a message to a DDS topic
   sub       Subscribe to a DDS topic and print samples
   discover  Print discovery and health diagnostics
+  idl       Compile an IDL file to Go source code
   help      Show this message
 
-GLOBAL FLAGS (all subcommands)
+GLOBAL FLAGS (pub/sub/discover)
   -domain int   DDS domain ID (default 0)
   -mock         Use in-process mock transport (default: RTPS/UDP)
 
@@ -193,6 +198,43 @@ func runSub(args []string) int {
 			return 0
 		}
 	}
+}
+
+// ── idl ───────────────────────────────────────────────────────────────────────
+
+func runIDL(args []string) int {
+	fs := flag.NewFlagSet("idl", flag.ContinueOnError)
+	out := fs.String("out", "", "output file path (default: print to stdout)")
+	if err := fs.Parse(args); err != nil {
+		return 1
+	}
+	if fs.NArg() != 1 {
+		fmt.Fprintln(os.Stderr, "idl: usage: ddstool idl [-out <file>] <input.idl>")
+		return 1
+	}
+	input := fs.Arg(0)
+
+	m, err := idl.ParseFile(input)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "idl: parse %s: %v\n", input, err)
+		return 1
+	}
+	src, err := idl.Generate(m)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "idl: generate: %v\n", err)
+		return 1
+	}
+
+	if *out == "" {
+		fmt.Print(src)
+		return 0
+	}
+	if err := os.WriteFile(*out, []byte(src), 0o644); err != nil {
+		fmt.Fprintf(os.Stderr, "idl: write %s: %v\n", *out, err)
+		return 1
+	}
+	fmt.Fprintf(os.Stderr, "idl: wrote %s\n", *out)
+	return 0
 }
 
 // ── discover ──────────────────────────────────────────────────────────────────

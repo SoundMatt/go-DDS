@@ -8,10 +8,14 @@
 //
 // ParseFile and ParseString parse a subset of OMG IDL 4.x:
 //   - module declarations (may be nested)
-//   - struct declarations
+//   - struct declarations with nested struct references
+//   - enum declarations
 //   - basic types: boolean, octet, short, unsigned short, long, unsigned long,
 //     long long, unsigned long long, float, double, string
-//   - sequence types: sequence<T>
+//   - sequence types: sequence<T> and bounded sequence<T, N>
+//   - bounded strings: string<N>
+//   - fixed-size arrays: T name[N]
+//   - qualified type names: Module::TypeName
 //
 // Generate produces a Go source file containing:
 //   - A Go struct for every IDL struct (fields exported, names converted to Go style)

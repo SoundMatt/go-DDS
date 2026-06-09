@@ -7,6 +7,7 @@ package idl
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -17,14 +18,18 @@ import (
 type tokenKind int
 
 const (
-	tokEOF tokenKind = iota
-	tokIdent
-	tokLBrace // {
-	tokRBrace // }
-	tokLAngle // <
-	tokRAngle // >
-	tokSemi   // ;
-	tokComma  // ,
+	tokEOF         tokenKind = iota
+	tokIdent                 // identifier or keyword
+	tokNumber                // integer literal (used for array sizes)
+	tokLBrace                // {
+	tokRBrace                // }
+	tokLAngle                // <
+	tokRAngle                // >
+	tokLBracket              // [
+	tokRBracket              // ]
+	tokSemi                  // ;
+	tokComma                 // ,
+	tokDoubleColon           // ::
 )
 
 type token struct {
@@ -115,12 +120,41 @@ func (l *lexer) next() token {
 	case '>':
 		l.advance()
 		return token{kind: tokRAngle, val: ">", line: ln}
+	case '[':
+		l.advance()
+		return token{kind: tokLBracket, val: "[", line: ln}
+	case ']':
+		l.advance()
+		return token{kind: tokRBracket, val: "]", line: ln}
 	case ';':
 		l.advance()
 		return token{kind: tokSemi, val: ";", line: ln}
 	case ',':
 		l.advance()
 		return token{kind: tokComma, val: ",", line: ln}
+	case ':':
+		// :: scope-resolution operator (IDL qualified names)
+		if l.pos+1 < len(l.src) && l.src[l.pos+1] == ':' {
+			l.advance()
+			l.advance()
+			return token{kind: tokDoubleColon, val: "::", line: ln}
+		}
+		// single colon — skip
+		l.advance()
+		return l.next()
+	}
+	if unicode.IsDigit(r) {
+		var b strings.Builder
+		for l.pos < len(l.src) {
+			ch := l.src[l.pos]
+			if unicode.IsDigit(ch) {
+				b.WriteRune(ch)
+				l.pos++
+			} else {
+				break
+			}
+		}
+		return token{kind: tokNumber, val: b.String(), line: ln}
 	}
 	if unicode.IsLetter(r) || r == '_' {
 		var b strings.Builder
@@ -203,6 +237,13 @@ func (p *parser) parseModule() (*Module, error) {
 				return nil, err
 			}
 			m.Structs = append(m.Structs, *s)
+		case "enum":
+			p.consume()
+			e, err := p.parseEnum()
+			if err != nil {
+				return nil, err
+			}
+			m.Enums = append(m.Enums, *e)
 		default:
 			// Unknown keyword or annotation — skip to next ';' or '}'
 			p.consume()
@@ -272,6 +313,20 @@ func (p *parser) parseStruct() (*Struct, error) {
 		if ferr != nil {
 			return nil, ferr
 		}
+		// Optional single array dimension: T name[N]
+		if p.peek().kind == tokLBracket {
+			p.consume() // [
+			sizeTok := p.consume()
+			if sizeTok.kind != tokNumber {
+				return nil, fmt.Errorf("idl: line %d: expected array size, got %q", sizeTok.line, sizeTok.val)
+			}
+			if _, ferr = p.expect(tokRBracket, "]"); ferr != nil {
+				return nil, ferr
+			}
+			size, _ := strconv.Atoi(sizeTok.val)
+			elem := typeSpec
+			typeSpec = TypeSpec{Kind: KindArray, ElemType: &elem, ArraySize: size}
+		}
 		semi, ferr := p.expect(tokSemi, ";")
 		_ = semi
 		if ferr != nil {
@@ -292,6 +347,38 @@ func (p *parser) parseStruct() (*Struct, error) {
 	return s, nil
 }
 
+func (p *parser) parseEnum() (*Enum, error) {
+	nameTok, err := p.expect(tokIdent, "enum name")
+	if err != nil {
+		return nil, err
+	}
+	_, err = p.expect(tokLBrace, "{")
+	if err != nil {
+		return nil, err
+	}
+	e := &Enum{Name: nameTok.val}
+	for {
+		t := p.peek()
+		if t.kind == tokRBrace || t.kind == tokEOF {
+			break
+		}
+		if t.kind == tokIdent {
+			p.consume()
+			e.Values = append(e.Values, t.val)
+		}
+		if p.peek().kind == tokComma {
+			p.consume()
+		}
+	}
+	if _, err = p.expect(tokRBrace, "}"); err != nil {
+		return nil, err
+	}
+	if _, err = p.expect(tokSemi, ";"); err != nil {
+		return nil, err
+	}
+	return e, nil
+}
+
 func (p *parser) parseTypeSpec() (TypeSpec, error) {
 	t := p.consume()
 	if t.kind != tokIdent {
@@ -307,6 +394,14 @@ func (p *parser) parseTypeSpec() (TypeSpec, error) {
 	case "double":
 		return TypeSpec{Kind: KindDouble}, nil
 	case "string":
+		// Consume optional bounded string: string<N>
+		if p.peek().kind == tokLAngle {
+			p.consume() // <
+			p.consume() // bound value — ignored
+			if _, err := p.expect(tokRAngle, ">"); err != nil {
+				return TypeSpec{}, err
+			}
+		}
 		return TypeSpec{Kind: KindString}, nil
 	case "short":
 		return TypeSpec{Kind: KindShort}, nil
@@ -344,7 +439,7 @@ func (p *parser) parseTypeSpec() (TypeSpec, error) {
 		if err != nil {
 			return TypeSpec{}, err
 		}
-		// Optional bound: sequence<T, N> — consume the comma and bound
+		// Optional bound: sequence<T, N>
 		if p.peek().kind == tokComma {
 			p.consume()
 			p.consume() // bound value — ignored
@@ -356,8 +451,19 @@ func (p *parser) parseTypeSpec() (TypeSpec, error) {
 		}
 		return TypeSpec{Kind: KindSequence, ElemType: &elem}, nil
 	default:
-		// Treat unknown identifiers as struct cross-references
-		return TypeSpec{Kind: KindStruct, RefName: t.val}, nil
+		// Named type — may be qualified: Module::Struct or bare Struct/Enum name.
+		// Consume any leading :: segments to form the full qualified name.
+		name := t.val
+		for p.peek().kind == tokDoubleColon {
+			p.consume() // ::
+			next := p.consume()
+			if next.kind != tokIdent {
+				return TypeSpec{}, fmt.Errorf("idl: line %d: expected name after '::', got %q", next.line, next.val)
+			}
+			name += "::" + next.val
+		}
+		// Defer struct-vs-enum resolution to the code generator (both use RefName).
+		return TypeSpec{Kind: KindStruct, RefName: name}, nil
 	}
 }
 
