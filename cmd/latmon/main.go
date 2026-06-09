@@ -298,7 +298,7 @@ func main() {
 			}
 			line, err := json.Marshal(rec)
 			if err == nil {
-				fmt.Fprintln(outFile, string(line))
+				_, _ = fmt.Fprintln(outFile, string(line))
 			}
 		}
 

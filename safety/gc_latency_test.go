@@ -24,6 +24,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -91,15 +92,15 @@ func gcPausesSorted(before, after *runtime.MemStats) []uint64 {
 // ── result record ─────────────────────────────────────────────────────────────
 
 type gcLatResult struct {
-	GoVersion                            string
-	GOOS, GOARCH                         string
-	NumCPU                               int
-	TestDuration                         time.Duration
+	GoVersion                           string
+	GOOS, GOARCH                        string
+	NumCPU                              int
+	TestDuration                        time.Duration
 	CameraHz, LidarHz, RadarHz          int
-	PressureMBs                          int
-	GCCycles                             uint32
+	PressureMBs                         int
+	GCCycles                            uint32
 	PauseP50ns, PauseP99ns, PauseP999ns uint64
-	PauseMaxNs                           uint64
+	PauseMaxNs                          uint64
 	MsgsDelivered, MsgsExpected         int64
 	LatP50ns, LatP99ns, LatMaxNs        uint64
 }
@@ -182,6 +183,8 @@ func TestGCLatencyProfile(t *testing.T) {
 		}
 	}()
 
+	var subWg sync.WaitGroup
+
 	publish := func(pub dds.Publisher, hz int, size int) {
 		ticker := time.NewTicker(time.Second / time.Duration(hz))
 		defer ticker.Stop()
@@ -243,15 +246,17 @@ func TestGCLatencyProfile(t *testing.T) {
 	go publish(cameraPub, cameraHz, cameraPayload)
 	go publish(lidarPub, lidarHz, lidarPayload)
 	go publish(radarPub, radarHz, radarPayload)
-	go subscribe(cameraSub)
-	go subscribe(lidarSub)
-	go subscribe(radarSub)
+	subWg.Add(3)
+	go func() { defer subWg.Done(); subscribe(cameraSub) }()
+	go func() { defer subWg.Done(); subscribe(lidarSub) }()
+	go func() { defer subWg.Done(); subscribe(radarSub) }()
 	go gcPressure()
 
 	t.Logf("Running %s workload (camera %dHz, lidar %dHz, radar %dHz) …",
 		testDuration, cameraHz, lidarHz, radarHz)
 	time.Sleep(testDuration)
 	cancel()
+	subWg.Wait() // drain subscribers before closing latCh to avoid send-on-closed race
 
 	runtime.GC()
 	var msAfter runtime.MemStats
