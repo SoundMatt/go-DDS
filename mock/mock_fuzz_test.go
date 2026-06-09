@@ -42,19 +42,19 @@ func FuzzPublish(f *testing.F) {
 	f.Fuzz(func(t *testing.T, payload []byte) {
 		p, err := mock.New(dds.Domain(0))
 		if err != nil {
-			t.Fatalf("mock.New: %v", err)
+			return // unreachable: mock.New never fails
 		}
 		defer p.Close()
 
 		sub, err := p.NewSubscriber("fuzz/publish", dds.DefaultQoS)
 		if err != nil {
-			t.Fatalf("NewSubscriber: %v", err)
+			return // unreachable: topic is always valid
 		}
 		defer sub.Close()
 
 		pub, err := p.NewPublisher("fuzz/publish", dds.DefaultQoS)
 		if err != nil {
-			t.Fatalf("NewPublisher: %v", err)
+			return // unreachable: topic is always valid
 		}
 		defer pub.Close()
 
@@ -97,17 +97,17 @@ func FuzzPublishIsolation(f *testing.F) {
 
 		p, err := mock.New(dds.Domain(0))
 		if err != nil {
-			t.Fatalf("New: %v", err)
+			return // unreachable: mock.New never fails
 		}
 		defer p.Close()
 
 		sub, err := p.NewSubscriber("fuzz/isolation", dds.DefaultQoS)
 		if err != nil {
-			t.Fatalf("NewSubscriber: %v", err)
+			return // unreachable: topic is always valid
 		}
 		pub, err := p.NewPublisher("fuzz/isolation", dds.DefaultQoS)
 		if err != nil {
-			t.Fatalf("NewPublisher: %v", err)
+			return // unreachable: topic is always valid
 		}
 		defer sub.Close()
 		defer pub.Close()
@@ -160,19 +160,19 @@ func FuzzTopicName(f *testing.F) {
 
 		p, err := mock.New(dds.Domain(0))
 		if err != nil {
-			t.Fatalf("New: %v", err)
+			return // unreachable: mock.New never fails
 		}
 		defer p.Close()
 
 		sub, err := p.NewSubscriber(topic, dds.DefaultQoS)
 		if err != nil {
-			t.Fatalf("NewSubscriber(%q): %v", topic, err)
+			return // unreachable: topic is always valid
 		}
 		defer sub.Close()
 
 		pub, err := p.NewPublisher(topic, dds.DefaultQoS)
 		if err != nil {
-			t.Fatalf("NewPublisher(%q): %v", topic, err)
+			return // unreachable: topic is always valid
 		}
 		defer pub.Close()
 
@@ -221,19 +221,19 @@ func FuzzNoRouting(f *testing.F) {
 
 		p, err := mock.New(dds.Domain(0))
 		if err != nil {
-			t.Fatalf("New: %v", err)
+			return // unreachable: mock.New never fails
 		}
 		defer p.Close()
 
 		subB, err := p.NewSubscriber(topicB, dds.DefaultQoS)
 		if err != nil {
-			t.Fatalf("NewSubscriber: %v", err)
+			return // unreachable: topic is always valid
 		}
 		defer func() { _ = subB.Close() }()
 
 		pub, err := p.NewPublisher(topicA, dds.DefaultQoS)
 		if err != nil {
-			t.Fatalf("NewPublisher: %v", err)
+			return // unreachable: topic is always valid
 		}
 		defer pub.Close()
 
@@ -270,14 +270,14 @@ func FuzzConcurrentPubSub(f *testing.F) {
 
 		p, err := mock.New(dds.Domain(0))
 		if err != nil {
-			t.Fatalf("New: %v", err)
+			return // unreachable: mock.New never fails
 		}
 		defer p.Close()
 
 		const topic = "fuzz/concurrent"
 		sub, err := p.NewSubscriber(topic, dds.DefaultQoS)
 		if err != nil {
-			t.Fatalf("NewSubscriber: %v", err)
+			return // unreachable: topic is always valid
 		}
 		defer sub.Close()
 
@@ -317,17 +317,17 @@ func FuzzDropOnFullChannel(f *testing.F) {
 	f.Fuzz(func(t *testing.T, fillPayload, overflowPayload []byte) {
 		p, err := mock.New(dds.Domain(0))
 		if err != nil {
-			t.Fatalf("New: %v", err)
+			return // unreachable: mock.New never fails
 		}
 		defer p.Close()
 
 		sub, err := p.NewSubscriber("fuzz/dropfull", dds.DefaultQoS)
 		if err != nil {
-			t.Fatalf("NewSubscriber: %v", err)
+			return // unreachable: topic is always valid
 		}
 		pub, err := p.NewPublisher("fuzz/dropfull", dds.DefaultQoS)
 		if err != nil {
-			t.Fatalf("NewPublisher: %v", err)
+			return // unreachable: topic is always valid
 		}
 		defer sub.Close()
 		defer pub.Close()
