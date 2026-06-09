@@ -205,12 +205,22 @@ func (p *parser) consume() token {
 	return t
 }
 
-func (p *parser) expect(kind tokenKind, desc string) (token, error) {
+func (p *parser) expectTok(kind tokenKind, desc string) (token, error) {
 	t := p.consume()
 	if t.kind != kind {
 		return t, fmt.Errorf("idl: line %d: expected %s, got %q", t.line, desc, t.val)
 	}
 	return t, nil
+}
+
+// expect consumes a token of the expected kind and discards its value; only the error is returned.
+func (p *parser) expect(kind tokenKind, desc string) error {
+	tok, err := p.expectTok(kind, desc)
+	if err != nil {
+		return err
+	}
+	_ = tok
+	return nil
 }
 
 // parseModule parses the top-level scope or a named module body.
@@ -274,24 +284,20 @@ func (p *parser) parseModule() (*Module, error) {
 }
 
 func (p *parser) parseNamedModule() (*Module, error) {
-	nameTok, err := p.expect(tokIdent, "module name")
+	nameTok, err := p.expectTok(tokIdent, "module name")
 	if err != nil {
 		return nil, err
 	}
-	lbrace, braceErr := p.expect(tokLBrace, "{")
-	_ = lbrace
-	if braceErr != nil {
-		return nil, braceErr
+	if err = p.expect(tokLBrace, "{"); err != nil {
+		return nil, err
 	}
 	m, err := p.parseModule()
 	if err != nil {
 		return nil, err
 	}
 	m.Name = nameTok.val
-	rbrace, rbErr := p.expect(tokRBrace, "}")
-	_ = rbrace
-	if rbErr != nil {
-		return nil, rbErr
+	if err = p.expect(tokRBrace, "}"); err != nil {
+		return nil, err
 	}
 	// Optional trailing semicolon
 	if p.peek().kind == tokSemi {
@@ -301,13 +307,11 @@ func (p *parser) parseNamedModule() (*Module, error) {
 }
 
 func (p *parser) parseStruct() (*Struct, error) {
-	nameTok, err := p.expect(tokIdent, "struct name")
+	nameTok, err := p.expectTok(tokIdent, "struct name")
 	if err != nil {
 		return nil, err
 	}
-	slbrace, err := p.expect(tokLBrace, "{")
-	_ = slbrace
-	if err != nil {
+	if err = p.expect(tokLBrace, "{"); err != nil {
 		return nil, err
 	}
 	s := &Struct{Name: nameTok.val}
@@ -338,7 +342,7 @@ func (p *parser) parseStruct() (*Struct, error) {
 		if ferr != nil {
 			return nil, ferr
 		}
-		fieldName, ferr := p.expect(tokIdent, "field name")
+		fieldName, ferr := p.expectTok(tokIdent, "field name")
 		if ferr != nil {
 			return nil, ferr
 		}
@@ -349,40 +353,36 @@ func (p *parser) parseStruct() (*Struct, error) {
 			if sizeTok.kind != tokNumber {
 				return nil, fmt.Errorf("idl: line %d: expected array size, got %q", sizeTok.line, sizeTok.val)
 			}
-			if _, ferr = p.expect(tokRBracket, "]"); ferr != nil {
+			if ferr = p.expect(tokRBracket, "]"); ferr != nil {
 				return nil, ferr
 			}
-			size, _ := strconv.Atoi(sizeTok.val)
+			size, sizeErr := strconv.Atoi(sizeTok.val)
+			if sizeErr != nil {
+				return nil, fmt.Errorf("idl: line %d: invalid array size %q: %w", sizeTok.line, sizeTok.val, sizeErr)
+			}
 			elem := typeSpec
 			typeSpec = TypeSpec{Kind: KindArray, ElemType: &elem, ArraySize: size}
 		}
-		semi, ferr := p.expect(tokSemi, ";")
-		_ = semi
-		if ferr != nil {
+		if ferr = p.expect(tokSemi, ";"); ferr != nil {
 			return nil, ferr
 		}
 		s.Fields = append(s.Fields, Field{Name: fieldName.val, Type: typeSpec, Key: isKey})
 	}
-	srbrace, err := p.expect(tokRBrace, "}")
-	_ = srbrace
-	if err != nil {
+	if err = p.expect(tokRBrace, "}"); err != nil {
 		return nil, err
 	}
-	ssemi, err := p.expect(tokSemi, ";")
-	_ = ssemi
-	if err != nil {
+	if err = p.expect(tokSemi, ";"); err != nil {
 		return nil, err
 	}
 	return s, nil
 }
 
 func (p *parser) parseEnum() (*Enum, error) {
-	nameTok, err := p.expect(tokIdent, "enum name")
+	nameTok, err := p.expectTok(tokIdent, "enum name")
 	if err != nil {
 		return nil, err
 	}
-	_, err = p.expect(tokLBrace, "{")
-	if err != nil {
+	if err = p.expect(tokLBrace, "{"); err != nil {
 		return nil, err
 	}
 	e := &Enum{Name: nameTok.val}
@@ -399,10 +399,10 @@ func (p *parser) parseEnum() (*Enum, error) {
 			p.consume()
 		}
 	}
-	if _, err = p.expect(tokRBrace, "}"); err != nil {
+	if err = p.expect(tokRBrace, "}"); err != nil {
 		return nil, err
 	}
-	if _, err = p.expect(tokSemi, ";"); err != nil {
+	if err = p.expect(tokSemi, ";"); err != nil {
 		return nil, err
 	}
 	return e, nil
@@ -413,11 +413,11 @@ func (p *parser) parseTypedef() (*Typedef, error) {
 	if err != nil {
 		return nil, err
 	}
-	nameTok, err := p.expect(tokIdent, "typedef alias name")
+	nameTok, err := p.expectTok(tokIdent, "typedef alias name")
 	if err != nil {
 		return nil, err
 	}
-	if _, err = p.expect(tokSemi, ";"); err != nil {
+	if err = p.expect(tokSemi, ";"); err != nil {
 		return nil, err
 	}
 	return &Typedef{Name: nameTok.val, Type: underlying}, nil
@@ -442,7 +442,7 @@ func (p *parser) parseTypeSpec() (TypeSpec, error) {
 		if p.peek().kind == tokLAngle {
 			p.consume() // <
 			p.consume() // bound value — ignored
-			if _, err := p.expect(tokRAngle, ">"); err != nil {
+			if err := p.expect(tokRAngle, ">"); err != nil {
 				return TypeSpec{}, err
 			}
 		}
@@ -474,9 +474,7 @@ func (p *parser) parseTypeSpec() (TypeSpec, error) {
 			return TypeSpec{}, fmt.Errorf("idl: line %d: unknown unsigned type %q", next.line, next.val)
 		}
 	case "sequence":
-		langle, err := p.expect(tokLAngle, "<")
-		_ = langle
-		if err != nil {
+		if err := p.expect(tokLAngle, "<"); err != nil {
 			return TypeSpec{}, err
 		}
 		elem, err := p.parseTypeSpec()
@@ -488,9 +486,7 @@ func (p *parser) parseTypeSpec() (TypeSpec, error) {
 			p.consume()
 			p.consume() // bound value — ignored
 		}
-		rangle, err := p.expect(tokRAngle, ">")
-		_ = rangle
-		if err != nil {
+		if err = p.expect(tokRAngle, ">"); err != nil {
 			return TypeSpec{}, err
 		}
 		return TypeSpec{Kind: KindSequence, ElemType: &elem}, nil
