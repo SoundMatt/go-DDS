@@ -35,8 +35,10 @@ func FuzzIDLParser(f *testing.F) {
 	f.Add("struct \x00 { long x; };")
 
 	f.Fuzz(func(t *testing.T, src string) {
-		// Must not panic.
-		_, _ = idl.ParseString(src)
+		m, parseErr := idl.ParseString(src)
+		if parseErr != nil || m == nil {
+			return
+		}
 	})
 }
 
@@ -49,11 +51,14 @@ func FuzzIDLGenerate(f *testing.F) {
 	f.Add(``)
 
 	f.Fuzz(func(t *testing.T, src string) {
-		m, err := idl.ParseString(src)
-		if err != nil {
+		m, parseErr := idl.ParseString(src)
+		if parseErr != nil || m == nil {
 			return
 		}
 		// Must not panic; formatting errors are acceptable for malformed ASTs.
-		_, _ = idl.Generate(m)
+		out, genErr := idl.Generate(m)
+		if genErr != nil || out == "" {
+			return
+		}
 	})
 }

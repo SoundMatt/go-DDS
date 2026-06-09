@@ -339,7 +339,11 @@ func TestParseFile_RoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create temp: %v", err)
 	}
-	_, _ = f.WriteString(`struct Temp { double celsius; };`)
+	n, writeErr := f.WriteString(`struct Temp { double celsius; };`)
+	_ = n
+	if writeErr != nil {
+		t.Fatalf("WriteString: %v", writeErr)
+	}
 	f.Close()
 
 	m, err := idl.ParseFile(f.Name())
@@ -352,10 +356,11 @@ func TestParseFile_RoundTrip(t *testing.T) {
 }
 
 func TestParseFile_NotFound(t *testing.T) {
-	_, err := idl.ParseFile("/nonexistent/path/to/file.idl")
+	m, err := idl.ParseFile("/nonexistent/path/to/file.idl")
 	if err == nil {
 		t.Fatal("expected error for missing file, got nil")
 	}
+	_ = m
 }
 
 func TestParseFile_Generate(t *testing.T) {
@@ -363,7 +368,11 @@ func TestParseFile_Generate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create temp: %v", err)
 	}
-	_, _ = f.WriteString(`struct Sensor { string id; float value; };`)
+	n2, writeErr2 := f.WriteString(`struct Sensor { string id; float value; };`)
+	_ = n2
+	if writeErr2 != nil {
+		t.Fatalf("WriteString: %v", writeErr2)
+	}
 	f.Close()
 
 	m, err := idl.ParseFile(f.Name())

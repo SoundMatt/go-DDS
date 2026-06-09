@@ -233,7 +233,7 @@ func runIDL(args []string) int {
 		fmt.Print(src)
 		return 0
 	}
-	if err := os.WriteFile(*out, []byte(src), 0o644); err != nil {
+	if err := os.WriteFile(*out, []byte(src), 0o640); err != nil {
 		fmt.Fprintf(os.Stderr, "idl: write %s: %v\n", *out, err)
 		return 1
 	}
