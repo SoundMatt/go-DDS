@@ -80,10 +80,10 @@ type Monitor struct {
 	mu      sync.RWMutex
 	clients map[chan string]struct{}
 
-	safetyMu       sync.RWMutex
+	safetyMu        sync.RWMutex
 	safetyProviders []safety.SafetyMetricsProvider
 
-	tsnMu      sync.RWMutex
+	tsnMu       sync.RWMutex
 	tsnTrackers map[string]*tsn.HealthTracker
 }
 

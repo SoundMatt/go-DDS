@@ -96,9 +96,9 @@ func (rm *RateMonitor) check() {
 	secs := rm.interval.Seconds()
 
 	type entry struct {
-		kind           SafetyEventKind
+		kind            SafetyEventKind
 		curVal, prevVal uint64
-		threshold      float64
+		threshold       float64
 	}
 	entries := [4]entry{
 		{SafetyEventCRCFailure, cur.CRCFailures, prev.CRCFailures, rm.thresholds.CRCFailureRate},
