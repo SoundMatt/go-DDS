@@ -3,7 +3,7 @@
   "project": {
     "name": "go-DDS",
     "module": "github.com/SoundMatt/go-DDS",
-    "standard": "generic"
+    "standard": "iso26262"
   },
   "rules": {},
   "report": {
