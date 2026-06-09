@@ -50,7 +50,10 @@ API parity does not.
 | v0.9.2 | 11 (partial) | ProtoCodec, FaultPublisher reorder, fuzz targets, WithContext ✅ |
 | v0.10 | 12 (partial), 13 (partial) | Dynamic WaitSet, REST/SSE bridge, Secure SEDP, TypeRegistry, Docker Quickstart ✅ |
 | v0.11 | 12, 13 | gRPC bridge, key rotation, bridge networking, interop scene, dev container, GHCR ✅ |
-| v0.12 | 2 (partial), 6, 7 (partial), 13 | Examples, Safety completeness (schema validation, metrics, monitor SSE), IDL/CDR, TAPRIO |
+| v0.12 | 2 (partial), 6, 7 (partial), 13 | Examples, Safety completeness (schema validation, metrics, monitor SSE), IDL/CDR, TAPRIO ✅ |
+| v0.13.0 | 2, 6, 7 | IDL factory codegen, safety RateMonitor + SSE, TSN health dashboard ✅ |
+| v0.13.1 | — | IDL nested struct CDR fix, stale rtps doc removed ✅ |
+| v0.13.2 | 2 | IDL array + enum support, ParseFile tests, qualified names, `ddstool idl` CLI |
 
 ### Released — v0.1 – v0.8
 
@@ -67,7 +70,10 @@ API parity does not.
 - **v0.9.2** — `ProtoCodec[T proto.Message]` for Protobuf encoding; `FaultPublisher.ReorderWindow` fault injection mode (shuffles buffered window on fill and flush on Close); `FaultPublisher.WriteCtx` context-aware writes with cancellable delay; `mock.WithContext`/`rtps.WithContext` participant lifecycle tied to `context.Context`; fuzz targets for `security` (HMAC+AES-GCM round-trip and arbitrary-input safety), `rpc` wire format (reply/request dispatch + round-trip), and `ProtoCodec`
 - **v0.10** — Dynamic WaitSet (`WaitSet.Attach`/`WaitSet.Detach` with snapshot-based `reflect.Select`); REST/SSE bridge (`bridge/rest` — `GET /topics`, `GET /topics/{t}` SSE, `POST /topics/{t}`, Bearer auth, keepalive); Secure SEDP (`rtps.EndpointPlugin`; `HMACDiscoveryPlugin.SignEndpoint`/`VerifyEndpoint` embeds per-endpoint HMAC-SHA-256 tag in vendor PID 0x8002); `TopicTypeRegistry` (`xtypes.RegisterTopicCodec[T]`, `LookupTopicType`, `GlobalTopicRegistry`); Docker Quickstart (`cmd/monitor`, `examples/quickstart/{pub,sub}`, `docker/Dockerfile`, `docker/docker-compose.yml`)
 - **v0.11** — gRPC bridge (`bridge/grpc` — `Subscribe` server-streaming, `Publish` unary, `StreamPublish` client-streaming, Bearer auth interceptors, filter/transform hooks, YAML config via `LoadConfig`/`ApplyConfig`, `JSONCodec`); `HMACDiscoveryPlugin.Rekey` atomic key rotation (RWMutex-safe); Docker bridge networking (`DDS_PEERS`+`WithNoMulticast` across all quickstart binaries, bridge-network compose); `docker/docker-compose.host.yml` Linux override; `docker/compose.interop.yml` CycloneDDS interop scene; `.devcontainer/devcontainer.json` Codespaces/VS Code support; `.github/workflows/docker-publish.yml` multi-arch GHCR publish (linux/amd64 + linux/arm64)
-- **v0.12** — _(in progress)_ Examples (`examples/sensor-pipeline/`, `examples/command-response/`, `examples/secure-topic/`, `examples/taprio-stream/` — each self-contained with `go run .` and its own README); Safety completeness: `E2ESubscriber` schema validation (type-check payload shape before CRC), `safety.Metrics` per-topic violation counters, monitor SSE `safety` event type; IDL compiler (`idl/` — `.idl` → Go struct + `Codec[T]` code generation, CDR/XCDR1 encoding); TAPRIO qdisc configuration (`tsn.TAPRIOConfig.Apply()` via netlink); full go-FuSa coverage (221 → 280+ requirements, all `[traced+tested]`)
+- **v0.12** — Examples (`examples/sensor-pipeline/`, `examples/command-response/`, `examples/secure-topic/`, `examples/taprio-stream/` — each self-contained with `go run .` and its own README); Safety completeness: `E2ESubscriber` schema validation, `safety.Metrics` per-topic violation counters, monitor SSE `safety` event type; IDL compiler (`idl/` — `.idl` → Go struct + `Codec[T]` code generation, CDR/XCDR1 encoding); TAPRIO qdisc configuration (`tsn.TAPRIOConfig.Apply()` via netlink); go-FuSa coverage (280+ requirements, all `[traced+tested]`)
+- **v0.13.0** — IDL factory codegen (`NewXxxPublisher`/`NewXxxSubscriber` typed wrappers); `safety.RateMonitor` (threshold-based violation-rate alerting, SSE `safety_metrics` events); TSN health dashboard in monitor (`/api/tsn` endpoint, `tsn_health` SSE events, `tsn.HealthTracker` + `tsn.TAPRIOConfig.VerifyApplied()`); monitor `RegisterSafetyMetrics` / `RegisterTSNHealth` registration APIs
+- **v0.13.1** — IDL nested struct CDR encode/decode (recursive field inlining, no `// TODO:` stubs); removed two stale limitation bullets from rtps package doc
+- **v0.13.2** — _(in progress)_ IDL array support (`T name[N]` → Go `[N]T`, CDR encode/decode with range loops); IDL enum support (Go `type E int32` + consts, int32 CDR codec, use as struct field types); `ParseFile` test coverage; qualified type names (`Module::Type`); `ddstool idl` CLI subcommand
 
 ---
 
