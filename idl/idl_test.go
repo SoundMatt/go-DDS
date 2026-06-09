@@ -203,6 +203,77 @@ func TestGenerate_FieldNames(t *testing.T) {
 	}
 }
 
+const nestedIDL = `
+struct Header {
+    unsigned long seq;
+    string source;
+};
+struct Frame {
+    Header header;
+    double value;
+    boolean valid;
+};
+`
+
+func TestGenerate_NestedStruct_NoTODO(t *testing.T) {
+	m, err := idl.ParseString(nestedIDL)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	src, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if strings.Contains(src, "// TODO:") {
+		t.Errorf("generated code has TODO stub(s):\n%s", src)
+	}
+}
+
+func TestGenerate_NestedStruct_InlinesFields(t *testing.T) {
+	m, err := idl.ParseString(nestedIDL)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	src, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	// Encoder must reference nested struct fields directly.
+	if !strings.Contains(src, "v.Header.Seq") {
+		t.Errorf("expected v.Header.Seq in encoder, got:\n%s", src)
+	}
+	if !strings.Contains(src, "v.Header.Source") {
+		t.Errorf("expected v.Header.Source in encoder, got:\n%s", src)
+	}
+	// Decoder must assign to nested struct fields.
+	if !strings.Contains(src, "v.Header.Seq") {
+		t.Errorf("expected v.Header.Seq assignment in decoder, got:\n%s", src)
+	}
+}
+
+func TestGenerate_NestedStruct_DeepNesting(t *testing.T) {
+	src := `
+struct A { long x; };
+struct B { A a; long y; };
+struct C { B b; A a2; };
+`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	out, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if strings.Contains(out, "// TODO:") {
+		t.Errorf("deep nesting left TODO stubs:\n%s", out)
+	}
+	// C's codec must reference B's field A's x transitively.
+	if !strings.Contains(out, "v.B.A.X") {
+		t.Errorf("expected v.B.A.X for deep nesting, got:\n%s", out)
+	}
+}
+
 func TestGenerate_ContainsFactories(t *testing.T) {
 	m, err := idl.ParseString(vehicleIDL)
 	if err != nil {
