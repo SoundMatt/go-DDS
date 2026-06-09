@@ -763,7 +763,9 @@ func TestGenerate_MatchesCommitted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Generate: %v", err)
 	}
-	if got != string(committed) {
+	// Normalise line endings so the test is portable across Windows (CRLF checkout) and Unix.
+	norm := func(s string) string { return strings.ReplaceAll(s, "\r\n", "\n") }
+	if norm(got) != norm(string(committed)) {
 		t.Errorf("generated output differs from idl/roundtrip/schema_gen.go — run:\n"+
 			"  go run ./cmd/ddstool idl -out idl/roundtrip/schema_gen.go"+
 			" idl/roundtrip/schema.idl\nto regenerate.\n\ngot:\n%s", got)

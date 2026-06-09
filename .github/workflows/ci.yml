@@ -106,10 +106,10 @@ jobs:
         run: go test -fuzz=^FuzzDropOnFullChannel$ -fuzztime=10s ./mock/...
 
       - name: FuzzIDLParser
-        run: go test -fuzz=^FuzzIDLParser$ -fuzztime=10s ./idl/...
+        run: go test -fuzz=^FuzzIDLParser$ -fuzztime=10s ./idl
 
       - name: FuzzIDLGenerate
-        run: go test -fuzz=^FuzzIDLGenerate$ -fuzztime=10s ./idl/...
+        run: go test -fuzz=^FuzzIDLGenerate$ -fuzztime=10s ./idl
 
   # ── Pure-Go RTPS/UDP implementation ──────────────────────────────────────
   # Wire-format unit tests always pass. Intra-process socket tests skip
