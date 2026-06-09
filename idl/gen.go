@@ -205,6 +205,18 @@ func (g *generator) encodeExpr(ts TypeSpec, ref string) string {
 			"e.WriteUint32(uint32(len(%s))); for _, _elem := range %s { %s }",
 			ref, ref, g.encodeExpr(*ts.ElemType, "_elem"),
 		)
+	case KindStruct:
+		// Nested structs are inlined in CDR — no length prefix, no encapsulation
+		// header. Recursively expand the referenced struct's fields at the call site.
+		s := g.findStruct(ts.RefName)
+		if s == nil {
+			return "// TODO: encode " + ref + " (unknown struct " + ts.RefName + ")"
+		}
+		parts := make([]string, 0, len(s.Fields))
+		for _, f := range s.Fields {
+			parts = append(parts, g.encodeExpr(f.Type, ref+"."+toGoName(f.Name)))
+		}
+		return strings.Join(parts, "; ")
 	default:
 		return "// TODO: encode " + ref
 	}
@@ -247,6 +259,18 @@ func (g *generator) decodeExpr(ts TypeSpec, dest string) string {
 			"{ var _n uint32; if _n, err = d.ReadUint32(); err != nil { return v, err }; %s = make(%s, _n); for _i := range %s { %s } }",
 			dest, g.goType(ts), dest, g.decodeExpr(*ts.ElemType, dest+"[_i]"),
 		)
+	case KindStruct:
+		// Nested structs are inlined in CDR — expand the referenced struct's
+		// fields at the call site, sharing the parent's decoder and err variable.
+		s := g.findStruct(ts.RefName)
+		if s == nil {
+			return fmt.Sprintf("// TODO: decode %s (unknown struct %s)", dest, ts.RefName)
+		}
+		parts := make([]string, 0, len(s.Fields))
+		for _, f := range s.Fields {
+			parts = append(parts, g.decodeExpr(f.Type, dest+"."+toGoName(f.Name)))
+		}
+		return strings.Join(parts, "; ")
 	default:
 		return fmt.Sprintf("// TODO: decode %s", dest)
 	}
@@ -255,6 +279,26 @@ func (g *generator) decodeExpr(ts TypeSpec, dest string) string {
 func (g *generator) line(s string) {
 	g.sb.WriteString(s)
 	g.sb.WriteByte('\n')
+}
+
+// findStruct searches the module tree for a struct by its IDL name.
+// Returns nil when the name is not defined in the current module.
+func (g *generator) findStruct(name string) *Struct {
+	return searchStruct(g.root, name)
+}
+
+func searchStruct(m *Module, name string) *Struct {
+	for i := range m.Structs {
+		if m.Structs[i].Name == name {
+			return &m.Structs[i]
+		}
+	}
+	for _, sub := range m.Modules {
+		if s := searchStruct(sub, name); s != nil {
+			return s
+		}
+	}
+	return nil
 }
 
 // ── Name helpers ──────────────────────────────────────────────────────────────
