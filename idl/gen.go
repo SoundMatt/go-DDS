@@ -28,11 +28,13 @@ func (g *generator) generate() (string, error) {
 	g.line(`import (`)
 	g.line(`	"fmt"`)
 	g.line("")
+	g.line(`	dds "github.com/SoundMatt/go-DDS"`)
 	g.line(`	"github.com/SoundMatt/go-DDS/cdr"`)
 	g.line(`)`)
 	g.line("")
-	g.line(`// _ suppresses unused-import errors during generation.`)
+	g.line(`// _ suppresses unused-import errors in modules with no structs.`)
 	g.line(`var _ = fmt.Sprintf`)
+	g.line(`var _ = dds.DefaultQoS`)
 	g.line("")
 
 	g.emitModule(g.root)
@@ -69,6 +71,31 @@ func (g *generator) emitStruct(s Struct) {
 	g.line("}")
 	g.line("")
 	g.emitCodec(s)
+	g.emitFactories(s)
+}
+
+func (g *generator) emitFactories(s Struct) {
+	goName := toGoName(s.Name)
+	codecName := goName + "Codec"
+
+	g.line("// New" + goName + "Publisher returns a TypedPublisher[" + goName + "] backed by CDR/XCDR1 encoding.")
+	g.line("func New" + goName + "Publisher(p dds.Participant, topic string, qos dds.QoS) (*dds.TypedPublisher[" + goName + "], error) {")
+	g.line("\tpub, err := p.NewPublisher(topic, qos)")
+	g.line("\tif err != nil {")
+	g.line("\t\treturn nil, err")
+	g.line("\t}")
+	g.line("\treturn dds.NewTypedPublisher[" + goName + "](pub, " + codecName + "{}), nil")
+	g.line("}")
+	g.line("")
+	g.line("// New" + goName + "Subscriber returns a TypedSubscriber[" + goName + "] backed by CDR/XCDR1 decoding.")
+	g.line("func New" + goName + "Subscriber(p dds.Participant, topic string, qos dds.QoS, opts ...dds.SubscriberOption) (*dds.TypedSubscriber[" + goName + "], error) {")
+	g.line("\tsub, err := p.NewSubscriber(topic, qos, opts...)")
+	g.line("\tif err != nil {")
+	g.line("\t\treturn nil, err")
+	g.line("\t}")
+	g.line("\treturn dds.NewTypedSubscriber[" + goName + "](sub, " + codecName + "{}), nil")
+	g.line("}")
+	g.line("")
 }
 
 func (g *generator) emitCodec(s Struct) {

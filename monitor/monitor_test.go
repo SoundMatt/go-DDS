@@ -25,6 +25,7 @@ import (
 	"github.com/SoundMatt/go-DDS/mock"
 	"github.com/SoundMatt/go-DDS/monitor"
 	"github.com/SoundMatt/go-DDS/safety"
+	"github.com/SoundMatt/go-DDS/tsn"
 )
 
 func newMockParticipant(t *testing.T) dds.Participant {
@@ -480,6 +481,131 @@ func TestMonitor_DiscoveryMetrics_PushedOverSSE(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("expected at least one metrics or discovery event over SSE")
+	}
+}
+
+// stubSafetyProvider implements safety.SafetyMetricsProvider for testing.
+type stubSafetyProvider struct {
+	snap safety.Snapshot
+}
+
+func (s *stubSafetyProvider) SafetyMetrics() safety.Snapshot { return s.snap }
+
+func TestMonitor_RegisterSafetyMetrics_PushesSnapshot(t *testing.T) {
+	p := newMockParticipant(t)
+	defer p.Close()
+	mon, err := monitor.New(p, monitor.Options{
+		Addr:            "127.0.0.1:0",
+		MetricsInterval: 50 * time.Millisecond,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mon.Close()
+
+	prov := &stubSafetyProvider{snap: safety.Snapshot{Topic: "test/safety", CRCFailures: 7}}
+	mon.RegisterSafetyMetrics(prov)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	resp, err := get(ctx, "http://"+mon.Addr()+"/events")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	scanner := bufio.NewScanner(resp.Body)
+	found := false
+	for scanner.Scan() {
+		if strings.Contains(scanner.Text(), "crc_failures") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("expected safety_metrics SSE event containing crc_failures")
+	}
+}
+
+func TestMonitor_APITSN_EmptyReturnsArray(t *testing.T) {
+	p := newMockParticipant(t)
+	defer p.Close()
+	mon, err := monitor.New(p, monitor.Options{Addr: "127.0.0.1:0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mon.Close()
+
+	ctx := context.Background()
+	resp, err := get(ctx, "http://"+mon.Addr()+"/api/tsn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	var buf strings.Builder
+	sc := bufio.NewScanner(resp.Body)
+	for sc.Scan() {
+		buf.WriteString(sc.Text())
+	}
+	if !strings.HasPrefix(strings.TrimSpace(buf.String()), "[") {
+		t.Errorf("expected JSON array, got: %s", buf.String())
+	}
+}
+
+func TestMonitor_RegisterTSNHealth_AppearsInAPIAndSSE(t *testing.T) {
+	p := newMockParticipant(t)
+	defer p.Close()
+	mon, err := monitor.New(p, monitor.Options{
+		Addr:            "127.0.0.1:0",
+		MetricsInterval: 50 * time.Millisecond,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mon.Close()
+
+	stream := &tsn.Stream{Topic: "vehicle/speed", IntervalUS: 1000}
+	ht := tsn.NewHealthTracker(stream, 100)
+	ht.Record(time.Now())
+	mon.RegisterTSNHealth("speed-stream", ht)
+
+	// Verify /api/tsn contains the registered tracker.
+	ctx := context.Background()
+	resp, err := get(ctx, "http://"+mon.Addr()+"/api/tsn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	var buf strings.Builder
+	sc := bufio.NewScanner(resp.Body)
+	for sc.Scan() {
+		buf.WriteString(sc.Text())
+	}
+	if !strings.Contains(buf.String(), "speed-stream") {
+		t.Errorf("expected speed-stream in /api/tsn response: %s", buf.String())
+	}
+
+	// Verify tsn_health SSE events are pushed.
+	ctx2, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	resp2, err := get(ctx2, "http://"+mon.Addr()+"/events")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp2.Body.Close()
+	scanner := bufio.NewScanner(resp2.Body)
+	found := false
+	for scanner.Scan() {
+		if strings.Contains(scanner.Text(), "tsn_health") || strings.Contains(scanner.Text(), "speed-stream") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("expected tsn_health SSE event with speed-stream")
 	}
 }
 

@@ -12,3 +12,8 @@ package tsn
 func (c *TAPRIOConfig) Apply() error {
 	return ErrNotSupported
 }
+
+// VerifyApplied returns ErrNotSupported on non-Linux platforms.
+func (c *TAPRIOConfig) VerifyApplied() error {
+	return ErrNotSupported
+}

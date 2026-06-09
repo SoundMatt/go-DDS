@@ -203,6 +203,31 @@ func TestGenerate_FieldNames(t *testing.T) {
 	}
 }
 
+func TestGenerate_ContainsFactories(t *testing.T) {
+	m, err := idl.ParseString(vehicleIDL)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	src, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	for _, name := range []string{"NewSpeedPublisher", "NewSpeedSubscriber", "NewEngineStatusPublisher", "NewEngineStatusSubscriber"} {
+		if !strings.Contains(src, name) {
+			t.Errorf("generated source missing factory %q", name)
+		}
+	}
+	if !strings.Contains(src, "dds.Participant") {
+		t.Error("generated source missing dds.Participant parameter")
+	}
+	if !strings.Contains(src, "dds.TypedPublisher[Speed]") {
+		t.Error("generated source missing TypedPublisher return type")
+	}
+	if !strings.Contains(src, "dds.SubscriberOption") {
+		t.Error("generated source missing dds.SubscriberOption variadic")
+	}
+}
+
 func TestGenerate_EmptyInput(t *testing.T) {
 	m, err := idl.ParseString("")
 	if err != nil {
