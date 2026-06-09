@@ -15,11 +15,14 @@ import (
 
 // generator walks a Module tree and produces Go source.
 type generator struct {
-	root *Module
-	sb   strings.Builder
+	root    *Module
+	sb      strings.Builder
+	visited map[string]bool // cycle guard for encodeExpr/decodeExpr struct expansion
 }
 
-func newGenerator(m *Module) *generator { return &generator{root: m} }
+func newGenerator(m *Module) *generator {
+	return &generator{root: m, visited: make(map[string]bool)}
+}
 
 func (g *generator) generate() (string, error) {
 	pkgName := g.packageName(g.root)
@@ -284,6 +287,12 @@ func (g *generator) encodeExpr(ts TypeSpec, ref string) string {
 		if s == nil {
 			return "// TODO: encode " + ref + " (unknown struct " + ts.RefName + ")"
 		}
+		// Cycle guard: a self-referential struct cannot be CDR-encoded.
+		if g.visited[ts.RefName] {
+			return "// TODO: encode " + ref + " (cyclic struct " + ts.RefName + ")"
+		}
+		g.visited[ts.RefName] = true
+		defer delete(g.visited, ts.RefName)
 		parts := make([]string, 0, len(s.Fields))
 		for _, f := range s.Fields {
 			parts = append(parts, g.encodeExpr(f.Type, ref+"."+toGoName(f.Name)))
@@ -352,6 +361,12 @@ func (g *generator) decodeExpr(ts TypeSpec, dest string) string {
 		if s == nil {
 			return fmt.Sprintf("// TODO: decode %s (unknown struct %s)", dest, ts.RefName)
 		}
+		// Cycle guard: a self-referential struct cannot be CDR-decoded.
+		if g.visited[ts.RefName] {
+			return fmt.Sprintf("// TODO: decode %s (cyclic struct %s)", dest, ts.RefName)
+		}
+		g.visited[ts.RefName] = true
+		defer delete(g.visited, ts.RefName)
 		parts := make([]string, 0, len(s.Fields))
 		for _, f := range s.Fields {
 			parts = append(parts, g.decodeExpr(f.Type, dest+"."+toGoName(f.Name)))

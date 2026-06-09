@@ -391,8 +391,8 @@ func (p *parser) parseEnum() (*Enum, error) {
 		if t.kind == tokRBrace || t.kind == tokEOF {
 			break
 		}
+		p.consume() // always advance; prevents spin on unexpected tokens (e.g. ';')
 		if t.kind == tokIdent {
-			p.consume()
 			e.Values = append(e.Values, t.val)
 		}
 		if p.peek().kind == tokComma {

@@ -1,0 +1,2 @@
+go test fuzz v1
+string("module A{}struct A{A g;long r;};")
