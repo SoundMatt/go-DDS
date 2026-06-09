@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"math"
 	"net"
+	"strings"
 	"syscall"
 
 	"golang.org/x/sys/unix"
@@ -60,6 +61,126 @@ func (c *TAPRIOConfig) Apply() error {
 	}
 
 	return recvACK(fd)
+}
+
+// VerifyApplied queries the kernel via RTM_GETQDISC to confirm that a TAPRIO
+// qdisc is the root qdisc on c.Interface. Returns nil if "taprio" is found,
+// or an error describing the mismatch. Call this after Apply to confirm the
+// schedule was accepted by the kernel.
+func (c *TAPRIOConfig) VerifyApplied() error {
+	if c.Interface == "" {
+		return fmt.Errorf("tsn: VerifyApplied: Interface must not be empty")
+	}
+	iface, err := net.InterfaceByName(c.Interface)
+	if err != nil {
+		return fmt.Errorf("tsn: VerifyApplied: interface %q: %w", c.Interface, err)
+	}
+
+	fd, err := unix.Socket(unix.AF_NETLINK, unix.SOCK_RAW|unix.SOCK_CLOEXEC, unix.NETLINK_ROUTE)
+	if err != nil {
+		return fmt.Errorf("tsn: VerifyApplied: netlink socket: %w", err)
+	}
+	defer unix.Close(fd) //nolint:errcheck
+
+	sa := &unix.SockaddrNetlink{Family: unix.AF_NETLINK}
+	if bindErr := unix.Bind(fd, sa); bindErr != nil {
+		return fmt.Errorf("tsn: VerifyApplied: bind: %w", bindErr)
+	}
+
+	req := buildGetQdiscMsg(uint32(iface.Index))
+	if _, writeErr := unix.Write(fd, req); writeErr != nil {
+		return fmt.Errorf("tsn: VerifyApplied: send: %w", writeErr)
+	}
+
+	return readQdiscKind(fd)
+}
+
+func buildGetQdiscMsg(ifindex uint32) []byte {
+	// tcmsg: only ifindex matters for a per-interface dump
+	tcmsg := make([]byte, 20)
+	tcmsg[0] = unix.AF_UNSPEC
+	binary.LittleEndian.PutUint32(tcmsg[4:], ifindex)
+
+	const (
+		rtmGetQdisc = 38
+		nlmFRequest = 0x01
+		nlmFDump    = 0x300 // NLM_F_ROOT | NLM_F_MATCH
+	)
+	hdr := make([]byte, 16)
+	total := uint32(16 + len(tcmsg))
+	binary.LittleEndian.PutUint32(hdr[0:], total)
+	binary.LittleEndian.PutUint16(hdr[4:], rtmGetQdisc)
+	binary.LittleEndian.PutUint16(hdr[6:], nlmFRequest|nlmFDump)
+	binary.LittleEndian.PutUint32(hdr[8:], 2)  // seq
+	binary.LittleEndian.PutUint32(hdr[12:], 0) // pid (kernel)
+	return append(hdr, tcmsg...)
+}
+
+// readQdiscKind reads RTM_GETQDISC response messages and returns nil if any
+// root qdisc is "taprio", or an error if none is found.
+func readQdiscKind(fd int) error {
+	buf := make([]byte, 32768)
+	for {
+		n, err := unix.Read(fd, buf)
+		if err != nil {
+			return fmt.Errorf("tsn: VerifyApplied: read: %w", err)
+		}
+		data := buf[:n]
+		for len(data) >= 16 {
+			msgLen := binary.LittleEndian.Uint32(data[0:4])
+			msgType := binary.LittleEndian.Uint16(data[4:6])
+			const (
+				nlmsgError = 2
+				nlmsgDone  = 3
+				rtmNewQdisc = 36
+			)
+			switch msgType {
+			case nlmsgDone:
+				return fmt.Errorf("tsn: VerifyApplied: no taprio qdisc found on interface")
+			case nlmsgError:
+				if len(data) >= 20 {
+					code := int32(binary.LittleEndian.Uint32(data[16:20]))
+					if code != 0 {
+						return fmt.Errorf("tsn: VerifyApplied: kernel error: %w", syscall.Errno(-code))
+					}
+				}
+				return fmt.Errorf("tsn: VerifyApplied: no taprio qdisc found on interface")
+			case rtmNewQdisc:
+				if int(msgLen) >= 16+20 {
+					kind := extractTCAKind(data[16+20 : msgLen])
+					if kind == "taprio" {
+						return nil
+					}
+				}
+			}
+			advance := (msgLen + 3) &^ 3
+			if advance < 16 || int(advance) >= len(data) {
+				break
+			}
+			data = data[advance:]
+		}
+	}
+}
+
+// extractTCAKind walks a netlink attribute list and returns the value of TCA_KIND (type 1).
+func extractTCAKind(attrs []byte) string {
+	for len(attrs) >= 4 {
+		attrLen := binary.LittleEndian.Uint16(attrs[0:2])
+		attrType := binary.LittleEndian.Uint16(attrs[2:4]) & 0x7FFF // mask NLA_F_NESTED
+		if attrLen < 4 || int(attrLen) > len(attrs) {
+			break
+		}
+		if attrType == 1 { // TCA_KIND
+			kind := string(attrs[4:attrLen])
+			return strings.TrimRight(kind, "\x00")
+		}
+		advance := (int(attrLen) + 3) &^ 3
+		if advance >= len(attrs) {
+			break
+		}
+		attrs = attrs[advance:]
+	}
+	return ""
 }
 
 // buildTAPRIOMsg constructs the RTM_NEWQDISC netlink message.

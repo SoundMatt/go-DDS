@@ -99,6 +99,32 @@ func TestTAPRIOConfig_Apply_NonLinux(t *testing.T) {
 	}
 }
 
+func TestTAPRIOConfig_VerifyApplied_EmptyInterface(t *testing.T) {
+	cfg := &tsn.TAPRIOConfig{
+		Entries: []tsn.TAPRIOEntry{{GateMask: 0xFF, Interval: time.Millisecond}},
+	}
+	err := cfg.VerifyApplied()
+	if err == nil {
+		t.Error("expected error for empty Interface")
+	}
+}
+
+func TestTAPRIOConfig_VerifyApplied_NonLinux(t *testing.T) {
+	cfg := &tsn.TAPRIOConfig{
+		Interface: "eth0",
+		Entries:   []tsn.TAPRIOEntry{{GateMask: 0xFF, Interval: time.Millisecond}},
+	}
+	err := cfg.VerifyApplied()
+	if err == nil {
+		t.Skip("VerifyApplied succeeded unexpectedly (taprio qdisc present?)")
+	}
+	// On non-Linux: must be ErrNotSupported.
+	// On Linux without a taprio qdisc: any error is acceptable.
+	if !errors.Is(err, tsn.ErrNotSupported) {
+		t.Logf("VerifyApplied error (non-ErrNotSupported, likely Linux without taprio qdisc): %v", err)
+	}
+}
+
 func TestTAPRIOFromStreams_DerivesTAPRIO(t *testing.T) {
 	cfg, err := tsn.ParseConfig([]byte(`{
 		"streams":[

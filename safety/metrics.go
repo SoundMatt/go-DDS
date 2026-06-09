@@ -59,13 +59,13 @@ type SafetyEvent struct {
 
 // Snapshot is a point-in-time copy of violation counters for one subscriber.
 type Snapshot struct {
-	Topic            string
-	CRCFailures      uint64
-	SequenceGaps     uint64
-	StaleSamples     uint64
-	HeaderTooShort   uint64
-	SchemaViolations uint64
-	ValidSamples     uint64
+	Topic            string `json:"topic"`
+	CRCFailures      uint64 `json:"crc_failures"`
+	SequenceGaps     uint64 `json:"sequence_gaps"`
+	StaleSamples     uint64 `json:"stale_samples"`
+	HeaderTooShort   uint64 `json:"header_too_short"`
+	SchemaViolations uint64 `json:"schema_violations"`
+	ValidSamples     uint64 `json:"valid_samples"`
 }
 
 // metrics tracks cumulative violation counters for one E2ESubscriber.

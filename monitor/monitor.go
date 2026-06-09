@@ -36,6 +36,7 @@ import (
 
 	dds "github.com/SoundMatt/go-DDS"
 	"github.com/SoundMatt/go-DDS/safety"
+	"github.com/SoundMatt/go-DDS/tsn"
 )
 
 //go:embed static/index.html
@@ -78,6 +79,12 @@ type Monitor struct {
 	ctx     context.Context
 	mu      sync.RWMutex
 	clients map[chan string]struct{}
+
+	safetyMu       sync.RWMutex
+	safetyProviders []safety.SafetyMetricsProvider
+
+	tsnMu      sync.RWMutex
+	tsnTrackers map[string]*tsn.HealthTracker
 }
 
 // New creates a Monitor wrapping p and starts the HTTP server.
@@ -115,6 +122,7 @@ func New(p dds.Participant, opts Options) (*Monitor, error) {
 	mux.HandleFunc("/health", m.handleHealth)
 	mux.HandleFunc("/api/topics", m.handleAPITopics)
 	mux.HandleFunc("/api/diagnostics", m.handleAPIDiagnostics)
+	mux.HandleFunc("/api/tsn", m.handleAPITSN)
 	m.server = &http.Server{Handler: mux}
 
 	go m.server.Serve(ln) //nolint:errcheck
@@ -177,6 +185,27 @@ func (m *Monitor) WatchSafety(events <-chan safety.SafetyEvent) {
 			}
 		}
 	}()
+}
+
+// RegisterSafetyMetrics adds p to the set of safety metrics providers whose
+// snapshots are periodically broadcast as "safety_metrics" SSE events.
+// May be called after New returns.
+func (m *Monitor) RegisterSafetyMetrics(p safety.SafetyMetricsProvider) {
+	m.safetyMu.Lock()
+	m.safetyProviders = append(m.safetyProviders, p)
+	m.safetyMu.Unlock()
+}
+
+// RegisterTSNHealth registers a HealthTracker under name. Its health snapshot
+// is periodically broadcast as a "tsn_health" SSE event and served at /api/tsn.
+// May be called after New returns.
+func (m *Monitor) RegisterTSNHealth(name string, ht *tsn.HealthTracker) {
+	m.tsnMu.Lock()
+	if m.tsnTrackers == nil {
+		m.tsnTrackers = make(map[string]*tsn.HealthTracker)
+	}
+	m.tsnTrackers[name] = ht
+	m.tsnMu.Unlock()
 }
 
 // Close stops the HTTP server and all background goroutines.
@@ -330,6 +359,44 @@ func (m *Monitor) handleAPIDiagnostics(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
+// handleAPITSN serves GET /api/tsn as a JSON array of TSN stream health snapshots.
+func (m *Monitor) handleAPITSN(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	m.tsnMu.RLock()
+	trackers := m.tsnTrackers
+	m.tsnMu.RUnlock()
+
+	type tsnEntry struct {
+		Name          string `json:"name"`
+		Topic         string `json:"topic"`
+		WriteCount    uint64 `json:"write_count"`
+		LateWrites    uint64 `json:"late_writes"`
+		MaxLatenessNS int64  `json:"max_lateness_ns"`
+		Healthy       bool   `json:"healthy"`
+	}
+	entries := make([]tsnEntry, 0, len(trackers))
+	for name, ht := range trackers {
+		h := ht.Health()
+		entries = append(entries, tsnEntry{
+			Name:          name,
+			Topic:         h.Topic,
+			WriteCount:    h.WriteCount,
+			LateWrites:    h.LateWrites,
+			MaxLatenessNS: h.MaxLateness.Nanoseconds(),
+			Healthy:       h.Healthy,
+		})
+	}
+	b, err := json.Marshal(entries)
+	if err != nil {
+		return
+	}
+	writeN, writeErr := w.Write(b)
+	_ = writeN
+	if writeErr != nil {
+		return
+	}
+}
+
 func (m *Monitor) broadcast(eventType, data string) {
 	msg := fmt.Sprintf("event: %s\ndata: %s\n\n", eventType, data)
 	m.mu.RLock()
@@ -343,56 +410,95 @@ func (m *Monitor) broadcast(eventType, data string) {
 }
 
 func (m *Monitor) metricsLoop() {
-	if m.mp == nil && m.dp == nil {
-		return
-	}
 	tick := time.NewTicker(m.opts.metricsInterval())
 	defer tick.Stop()
 	for {
 		select {
 		case <-tick.C:
-			if m.mp != nil {
-				mt := m.mp.Metrics()
-				type metricsEvent struct {
-					WriteCount     uint64 `json:"write_count"`
-					DeliverCount   uint64 `json:"deliver_count"`
-					DropCount      uint64 `json:"drop_count"`
-					BytesWritten   uint64 `json:"bytes_written"`
-					BytesDelivered uint64 `json:"bytes_delivered"`
-				}
-				b, jsonErr := json.Marshal(metricsEvent{
-					WriteCount:     mt.WriteCount,
-					DeliverCount:   mt.DeliverCount,
-					DropCount:      mt.DropCount,
-					BytesWritten:   mt.BytesWritten,
-					BytesDelivered: mt.BytesDelivered,
-				})
-				if jsonErr == nil {
-					m.broadcast("metrics", string(b))
-				}
-			}
-			if m.dp != nil {
-				dm := m.dp.DiscoveryMetrics()
-				type discoveryEvent struct {
-					AnnouncesSent     uint64 `json:"announces_sent"`
-					AnnouncesReceived uint64 `json:"announces_received"`
-					PeersKnown        uint64 `json:"peers_known"`
-					PeerEvictions     uint64 `json:"peer_evictions"`
-					EndpointMatches   uint64 `json:"endpoint_matches"`
-				}
-				b, jsonErr := json.Marshal(discoveryEvent{
-					AnnouncesSent:     dm.AnnouncesSent,
-					AnnouncesReceived: dm.AnnouncesReceived,
-					PeersKnown:        dm.PeersKnown,
-					PeerEvictions:     dm.PeerEvictions,
-					EndpointMatches:   dm.EndpointMatches,
-				})
-				if jsonErr == nil {
-					m.broadcast("discovery", string(b))
-				}
-			}
+			m.tickMetrics()
 		case <-m.ctx.Done():
 			return
+		}
+	}
+}
+
+func (m *Monitor) tickMetrics() {
+	if m.mp != nil {
+		mt := m.mp.Metrics()
+		type metricsEvent struct {
+			WriteCount     uint64 `json:"write_count"`
+			DeliverCount   uint64 `json:"deliver_count"`
+			DropCount      uint64 `json:"drop_count"`
+			BytesWritten   uint64 `json:"bytes_written"`
+			BytesDelivered uint64 `json:"bytes_delivered"`
+		}
+		b, jsonErr := json.Marshal(metricsEvent{
+			WriteCount:     mt.WriteCount,
+			DeliverCount:   mt.DeliverCount,
+			DropCount:      mt.DropCount,
+			BytesWritten:   mt.BytesWritten,
+			BytesDelivered: mt.BytesDelivered,
+		})
+		if jsonErr == nil {
+			m.broadcast("metrics", string(b))
+		}
+	}
+
+	if m.dp != nil {
+		dm := m.dp.DiscoveryMetrics()
+		type discoveryEvent struct {
+			AnnouncesSent     uint64 `json:"announces_sent"`
+			AnnouncesReceived uint64 `json:"announces_received"`
+			PeersKnown        uint64 `json:"peers_known"`
+			PeerEvictions     uint64 `json:"peer_evictions"`
+			EndpointMatches   uint64 `json:"endpoint_matches"`
+		}
+		b, jsonErr := json.Marshal(discoveryEvent{
+			AnnouncesSent:     dm.AnnouncesSent,
+			AnnouncesReceived: dm.AnnouncesReceived,
+			PeersKnown:        dm.PeersKnown,
+			PeerEvictions:     dm.PeerEvictions,
+			EndpointMatches:   dm.EndpointMatches,
+		})
+		if jsonErr == nil {
+			m.broadcast("discovery", string(b))
+		}
+	}
+
+	m.safetyMu.RLock()
+	safetyProviders := m.safetyProviders
+	m.safetyMu.RUnlock()
+	for _, sp := range safetyProviders {
+		snap := sp.SafetyMetrics()
+		b, jsonErr := json.Marshal(snap)
+		if jsonErr == nil {
+			m.broadcast("safety_metrics", string(b))
+		}
+	}
+
+	m.tsnMu.RLock()
+	tsnTrackers := m.tsnTrackers
+	m.tsnMu.RUnlock()
+	type tsnHealthEvent struct {
+		Name          string `json:"name"`
+		Topic         string `json:"topic"`
+		WriteCount    uint64 `json:"write_count"`
+		LateWrites    uint64 `json:"late_writes"`
+		MaxLatenessNS int64  `json:"max_lateness_ns"`
+		Healthy       bool   `json:"healthy"`
+	}
+	for name, ht := range tsnTrackers {
+		h := ht.Health()
+		b, jsonErr := json.Marshal(tsnHealthEvent{
+			Name:          name,
+			Topic:         h.Topic,
+			WriteCount:    h.WriteCount,
+			LateWrites:    h.LateWrites,
+			MaxLatenessNS: h.MaxLateness.Nanoseconds(),
+			Healthy:       h.Healthy,
+		})
+		if jsonErr == nil {
+			m.broadcast("tsn_health", string(b))
 		}
 	}
 }
