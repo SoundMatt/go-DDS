@@ -44,14 +44,16 @@ func persistLoad(dir, topic string) ([]byte, error) {
 	}
 	defer f.Close()
 	var length uint32
-	if err := binary.Read(f, binary.LittleEndian, &length); err != nil {
-		return nil, err
+	if readErr := binary.Read(f, binary.LittleEndian, &length); readErr != nil {
+		return nil, readErr
 	}
 	if length > 64*1024*1024 {
 		return nil, fmt.Errorf("persist: payload %d bytes exceeds 64 MiB cap", length)
 	}
 	buf := make([]byte, length)
-	if _, err := f.Read(buf); err != nil {
+	ignoredVal, err := f.Read(buf)
+	_ = ignoredVal
+	if err != nil {
 		return nil, err
 	}
 	return buf, nil
@@ -71,8 +73,12 @@ func persistFlush(dir, topic string, payload []byte) {
 	defer f.Close()
 	var length [4]byte
 	binary.LittleEndian.PutUint32(length[:], uint32(len(payload)))
-	_, _ = f.Write(length[:])
-	_, _ = f.Write(payload)
+	writeN, writeErr := f.Write(length[:])
+	_ = writeN
+	_ = writeErr
+	writeN, writeErr = f.Write(payload)
+	_ = writeN
+	_ = writeErr
 }
 
 // persistPath returns the file path for a topic inside dir.

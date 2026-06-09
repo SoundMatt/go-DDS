@@ -114,10 +114,14 @@ func TestCyclone_ParticipantClose_BlocksNewEndpoints(t *testing.T) {
 		t.Skipf("CycloneDDS unavailable: %v", err)
 	}
 	p.Close()
-	if _, err := p.NewPublisher("t", dds.DefaultQoS); err == nil {
+	ignoredVal, err := p.NewPublisher("t", dds.DefaultQoS)
+	_ = ignoredVal
+	if err == nil {
 		t.Error("expected error from closed participant")
 	}
-	if _, err := p.NewSubscriber("t", dds.DefaultQoS); err == nil {
+	ignoredVal, err := p.NewSubscriber("t", dds.DefaultQoS)
+	_ = ignoredVal
+	if err == nil {
 		t.Error("expected error from closed participant")
 	}
 }

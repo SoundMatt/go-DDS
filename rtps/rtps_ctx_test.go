@@ -31,7 +31,9 @@ func TestRTPSWithContext_CancelsParticipant(t *testing.T) {
 	}
 
 	// Participant is open before cancel.
-	if _, err := p.NewPublisher("rtps/ctx/before", dds.DefaultQoS); err != nil {
+	ignoredVal, err := p.NewPublisher("rtps/ctx/before", dds.DefaultQoS)
+	_ = ignoredVal
+	if err != nil {
 		t.Fatalf("NewPublisher before cancel: %v", err)
 	}
 
@@ -40,7 +42,8 @@ func TestRTPSWithContext_CancelsParticipant(t *testing.T) {
 	// Poll until the background goroutine calls Close.
 	deadline := time.After(3 * time.Second)
 	for {
-		_, err := p.NewPublisher("rtps/ctx/after", dds.DefaultQoS)
+		ignoredRet, err := p.NewPublisher("rtps/ctx/after", dds.DefaultQoS)
+		_ = ignoredRet
 		if errors.Is(err, dds.ErrClosed) {
 			return // correct
 		}
@@ -65,7 +68,8 @@ func TestRTPSWithContext_AlreadyCancelledContext(t *testing.T) {
 
 	deadline := time.After(3 * time.Second)
 	for {
-		_, err := p.NewPublisher("rtps/ctx/precancelled", dds.DefaultQoS)
+		ignoredRet, err := p.NewPublisher("rtps/ctx/precancelled", dds.DefaultQoS)
+		_ = ignoredRet
 		if errors.Is(err, dds.ErrClosed) {
 			return
 		}

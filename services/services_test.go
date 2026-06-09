@@ -266,8 +266,14 @@ func TestReplayService_FilteredTopics(t *testing.T) {
 	}
 	buf := makeJSONL(t, samples)
 
-	subA, _ := p.NewSubscriber(topicA, dds.DefaultQoS)
-	subB, _ := p.NewSubscriber(topicB, dds.DefaultQoS)
+	subA, err := p.NewSubscriber(topicA, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	subB, err := p.NewSubscriber(topicB, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer subA.Close()
 	defer subB.Close()
 
@@ -349,7 +355,8 @@ func TestMonitorService_Close(t *testing.T) {
 
 func TestMonitorService_New_ListenError(t *testing.T) {
 	p := newPart(t)
-	_, err := services.NewMonitorService(p, monitor.Options{Addr: "127.0.0.1:99999"})
+	ignoredRet, err := services.NewMonitorService(p, monitor.Options{Addr: "127.0.0.1:99999"})
+	_ = ignoredRet
 	if err == nil {
 		t.Fatal("expected error for invalid port")
 	}

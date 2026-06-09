@@ -147,7 +147,9 @@ func NewAESGCMPlugin(key []byte) (*AESGCMPlugin, error) {
 
 func (p *AESGCMPlugin) Seal(plaintext []byte) ([]byte, error) {
 	nonce := make([]byte, p.aead.NonceSize())
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+	ignoredVal, err := io.ReadFull(rand.Reader, nonce)
+	_ = ignoredVal
+	if err != nil {
 		return nil, err
 	}
 	out := p.aead.Seal(nonce, nonce, plaintext, nil)
@@ -170,7 +172,9 @@ func (p *AESGCMPlugin) Open(data []byte) ([]byte, error) {
 // on any supported platform).
 func NewRandomKey(n int) []byte {
 	k := make([]byte, n)
-	if _, err := io.ReadFull(rand.Reader, k); err != nil {
+	ignoredVal, err := io.ReadFull(rand.Reader, k)
+	_ = ignoredVal
+	if err != nil {
 		panic("security: random key generation failed: " + err.Error())
 	}
 	return k

@@ -133,7 +133,10 @@ func (m *Monitor) Publish(s dds.Sample) {
 		Topic   string `json:"topic"`
 		Payload string `json:"payload"`
 	}
-	b, _ := json.Marshal(sampleEvent{Topic: s.Topic, Payload: string(s.Payload)})
+	b, jsonErr := json.Marshal(sampleEvent{Topic: s.Topic, Payload: string(s.Payload)})
+	if jsonErr != nil {
+		return
+	}
 	m.broadcast("sample", string(b))
 }
 
@@ -145,12 +148,15 @@ func (m *Monitor) PublishSafetyEvent(e safety.SafetyEvent) {
 		Counter uint32 `json:"counter"`
 		Message string `json:"message"`
 	}
-	b, _ := json.Marshal(safetyEv{
+	b, jsonErr := json.Marshal(safetyEv{
 		Kind:    e.Kind.String(),
 		Topic:   e.Topic,
 		Counter: e.Counter,
 		Message: e.Message,
 	})
+	if jsonErr != nil {
+		return
+	}
 	m.broadcast("safety", string(b))
 }
 
@@ -183,7 +189,11 @@ func (m *Monitor) Close() error {
 
 func (m *Monitor) handleIndex(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = w.Write(indexHTML)
+	writeN, writeErr := w.Write(indexHTML)
+	_ = writeN
+	if writeErr != nil {
+		return
+	}
 }
 
 func (m *Monitor) handleSSE(w http.ResponseWriter, r *http.Request) {
@@ -212,7 +222,11 @@ func (m *Monitor) handleSSE(w http.ResponseWriter, r *http.Request) {
 			if !ok {
 				return
 			}
-			_, _ = fmt.Fprint(w, msg)
+			writeN, writeErr := fmt.Fprint(w, msg)
+			_ = writeN
+			if writeErr != nil {
+				return
+			}
 			flusher.Flush()
 		case <-r.Context().Done():
 			return
@@ -227,7 +241,11 @@ func (m *Monitor) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if m.hp == nil {
 		w.WriteHeader(http.StatusNotImplemented)
-		_, _ = w.Write([]byte(`{"status":"unknown","error":"health reporting not available"}`))
+		writeN, writeErr := w.Write([]byte(`{"status":"unknown","error":"health reporting not available"}`))
+		_ = writeN
+		if writeErr != nil {
+			return
+		}
 		return
 	}
 	h := m.hp.Health()
@@ -235,26 +253,44 @@ func (m *Monitor) handleHealth(w http.ResponseWriter, _ *http.Request) {
 		Status  string            `json:"status"`
 		Details map[string]string `json:"details,omitempty"`
 	}
-	b, _ := json.Marshal(healthResp{Status: h.Status.String(), Details: h.Details})
+	b, err := json.Marshal(healthResp{Status: h.Status.String(), Details: h.Details})
+	if err != nil {
+		return
+	}
 	if h.Status == dds.HealthDown {
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}
-	_, _ = w.Write(b)
+	writeN, writeErr := w.Write(b)
+	_ = writeN
+	if writeErr != nil {
+		return
+	}
 }
 
 // handleAPITopics serves GET /api/topics as a JSON array of per-topic metrics.
 func (m *Monitor) handleAPITopics(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if m.tp == nil {
-		_, _ = w.Write([]byte(`[]`))
+		writeN, writeErr := w.Write([]byte(`[]`))
+		_ = writeN
+		if writeErr != nil {
+			return
+		}
 		return
 	}
 	topics := m.tp.TopicMetrics()
 	if topics == nil {
 		topics = []dds.TopicMetrics{}
 	}
-	b, _ := json.Marshal(topics)
-	_, _ = w.Write(b)
+	b, err := json.Marshal(topics)
+	if err != nil {
+		return
+	}
+	writeN, writeErr := w.Write(b)
+	_ = writeN
+	if writeErr != nil {
+		return
+	}
 }
 
 // handleAPIDiagnostics serves GET /api/diagnostics as a JSON object combining
@@ -283,8 +319,15 @@ func (m *Monitor) handleAPIDiagnostics(w http.ResponseWriter, _ *http.Request) {
 		h := m.hp.Health()
 		resp.Health = &diagHealth{Status: h.Status.String(), Details: h.Details}
 	}
-	b, _ := json.Marshal(resp)
-	_, _ = w.Write(b)
+	b, err := json.Marshal(resp)
+	if err != nil {
+		return
+	}
+	writeN, writeErr := w.Write(b)
+	_ = writeN
+	if writeErr != nil {
+		return
+	}
 }
 
 func (m *Monitor) broadcast(eventType, data string) {
@@ -317,14 +360,16 @@ func (m *Monitor) metricsLoop() {
 					BytesWritten   uint64 `json:"bytes_written"`
 					BytesDelivered uint64 `json:"bytes_delivered"`
 				}
-				b, _ := json.Marshal(metricsEvent{
+				b, jsonErr := json.Marshal(metricsEvent{
 					WriteCount:     mt.WriteCount,
 					DeliverCount:   mt.DeliverCount,
 					DropCount:      mt.DropCount,
 					BytesWritten:   mt.BytesWritten,
 					BytesDelivered: mt.BytesDelivered,
 				})
-				m.broadcast("metrics", string(b))
+				if jsonErr == nil {
+					m.broadcast("metrics", string(b))
+				}
 			}
 			if m.dp != nil {
 				dm := m.dp.DiscoveryMetrics()
@@ -335,14 +380,16 @@ func (m *Monitor) metricsLoop() {
 					PeerEvictions     uint64 `json:"peer_evictions"`
 					EndpointMatches   uint64 `json:"endpoint_matches"`
 				}
-				b, _ := json.Marshal(discoveryEvent{
+				b, jsonErr := json.Marshal(discoveryEvent{
 					AnnouncesSent:     dm.AnnouncesSent,
 					AnnouncesReceived: dm.AnnouncesReceived,
 					PeersKnown:        dm.PeersKnown,
 					PeerEvictions:     dm.PeerEvictions,
 					EndpointMatches:   dm.EndpointMatches,
 				})
-				m.broadcast("discovery", string(b))
+				if jsonErr == nil {
+					m.broadcast("discovery", string(b))
+				}
 			}
 		case <-m.ctx.Done():
 			return

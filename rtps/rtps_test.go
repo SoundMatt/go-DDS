@@ -227,10 +227,14 @@ func TestRTPS_ParticipantClose_BlocksNewEndpoints(t *testing.T) {
 	}
 	p.Close()
 
-	if _, err := p.NewPublisher("t", dds.DefaultQoS); err == nil {
+	ignoredPub, err := p.NewPublisher("t", dds.DefaultQoS)
+	_ = ignoredPub
+	if err == nil {
 		t.Error("expected error from closed participant (NewPublisher)")
 	}
-	if _, err := p.NewSubscriber("t", dds.DefaultQoS); err == nil {
+	ignoredSub, err := p.NewSubscriber("t", dds.DefaultQoS)
+	_ = ignoredSub
+	if err == nil {
 		t.Error("expected error from closed participant (NewSubscriber)")
 	}
 }
@@ -337,20 +341,29 @@ func TestRTPS_TwoParticipants_SameHost(t *testing.T) {
 func TestWaitSet_ReceiveFromFirst(t *testing.T) {
 	p := newTestParticipant(t)
 
-	subA, _ := p.NewSubscriber("waitset/a", dds.DefaultQoS)
-	subB, _ := p.NewSubscriber("waitset/b", dds.DefaultQoS)
+	subA, err := p.NewSubscriber("waitset/a", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	subB, err := p.NewSubscriber("waitset/b", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer subA.Close()
 	defer subB.Close()
 
-	pubA, _ := p.NewPublisher("waitset/a", dds.DefaultQoS)
+	pubA, err := p.NewPublisher("waitset/a", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pubA.Close()
 
 	ws := dds.NewWaitSet(subA, subB)
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	if err := pubA.Write([]byte("ping")); err != nil {
-		t.Fatalf("Write: %v", err)
+	if writeErr := pubA.Write([]byte("ping")); writeErr != nil {
+		t.Fatalf("Write: %v", writeErr)
 	}
 	s, sub, err := ws.Wait(ctx)
 	if err != nil {
@@ -367,20 +380,29 @@ func TestWaitSet_ReceiveFromFirst(t *testing.T) {
 func TestWaitSet_ReceiveFromSecond(t *testing.T) {
 	p := newTestParticipant(t)
 
-	subA, _ := p.NewSubscriber("waitset/only-b/a", dds.DefaultQoS)
-	subB, _ := p.NewSubscriber("waitset/only-b/b", dds.DefaultQoS)
+	subA, err := p.NewSubscriber("waitset/only-b/a", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	subB, err := p.NewSubscriber("waitset/only-b/b", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer subA.Close()
 	defer subB.Close()
 
-	pubB, _ := p.NewPublisher("waitset/only-b/b", dds.DefaultQoS)
+	pubB, err := p.NewPublisher("waitset/only-b/b", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pubB.Close()
 
 	ws := dds.NewWaitSet(subA, subB)
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	if err := pubB.Write([]byte("from-b")); err != nil {
-		t.Fatalf("Write: %v", err)
+	if writeErr := pubB.Write([]byte("from-b")); writeErr != nil {
+		t.Fatalf("Write: %v", writeErr)
 	}
 	s, sub, err := ws.Wait(ctx)
 	if err != nil {
@@ -397,14 +419,19 @@ func TestWaitSet_ReceiveFromSecond(t *testing.T) {
 func TestWaitSet_ContextCancellation(t *testing.T) {
 	p := newTestParticipant(t)
 
-	sub, _ := p.NewSubscriber("waitset/cancel", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("waitset/cancel", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
 
 	ws := dds.NewWaitSet(sub)
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
 
-	_, _, err := ws.Wait(ctx)
+	ret1, ret2, err := ws.Wait(ctx)
+	_ = ret1
+	_ = ret2
 	if err == nil {
 		t.Error("expected context error when no sample arrives")
 	}
@@ -413,7 +440,10 @@ func TestWaitSet_ContextCancellation(t *testing.T) {
 func TestWaitSet_ClosedSubscriber(t *testing.T) {
 	p := newTestParticipant(t)
 
-	sub, _ := p.NewSubscriber("waitset/closed", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("waitset/closed", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	ws := dds.NewWaitSet(sub)
 
 	// Close the subscriber so its channel is closed.
@@ -488,7 +518,10 @@ func TestRTPS_TransientLocal_NoSample(t *testing.T) {
 func TestWaitSet_AllChannelsClosed(t *testing.T) {
 	p := newTestParticipant(t)
 
-	sub, _ := p.NewSubscriber("ws/all-closed", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("ws/all-closed", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	sub.Close() // channel is now closed
 
 	ws := dds.NewWaitSet(sub)
@@ -590,8 +623,14 @@ func TestRTPS_Security_NullPlugin(t *testing.T) {
 	}
 	t.Cleanup(func() { p.Close() })
 
-	sub, _ := p.NewSubscriber("security/null", dds.DefaultQoS)
-	pub, _ := p.NewPublisher("security/null", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("security/null", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	pub, err := p.NewPublisher("security/null", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer sub.Close()
 	defer pub.Close()
 
@@ -618,8 +657,14 @@ func TestRTPS_Security_HMAC(t *testing.T) {
 	}
 	t.Cleanup(func() { p.Close() })
 
-	sub, _ := p.NewSubscriber("security/hmac", dds.DefaultQoS)
-	pub, _ := p.NewPublisher("security/hmac", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("security/hmac", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	pub, err := p.NewPublisher("security/hmac", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer sub.Close()
 	defer pub.Close()
 
@@ -649,8 +694,14 @@ func TestRTPS_Security_AESGCM(t *testing.T) {
 	}
 	t.Cleanup(func() { p.Close() })
 
-	sub, _ := p.NewSubscriber("security/aesgcm", dds.DefaultQoS)
-	pub, _ := p.NewPublisher("security/aesgcm", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("security/aesgcm", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	pub, err := p.NewPublisher("security/aesgcm", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer sub.Close()
 	defer pub.Close()
 
@@ -801,7 +852,8 @@ func TestTryRead_RTPS(t *testing.T) {
 	}
 	defer sub.Close()
 
-	_, ok := sub.TryRead()
+	ignoredRet, ok := sub.TryRead()
+	_ = ignoredRet
 	if ok {
 		t.Error("TryRead on empty channel must return false")
 	}

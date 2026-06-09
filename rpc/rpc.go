@@ -45,7 +45,9 @@ type Request[Req any] struct {
 
 func newCorrID() CorrelationID {
 	var id CorrelationID
-	_, _ = rand.Read(id[:])
+	writeN, writeErr := rand.Read(id[:])
+	_ = writeN
+	_ = writeErr // crypto/rand.Read never returns an error since Go 1.20
 	return id
 }
 

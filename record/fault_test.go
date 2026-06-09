@@ -27,9 +27,15 @@ import (
 func TestFaultPublisher_NoFaults_Delivers(t *testing.T) {
 	p := newPart(t)
 	topic := uniqueTopic("fault/none")
-	sub, _ := p.NewSubscriber(topic, dds.DefaultQoS)
+	sub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
-	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	fp := record.NewFaultPublisher(pub, record.FaultOptions{}, 1)
@@ -51,9 +57,15 @@ func TestFaultPublisher_NoFaults_Delivers(t *testing.T) {
 func TestFaultPublisher_LossRate100_DropsAll(t *testing.T) {
 	p := newPart(t)
 	topic := uniqueTopic("fault/loss100")
-	sub, _ := p.NewSubscriber(topic, dds.DefaultQoS)
+	sub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
-	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	fp := record.NewFaultPublisher(pub, record.FaultOptions{LossRate: 1.0}, 1)
@@ -75,9 +87,15 @@ func TestFaultPublisher_LossRate100_DropsAll(t *testing.T) {
 func TestFaultPublisher_DuplicateRate100_Duplicates(t *testing.T) {
 	p := newPart(t)
 	topic := uniqueTopic("fault/dup100")
-	sub, _ := p.NewSubscriber(topic, dds.DefaultQoS, dds.WithChannelDepth(10))
+	sub, err := p.NewSubscriber(topic, dds.DefaultQoS, dds.WithChannelDepth(10))
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
-	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	fp := record.NewFaultPublisher(pub, record.FaultOptions{DuplicateRate: 1.0}, 1)
@@ -105,9 +123,15 @@ done:
 func TestFaultPublisher_CorruptRate100_FlipsByte(t *testing.T) {
 	p := newPart(t)
 	topic := uniqueTopic("fault/corrupt100")
-	sub, _ := p.NewSubscriber(topic, dds.DefaultQoS)
+	sub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
-	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	original := []byte("hello")
@@ -130,9 +154,15 @@ func TestFaultPublisher_CorruptRate100_FlipsByte(t *testing.T) {
 func TestFaultPublisher_CorruptRate_EmptyPayload_NoCorruption(t *testing.T) {
 	p := newPart(t)
 	topic := uniqueTopic("fault/corrupt-empty")
-	sub, _ := p.NewSubscriber(topic, dds.DefaultQoS)
+	sub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
-	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	fp := record.NewFaultPublisher(pub, record.FaultOptions{CorruptRate: 1.0}, 1)
@@ -147,9 +177,15 @@ func TestFaultPublisher_CorruptRate_EmptyPayload_NoCorruption(t *testing.T) {
 func TestFaultPublisher_FixedDelay(t *testing.T) {
 	p := newPart(t)
 	topic := uniqueTopic("fault/delay")
-	sub, _ := p.NewSubscriber(topic, dds.DefaultQoS)
+	sub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
-	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	const delay = 40 * time.Millisecond
@@ -178,7 +214,10 @@ func TestFaultPublisher_FixedDelay(t *testing.T) {
 func TestFaultPublisher_RandomDelay_WithinRange(t *testing.T) {
 	p := newPart(t)
 	topic := uniqueTopic("fault/delay-range")
-	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	const lo, hi = 10 * time.Millisecond, 30 * time.Millisecond
@@ -202,12 +241,15 @@ func TestFaultPublisher_RandomDelay_WithinRange(t *testing.T) {
 func TestFaultPublisher_WriteAfterClose_ReturnsError(t *testing.T) {
 	p := newPart(t)
 	topic := uniqueTopic("fault/closed")
-	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
-	fp := record.NewFaultPublisher(pub, record.FaultOptions{}, 1)
-	if err := fp.Close(); err != nil {
-		t.Fatalf("Close: %v", err)
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
 	}
-	err := fp.Write([]byte("x"))
+	fp := record.NewFaultPublisher(pub, record.FaultOptions{}, 1)
+	if closeErr := fp.Close(); closeErr != nil {
+		t.Fatalf("Close: %v", closeErr)
+	}
+	err = fp.Write([]byte("x"))
 	if err == nil {
 		t.Fatal("expected error writing to closed FaultPublisher")
 	}
@@ -216,7 +258,10 @@ func TestFaultPublisher_WriteAfterClose_ReturnsError(t *testing.T) {
 func TestFaultPublisher_CloseIdempotent(t *testing.T) {
 	p := newPart(t)
 	topic := uniqueTopic("fault/close-idem")
-	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	fp := record.NewFaultPublisher(pub, record.FaultOptions{}, 1)
 	_ = fp.Close()
 	// second close: underlying pub is already closed, but must not panic
@@ -229,13 +274,16 @@ func TestFaultPublisher_CloseIdempotent(t *testing.T) {
 func TestFaultPublisher_UnderlyingWriteError(t *testing.T) {
 	p := newPart(t)
 	topic := uniqueTopic("fault/pub-err")
-	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 
 	fp := record.NewFaultPublisher(pub, record.FaultOptions{}, 1)
 	// Close the underlying publisher directly — FaultPublisher stays "open".
 	_ = pub.Close()
 
-	err := fp.Write([]byte("x"))
+	err = fp.Write([]byte("x"))
 	if err == nil {
 		t.Fatal("expected error from underlying closed publisher")
 	}
@@ -246,7 +294,10 @@ func TestFaultPublisher_ZeroSeedIsNonDeterministic(t *testing.T) {
 	// Seed 0 triggers time.Now() seeding; just verify it constructs without panic.
 	p := newPart(t)
 	topic := uniqueTopic("fault/seed0")
-	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	fp := record.NewFaultPublisher(pub, record.FaultOptions{}, 0)
 	if err := fp.Write([]byte("ok")); err != nil {
 		t.Fatalf("Write: %v", err)
@@ -258,9 +309,15 @@ func TestFaultPublisher_ReorderWindow_FlushesOnFull(t *testing.T) {
 	p := newPart(t)
 	topic := uniqueTopic("fault/reorder-full")
 	const window = 4
-	sub, _ := p.NewSubscriber(topic, dds.DefaultQoS, dds.WithChannelDepth(window*2))
+	sub, err := p.NewSubscriber(topic, dds.DefaultQoS, dds.WithChannelDepth(window*2))
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
-	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	fp := record.NewFaultPublisher(pub, record.FaultOptions{ReorderWindow: window}, 42)
@@ -306,9 +363,15 @@ func TestFaultPublisher_ReorderWindow_FlushOnClose(t *testing.T) {
 	p := newPart(t)
 	topic := uniqueTopic("fault/reorder-close")
 	const window = 4
-	sub, _ := p.NewSubscriber(topic, dds.DefaultQoS, dds.WithChannelDepth(window))
+	sub, err := p.NewSubscriber(topic, dds.DefaultQoS, dds.WithChannelDepth(window))
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
-	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 
 	fp := record.NewFaultPublisher(pub, record.FaultOptions{ReorderWindow: window}, 7)
 
@@ -345,9 +408,15 @@ func TestFaultPublisher_ReorderWindow_FlushOnClose(t *testing.T) {
 func TestFaultPublisher_WriteCtx_Delivers(t *testing.T) {
 	p := newPart(t)
 	topic := uniqueTopic("fault/writectx-ok")
-	sub, _ := p.NewSubscriber(topic, dds.DefaultQoS)
+	sub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
-	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	fp := record.NewFaultPublisher(pub, record.FaultOptions{}, 1)
@@ -370,7 +439,10 @@ func TestFaultPublisher_WriteCtx_Delivers(t *testing.T) {
 func TestFaultPublisher_WriteCtx_CancelledDuringDelay(t *testing.T) {
 	p := newPart(t)
 	topic := uniqueTopic("fault/writectx-cancel")
-	pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	const delay = 200 * time.Millisecond
@@ -384,7 +456,7 @@ func TestFaultPublisher_WriteCtx_CancelledDuringDelay(t *testing.T) {
 	defer cancel()
 
 	start := time.Now()
-	err := fp.WriteCtx(ctx, []byte("delayed"))
+	err = fp.WriteCtx(ctx, []byte("delayed"))
 	elapsed := time.Since(start)
 	if err == nil {
 		t.Fatal("expected context error, got nil")

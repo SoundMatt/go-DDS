@@ -103,7 +103,10 @@ func TestCDR_Uint32RoundTrip(t *testing.T) {
 	enc.addUint32(pidBuiltinEndpointSet, 0xDEADBEEF)
 	raw := enc.finish()
 
-	dec, _ := newPLCDRDecoder(raw)
+	dec, ok := newPLCDRDecoder(raw)
+	if !ok {
+		t.Fatal("newPLCDRDecoder failed")
+	}
 	p, ok := dec.next()
 	if !ok {
 		t.Fatal("no param")
@@ -196,14 +199,16 @@ func TestRTPS_HeaderMarshalParse(t *testing.T) {
 func TestRTPS_Header_InvalidMagic(t *testing.T) {
 	b := make([]byte, 20)
 	b[0] = 'X' // wrong magic
-	_, ok := parseHeader(b)
+	ignoredRet, ok := parseHeader(b)
+	_ = ignoredRet
 	if ok {
 		t.Error("parseHeader should fail on bad magic")
 	}
 }
 
 func TestRTPS_Header_TooShort(t *testing.T) {
-	_, ok := parseHeader(make([]byte, 15))
+	ignoredRet, ok := parseHeader(make([]byte, 15))
+	_ = ignoredRet
 	if ok {
 		t.Error("parseHeader should fail on short input")
 	}
@@ -278,7 +283,8 @@ func TestCDR_WrapUnwrap(t *testing.T) {
 
 func TestCDR_UnwrapInvalidScheme(t *testing.T) {
 	b := []byte{0xFF, 0xFF, 0x00, 0x00, 0x01, 0x02}
-	_, ok := cdrUnwrapPayload(b)
+	ignoredRet, ok := cdrUnwrapPayload(b)
+	_ = ignoredRet
 	if ok {
 		t.Error("expected cdrUnwrapPayload to fail on unknown scheme")
 	}
@@ -386,7 +392,8 @@ func TestRTPS_HeartbeatRoundTrip(t *testing.T) {
 }
 
 func TestRTPS_Heartbeat_TooShort(t *testing.T) {
-	_, ok := parseHeartbeat(make([]byte, 10))
+	ignoredRet, ok := parseHeartbeat(make([]byte, 10))
+	_ = ignoredRet
 	if ok {
 		t.Error("parseHeartbeat should fail on short body")
 	}
@@ -417,7 +424,8 @@ func TestRTPS_AckNackRoundTrip(t *testing.T) {
 }
 
 func TestRTPS_AckNack_TooShort(t *testing.T) {
-	_, ok := parseAckNack(make([]byte, 10))
+	ignoredRet, ok := parseAckNack(make([]byte, 10))
+	_ = ignoredRet
 	if ok {
 		t.Error("parseAckNack should fail on short body")
 	}
@@ -440,7 +448,9 @@ func TestSendHistory_StoreGet(t *testing.T) {
 
 func TestSendHistory_FirstLast(t *testing.T) {
 	h := newSendHistory()
-	_, _, ok := h.firstLast()
+	ret1, ret2, ok := h.firstLast()
+	_ = ret1
+	_ = ret2
 	if ok {
 		t.Error("empty history should return ok=false")
 	}
@@ -472,7 +482,9 @@ func TestSendHistory_PayloadIsolation(t *testing.T) {
 func TestRecvTracker_Sequential(t *testing.T) {
 	rt := &recvTracker{}
 	for _, sn := range []uint32{1, 2, 3, 4, 5} {
-		_, _, needAck := rt.receive(sn)
+		ret1, ret2, needAck := rt.receive(sn)
+		_ = ret1
+		_ = ret2
 		if needAck {
 			t.Errorf("sn=%d: unexpected ACKNACK", sn)
 		}
@@ -499,7 +511,9 @@ func TestRecvTracker_Duplicate(t *testing.T) {
 	rt := &recvTracker{}
 	rt.receive(1)
 	rt.receive(2)
-	_, _, needAck := rt.receive(1) // duplicate
+	ret1, ret2, needAck := rt.receive(1) // duplicate
+	_ = ret1
+	_ = ret2
 	if needAck {
 		t.Error("duplicate sample should not trigger ACKNACK")
 	}

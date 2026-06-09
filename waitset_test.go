@@ -34,8 +34,14 @@ func newMockParticipant(t *testing.T) dds.Participant {
 
 func TestWaitSet_DeliversSample(t *testing.T) {
 	p := newMockParticipant(t)
-	sub, _ := p.NewSubscriber("ws/deliver", dds.DefaultQoS)
-	pub, _ := p.NewPublisher("ws/deliver", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("ws/deliver", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	pub, err := p.NewPublisher("ws/deliver", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer sub.Close()
 	defer pub.Close()
 
@@ -59,14 +65,19 @@ func TestWaitSet_DeliversSample(t *testing.T) {
 
 func TestWaitSet_ContextCancelled(t *testing.T) {
 	p := newMockParticipant(t)
-	sub, _ := p.NewSubscriber("ws/cancel", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("ws/cancel", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
 
 	ws := dds.NewWaitSet(sub)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
 	defer cancel()
 
-	_, _, err := ws.Wait(ctx)
+	ret1, ret2, err := ws.Wait(ctx)
+	_ = ret1
+	_ = ret2
 	if err == nil {
 		t.Error("expected context error when no sample arrives")
 	}
@@ -78,7 +89,10 @@ func TestWaitSet_ContextCancelled(t *testing.T) {
 // be ErrClosed (not nil and not a context error).
 func TestWaitSet_AllChannelsClosed(t *testing.T) {
 	p := newMockParticipant(t)
-	sub, _ := p.NewSubscriber("ws/closed", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("ws/closed", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 
 	// Close the channel before calling Wait.
 	sub.Close()
@@ -92,7 +106,9 @@ func TestWaitSet_AllChannelsClosed(t *testing.T) {
 	}
 	ch := make(chan result, 1)
 	go func() {
-		_, _, err := ws.Wait(ctx)
+		ret1, ret2, err := ws.Wait(ctx)
+		_ = ret1
+		_ = ret2
 		ch <- result{err}
 	}()
 
@@ -110,14 +126,19 @@ func TestWaitSet_AllChannelsClosed(t *testing.T) {
 // context takes priority over ErrClosed when both occur simultaneously.
 func TestWaitSet_AllChannelsClosed_ContextCancelled(t *testing.T) {
 	p := newMockParticipant(t)
-	sub, _ := p.NewSubscriber("ws/closedctx", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("ws/closedctx", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	sub.Close()
 
 	ws := dds.NewWaitSet(sub)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // already cancelled
 
-	_, _, err := ws.Wait(ctx)
+	ret1, ret2, err := ws.Wait(ctx)
+	_ = ret1
+	_ = ret2
 	if err == nil {
 		t.Error("expected non-nil error when context is cancelled")
 	}
@@ -218,7 +239,10 @@ type speedSample struct {
 
 func TestTypedPublisher_WriteAndClose(t *testing.T) {
 	p := newMockParticipant(t)
-	pub, _ := p.NewPublisher("typed/speed", dds.DefaultQoS)
+	pub, err := p.NewPublisher("typed/speed", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	tp := dds.NewTypedPublisher[speedSample](pub, dds.JSONCodec[speedSample]{})
@@ -232,8 +256,14 @@ func TestTypedPublisher_WriteAndClose(t *testing.T) {
 
 func TestTypedSubscriber_DeliversDecodedValue(t *testing.T) {
 	p := newMockParticipant(t)
-	rawSub, _ := p.NewSubscriber("typed/sub", dds.DefaultQoS)
-	rawPub, _ := p.NewPublisher("typed/sub", dds.DefaultQoS)
+	rawSub, err := p.NewSubscriber("typed/sub", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	rawPub, err := p.NewPublisher("typed/sub", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer rawPub.Close()
 
 	ts := dds.NewTypedSubscriber[speedSample](rawSub, dds.JSONCodec[speedSample]{})
@@ -256,8 +286,14 @@ func TestTypedSubscriber_DeliversDecodedValue(t *testing.T) {
 
 func TestTypedSubscriber_DecodeErrorDropped(t *testing.T) {
 	p := newMockParticipant(t)
-	rawSub, _ := p.NewSubscriber("typed/drop", dds.DefaultQoS)
-	rawPub, _ := p.NewPublisher("typed/drop", dds.DefaultQoS)
+	rawSub, err := p.NewSubscriber("typed/drop", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	rawPub, err := p.NewPublisher("typed/drop", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer rawPub.Close()
 
 	ts := dds.NewTypedSubscriber[speedSample](rawSub, dds.JSONCodec[speedSample]{})
@@ -277,7 +313,10 @@ func TestTypedSubscriber_DecodeErrorDropped(t *testing.T) {
 // when the underlying subscriber channel closes before ts.Close() is called.
 func TestTypedSubscriber_ClosedRawSub(t *testing.T) {
 	p := newMockParticipant(t)
-	rawSub, _ := p.NewSubscriber("typed/rawclose", dds.DefaultQoS)
+	rawSub, err := p.NewSubscriber("typed/rawclose", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 
 	ts := dds.NewTypedSubscriber[speedSample](rawSub, dds.JSONCodec[speedSample]{})
 
@@ -298,7 +337,10 @@ func TestTypedSubscriber_ClosedRawSub(t *testing.T) {
 
 func TestTypedSubscriber_Close_StopsPump(t *testing.T) {
 	p := newMockParticipant(t)
-	rawSub, _ := p.NewSubscriber("typed/close", dds.DefaultQoS)
+	rawSub, err := p.NewSubscriber("typed/close", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	ts := dds.NewTypedSubscriber[speedSample](rawSub, dds.JSONCodec[speedSample]{})
 	if err := ts.Close(); err != nil {
 		t.Fatalf("Close: %v", err)
@@ -336,11 +378,14 @@ func (errCodec[T]) Unmarshal([]byte) (T, error) { var z T; return z, nil }
 
 func TestTypedPublisher_MarshalError_Propagated(t *testing.T) {
 	p := newMockParticipant(t)
-	pub, _ := p.NewPublisher("typed/marshal-err", dds.DefaultQoS)
+	pub, err := p.NewPublisher("typed/marshal-err", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	tp := dds.NewTypedPublisher[speedSample](pub, errCodec[speedSample]{})
-	err := tp.Write(speedSample{KMH: 1})
+	err = tp.Write(speedSample{KMH: 1})
 	if err == nil {
 		t.Error("expected TypedPublisher.Write to propagate Marshal error")
 	}
@@ -374,9 +419,18 @@ func TestHealthStatus_String_Down(t *testing.T) {
 
 func TestWaitSet_Attach_DeliversFromNewSub(t *testing.T) {
 	p := newMockParticipant(t)
-	sub1, _ := p.NewSubscriber("ws/attach1", dds.DefaultQoS)
-	sub2, _ := p.NewSubscriber("ws/attach2", dds.DefaultQoS)
-	pub2, _ := p.NewPublisher("ws/attach2", dds.DefaultQoS)
+	sub1, err := p.NewSubscriber("ws/attach1", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	sub2, err := p.NewSubscriber("ws/attach2", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	pub2, err := p.NewPublisher("ws/attach2", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer sub1.Close()
 	defer sub2.Close()
 	defer pub2.Close()
@@ -403,10 +457,22 @@ func TestWaitSet_Attach_DeliversFromNewSub(t *testing.T) {
 
 func TestWaitSet_Detach_RemovesSub(t *testing.T) {
 	p := newMockParticipant(t)
-	sub1, _ := p.NewSubscriber("ws/detach1", dds.DefaultQoS)
-	sub2, _ := p.NewSubscriber("ws/detach2", dds.DefaultQoS)
-	pub1, _ := p.NewPublisher("ws/detach1", dds.DefaultQoS)
-	pub2, _ := p.NewPublisher("ws/detach2", dds.DefaultQoS)
+	sub1, err := p.NewSubscriber("ws/detach1", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	sub2, err := p.NewSubscriber("ws/detach2", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	pub1, err := p.NewPublisher("ws/detach1", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	pub2, err := p.NewPublisher("ws/detach2", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer sub1.Close()
 	defer sub2.Close()
 	defer pub1.Close()
@@ -431,7 +497,10 @@ func TestWaitSet_Detach_RemovesSub(t *testing.T) {
 
 func TestWaitSet_Detach_Idempotent(t *testing.T) {
 	p := newMockParticipant(t)
-	sub, _ := p.NewSubscriber("ws/detach-idem", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("ws/detach-idem", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
 
 	ws := dds.NewWaitSet(sub)
@@ -440,7 +509,9 @@ func TestWaitSet_Detach_Idempotent(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
 	defer cancel()
-	_, _, err := ws.Wait(ctx) // empty WaitSet times out immediately
+	ret1, ret2, err := ws.Wait(ctx) // empty WaitSet times out immediately
+	_ = ret1
+	_ = ret2
 	if err == nil {
 		t.Error("expected context error on empty WaitSet")
 	}
@@ -448,7 +519,10 @@ func TestWaitSet_Detach_Idempotent(t *testing.T) {
 
 func TestWaitSet_Attach_ReturnsWaitSet(t *testing.T) {
 	p := newMockParticipant(t)
-	sub, _ := p.NewSubscriber("ws/chain", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("ws/chain", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
 
 	ws := dds.NewWaitSet()
@@ -461,9 +535,18 @@ func TestWaitSet_Attach_ReturnsWaitSet(t *testing.T) {
 func TestWaitSet_OneClosedOnePending(t *testing.T) {
 	p := newMockParticipant(t)
 
-	subClosed, _ := p.NewSubscriber("ws/closed2", dds.DefaultQoS)
-	subOpen, _ := p.NewSubscriber("ws/open", dds.DefaultQoS)
-	pub, _ := p.NewPublisher("ws/open", dds.DefaultQoS)
+	subClosed, err := p.NewSubscriber("ws/closed2", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	subOpen, err := p.NewSubscriber("ws/open", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	pub, err := p.NewPublisher("ws/open", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer subOpen.Close()
 	defer pub.Close()
 
@@ -488,11 +571,20 @@ func TestWaitSet_OneClosedOnePending(t *testing.T) {
 }
 
 func TestTypedPublisher_WriteCtx_ValidContext(t *testing.T) {
-	p, _ := mock.New(0)
+	p, err := mock.New(0)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
 	defer func() { _ = p.Close() }()
 
-	pub, _ := p.NewPublisher("typed/ctx", dds.DefaultQoS)
-	sub, _ := p.NewSubscriber("typed/ctx", dds.DefaultQoS)
+	pub, err := p.NewPublisher("typed/ctx", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	sub, err := p.NewSubscriber("typed/ctx", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer func() { _ = sub.Close() }()
 
 	tp := dds.NewTypedPublisher[speedSample](pub, dds.JSONCodec[speedSample]{})
@@ -512,10 +604,16 @@ func TestTypedPublisher_WriteCtx_ValidContext(t *testing.T) {
 }
 
 func TestTypedPublisher_WriteCtx_CancelledContext(t *testing.T) {
-	p, _ := mock.New(0)
+	p, err := mock.New(0)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
 	defer func() { _ = p.Close() }()
 
-	pub, _ := p.NewPublisher("typed/ctxcancel", dds.DefaultQoS)
+	pub, err := p.NewPublisher("typed/ctxcancel", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	tp := dds.NewTypedPublisher[speedSample](pub, dds.JSONCodec[speedSample]{})
 	defer func() { _ = tp.Close() }()
 
@@ -527,10 +625,16 @@ func TestTypedPublisher_WriteCtx_CancelledContext(t *testing.T) {
 }
 
 func TestTypedPublisher_WriteCtx_MarshalError(t *testing.T) {
-	p, _ := mock.New(0)
+	p, err := mock.New(0)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
 	defer func() { _ = p.Close() }()
 
-	pub, _ := p.NewPublisher("typed/ctxmarshalerr", dds.DefaultQoS)
+	pub, err := p.NewPublisher("typed/ctxmarshalerr", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	tp := dds.NewTypedPublisher[speedSample](pub, errCodec[speedSample]{})
 	defer func() { _ = tp.Close() }()
 
@@ -590,7 +694,8 @@ func TestTryRead_Interface(t *testing.T) {
 	defer sub.Close()
 
 	// Channel is empty — TryRead must return false.
-	_, ok := sub.TryRead()
+	ignoredRet, ok := sub.TryRead()
+	_ = ignoredRet
 	if ok {
 		t.Error("TryRead on empty channel must return false")
 	}
@@ -612,8 +717,14 @@ func TestWithDeadlineMissed_Option(t *testing.T) {
 
 func TestTypedSample_MetadataForwarded(t *testing.T) {
 	p := newMockParticipant(t)
-	rawSub, _ := p.NewSubscriber("typed/meta", dds.DefaultQoS)
-	rawPub, _ := p.NewPublisher("typed/meta", dds.DefaultQoS)
+	rawSub, err := p.NewSubscriber("typed/meta", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	rawPub, err := p.NewPublisher("typed/meta", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer rawPub.Close()
 
 	ts := dds.NewTypedSubscriber[speedSample](rawSub, dds.JSONCodec[speedSample]{})

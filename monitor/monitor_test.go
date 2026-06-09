@@ -154,7 +154,8 @@ func TestMonitor_New_ListenError(t *testing.T) {
 	p := newMockParticipant(t)
 	defer p.Close()
 	// Port 99999 is out of the valid range; net.Listen returns an error.
-	_, err := monitor.New(p, monitor.Options{Addr: "127.0.0.1:99999"})
+	ignoredRet, err := monitor.New(p, monitor.Options{Addr: "127.0.0.1:99999"})
+	_ = ignoredRet
 	if err == nil {
 		t.Fatal("expected error for invalid listen address")
 	}

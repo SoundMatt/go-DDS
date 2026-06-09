@@ -72,14 +72,16 @@ func TestParseConfig_AllFields(t *testing.T) {
 }
 
 func TestParseConfig_InvalidJSON(t *testing.T) {
-	_, err := config.ParseConfig(strings.NewReader(`{not valid json`))
+	ignoredRet, err := config.ParseConfig(strings.NewReader(`{not valid json`))
+	_ = ignoredRet
 	if err == nil {
 		t.Fatal("expected error for invalid JSON")
 	}
 }
 
 func TestParseConfig_EmptyReader(t *testing.T) {
-	_, err := config.ParseConfig(strings.NewReader(""))
+	ignoredRet, err := config.ParseConfig(strings.NewReader(""))
+	_ = ignoredRet
 	if err == nil {
 		t.Fatal("expected error for empty input")
 	}
@@ -87,7 +89,8 @@ func TestParseConfig_EmptyReader(t *testing.T) {
 
 func TestParseConfig_ValidationError(t *testing.T) {
 	// Valid JSON but fails Validate: domain out of range triggers return nil, err.
-	_, err := config.ParseConfig(strings.NewReader(`{"domain": -1}`))
+	ignoredRet, err := config.ParseConfig(strings.NewReader(`{"domain": -1}`))
+	_ = ignoredRet
 	if err == nil {
 		t.Fatal("expected error for invalid domain in ParseConfig")
 	}
@@ -121,7 +124,8 @@ func TestLoadConfig_HappyPath(t *testing.T) {
 }
 
 func TestLoadConfig_FileNotFound(t *testing.T) {
-	_, err := config.LoadConfig("/nonexistent/path/config.json")
+	ignoredRet, err := config.LoadConfig("/nonexistent/path/config.json")
+	_ = ignoredRet
 	if err == nil {
 		t.Fatal("expected error for missing file")
 	}
@@ -328,7 +332,10 @@ func TestParseConfig_JSONRoundTrip(t *testing.T) {
 func TestParseConfig_ResolvedDursNotInJSON(t *testing.T) {
 	// HeartbeatPeriodDur is tagged json:"-" and must not appear in the output.
 	cfg := config.ParticipantConfig{HeartbeatPeriodDur: 99 * time.Second}
-	b, _ := json.Marshal(cfg)
+	b, err := json.Marshal(cfg)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
 	if bytes.Contains(b, []byte("HeartbeatPeriodDur")) || bytes.Contains(b, []byte("99")) {
 		t.Errorf("resolved duration should not appear in JSON: %s", b)
 	}

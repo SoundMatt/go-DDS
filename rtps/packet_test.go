@@ -156,7 +156,10 @@ func TestNotifyReliableReaders_NoReaders(t *testing.T) {
 
 func TestNotifyReliableReaders_BestEffortReader(t *testing.T) {
 	p := testPart(t)
-	sub, _ := p.NewSubscriber("nrr/be", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("nrr/be", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
 	// BestEffort reader is skipped — must not panic.
 	p.notifyReliableReaders(
@@ -1243,10 +1246,15 @@ func TestPersistLoad_OversizePayload_Rejected(t *testing.T) {
 	}
 	var hdr [4]byte
 	binary.LittleEndian.PutUint32(hdr[:], 64*1024*1024+1) // one byte over the cap
-	_, _ = f.Write(hdr[:])
+	writeN, writeErr := f.Write(hdr[:])
+	_ = writeN
+	if writeErr != nil {
+		t.Fatalf("Write: %v", writeErr)
+	}
 	_ = f.Close()
 
-	_, loadErr := persistLoad(dir, "big/topic")
+	ignoredRet, loadErr := persistLoad(dir, "big/topic")
+	_ = ignoredRet
 	if loadErr == nil {
 		t.Error("expected error for oversized payload header, got nil")
 	}
@@ -1322,7 +1330,8 @@ func TestPlog_Debug_WithNonNilLogger(t *testing.T) {
 
 func TestNewPublisher_EmptyTopic_ErrTopicEmpty(t *testing.T) {
 	p := testPart(t)
-	_, err := p.NewPublisher("", dds.DefaultQoS)
+	ignoredRet, err := p.NewPublisher("", dds.DefaultQoS)
+	_ = ignoredRet
 	if err == nil {
 		t.Fatal("expected error for empty topic")
 	}
@@ -1330,7 +1339,8 @@ func TestNewPublisher_EmptyTopic_ErrTopicEmpty(t *testing.T) {
 
 func TestNewSubscriber_EmptyTopic_ErrTopicEmpty(t *testing.T) {
 	p := testPart(t)
-	_, err := p.NewSubscriber("", dds.DefaultQoS)
+	ignoredRet, err := p.NewSubscriber("", dds.DefaultQoS)
+	_ = ignoredRet
 	if err == nil {
 		t.Fatal("expected error for empty topic")
 	}
@@ -1495,7 +1505,8 @@ func TestWithNoMulticast_ParticipantStarts(t *testing.T) {
 	// NOTE: current implementation still binds the mcast socket (the option is
 	// stored but not yet used to skip the bind — that is wired at SPDP level).
 	// This test verifies the option is accepted without error.
-	_, err := newParticipant(dds.Domain(99), WithNoMulticast())
+	ignoredRet, err := newParticipant(dds.Domain(99), WithNoMulticast())
+	_ = ignoredRet
 	if err != nil {
 		t.Skipf("newParticipant: %v — socket creation unavailable", err)
 	}
@@ -1546,9 +1557,15 @@ func TestInfoTS_WriteCarriesTimestamp(t *testing.T) {
 	defer p.Close()
 
 	before := time.Now()
-	sub, _ := p.NewSubscriber("ts/rtps", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("ts/rtps", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
-	pub, _ := p.NewPublisher("ts/rtps", dds.DefaultQoS)
+	pub, err := p.NewPublisher("ts/rtps", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	_ = pub.Write([]byte("ts-test"))
@@ -1597,9 +1614,15 @@ func TestWithTracer_AcceptedAndUsed(t *testing.T) {
 		t.Skipf("newParticipant: %v", err)
 	}
 	defer p.Close()
-	pub, _ := p.NewPublisher("tracer/test", dds.DefaultQoS)
+	pub, err := p.NewPublisher("tracer/test", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
-	sub, _ := p.NewSubscriber("tracer/test", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("tracer/test", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
 
 	_ = pub.Write([]byte("trace"))
@@ -1630,9 +1653,15 @@ func TestChannelDepth_RTPS(t *testing.T) {
 	}
 	defer p.Close()
 
-	sub, _ := p.NewSubscriber("depth/rtps", dds.DefaultQoS, dds.WithChannelDepth(2))
+	sub, err := p.NewSubscriber("depth/rtps", dds.DefaultQoS, dds.WithChannelDepth(2))
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
-	pub, _ := p.NewPublisher("depth/rtps", dds.DefaultQoS)
+	pub, err := p.NewPublisher("depth/rtps", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	_ = pub.Write([]byte("a"))
@@ -1662,12 +1691,18 @@ func TestBackPressure_DropOldest_RTPS(t *testing.T) {
 	}
 	defer p.Close()
 
-	sub, _ := p.NewSubscriber("bp/rtps", dds.DefaultQoS,
+	sub, err := p.NewSubscriber("bp/rtps", dds.DefaultQoS,
 		dds.WithChannelDepth(1),
 		dds.WithBackPressure(dds.DropOldest),
 	)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
-	pub, _ := p.NewPublisher("bp/rtps", dds.DefaultQoS)
+	pub, err := p.NewPublisher("bp/rtps", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	_ = pub.Write([]byte("old"))
@@ -1707,7 +1742,10 @@ func TestCloseWithDrain_RTPS_BestEffort(t *testing.T) {
 	if err != nil {
 		t.Skipf("newParticipant: %v", err)
 	}
-	pub, _ := p.NewPublisher("drain/be", dds.DefaultQoS)
+	pub, err := p.NewPublisher("drain/be", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	_ = pub.Write([]byte("x"))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -1725,7 +1763,10 @@ func TestCloseWithDrain_RTPS_Reliable_NoRemoteReaders(t *testing.T) {
 	if err != nil {
 		t.Skipf("newParticipant: %v", err)
 	}
-	pub, _ := p.NewPublisher("drain/rel", dds.ReliableQoS)
+	pub, err := p.NewPublisher("drain/rel", dds.ReliableQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	_ = pub.Write([]byte("reliable"))
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
@@ -1746,7 +1787,10 @@ func TestAdvanceAcked_SignalsDrainCh(t *testing.T) {
 	}
 	defer p.Close()
 
-	pub, _ := p.NewPublisher("drain/ack", dds.ReliableQoS)
+	pub, err := p.NewPublisher("drain/ack", dds.ReliableQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	_ = pub.Write([]byte("w1"))
@@ -1858,7 +1902,10 @@ func TestSplitIntoFragmentsN_ZeroSizeFallback(t *testing.T) {
 
 func TestWriter_FragmentSize_NoTSNStream(t *testing.T) {
 	p := testPart(t)
-	pub, _ := p.NewPublisher("fsize/default", dds.DefaultQoS)
+	pub, err := p.NewPublisher("fsize/default", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 	w, ok := pub.(*rtpsWriter)
 	if !ok {
@@ -1871,7 +1918,10 @@ func TestWriter_FragmentSize_NoTSNStream(t *testing.T) {
 
 func TestWriter_SendSock_NoTSN_IsDataSock(t *testing.T) {
 	p := testPart(t)
-	pub, _ := p.NewPublisher("ssock/default", dds.DefaultQoS)
+	pub, err := p.NewPublisher("ssock/default", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 	w, ok := pub.(*rtpsWriter)
 	if !ok {
@@ -2050,7 +2100,10 @@ func TestTSNConfig_FragSizePropagated(t *testing.T) {
 	}
 	defer p.Close()
 
-	pub, _ := p.NewPublisher("frag/tsn", dds.DefaultQoS)
+	pub, err := p.NewPublisher("frag/tsn", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 	w, ok := pub.(*rtpsWriter)
 	if !ok {
@@ -2152,9 +2205,15 @@ func TestScheduledSend_TriggeredOnWrite(t *testing.T) {
 func TestWrite_FragmentedPath_LargePayload(t *testing.T) {
 	// Verify that a payload larger than maxFragmentPayload is written without error.
 	p := testPart(t)
-	sub, _ := p.NewSubscriber("frag/large", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("frag/large", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer sub.Close()
-	pub, _ := p.NewPublisher("frag/large", dds.DefaultQoS)
+	pub, err := p.NewPublisher("frag/large", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 
 	large := make([]byte, maxFragmentPayload+100)

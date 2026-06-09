@@ -27,7 +27,9 @@ func TestWithContext_CancelsParticipant(t *testing.T) {
 	}
 
 	// Participant is open before cancel.
-	if _, err := p.NewPublisher("ctx/before", dds.DefaultQoS); err != nil {
+	ignoredVal, err := p.NewPublisher("ctx/before", dds.DefaultQoS)
+	_ = ignoredVal
+	if err != nil {
 		t.Fatalf("NewPublisher before cancel: %v", err)
 	}
 
@@ -36,7 +38,8 @@ func TestWithContext_CancelsParticipant(t *testing.T) {
 	// Poll until the background goroutine calls Close.
 	deadline := time.After(2 * time.Second)
 	for {
-		_, err := p.NewPublisher("ctx/after", dds.DefaultQoS)
+		ignoredRet, err := p.NewPublisher("ctx/after", dds.DefaultQoS)
+		_ = ignoredRet
 		if errors.Is(err, dds.ErrClosed) {
 			return // correct
 		}
@@ -61,7 +64,8 @@ func TestWithContext_AlreadyCancelledContext(t *testing.T) {
 
 	deadline := time.After(2 * time.Second)
 	for {
-		_, err := p.NewPublisher("ctx/precancelled", dds.DefaultQoS)
+		ignoredRet, err := p.NewPublisher("ctx/precancelled", dds.DefaultQoS)
+		_ = ignoredRet
 		if errors.Is(err, dds.ErrClosed) {
 			return // correct
 		}

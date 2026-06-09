@@ -32,11 +32,20 @@ var payloadSizes = []struct {
 func BenchmarkPublish_RoundTrip(b *testing.B) {
 	for _, ps := range payloadSizes {
 		b.Run(ps.name, func(b *testing.B) {
-			p, _ := mock.New(dds.Domain(0))
+			p, err := mock.New(dds.Domain(0))
+			if err != nil {
+				b.Fatalf("New: %v", err)
+			}
 			defer p.Close()
 			topic := "bench/roundtrip/" + ps.name
-			sub, _ := p.NewSubscriber(topic, dds.DefaultQoS)
-			pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+			sub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+			if err != nil {
+				b.Fatalf("NewSubscriber: %v", err)
+			}
+			pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+			if err != nil {
+				b.Fatalf("NewPublisher: %v", err)
+			}
 			defer sub.Close()
 			defer pub.Close()
 
@@ -64,13 +73,22 @@ func BenchmarkPublish_RoundTrip(b *testing.B) {
 func BenchmarkPublish_FireAndForget(b *testing.B) {
 	for _, ps := range payloadSizes {
 		b.Run(ps.name, func(b *testing.B) {
-			p, _ := mock.New(dds.Domain(0))
+			p, err := mock.New(dds.Domain(0))
+			if err != nil {
+				b.Fatalf("New: %v", err)
+			}
 			defer p.Close()
 			// Subscriber registered so broker iterates the subscription list
 			// (same code path as production).
 			topic := "bench/ff/" + ps.name
-			sub, _ := p.NewSubscriber(topic, dds.DefaultQoS)
-			pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+			sub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+			if err != nil {
+				b.Fatalf("NewSubscriber: %v", err)
+			}
+			pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+			if err != nil {
+				b.Fatalf("NewPublisher: %v", err)
+			}
 			defer sub.Close()
 			defer pub.Close()
 
@@ -93,20 +111,30 @@ func BenchmarkPublish_FireAndForget(b *testing.B) {
 func BenchmarkPublish_FanOut(b *testing.B) {
 	for _, n := range []int{1, 2, 4, 8, 16} {
 		b.Run(fmt.Sprintf("%dsubs", n), func(b *testing.B) {
-			p, _ := mock.New(dds.Domain(0))
+			p, err := mock.New(dds.Domain(0))
+			if err != nil {
+				b.Fatalf("New: %v", err)
+			}
 			defer p.Close()
 
 			topic := fmt.Sprintf("bench/fanout/%d", n)
 			subs := make([]dds.Subscriber, n)
 			for i := range subs {
-				subs[i], _ = p.NewSubscriber(topic, dds.DefaultQoS)
+				var subErr error
+				subs[i], subErr = p.NewSubscriber(topic, dds.DefaultQoS)
+				if subErr != nil {
+					b.Fatalf("NewSubscriber: %v", subErr)
+				}
 			}
 			defer func() {
 				for _, s := range subs {
 					_ = s.Close()
 				}
 			}()
-			pub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+			pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+			if err != nil {
+				b.Fatalf("NewPublisher: %v", err)
+			}
 			defer pub.Close()
 
 			payload := []byte(`{"value":42}`)
@@ -132,7 +160,10 @@ func BenchmarkPublish_FanOut(b *testing.B) {
 // each with its own publisher, writing to a shared topic. Measures concurrent
 // publish throughput and exercises the broker's RWMutex read path.
 func BenchmarkPublish_Parallel(b *testing.B) {
-	p, _ := mock.New(dds.Domain(0))
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		b.Fatalf("New: %v", err)
+	}
 	defer p.Close()
 
 	payload := []byte(`{"sensor":"parallel","value":1.0}`)
@@ -141,7 +172,10 @@ func BenchmarkPublish_Parallel(b *testing.B) {
 	b.ResetTimer()
 
 	b.RunParallel(func(pb *testing.PB) {
-		pub, _ := p.NewPublisher("bench/parallel", dds.DefaultQoS)
+		pub, err := p.NewPublisher("bench/parallel", dds.DefaultQoS)
+		if err != nil {
+			b.Fatalf("NewPublisher: %v", err)
+		}
 		defer pub.Close()
 		for pb.Next() {
 			_ = pub.Write(payload)
@@ -152,7 +186,10 @@ func BenchmarkPublish_Parallel(b *testing.B) {
 // BenchmarkSubscribe_Parallel exercises concurrent subscriber creation and
 // receive under parallel writes — stresses the broker's RWMutex write path.
 func BenchmarkSubscribe_Parallel(b *testing.B) {
-	p, _ := mock.New(dds.Domain(0))
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		b.Fatalf("New: %v", err)
+	}
 	defer p.Close()
 
 	payload := []byte("ping")
@@ -161,8 +198,14 @@ func BenchmarkSubscribe_Parallel(b *testing.B) {
 
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			sub, _ := p.NewSubscriber("bench/sub-parallel", dds.DefaultQoS)
-			pub, _ := p.NewPublisher("bench/sub-parallel", dds.DefaultQoS)
+			sub, err := p.NewSubscriber("bench/sub-parallel", dds.DefaultQoS)
+			if err != nil {
+				b.Fatalf("NewSubscriber: %v", err)
+			}
+			pub, err := p.NewPublisher("bench/sub-parallel", dds.DefaultQoS)
+			if err != nil {
+				b.Fatalf("NewPublisher: %v", err)
+			}
 			if err := pub.Write(payload); err != nil {
 				b.Fatal(err)
 			}
@@ -179,31 +222,46 @@ func BenchmarkSubscribe_Parallel(b *testing.B) {
 func BenchmarkNewParticipant(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		p, _ := mock.New(dds.Domain(0))
+		p, err := mock.New(dds.Domain(0))
+		if err != nil {
+			b.Fatalf("New: %v", err)
+		}
 		p.Close()
 	}
 }
 
 // BenchmarkNewPublisher measures publisher creation + close on a live participant.
 func BenchmarkNewPublisher(b *testing.B) {
-	p, _ := mock.New(dds.Domain(0))
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		b.Fatalf("New: %v", err)
+	}
 	defer p.Close()
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		pub, _ := p.NewPublisher(fmt.Sprintf("bench/pubcreate/%d", i), dds.DefaultQoS)
+		pub, err := p.NewPublisher(fmt.Sprintf("bench/pubcreate/%d", i), dds.DefaultQoS)
+		if err != nil {
+			b.Fatalf("NewPublisher: %v", err)
+		}
 		pub.Close()
 	}
 }
 
 // BenchmarkNewSubscriber measures subscriber creation + close on a live participant.
 func BenchmarkNewSubscriber(b *testing.B) {
-	p, _ := mock.New(dds.Domain(0))
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		b.Fatalf("New: %v", err)
+	}
 	defer p.Close()
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		sub, _ := p.NewSubscriber(fmt.Sprintf("bench/subcreate/%d", i), dds.DefaultQoS)
+		sub, err := p.NewSubscriber(fmt.Sprintf("bench/subcreate/%d", i), dds.DefaultQoS)
+		if err != nil {
+			b.Fatalf("NewSubscriber: %v", err)
+		}
 		sub.Close()
 	}
 }
@@ -214,11 +272,20 @@ func BenchmarkNewSubscriber(b *testing.B) {
 // subscriber channel is full (64 slots). This covers the default: drop branch
 // in broker.publish and is the common case for a slow consumer.
 func BenchmarkBroker_DroppedSamples(b *testing.B) {
-	p, _ := mock.New(dds.Domain(0))
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		b.Fatalf("New: %v", err)
+	}
 	defer p.Close()
 
-	sub, _ := p.NewSubscriber("bench/drop", dds.DefaultQoS)
-	pub, _ := p.NewPublisher("bench/drop", dds.DefaultQoS)
+	sub, err := p.NewSubscriber("bench/drop", dds.DefaultQoS)
+	if err != nil {
+		b.Fatalf("NewSubscriber: %v", err)
+	}
+	pub, err := p.NewPublisher("bench/drop", dds.DefaultQoS)
+	if err != nil {
+		b.Fatalf("NewPublisher: %v", err)
+	}
 	defer sub.Close()
 	defer pub.Close()
 
@@ -240,12 +307,18 @@ func BenchmarkBroker_DroppedSamples(b *testing.B) {
 // BenchmarkBroker_SubscribeUnsubscribe measures the cost of subscribe +
 // unsubscribe (broker mutex write path) under no concurrent traffic.
 func BenchmarkBroker_SubscribeUnsubscribe(b *testing.B) {
-	p, _ := mock.New(dds.Domain(0))
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		b.Fatalf("New: %v", err)
+	}
 	defer p.Close()
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		sub, _ := p.NewSubscriber("bench/subunsub", dds.DefaultQoS)
+		sub, err := p.NewSubscriber("bench/subunsub", dds.DefaultQoS)
+		if err != nil {
+			b.Fatalf("NewSubscriber: %v", err)
+		}
 		sub.Close()
 	}
 }
@@ -254,15 +327,25 @@ func BenchmarkBroker_SubscribeUnsubscribe(b *testing.B) {
 // exist — exercises the map lookup cost as the topic namespace grows.
 func BenchmarkPublish_ManyTopics(b *testing.B) {
 	const numTopics = 1000
-	p, _ := mock.New(dds.Domain(0))
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		b.Fatalf("New: %v", err)
+	}
 	defer p.Close()
 
 	subs := make([]dds.Subscriber, numTopics)
 	pubs := make([]dds.Publisher, numTopics)
 	for i := 0; i < numTopics; i++ {
 		t := fmt.Sprintf("bench/manytopics/%d", i)
-		subs[i], _ = p.NewSubscriber(t, dds.DefaultQoS)
-		pubs[i], _ = p.NewPublisher(t, dds.DefaultQoS)
+		var subErr, pubErr error
+		subs[i], subErr = p.NewSubscriber(t, dds.DefaultQoS)
+		if subErr != nil {
+			b.Fatalf("NewSubscriber: %v", subErr)
+		}
+		pubs[i], pubErr = p.NewPublisher(t, dds.DefaultQoS)
+		if pubErr != nil {
+			b.Fatalf("NewPublisher: %v", pubErr)
+		}
 	}
 	defer func() {
 		for i := range subs {

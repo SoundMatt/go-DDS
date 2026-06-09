@@ -74,7 +74,7 @@ func setSockTOS(conn *net.UDPConn, dscp uint8) error {
 func enableTxTime(conn *net.UDPConn) error {
 	cfg := sockTxTime{Clockid: clockTAI, Flags: 0}
 	return withFd(conn, func(fd int) error {
-		_, _, errno := syscall.RawSyscall6(
+		ret1, ret2, errno := syscall.RawSyscall6(
 			syscall.SYS_SETSOCKOPT,
 			uintptr(fd),
 			syscall.SOL_SOCKET,
@@ -83,6 +83,8 @@ func enableTxTime(conn *net.UDPConn) error {
 			unsafe.Sizeof(cfg),
 			0,
 		)
+		_ = ret1
+		_ = ret2
 		if errno != 0 {
 			return errno
 		}
@@ -98,8 +100,10 @@ func clockTAINow() (time.Time, error) {
 	var ts syscall.Timespec
 	// syscall.ClockGettime is not available on all Linux build configurations;
 	// use a raw syscall instead for portability across Go toolchain versions.
-	_, _, errno := syscall.RawSyscall(syscall.SYS_CLOCK_GETTIME,
+	ret1, ret2, errno := syscall.RawSyscall(syscall.SYS_CLOCK_GETTIME,
 		uintptr(clockTAI), uintptr(unsafe.Pointer(&ts)), 0)
+	_ = ret1
+	_ = ret2
 	if errno != 0 {
 		return time.Now(), errno
 	}
@@ -129,14 +133,16 @@ func buildTxTimeCmsg(txTimeNS uint64) []byte {
 // falls back to a plain WriteToUDP.
 func scheduledSend(conn *net.UDPConn, dst *net.UDPAddr, data []byte, txTimeNS uint64) error {
 	if txTimeNS == 0 {
-		_, err := conn.WriteToUDP(data, dst)
+		ignoredRet, err := conn.WriteToUDP(data, dst)
+		_ = ignoredRet
 		return err
 	}
 	ip4 := dst.IP.To4()
 	if ip4 == nil {
 		// IPv6 path: fall back to ordinary send (SCM_TXTIME with IPv6 needs
 		// a slightly different cmsg layout; not implemented in v0.5).
-		_, err := conn.WriteToUDP(data, dst)
+		ignoredRet, err := conn.WriteToUDP(data, dst)
+		_ = ignoredRet
 		return err
 	}
 	sa := &syscall.SockaddrInet4{Port: dst.Port}

@@ -265,11 +265,14 @@ func writeFrame(w io.Writer, f *wireFrame) error {
 	}
 	var hdr [4]byte
 	binary.BigEndian.PutUint32(hdr[:], uint32(len(data)))
-	if _, werr := w.Write(hdr[:]); werr != nil {
+	ignoredVal, werr := w.Write(hdr[:])
+	_ = ignoredVal
+	if werr != nil {
 		return werr
 	}
-	_, err = w.Write(data)
-	return err
+	writeN, writeErr := w.Write(data)
+	_ = writeN
+	return writeErr
 }
 
 func readFrame(r io.Reader) (*wireFrame, error) {

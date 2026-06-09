@@ -210,7 +210,8 @@ func TestHealthTracker_NegativeLateness_Clamped(t *testing.T) {
 // ── TAPRIOFromStreams ─────────────────────────────────────────────────────────
 
 func TestTAPRIOFromStreams_NilConfig(t *testing.T) {
-	_, err := tsn.TAPRIOFromStreams(nil)
+	ignoredRet, err := tsn.TAPRIOFromStreams(nil)
+	_ = ignoredRet
 	if err == nil {
 		t.Fatal("expected error for nil config")
 	}
@@ -218,7 +219,8 @@ func TestTAPRIOFromStreams_NilConfig(t *testing.T) {
 
 func TestTAPRIOFromStreams_EmptyStreams(t *testing.T) {
 	cfg := &tsn.StreamConfig{}
-	_, err := tsn.TAPRIOFromStreams(cfg)
+	ignoredRet, err := tsn.TAPRIOFromStreams(cfg)
+	_ = ignoredRet
 	if err == nil {
 		t.Fatal("expected error for empty streams")
 	}
@@ -228,7 +230,8 @@ func TestTAPRIOFromStreams_AllZeroIntervals(t *testing.T) {
 	cfg := &tsn.StreamConfig{
 		Streams: []tsn.Stream{{Topic: "a", PCP: 1, IntervalUS: 0}},
 	}
-	_, err := tsn.TAPRIOFromStreams(cfg)
+	ignoredRet, err := tsn.TAPRIOFromStreams(cfg)
+	_ = ignoredRet
 	if err == nil {
 		t.Fatal("expected error when all intervals are zero")
 	}

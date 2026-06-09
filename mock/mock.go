@@ -101,7 +101,8 @@ func (b *broker) topicCounterFor(topic string) *mockTopicCounter {
 		}
 	}
 	tc := &mockTopicCounter{}
-	actual, _ := b.topicMetrics.LoadOrStore(topic, tc)
+	actual, loaded := b.topicMetrics.LoadOrStore(topic, tc)
+	_ = loaded
 	if tc2, ok := actual.(*mockTopicCounter); ok {
 		return tc2
 	}

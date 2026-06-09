@@ -118,8 +118,14 @@ func TestWANBridge_MultipleTopics(t *testing.T) {
 	}
 	defer cli.Close()
 
-	pubA, _ := src.NewPublisher(topicA, dds.DefaultQoS)
-	pubB, _ := src.NewPublisher(topicB, dds.DefaultQoS)
+	pubA, err := src.NewPublisher(topicA, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	pubB, err := src.NewPublisher(topicB, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pubA.Close()
 	defer pubB.Close()
 
@@ -184,7 +190,8 @@ func TestWANBridge_Close_Idempotent(t *testing.T) {
 
 func TestWANBridge_Serve_ListenError(t *testing.T) {
 	p := newPart(t)
-	_, err := wan.Serve(p, "127.0.0.1:99999", wan.Options{})
+	ignoredRet, err := wan.Serve(p, "127.0.0.1:99999", wan.Options{})
+	_ = ignoredRet
 	if err == nil {
 		t.Fatal("expected error for invalid port")
 	}
@@ -193,7 +200,8 @@ func TestWANBridge_Serve_ListenError(t *testing.T) {
 func TestWANBridge_Connect_DialError(t *testing.T) {
 	p := newPart(t)
 	// Port 1 is not listening on any test host.
-	_, err := wan.Connect(p, "127.0.0.1:1", wan.Options{})
+	ignoredRet, err := wan.Connect(p, "127.0.0.1:1", wan.Options{})
+	_ = ignoredRet
 	if err == nil {
 		t.Fatal("expected error connecting to non-listening port")
 	}
@@ -204,7 +212,8 @@ func TestWANBridge_Connect_DialError(t *testing.T) {
 // dial fails, so Connect must close the subscriptions before returning.
 func TestWANBridge_Connect_DialError_WithTopics(t *testing.T) {
 	p := newPart(t)
-	_, err := wan.Connect(p, "127.0.0.1:1", wan.Options{Topics: []string{"cleanup/topic"}})
+	ignoredRet, err := wan.Connect(p, "127.0.0.1:1", wan.Options{Topics: []string{"cleanup/topic"}})
+	_ = ignoredRet
 	if err == nil {
 		t.Fatal("expected error connecting to non-listening port")
 	}
@@ -215,7 +224,8 @@ func TestWANBridge_Connect_ClosedParticipant(t *testing.T) {
 	srv := mustServe(t, newPart(t))
 
 	src.Close() // close before Connect — subscription creation fails
-	_, err := wan.Connect(src, srv.Addr(), wan.Options{Topics: []string{"some/topic"}})
+	ignoredRet, err := wan.Connect(src, srv.Addr(), wan.Options{Topics: []string{"some/topic"}})
+	_ = ignoredRet
 	if err == nil {
 		t.Fatal("expected error connecting with closed participant")
 	}
@@ -299,7 +309,10 @@ func TestWANBridge_Server_ClosedParticipant(t *testing.T) {
 	}
 	defer cli.Close()
 
-	pub, _ := src.NewPublisher(topic, dds.DefaultQoS)
+	pub, err := src.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	defer pub.Close()
 	_ = pub.Write([]byte("ping"))
 

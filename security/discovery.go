@@ -75,8 +75,12 @@ func (h *HMACDiscoveryPlugin) sign(guidPrefix []byte) []byte {
 	key := h.key
 	h.mu.RUnlock()
 	mac := hmac.New(sha256.New, key)
-	_, _ = mac.Write([]byte(discoveryContext))
-	_, _ = mac.Write(guidPrefix)
+	writeN, writeErr := mac.Write([]byte(discoveryContext))
+	_ = writeN
+	_ = writeErr // hmac.Hash.Write never returns an error
+	writeN, writeErr = mac.Write(guidPrefix)
+	_ = writeN
+	_ = writeErr
 	return mac.Sum(nil)
 }
 
@@ -102,9 +106,15 @@ func (h *HMACDiscoveryPlugin) SignEndpoint(guidPrefix []byte, topic string) []by
 	key := h.key
 	h.mu.RUnlock()
 	mac := hmac.New(sha256.New, key)
-	_, _ = mac.Write([]byte(endpointContext))
-	_, _ = mac.Write(guidPrefix)
-	_, _ = mac.Write([]byte(topic))
+	writeN, writeErr := mac.Write([]byte(endpointContext))
+	_ = writeN
+	_ = writeErr // hmac.Hash.Write never returns an error
+	writeN, writeErr = mac.Write(guidPrefix)
+	_ = writeN
+	_ = writeErr
+	writeN, writeErr = mac.Write([]byte(topic))
+	_ = writeN
+	_ = writeErr
 	return mac.Sum(nil)
 }
 

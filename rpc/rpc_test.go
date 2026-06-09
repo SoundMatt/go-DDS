@@ -116,12 +116,14 @@ func TestRPC_MultipleInFlight(t *testing.T) {
 }
 
 func TestRPC_ContextTimeout(t *testing.T) {
-	requester, _ := newRPC(t, "rpc/timeout")
+	requester, replier := newRPC(t, "rpc/timeout")
+	_ = replier
 
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
 
-	_, err := requester.Request(ctx, addReq{A: 1, B: 2})
+	rep, err := requester.Request(ctx, addReq{A: 1, B: 2})
+	_ = rep
 	if err == nil {
 		t.Fatal("expected error on timeout")
 	}
@@ -131,12 +133,14 @@ func TestRPC_ContextTimeout(t *testing.T) {
 }
 
 func TestRPC_ContextCancelBeforeSend(t *testing.T) {
-	requester, _ := newRPC(t, "rpc/ctxcancel")
+	requester, replier := newRPC(t, "rpc/ctxcancel")
+	_ = replier
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // already cancelled
 
-	_, err := requester.Request(ctx, addReq{A: 0, B: 0})
+	rep, err := requester.Request(ctx, addReq{A: 0, B: 0})
+	_ = rep
 	if err == nil {
 		t.Fatal("expected error for cancelled context")
 	}

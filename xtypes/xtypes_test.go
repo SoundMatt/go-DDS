@@ -219,7 +219,8 @@ func TestDynamicData_UnknownField_Error(t *testing.T) {
 func TestDynamicData_Get_UnsetField_ReturnsFalse(t *testing.T) {
 	td := speedDesc()
 	d := xtypes.NewDynamicData(&td)
-	_, ok := d.Get("kmh") // declared but not set
+	ignoredRet, ok := d.Get("kmh") // declared but not set
+	_ = ignoredRet
 	if ok {
 		t.Error("Get on unset field should return false")
 	}
@@ -250,7 +251,10 @@ func TestDynamicData_FromJSON_RoundTrip(t *testing.T) {
 	_ = d.Set("kmh", 80.0)
 	_ = d.Set("unit", "kmh")
 
-	b, _ := d.ToJSON()
+	b, err := d.ToJSON()
+	if err != nil {
+		t.Fatalf("ToJSON: %v", err)
+	}
 
 	d2 := xtypes.NewDynamicData(&td)
 	if err := d2.FromJSON(b); err != nil {
@@ -278,7 +282,8 @@ func TestDynamicData_FromJSON_UnknownFieldsIgnored(t *testing.T) {
 	if err := d.FromJSON([]byte(raw)); err != nil {
 		t.Fatalf("FromJSON: %v", err)
 	}
-	_, ok := d.Get("future_field")
+	ignoredRet, ok := d.Get("future_field")
+	_ = ignoredRet
 	if ok {
 		t.Error("unknown field should not be stored in DynamicData")
 	}
@@ -345,7 +350,8 @@ func TestTypeRegistry_Register_NameConflict_DifferentHash(t *testing.T) {
 
 func TestTypeRegistry_Lookup_Missing(t *testing.T) {
 	r := xtypes.NewTypeRegistry()
-	_, ok := r.Lookup("Nonexistent")
+	ignoredRet, ok := r.Lookup("Nonexistent")
+	_ = ignoredRet
 	if ok {
 		t.Error("Lookup of unregistered type should return false")
 	}

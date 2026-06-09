@@ -91,8 +91,14 @@ func TestE2EPublisher_CounterIncrements(t *testing.T) {
 	topic := uniqueTopic("e2e/counter")
 	cfg := safety.E2EConfig{}
 
-	rawPub, _ := p.NewPublisher(topic, dds.DefaultQoS)
-	rawSub, _ := p.NewSubscriber(topic, dds.DefaultQoS, dds.WithChannelDepth(10))
+	rawPub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	rawSub, err := p.NewSubscriber(topic, dds.DefaultQoS, dds.WithChannelDepth(10))
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer rawSub.Close()
 
 	pub := safety.NewE2EPublisher(rawPub, cfg)
@@ -128,8 +134,14 @@ func TestE2EPublisher_CounterIncrements(t *testing.T) {
 func TestE2EPublisher_HeaderPresent(t *testing.T) {
 	p := newPart(t)
 	topic := uniqueTopic("e2e/header")
-	rawPub, _ := p.NewPublisher(topic, dds.DefaultQoS)
-	rawSub, _ := p.NewSubscriber(topic, dds.DefaultQoS)
+	rawPub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	rawSub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer rawSub.Close()
 
 	cfg := safety.E2EConfig{DataID: 0xAB, SourceID: 0xCD}
@@ -164,8 +176,14 @@ func TestE2ESubscriber_CRCMismatch_ReportsError(t *testing.T) {
 	topic := uniqueTopic("e2e/crc")
 	cfg := safety.E2EConfig{}
 
-	rawPub, _ := p.NewPublisher(topic, dds.DefaultQoS)
-	rawSub, _ := p.NewSubscriber(topic, dds.DefaultQoS)
+	rawPub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	rawSub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer rawSub.Close()
 
 	// Send a frame manually with a bad CRC.
@@ -193,8 +211,14 @@ func TestE2ESubscriber_CRCMismatch_ReportsError(t *testing.T) {
 func TestE2ESubscriber_ShortPayload_ReportsError(t *testing.T) {
 	p := newPart(t)
 	topic := uniqueTopic("e2e/short")
-	rawPub, _ := p.NewPublisher(topic, dds.DefaultQoS)
-	rawSub, _ := p.NewSubscriber(topic, dds.DefaultQoS)
+	rawPub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	rawSub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer rawSub.Close()
 
 	// Payload shorter than headerSize.
@@ -221,8 +245,14 @@ func TestE2ESubscriber_SequenceGap_ReportsError(t *testing.T) {
 	topic := uniqueTopic("e2e/seqgap")
 	cfg := safety.E2EConfig{}
 
-	rawPub, _ := p.NewPublisher(topic, dds.DefaultQoS)
-	rawSub, _ := p.NewSubscriber(topic, dds.DefaultQoS, dds.WithChannelDepth(10))
+	rawPub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	rawSub, err := p.NewSubscriber(topic, dds.DefaultQoS, dds.WithChannelDepth(10))
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer rawSub.Close()
 
 	pub := safety.NewE2EPublisher(rawPub, cfg)
@@ -268,8 +298,14 @@ func TestE2ESubscriber_FreshnessCheck_StaleReportsError(t *testing.T) {
 	topic := uniqueTopic("e2e/stale")
 	cfg := safety.E2EConfig{MaxAge: 10 * time.Millisecond}
 
-	rawPub, _ := p.NewPublisher(topic, dds.DefaultQoS)
-	rawSub, _ := p.NewSubscriber(topic, dds.DefaultQoS)
+	rawPub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	rawSub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer rawSub.Close()
 
 	// Inject a frame with a timestamp from 1 second ago.
@@ -297,8 +333,14 @@ func TestE2ESubscriber_FreshnessCheck_FreshPasses(t *testing.T) {
 	topic := uniqueTopic("e2e/fresh")
 	cfg := safety.E2EConfig{DataID: 1, SourceID: 1, MaxAge: time.Second}
 
-	rawPub, _ := p.NewPublisher(topic, dds.DefaultQoS)
-	rawSub, _ := p.NewSubscriber(topic, dds.DefaultQoS)
+	rawPub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	rawSub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer rawSub.Close()
 
 	pub := safety.NewE2EPublisher(rawPub, cfg)
@@ -329,8 +371,14 @@ func TestE2ESubscriber_DisabledFreshness_AcceptsOld(t *testing.T) {
 	topic := uniqueTopic("e2e/no-age")
 	cfg := safety.E2EConfig{MaxAge: 0} // disabled
 
-	rawPub, _ := p.NewPublisher(topic, dds.DefaultQoS)
-	rawSub, _ := p.NewSubscriber(topic, dds.DefaultQoS)
+	rawPub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	rawSub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	defer rawSub.Close()
 
 	// Very old timestamp — should pass with MaxAge=0.
@@ -356,7 +404,10 @@ func TestE2ESubscriber_DisabledFreshness_AcceptsOld(t *testing.T) {
 func TestE2ESubscriber_Close(t *testing.T) {
 	p := newPart(t)
 	topic := uniqueTopic("e2e/close")
-	rawSub, _ := p.NewSubscriber(topic, dds.DefaultQoS)
+	rawSub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	sub := safety.NewE2ESubscriber(rawSub, safety.E2EConfig{})
 	if err := sub.Close(); err != nil {
 		t.Fatalf("Close: %v", err)
@@ -366,7 +417,10 @@ func TestE2ESubscriber_Close(t *testing.T) {
 func TestE2ESubscriber_CloseIdempotent(t *testing.T) {
 	p := newPart(t)
 	topic := uniqueTopic("e2e/close-idem")
-	rawSub, _ := p.NewSubscriber(topic, dds.DefaultQoS)
+	rawSub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 	sub := safety.NewE2ESubscriber(rawSub, safety.E2EConfig{})
 	_ = sub.Close()
 	_ = sub.Close() // must not panic
@@ -375,7 +429,10 @@ func TestE2ESubscriber_CloseIdempotent(t *testing.T) {
 func TestE2EPublisher_Close(t *testing.T) {
 	p := newPart(t)
 	topic := uniqueTopic("e2e/pub-close")
-	rawPub, _ := p.NewPublisher(topic, dds.DefaultQoS)
+	rawPub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
 	pub := safety.NewE2EPublisher(rawPub, safety.E2EConfig{})
 	if err := pub.Close(); err != nil {
 		t.Fatalf("Close: %v", err)
@@ -395,7 +452,10 @@ func TestE2EError_Error(t *testing.T) {
 func TestE2ESubscriber_ClosedRawSub(t *testing.T) {
 	p := newPart(t)
 	topic := uniqueTopic("e2e/rawclose")
-	rawSub, _ := p.NewSubscriber(topic, dds.DefaultQoS)
+	rawSub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
 
 	sub := safety.NewE2ESubscriber(rawSub, safety.E2EConfig{})
 

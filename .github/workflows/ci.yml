@@ -84,6 +84,9 @@ jobs:
         with:
           go-version: "1.25"
 
+      - name: Clear fuzz corpus cache
+        run: go clean -fuzzcache
+
       - name: FuzzPublish
         run: go test -fuzz=^FuzzPublish$ -fuzztime=10s ./mock/...
 

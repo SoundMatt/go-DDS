@@ -45,7 +45,8 @@ func TestTopicTypeRegistry_RegisterAndLookup(t *testing.T) {
 
 func TestTopicTypeRegistry_LookupUnregistered(t *testing.T) {
 	r := xtypes.NewTopicTypeRegistry()
-	_, ok := r.LookupTopicType("nonexistent/topic")
+	ignoredRet, ok := r.LookupTopicType("nonexistent/topic")
+	_ = ignoredRet
 	if ok {
 		t.Error("expected false for unregistered topic")
 	}
@@ -112,7 +113,8 @@ func TestTopicTypeRegistry_Deregister(t *testing.T) {
 	xtypes.RegisterTopicCodec(r, "sensors/temp", rawCodec[Temperature]{})
 	r.Deregister("sensors/temp")
 
-	_, ok := r.LookupTopicType("sensors/temp")
+	ignoredRet, ok := r.LookupTopicType("sensors/temp")
+	_ = ignoredRet
 	if ok {
 		t.Error("expected topic to be absent after Deregister")
 	}
