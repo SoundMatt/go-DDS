@@ -113,7 +113,7 @@ Tool versions used in CI are pinned in `.github/workflows/ci.yml`:
 
 ```yaml
 go-version: "1.25"          # Go toolchain
-gofusa: @v0.19.0             # Safety analysis
+gofusa: @v0.21.0             # Safety analysis
 actions/checkout@v5          # CI checkout
 actions/setup-go@v6          # Go install
 ```
