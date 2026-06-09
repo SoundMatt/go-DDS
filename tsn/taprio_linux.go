@@ -130,8 +130,8 @@ func readQdiscKind(fd int) error {
 			msgLen := binary.LittleEndian.Uint32(data[0:4])
 			msgType := binary.LittleEndian.Uint16(data[4:6])
 			const (
-				nlmsgError = 2
-				nlmsgDone  = 3
+				nlmsgError  = 2
+				nlmsgDone   = 3
 				rtmNewQdisc = 36
 			)
 			switch msgType {
