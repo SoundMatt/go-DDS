@@ -1,6 +1,6 @@
 {
   "format": "go-FuSa dFMEA v1",
-  "generated_at": "2026-06-08T21:17:53.029703Z",
+  "generated_at": "2026-06-09T16:45:49.305243Z",
   "module": "github.com/SoundMatt/go-DDS",
   "entries": [
     {
@@ -55,7 +55,17 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -68,7 +78,17 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -81,7 +101,17 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -94,7 +124,17 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -107,7 +147,17 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -120,7 +170,17 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -133,7 +193,17 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -146,7 +216,17 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -159,7 +239,17 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -172,7 +262,17 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -185,7 +285,17 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -198,7 +308,17 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -211,7 +331,17 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -224,7 +354,17 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -237,7 +377,17 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -250,7 +400,17 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -263,7 +423,17 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -276,7 +446,17 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -289,7 +469,17 @@
         "Incorrect system state"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -302,7 +492,17 @@
         "Incorrect system state"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -315,7 +515,17 @@
         "Incorrect system state"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -328,7 +538,17 @@
         "Incorrect system state"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -341,7 +561,17 @@
         "Incorrect system state"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -354,7 +584,17 @@
         "Incorrect system state"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -367,7 +607,17 @@
         "Incorrect system state"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -380,7 +630,17 @@
         "Incorrect system state"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -393,7 +653,17 @@
         "Incorrect system state"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -406,7 +676,17 @@
         "Incorrect system state"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -419,7 +699,17 @@
         "Incorrect system state"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -432,7 +722,17 @@
         "Incorrect system state"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "cdr",
@@ -445,7 +745,17 @@
         "Incorrect system state"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "config",
@@ -497,7 +807,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER004: import of \"unsafe\" bypasses Go type safety and memory safety guarantees"
+      ]
     },
     {
       "component": "cyclone",
@@ -510,7 +823,10 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER004: import of \"unsafe\" bypasses Go type safety and memory safety guarantees"
+      ]
     },
     {
       "component": "cyclone",
@@ -523,7 +839,10 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER004: import of \"unsafe\" bypasses Go type safety and memory safety guarantees"
+      ]
     },
     {
       "component": "cyclone",
@@ -536,7 +855,10 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER004: import of \"unsafe\" bypasses Go type safety and memory safety guarantees"
+      ]
     },
     {
       "component": "cyclone",
@@ -549,7 +871,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER004: import of \"unsafe\" bypasses Go type safety and memory safety guarantees"
+      ]
     },
     {
       "component": "cyclone",
@@ -575,7 +900,10 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER004: import of \"unsafe\" bypasses Go type safety and memory safety guarantees"
+      ]
     },
     {
       "component": "cyclone",
@@ -588,7 +916,10 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER004: import of \"unsafe\" bypasses Go type safety and memory safety guarantees"
+      ]
     },
     {
       "component": "cyclone",
@@ -603,7 +934,10 @@
         "Memory leak or deadlock"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER004: import of \"unsafe\" bypasses Go type safety and memory safety guarantees"
+      ]
     },
     {
       "component": "cyclone",
@@ -629,7 +963,10 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER004: import of \"unsafe\" bypasses Go type safety and memory safety guarantees"
+      ]
     },
     {
       "component": "cyclone",
@@ -642,7 +979,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER004: import of \"unsafe\" bypasses Go type safety and memory safety guarantees"
+      ]
     },
     {
       "component": "cyclone",
@@ -655,7 +995,10 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER004: import of \"unsafe\" bypasses Go type safety and memory safety guarantees"
+      ]
     },
     {
       "component": "cyclone",
@@ -670,7 +1013,10 @@
         "Incorrect system state"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER004: import of \"unsafe\" bypasses Go type safety and memory safety guarantees"
+      ]
     },
     {
       "component": "cyclone",
@@ -685,7 +1031,10 @@
         "Incorrect system state"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER004: import of \"unsafe\" bypasses Go type safety and memory safety guarantees"
+      ]
     },
     {
       "component": "domain",
@@ -1469,7 +1818,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "mock",
@@ -1482,7 +1834,10 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "mock",
@@ -1495,7 +1850,10 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "mock",
@@ -1508,7 +1866,10 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "mock",
@@ -1521,7 +1882,10 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "mock",
@@ -1534,7 +1898,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "mock",
@@ -1547,7 +1914,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "mock",
@@ -1560,7 +1930,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "mock",
@@ -1573,7 +1946,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "mock",
@@ -1586,7 +1962,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "mock",
@@ -1601,7 +1980,10 @@
         "Memory leak or deadlock"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "mock",
@@ -1614,7 +1996,10 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "mock",
@@ -1627,7 +2012,10 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "mock",
@@ -1640,7 +2028,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "mock",
@@ -1653,7 +2044,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "mock",
@@ -1666,7 +2060,10 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "mock",
@@ -1679,7 +2076,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "mock",
@@ -1692,7 +2092,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "mock",
@@ -1705,7 +2108,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "mock",
@@ -1718,7 +2124,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "mock",
@@ -1733,7 +2142,10 @@
         "Incorrect system state"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "mock",
@@ -1748,7 +2160,10 @@
         "Incorrect system state"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "monitor",
@@ -1807,6 +2222,32 @@
     {
       "component": "monitor",
       "function": "PublishSafetyEvent",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/monitor/monitor.go",
+      "failure_modes": [
+        "Incorrect output"
+      ],
+      "effects": [
+        "Incorrect system behavior"
+      ],
+      "severity": "low",
+      "detection_control": "unit tests"
+    },
+    {
+      "component": "monitor",
+      "function": "RegisterSafetyMetrics",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/monitor/monitor.go",
+      "failure_modes": [
+        "Incorrect output"
+      ],
+      "effects": [
+        "Incorrect system behavior"
+      ],
+      "severity": "low",
+      "detection_control": "unit tests"
+    },
+    {
+      "component": "monitor",
+      "function": "RegisterTSNHealth",
       "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/monitor/monitor.go",
       "failure_modes": [
         "Incorrect output"
@@ -2077,7 +2518,10 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER003: import of math/rand — use crypto/rand for security-sensitive random values"
+      ]
     },
     {
       "component": "record",
@@ -2090,7 +2534,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER003: import of math/rand — use crypto/rand for security-sensitive random values"
+      ]
     },
     {
       "component": "record",
@@ -2196,7 +2643,10 @@
         "Incorrect system state"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER003: import of math/rand — use crypto/rand for security-sensitive random values"
+      ]
     },
     {
       "component": "record",
@@ -2211,7 +2661,10 @@
         "Incorrect system state"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER003: import of math/rand — use crypto/rand for security-sensitive random values"
+      ]
     },
     {
       "component": "rest",
@@ -2251,6 +2704,186 @@
       ],
       "severity": "low",
       "detection_control": "unit tests"
+    },
+    {
+      "component": "roundtrip (idlgen)",
+      "function": "KeyFields",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/idl/roundtrip/schema_gen.go",
+      "failure_modes": [
+        "Incorrect output"
+      ],
+      "effects": [
+        "Incorrect system behavior"
+      ],
+      "severity": "low",
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
+    },
+    {
+      "component": "roundtrip (idlgen)",
+      "function": "KeyFields",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/idl/roundtrip/schema_gen.go",
+      "failure_modes": [
+        "Incorrect output"
+      ],
+      "effects": [
+        "Incorrect system behavior"
+      ],
+      "severity": "low",
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
+    },
+    {
+      "component": "roundtrip (idlgen)",
+      "function": "Marshal",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/idl/roundtrip/schema_gen.go",
+      "failure_modes": [
+        "Returns unexpected error"
+      ],
+      "effects": [
+        "Silent failure propagated to caller"
+      ],
+      "severity": "medium",
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
+    },
+    {
+      "component": "roundtrip (idlgen)",
+      "function": "Marshal",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/idl/roundtrip/schema_gen.go",
+      "failure_modes": [
+        "Returns unexpected error"
+      ],
+      "effects": [
+        "Silent failure propagated to caller"
+      ],
+      "severity": "medium",
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
+    },
+    {
+      "component": "roundtrip (idlgen)",
+      "function": "NewHeaderPublisher",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/idl/roundtrip/schema_gen.go",
+      "failure_modes": [
+        "Returns unexpected error"
+      ],
+      "effects": [
+        "Silent failure propagated to caller"
+      ],
+      "severity": "medium",
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
+    },
+    {
+      "component": "roundtrip (idlgen)",
+      "function": "NewHeaderSubscriber",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/idl/roundtrip/schema_gen.go",
+      "failure_modes": [
+        "Returns unexpected error"
+      ],
+      "effects": [
+        "Silent failure propagated to caller"
+      ],
+      "severity": "medium",
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
+    },
+    {
+      "component": "roundtrip (idlgen)",
+      "function": "NewTelemetryPublisher",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/idl/roundtrip/schema_gen.go",
+      "failure_modes": [
+        "Returns unexpected error"
+      ],
+      "effects": [
+        "Silent failure propagated to caller"
+      ],
+      "severity": "medium",
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
+    },
+    {
+      "component": "roundtrip (idlgen)",
+      "function": "NewTelemetrySubscriber",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/idl/roundtrip/schema_gen.go",
+      "failure_modes": [
+        "Returns unexpected error"
+      ],
+      "effects": [
+        "Silent failure propagated to caller"
+      ],
+      "severity": "medium",
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
+    },
+    {
+      "component": "roundtrip (idlgen)",
+      "function": "Unmarshal",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/idl/roundtrip/schema_gen.go",
+      "failure_modes": [
+        "Returns unexpected error"
+      ],
+      "effects": [
+        "Silent failure propagated to caller"
+      ],
+      "severity": "medium",
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
+    },
+    {
+      "component": "roundtrip (idlgen)",
+      "function": "Unmarshal",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/idl/roundtrip/schema_gen.go",
+      "failure_modes": [
+        "Returns unexpected error"
+      ],
+      "effects": [
+        "Silent failure propagated to caller"
+      ],
+      "severity": "medium",
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rpc",
@@ -2358,7 +2991,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2371,7 +3007,10 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2384,7 +3023,10 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2397,7 +3039,10 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2410,7 +3055,10 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2423,7 +3071,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2436,7 +3087,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2449,7 +3103,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2462,7 +3119,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2475,7 +3135,10 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2490,7 +3153,10 @@
         "Memory leak or deadlock"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2503,7 +3169,10 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2516,7 +3185,20 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2529,7 +3211,20 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2542,7 +3237,20 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2568,7 +3276,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2581,7 +3292,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2594,7 +3308,10 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2607,7 +3324,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2620,7 +3340,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2633,7 +3356,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2646,7 +3372,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2659,7 +3388,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2672,7 +3404,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2685,7 +3420,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2698,7 +3436,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2711,7 +3452,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2724,7 +3468,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2737,7 +3484,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2750,7 +3500,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2763,7 +3516,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2776,7 +3532,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2789,7 +3548,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2802,7 +3564,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2815,7 +3580,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2830,7 +3598,10 @@
         "Incorrect system state"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "rtps",
@@ -2845,7 +3616,10 @@
         "Incorrect system state"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "safety",
@@ -2858,7 +3632,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "safety",
@@ -2871,7 +3648,10 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "safety",
@@ -2884,7 +3664,10 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "safety",
@@ -2910,20 +3693,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
-    },
-    {
-      "component": "safety",
-      "function": "Errors",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e.go",
-      "failure_modes": [
-        "Incorrect output"
-      ],
-      "effects": [
-        "Incorrect system behavior"
-      ],
-      "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "safety",
@@ -2937,6 +3710,22 @@
       ],
       "severity": "low",
       "detection_control": "unit tests"
+    },
+    {
+      "component": "safety",
+      "function": "Errors",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e.go",
+      "failure_modes": [
+        "Incorrect output"
+      ],
+      "effects": [
+        "Incorrect system behavior"
+      ],
+      "severity": "low",
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "safety",
@@ -2962,12 +3751,31 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "safety",
       "function": "NewE2ESubscriber",
       "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e.go",
+      "failure_modes": [
+        "Goroutine not terminated"
+      ],
+      "effects": [
+        "Memory leak or deadlock"
+      ],
+      "severity": "medium",
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
+    },
+    {
+      "component": "safety",
+      "function": "NewRateMonitor",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/rate.go",
       "failure_modes": [
         "Goroutine not terminated"
       ],
@@ -2988,7 +3796,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "safety",
@@ -3001,7 +3812,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "safety",
@@ -3044,6 +3858,19 @@
     },
     {
       "component": "safety",
+      "function": "Stop",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/rate.go",
+      "failure_modes": [
+        "Incorrect output"
+      ],
+      "effects": [
+        "Incorrect system behavior"
+      ],
+      "severity": "low",
+      "detection_control": "unit tests"
+    },
+    {
+      "component": "safety",
       "function": "String",
       "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/metrics.go",
       "failure_modes": [
@@ -3068,7 +3895,10 @@
         "Incorrect system state"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "security",
@@ -3159,7 +3989,11 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "security",
@@ -3229,7 +4063,7 @@
     {
       "component": "security",
       "function": "Open",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security.go",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert.go",
       "failure_modes": [
         "Returns unexpected error"
       ],
@@ -3237,12 +4071,16 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "security",
       "function": "Open",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert.go",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security.go",
       "failure_modes": [
         "Returns unexpected error"
       ],
@@ -3307,33 +4145,37 @@
     {
       "component": "security",
       "function": "Seal",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security.go",
-      "failure_modes": [
-        "Returns unexpected error"
-      ],
-      "effects": [
-        "Silent failure propagated to caller"
-      ],
-      "severity": "medium",
-      "detection_control": "unit tests"
-    },
-    {
-      "component": "security",
-      "function": "Seal",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security.go",
-      "failure_modes": [
-        "Returns unexpected error"
-      ],
-      "effects": [
-        "Silent failure propagated to caller"
-      ],
-      "severity": "medium",
-      "detection_control": "unit tests"
-    },
-    {
-      "component": "security",
-      "function": "Seal",
       "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert.go",
+      "failure_modes": [
+        "Returns unexpected error"
+      ],
+      "effects": [
+        "Silent failure propagated to caller"
+      ],
+      "severity": "medium",
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
+    },
+    {
+      "component": "security",
+      "function": "Seal",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security.go",
+      "failure_modes": [
+        "Returns unexpected error"
+      ],
+      "effects": [
+        "Silent failure propagated to caller"
+      ],
+      "severity": "medium",
+      "detection_control": "unit tests"
+    },
+    {
+      "component": "security",
+      "function": "Seal",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security.go",
       "failure_modes": [
         "Returns unexpected error"
       ],
@@ -3566,7 +4408,11 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "shmem",
@@ -3579,7 +4425,11 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "shmem",
@@ -3592,7 +4442,11 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "shmem",
@@ -3605,7 +4459,11 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "shmem",
@@ -3618,7 +4476,11 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "shmem",
@@ -3631,7 +4493,11 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "shmem",
@@ -3644,7 +4510,11 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "shmem",
@@ -3657,7 +4527,11 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "shmem",
@@ -3670,7 +4544,11 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "shmem",
@@ -3683,7 +4561,11 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "shmem",
@@ -3696,7 +4578,11 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "shmem",
@@ -3709,7 +4595,11 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "shmem",
@@ -3724,7 +4614,11 @@
         "Incorrect system state"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "shmem",
@@ -3739,7 +4633,11 @@
         "Incorrect system state"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "testutil",
@@ -3900,7 +4798,7 @@
     {
       "component": "tsn",
       "function": "Apply",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_stub.go",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_linux.go",
       "failure_modes": [
         "Returns unexpected error"
       ],
@@ -3908,12 +4806,24 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "tsn",
       "function": "Apply",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_linux.go",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_stub.go",
       "failure_modes": [
         "Returns unexpected error"
       ],
@@ -3934,7 +4844,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "tsn",
@@ -3947,7 +4860,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "tsn",
@@ -3999,7 +4915,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "tsn",
@@ -4025,7 +4944,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "tsn",
@@ -4038,7 +4960,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "tsn",
@@ -4064,7 +4989,10 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "tsn",
@@ -4077,7 +5005,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "tsn",
@@ -4116,6 +5047,47 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
+    },
+    {
+      "component": "tsn",
+      "function": "VerifyApplied",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_linux.go",
+      "failure_modes": [
+        "Returns unexpected error"
+      ],
+      "effects": [
+        "Silent failure propagated to caller"
+      ],
+      "severity": "medium",
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
+    },
+    {
+      "component": "tsn",
+      "function": "VerifyApplied",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_stub.go",
+      "failure_modes": [
+        "Returns unexpected error"
+      ],
+      "effects": [
+        "Silent failure propagated to caller"
+      ],
+      "severity": "medium",
       "detection_control": "unit tests"
     },
     {
@@ -4129,7 +5101,10 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "wan",
@@ -4142,7 +5117,10 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "wan",
@@ -4157,7 +5135,10 @@
         "Memory leak or deadlock"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "wan",
@@ -4172,7 +5153,10 @@
         "Memory leak or deadlock"
       ],
       "severity": "medium",
-      "detection_control": "unit tests"
+      "detection_control": "unit tests",
+      "cyber_risks": [
+        "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
+      ]
     },
     {
       "component": "xtypes",

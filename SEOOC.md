@@ -2,7 +2,8 @@
 
 **Standard**: ISO 26262:2018 Part 10 — Guidelines on ISO 26262  
 **Claimed ASIL**: ASIL-B (for elements annotated `level: ASIL-B` in `.fusa-reqs.json`)  
-**Version**: v0.11.0 and later  
+**Version**: v0.14.0 and later  
+**go-FuSa**: v0.21.0 (pinned in CI)  
 **Maintainer**: Matt Jones &lt;matt@jellybaby.com&gt;
 
 ---
@@ -15,23 +16,28 @@ The safety evidence package for go-DDS consists of:
 
 | Artefact | File |
 |---|---|
-| Requirements manifest (211 requirements) | `.fusa-reqs.json` |
+| Requirements manifest (238 requirements) | `.fusa-reqs.json` |
 | Traceability matrix | `gofusa trace` output |
-| Verification report | `verify-report.json` |
 | FMEA | `fmea.json` / `fmea.csv` |
 | Safety case | `safety-case.json` / `safety-case.md` |
 | SBOM | `sbom.json` |
 | Provenance | `provenance.json` |
+| **HARA** | **`HARA.md`** |
+| **GC latency evidence** | **`GC_LATENCY.md`** |
+| **Software Safety Plan** | **`SAFETY_PLAN.md`** |
+| **Coding Standard** | **`CODING_STANDARD.md`** |
+| **Cert package** (PSAC, SDP, SVP, SCMP, SQAP, LLR, SCR, DCA, TQPs) | **`cert/`** |
 
 The following subsystems carry ASIL-B claims:
 
-- **E2E protection** (`safety/`) — REQ-SAFETY-001 through REQ-SAFETY-014  
-- **Fragment reassembly** (`rtps/fragment.go`) — REQ-FRAG-001 through REQ-FRAG-005  
-- **Goroutine lifecycle** — REQ-RT-001 (all packages)  
-- **Subscriber overflow policies** — REQ-QOS-005 through REQ-QOS-007  
-- **Payload size enforcement** — REQ-PART-007  
-- **Transport drop-under-load** — REQ-TRANS-003  
-- **Persistent history bounds** — REQ-REL-011  
+- **E2E protection** (`safety/`) — REQ-SAFETY-001 through REQ-SAFETY-019
+- **Rate monitoring** (`safety/rate.go`) — REQ-SAFETY-018, REQ-SAFETY-019
+- **Fragment reassembly** (`rtps/fragment.go`) — REQ-FRAG-001 through REQ-FRAG-005
+- **Goroutine lifecycle** — REQ-RT-001 (all packages)
+- **Subscriber overflow policies** — REQ-QOS-005 through REQ-QOS-007
+- **Payload size enforcement** — REQ-PART-007
+- **Transport drop-under-load** — REQ-TRANS-003
+- **Persistent history bounds** — REQ-REL-011
 
 Security subsystems carry CAL-2/CAL-3 claims under ISO 21434:
 
@@ -126,7 +132,7 @@ The table below maps each safety-relevant configuration option to the requiremen
 
 ## 4. Known limitations and deviations
 
-1. **No formal HARA**: The ASIL and CAL levels in `.fusa-reqs.json` are engineering estimates. A formal Hazard Analysis and Risk Assessment (HARA) and Threat Analysis and Risk Assessment (TARA) are required to confirm the levels for a specific vehicle application.
+1. **HARA is tabletop, not system-level**: `HARA.md` provides a formal tabletop HARA for the ADAS sensor-fusion use case (ISO 26262-3 methodology), confirming ASIL-B for the H-01 late-delivery hazard. A system-level HARA for a specific vehicle application remains the integrator's responsibility.
 
 2. **No MISRA-Go compliance**: go-DDS uses standard Go idioms (goroutines, interfaces, generics) that are not evaluated against MISRA-Go. Integrators targeting MISRA-Go environments must perform their own conformance review.
 
@@ -142,12 +148,15 @@ The table below maps each safety-relevant configuration option to the requiremen
 
 ## 5. Verification summary
 
-All 221 requirements (211 functional + 10 SEOOC AoUs) are covered by at least one `//fusa:req` implementation annotation and one `//fusa:test` test annotation. Run:
+All 238 requirements (228 functional + 10 SEOOC AoUs) are covered by at least one `//fusa:req` implementation annotation and one `//fusa:test` test annotation. Run:
 
 ```bash
-~/go/bin/gofusa trace          # full traceability matrix
-~/go/bin/gofusa check --strict # static analysis (ANA001, ANA002)
-~/go/bin/gofusa verify         # test execution
+gofusa trace          # traceability matrix — must show zero orphan/untested
+gofusa check ./...    # safety analysis — must show 0 errors (v0.21.0)
+gofusa safety-case    # regenerate safety-case.md / .json / .mermaid
+gofusa fmea -cyber    # regenerate fmea.csv / fmea.json
+gofusa release        # regenerate sbom.json, provenance.json, artifact-manifest.json
 ```
 
-All three commands must complete without error before any release.
+All commands except `release` must complete without error before any release.
+See `SAFETY_PLAN.md §9` for the full release criteria checklist.

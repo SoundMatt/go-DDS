@@ -644,6 +644,38 @@ See [ROADMAP.md](ROADMAP.md) for per-milestone goals, sub-items, and success cri
 - [x] `.devcontainer/devcontainer.json` — Go 1.22 dev container with golangci-lint, Docker-in-Docker, and VS Code Go extension; works in GitHub Codespaces
 - [x] `.github/workflows/docker-publish.yml` — multi-arch (`linux/amd64`, `linux/arm64`) GHCR publish on push to main and version tags
 
+**Released — v0.12 — Examples, Safety Completeness, IDL/CDR Compiler, TAPRIO**
+
+- [x] `examples/sensor-pipeline`, `examples/command-response`, `examples/secure-topic`, `examples/taprio-stream` — self-contained runnable examples with `go run .`
+- [x] `E2ESubscriber` schema validation — per-topic payload-length and schema-hash checks with `SafetyEventKindSchemaViolation`
+- [x] `safety.Metrics` per-topic violation counters (CRC, sequence gap, stale, schema) via `SafetyMetrics()` snapshot
+- [x] Monitor SSE `safety` event type — `WatchSafety()` broadcasts `SafetyEvent` to browser clients
+- [x] `idl/` — `.idl` → Go struct + `Codec[T]` code generation; CDR/XCDR1 encode/decode
+- [x] `tsn.TAPRIOConfig.Apply()` — TAPRIO qdisc configuration via netlink
+- [x] go-FuSa: 280+ requirements, all `[traced+tested]`
+
+**Released — v0.13.x — IDL Factory Codegen, RateMonitor, TSN Dashboard**
+
+- [x] IDL `NewXxxPublisher`/`NewXxxSubscriber` typed factory wrappers
+- [x] `safety.RateMonitor` — threshold-based violation-rate alerting (events/sec per topic per kind)
+- [x] TSN health dashboard in monitor — `/api/tsn`, `tsn_health` SSE events, `tsn.HealthTracker`
+- [x] IDL nested struct CDR encode/decode (v0.13.1)
+- [x] IDL array (`T name[N]`), enum, qualified type names, `ddstool idl` CLI (v0.13.2)
+
+**Released — v0.14.x — IDL Completeness, go-FuSa Compliance, Safety Certification Package**
+
+- [x] IDL `go/format` output, `@key` annotation, `typedef`, end-to-end roundtrip harness, `--package` flag (v0.14.0)
+- [x] IDL fuzz targets (`FuzzIDLParse`, `FuzzIDLGenerate`) + parseEnum infinite-loop fix (v0.14.1)
+- [x] go-FuSa v0.19.0 → v0.21.0 compliance: LINT001/ANA007/CYBER017 fixes; cycle detection in IDL generator (v0.14.1–v0.14.3)
+- [x] CI: pinned `gofusa` safety gate (0 errors required to merge) (v0.14.2)
+- [x] Release workflow — auto-regenerates FMEA, safety case, SBOM, provenance on every tag (v0.14.3)
+- [x] `HARA.md` — tabletop ISO 26262-3 HARA; H-01 late delivery → ASIL-B
+- [x] `GC_LATENCY.md` — measured STW pause MAX 146µs, E2E latency MAX 305µs; formal GSN argument
+- [x] `cmd/latmon` — continuous rolling-window latency monitor with JSON output
+- [x] `cert/` — complete certification package: PSAC, SDP, SVP, SCMP, SQAP, LLR, SCR, DCA, TQPs, PRP, DEVIATIONS, RELEASE_LOG
+- [x] `SAFETY_PLAN.md`, `CODING_STANDARD.md`, `STANDARDS_GAP.md` — ISO 26262 / IEC 61508 / DO-178C gap analysis
+- [x] 238 requirements, all traced + tested; `gofusa check` 0 errors
+
 See [ROADMAP.md](ROADMAP.md) for goals and sub-items.
 
 ## Example use cases

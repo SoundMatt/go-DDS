@@ -61,15 +61,18 @@ history expansion on `%`, `!`, and `(`.
 
 ## Known active branches / version history
 
-| Tag     | Highlights |
+| Tag      | Highlights |
 |---|---|
-| v0.1.0  | Initial interface, mock, CycloneDDS skeleton |
-| v0.1.x  | Pure-Go RTPS, Reliable QoS, WaitSet, Security |
-| v0.2.0  | TransientLocal, IPv6 multicast, interop harness, 88.7% coverage |
-| v0.2.1  | Three protocol correctness bug-fixes (topic routing, lease expiry, GAP) |
-| v0.3.0  | (in progress) Planned-core: sentinel errors, unicast discovery, content |
-|         | filter, deadline QoS, fragmentation, wildcards, metrics, persistent |
-|         | history, web monitor |
+| v0.1–0.2 | Core interfaces, RTPS, Security, TransientLocal, IPv6 |
+| v0.3–0.8 | Sentinel errors, QoS, fragmentation, wildcard, metrics, shmem, pool, E2E safety |
+| v0.9–0.11 | Enterprise security, dynamic data, bridges (REST/gRPC/WAN/MQTT), Docker, GHCR |
+| v0.12    | Examples, safety completeness, IDL/CDR compiler, TAPRIO, go-FuSa coverage |
+| v0.13.x  | IDL factory codegen, RateMonitor, TSN health dashboard, nested CDR, enum/array IDL |
+| v0.14.0  | IDL go/format, @key, typedef, roundtrip, ddstool idl, fuzz targets |
+| v0.14.1  | go-FuSa v0.19.0 upgrade: LINT001/ANA007/CYBER017 fixes across idl/, ddstool |
+| v0.14.2  | CI: pinned gofusa v0.19.0 gate job |
+| v0.14.3  | Release workflow; gitignore check-report.json |
+| **main** | **go-FuSa v0.21.0; HARA, GC_LATENCY, latmon, cert/ package (ASIL-B/SIL-2/DAL-C)** |
 
 ## CI matrix
 
@@ -81,6 +84,7 @@ history expansion on `%`, `!`, and `(`.
 | benchmark-smoke | ubuntu, 1 iter each |
 | fuzz-short     | ubuntu, 10 s per target |
 | lint           | golangci-lint |
+| gofusa         | go-FuSa v0.21.0 safety check (0 errors required) |
 | dco            | DCO sign-off check |
 | test-interop   | Docker probe-and-skip |
 

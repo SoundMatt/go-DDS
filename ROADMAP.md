@@ -54,7 +54,11 @@ API parity does not.
 | v0.13.0 | 2, 6, 7 | IDL factory codegen, safety RateMonitor + SSE, TSN health dashboard ✅ |
 | v0.13.1 | — | IDL nested struct CDR fix, stale rtps doc removed ✅ |
 | v0.13.2 | 2 | IDL array + enum support, ParseFile tests, qualified names, `ddstool idl` CLI ✅ |
-| v0.14.0 | 2 | IDL go/format output, @key annotation, typedef, end-to-end round-trip, `--package` flag, IDL fuzz targets |
+| v0.14.0 | 2 | IDL go/format output, @key annotation, typedef, end-to-end round-trip, `--package` flag, IDL fuzz targets ✅ |
+| v0.14.1 | — | go-FuSa v0.19.0: LINT001/ANA007/CYBER017 fixes, parseEnum infinite-loop fix, cycle detection in IDL gen ✅ |
+| v0.14.2 | — | CI: pinned gofusa v0.19.0 safety gate job ✅ |
+| v0.14.3 | — | Release workflow; gitignore check-report.json; gofusa v0.21.0 ✅ |
+| **main** | — | **HARA, GC latency profile, latmon tool, full cert/ package (ASIL-B/SIL-2/DAL-C)** |
 
 ### Released — v0.1 – v0.8
 
@@ -74,7 +78,12 @@ API parity does not.
 - **v0.12** — Examples (`examples/sensor-pipeline/`, `examples/command-response/`, `examples/secure-topic/`, `examples/taprio-stream/` — each self-contained with `go run .` and its own README); Safety completeness: `E2ESubscriber` schema validation, `safety.Metrics` per-topic violation counters, monitor SSE `safety` event type; IDL compiler (`idl/` — `.idl` → Go struct + `Codec[T]` code generation, CDR/XCDR1 encoding); TAPRIO qdisc configuration (`tsn.TAPRIOConfig.Apply()` via netlink); go-FuSa coverage (280+ requirements, all `[traced+tested]`)
 - **v0.13.0** — IDL factory codegen (`NewXxxPublisher`/`NewXxxSubscriber` typed wrappers); `safety.RateMonitor` (threshold-based violation-rate alerting, SSE `safety_metrics` events); TSN health dashboard in monitor (`/api/tsn` endpoint, `tsn_health` SSE events, `tsn.HealthTracker` + `tsn.TAPRIOConfig.VerifyApplied()`); monitor `RegisterSafetyMetrics` / `RegisterTSNHealth` registration APIs
 - **v0.13.1** — IDL nested struct CDR encode/decode (recursive field inlining, no `// TODO:` stubs); removed two stale limitation bullets from rtps package doc
-- **v0.13.2** — _(in progress)_ IDL array support (`T name[N]` → Go `[N]T`, CDR encode/decode with range loops); IDL enum support (Go `type E int32` + consts, int32 CDR codec, use as struct field types); `ParseFile` test coverage; qualified type names (`Module::Type`); `ddstool idl` CLI subcommand
+- **v0.13.2** — IDL array support (`T name[N]` → Go `[N]T`, CDR encode/decode with range loops); IDL enum support (Go `type E int32` + consts, int32 CDR codec, use as struct field types); `ParseFile` test coverage; qualified type names (`Module::Type`); `ddstool idl` CLI subcommand
+- **v0.14.0** — IDL `go/format` output; `@key` annotation support; `typedef` declarations; end-to-end IDL roundtrip test harness; `--package` flag for `ddstool idl`; fuzz targets for `FuzzIDLParse` and `FuzzIDLGenerate`
+- **v0.14.1** — go-FuSa v0.19.0 compliance: LINT001/ANA007/CYBER017 fixes across `idl/` and `cmd/ddstool`; parseEnum infinite-loop fix (fuzz corpus entry); cycle detection in IDL code generator (self-referential struct `A{A g}`); `idl/parser.go` refactor (`expectTok`/`expect` split)
+- **v0.14.2** — CI: pinned `gofusa@v0.19.0` safety gate job added to `.github/workflows/ci.yml`
+- **v0.14.3** — Release workflow (`.github/workflows/release.yml`) regenerates safety artifacts on every `v*` tag; `.gitignore` excludes `check-report.json`
+- **main (unreleased)** — go-FuSa v0.21.0; `HARA.md` (tabletop HARA, ASIL-B derivation); `GC_LATENCY.md` (STW max 146µs, E2E max 305µs); `cmd/latmon` continuous monitoring tool; `STANDARDS_GAP.md`; full `cert/` certification package (PSAC, SDP, SVP, SCMP, SQAP, LLR, SCR, DCA, TQPs, PRP, DEVIATIONS, RELEASE_LOG); `SAFETY_PLAN.md`; `CODING_STANDARD.md`; 238 requirements all traced+tested
 
 ---
 
