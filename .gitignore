@@ -4,6 +4,7 @@
 .claude/scheduled_tasks.lock
 /memory/
 /audit-pack.zip
+/check-report.json
 *.json.bak
 /boundary.dot
 /boundary.mermaid
