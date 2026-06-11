@@ -15,6 +15,7 @@ package grpcbridge_test
 
 import (
 	"context"
+	"errors"
 	"net"
 	"os"
 	"path/filepath"
@@ -572,6 +573,278 @@ func TestBridge_Auth_Stream_CorrectToken_Passes(t *testing.T) {
 	}
 	if string(got.Payload) != "authenticated" {
 		t.Errorf("payload: %q", got.Payload)
+	}
+}
+
+// ── Options.QoS non-default branch ───────────────────────────────────────────
+
+// TestBridge_Options_QoS_NonDefault verifies that a bridge created with a
+// non-zero Options.QoS passes that QoS to getOrCreatePub, covering the
+// non-default branch of Options.qos().
+func TestBridge_Options_QoS_NonDefault(t *testing.T) {
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
+	defer p.Close()
+	b := grpcbridge.New(p, grpcbridge.Options{QoS: dds.QoS{MaxSampleSize: 1024}})
+	lis := listenLocal(t)
+	go func() { _ = b.Server().Serve(lis) }()
+	defer b.Close()
+
+	conn := dialJSON(t, lis.Addr().String())
+	defer conn.Close()
+	client := grpcbridge.NewRawClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	ack, err := client.Publish(ctx, &grpcbridge.PublishRequest{Topic: "qos/test", Payload: []byte("hi")})
+	if err != nil {
+		t.Fatalf("Publish with non-default QoS: %v", err)
+	}
+	if ack.Count != 1 {
+		t.Errorf("count: got %d, want 1", ack.Count)
+	}
+}
+
+// ── Transform error path ──────────────────────────────────────────────────────
+
+// TestBridge_Transform_ErrorDropsSample verifies that when a Transform
+// returns an error, the sample is skipped (continue branch in Subscribe).
+func TestBridge_Transform_ErrorDropsSample(t *testing.T) {
+	opts := grpcbridge.Options{
+		Transform: func(_ string, payload []byte) ([]byte, error) {
+			if string(payload) == "bad" {
+				return nil, errors.New("transform error")
+			}
+			return payload, nil
+		},
+	}
+	client, _, p := newTestBridge(t, opts)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	stream, err := client.Subscribe(ctx, &grpcbridge.SubscribeRequest{Topic: "grpc/transform-err"})
+	if err != nil {
+		t.Fatalf("Subscribe: %v", err)
+	}
+	time.Sleep(20 * time.Millisecond)
+
+	pub, err := p.NewPublisher("grpc/transform-err", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+	_ = pub.Write([]byte("bad"))  // dropped by transform error
+	_ = pub.Write([]byte("good")) // passes through
+
+	got, err := stream.Recv()
+	if err != nil {
+		t.Fatalf("Recv: %v", err)
+	}
+	if string(got.Payload) != "good" {
+		t.Errorf("expected good, got %q", got.Payload)
+	}
+}
+
+// ── StreamPublish empty topic ─────────────────────────────────────────────────
+
+// TestBridge_StreamPublish_EmptyTopic verifies that sending an empty topic
+// inside a StreamPublish stream returns InvalidArgument, covering the
+// req.Topic == "" branch in Bridge.StreamPublish.
+func TestBridge_StreamPublish_EmptyTopic(t *testing.T) {
+	client, _, _ := newTestBridge(t, grpcbridge.Options{})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	sp, err := client.StreamPublish(ctx)
+	if err != nil {
+		t.Fatalf("StreamPublish: %v", err)
+	}
+	if sendErr := sp.Send(&grpcbridge.PublishRequest{Topic: "", Payload: []byte("x")}); sendErr != nil {
+		// Some gRPC impls report the error at Send time.
+		if !strings.Contains(sendErr.Error(), "InvalidArgument") && !strings.Contains(sendErr.Error(), "invalid") {
+			t.Errorf("expected InvalidArgument, got %v", sendErr)
+		}
+		return
+	}
+	_, recvErr := sp.CloseAndRecv()
+	if recvErr == nil {
+		t.Fatal("expected error for empty topic in StreamPublish")
+	}
+	if !strings.Contains(recvErr.Error(), "InvalidArgument") && !strings.Contains(recvErr.Error(), "invalid") {
+		t.Errorf("expected InvalidArgument, got %v", recvErr)
+	}
+}
+
+// ── getOrCreateSub cache hit ──────────────────────────────────────────────────
+
+// TestBridge_Subscribe_SameTopic_Cache verifies that subscribing to the same
+// topic twice reuses the cached subscriber, covering the cache-hit branch in
+// Bridge.getOrCreateSub. Two streams share one DDS subscriber, so messages
+// are delivered to whichever goroutine reads first — we publish two messages
+// and verify at least one arrives on any stream.
+func TestBridge_Subscribe_SameTopic_Cache(t *testing.T) {
+	client, _, p := newTestBridge(t, grpcbridge.Options{})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// First Subscribe — creates subscriber and caches it.
+	stream1, err := client.Subscribe(ctx, &grpcbridge.SubscribeRequest{Topic: "grpc/cache-test"})
+	if err != nil {
+		t.Fatalf("first Subscribe: %v", err)
+	}
+
+	// Second Subscribe — hits the cached subscriber in getOrCreateSub.
+	stream2, err := client.Subscribe(ctx, &grpcbridge.SubscribeRequest{Topic: "grpc/cache-test"})
+	if err != nil {
+		t.Fatalf("second Subscribe: %v", err)
+	}
+
+	time.Sleep(20 * time.Millisecond)
+
+	pub, err := p.NewPublisher("grpc/cache-test", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	// Publish two messages; the two competing goroutines (stream1 and stream2)
+	// each consume one. At least one arrival confirms the cache-hit path works.
+	_ = pub.Write([]byte("cached-1"))
+	_ = pub.Write([]byte("cached-2"))
+
+	got := make(chan string, 2)
+	recvFrom := func(s interface {
+		Recv() (*grpcbridge.Sample, error)
+	}) {
+		sample, recvErr := s.Recv()
+		if recvErr == nil {
+			got <- string(sample.Payload)
+		}
+	}
+	go recvFrom(stream1)
+	go recvFrom(stream2)
+
+	// Expect at least one delivery within the context deadline.
+	select {
+	case payload := <-got:
+		if payload != "cached-1" && payload != "cached-2" {
+			t.Errorf("unexpected payload: %q", payload)
+		}
+	case <-ctx.Done():
+		t.Fatal("timeout: no message received on either stream")
+	}
+}
+
+// ── Bridge.Publish WriteCtx error ────────────────────────────────────────────
+
+// TestBridge_Publish_WriteCtxFails covers the pub.WriteCtx error branch in
+// Bridge.Publish by using QoS.MaxSampleSize=1 and sending a 2-byte payload.
+func TestBridge_Publish_WriteCtxFails(t *testing.T) {
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
+	defer p.Close()
+	b := grpcbridge.New(p, grpcbridge.Options{QoS: dds.QoS{MaxSampleSize: 1}})
+	lis := listenLocal(t)
+	go func() { _ = b.Server().Serve(lis) }()
+	defer b.Close()
+
+	conn := dialJSON(t, lis.Addr().String())
+	defer conn.Close()
+	client := grpcbridge.NewRawClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	// "hi" is 2 bytes, exceeds MaxSampleSize=1 → WriteCtx returns ErrPayloadTooLarge.
+	ignoredRet, pubErr := client.Publish(ctx, &grpcbridge.PublishRequest{Topic: "publish/fail", Payload: []byte("hi")})
+	_ = ignoredRet
+	if pubErr == nil {
+		t.Fatal("expected error when payload exceeds MaxSampleSize")
+	}
+}
+
+// ── StreamPublish publisher error ─────────────────────────────────────────────
+
+// TestBridge_StreamPublish_PublisherError covers the getOrCreatePub error path
+// in Bridge.StreamPublish by closing the participant after stream setup but
+// before sending a sample on a new topic.
+func TestBridge_StreamPublish_PublisherError(t *testing.T) {
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
+	b := grpcbridge.New(p, grpcbridge.Options{})
+	lis := listenLocal(t)
+	go func() { _ = b.Server().Serve(lis) }()
+	defer b.Close()
+
+	conn := dialJSON(t, lis.Addr().String())
+	defer conn.Close()
+	client := grpcbridge.NewRawClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	sp, err := client.StreamPublish(ctx)
+	if err != nil {
+		t.Fatalf("StreamPublish: %v", err)
+	}
+
+	// Close participant so that getOrCreatePub fails for any new topic.
+	p.Close()
+
+	if sendErr := sp.Send(&grpcbridge.PublishRequest{Topic: "sp/new-after-close", Payload: []byte("x")}); sendErr != nil {
+		// Some implementations report the server-side error at Send time.
+		return
+	}
+	_, recvErr := sp.CloseAndRecv()
+	if recvErr == nil {
+		t.Fatal("expected error after participant closed")
+	}
+}
+
+// ── Auth wrong-token path ─────────────────────────────────────────────────────
+
+// TestBridge_Auth_WrongToken_Unauthenticated verifies that a non-empty but
+// incorrect Authorization header triggers the vals[0]!="Bearer <token>" branch
+// inside checkAuth (as opposed to the missing-header branch).
+func TestBridge_Auth_WrongToken_Unauthenticated(t *testing.T) {
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer p.Close()
+	b := grpcbridge.New(p, grpcbridge.Options{AuthToken: "secret"})
+	lis := listenLocal(t)
+	go func() { _ = b.Server().Serve(lis) }()
+	defer b.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	conn, dialErr := grpc.DialContext(ctx, lis.Addr().String(), //nolint:staticcheck
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.ForceCodec(grpcbridge.JSONCodec{})),
+		grpc.WithPerRPCCredentials(bearerToken("wrong")), // non-empty but wrong
+	)
+	if dialErr != nil {
+		t.Fatalf("dial: %v", dialErr)
+	}
+	defer conn.Close()
+
+	client := grpcbridge.NewRawClient(conn)
+	ignoredRet, pubErr := client.Publish(ctx, &grpcbridge.PublishRequest{Topic: "t", Payload: []byte("x")})
+	_ = ignoredRet
+	if pubErr == nil {
+		t.Fatal("expected unauthenticated error with wrong token")
+	}
+	if !strings.Contains(pubErr.Error(), "Unauthenticated") && !strings.Contains(pubErr.Error(), "unauthenticated") {
+		t.Errorf("expected Unauthenticated, got %v", pubErr)
 	}
 }
 

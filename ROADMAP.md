@@ -68,7 +68,8 @@ API parity does not.
 | v0.20.0 | — | shmem DiscoveryMetrics/TopicMetrics/Health parity; idl/roundtrip coverage 80% ✅ |
 | v0.21.0 | — | cyclone optional interface parity; bridge/grpc coverage 75.6%→86.7% ✅ |
 | v0.22.0 | — | bridge/rest coverage 78.8%→91.2%; cdr/ coverage 91.7%→94.2% ✅ |
-| **main** | — | **idl/ 87.2%→88.1%; idl/roundtrip 80%→85.3%; monitor/ addr() 100%** |
+| v0.23.0 | — | idl/ 87.2%→88.1%; idl/roundtrip 80%→85.3%; monitor/ 90.0%→90.5% ✅ |
+| **main** | — | **bridge/grpc 86.7%→91.1%; bridge/wan readFrame JSON error covered** |
 
 ### Released — v0.1 – v0.8
 
@@ -102,7 +103,7 @@ API parity does not.
 - **v0.19.0** — `shmem.NewLoaningPublisher` (LoaningPublisher parity across all transports); fuzz targets for `cdr/` (`FuzzCDRDecode`, `FuzzCDRRoundtrip`) and `xtypes/` (`FuzzDynamicDataFromJSON`, `FuzzTypeIdentifier`); `auto/` coverage 69.2%→76.9% via `WithRTPSOpts` test; shmem/ coverage at 93.8%
 - **v0.20.0** — shmem `DiscoveryMetrics`/`TopicMetrics`/`Health` interface parity with mock/rtps (per-topic `sync.Map` counters, `shmTopicCounter`); `idl/roundtrip` typed-factory coverage 61.3%→80.0%; shmem/ coverage →96%+
 - **v0.21.0** — cyclone `DiscoveryMetrics`/`TopicMetrics`/`Health` optional interface parity (stub returns zeros/nil/HealthOK); cyclone interface tests; `bridge/grpc` coverage 75.6%→86.7% (`ApplyConfig`, `qos()`, `NewClient`, `authStream` now tested)
-- **main (unreleased)** — `bridge/rest` coverage 78.8%→91.2% (handlePublish/handleSubscribe error paths, keepalive SSE comment, custom QoS option); `cdr/` coverage 91.7%→94.2% (`Len`, `WriteInt8`, `Remaining` now tested)
+- **main (unreleased)** — `bridge/grpc` 86.7%→91.1% (Transform error drop, StreamPublish empty-topic/publisher-error, getOrCreateSub cache-hit, Publish WriteCtx error, wrong-bearer-token auth); `bridge/wan` readFrame JSON-decode error path covered; Options.qos() non-default branch
 
 ---
 
