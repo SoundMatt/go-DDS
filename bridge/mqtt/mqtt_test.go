@@ -350,3 +350,24 @@ func TestBridge_Close_Idempotent(t *testing.T) {
 	b.Close()
 	b.Close() // must not panic
 }
+
+// TestNewBridge_DDSSubscriberError covers the DDS subscriber creation error
+// path in NewBridge: MQTT subscriptions succeed, but the participant is closed
+// so NewSubscriber fails for the DDS topic.
+func TestNewBridge_DDSSubscriberError(t *testing.T) {
+	p, err := mock.New(0)
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
+	// Close the participant so NewSubscriber fails.
+	_ = p.Close()
+
+	client := newStubClient()
+	ignoredRet, newErr := mqttbridge.NewBridge(p, client, mqttbridge.Options{
+		DDSTopics: []string{"vehicle/speed"},
+	})
+	_ = ignoredRet
+	if newErr == nil {
+		t.Fatal("expected error when DDS participant is closed")
+	}
+}
