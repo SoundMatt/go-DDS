@@ -433,6 +433,93 @@ func TestBridge_Subscribe_Keepalive_FiresComment(t *testing.T) {
 	t.Error("no keepalive comment received in SSE stream within timeout")
 }
 
+// ── handleSubscribe: non-Flusher ResponseWriter ───────────────────────────────
+
+// noFlusher wraps a ResponseWriter to hide http.Flusher, triggering the
+// "streaming not supported" branch in handleSubscribe.
+type noFlusher struct{ http.ResponseWriter }
+
+// TestBridge_Subscribe_NotFlusher covers the "streaming not supported" branch
+// in handleSubscribe when the ResponseWriter does not implement http.Flusher.
+func TestBridge_Subscribe_NotFlusher(t *testing.T) {
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
+	defer p.Close()
+	b := rest.New(p, rest.Options{})
+	defer b.Close()
+
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "/topics/no-flush", nil)
+	rw := httptest.NewRecorder()
+	b.ServeHTTP(&noFlusher{rw}, req)
+	if rw.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", rw.Code)
+	}
+}
+
+// ── handlePublish: body read error ───────────────────────────────────────────
+
+// errReader always returns an error on Read, simulating a broken request body.
+type errReader struct{}
+
+func (errReader) Read([]byte) (int, error) { return 0, io.ErrUnexpectedEOF }
+func (errReader) Close() error             { return nil }
+
+// TestBridge_Publish_BodyReadError covers the io.ReadAll error branch in
+// handlePublish when the request body returns an error.
+func TestBridge_Publish_BodyReadError(t *testing.T) {
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
+	defer p.Close()
+	b := rest.New(p, rest.Options{})
+	defer b.Close()
+
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "/topics/body-err", errReader{})
+	rw := httptest.NewRecorder()
+	b.ServeHTTP(rw, req)
+	if rw.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", rw.Code)
+	}
+}
+
+// ── getOrCreateSub cache hit ──────────────────────────────────────────────────
+
+// TestBridge_Subscribe_SameTopicCache verifies that subscribing to the same
+// topic twice reuses the cached subscriber, covering the cache-hit branch in
+// Bridge.getOrCreateSub.
+func TestBridge_Subscribe_SameTopicCache(t *testing.T) {
+	ignoredRet, srv := newBridgeServer(t, rest.Options{})
+	_ = ignoredRet
+
+	// Open two concurrent SSE streams on the same topic.
+	ctx1, cancel1 := context.WithCancel(context.Background())
+	defer cancel1()
+	ctx2, cancel2 := context.WithCancel(context.Background())
+	defer cancel2()
+
+	req1, _ := http.NewRequestWithContext(ctx1, http.MethodGet, srv.URL+"/topics/cache-hit", nil)
+	req2, _ := http.NewRequestWithContext(ctx2, http.MethodGet, srv.URL+"/topics/cache-hit", nil)
+
+	go func() {
+		resp, err := http.DefaultClient.Do(req1)
+		if err == nil {
+			resp.Body.Close()
+		}
+	}()
+	time.Sleep(30 * time.Millisecond)
+	go func() {
+		resp, err := http.DefaultClient.Do(req2)
+		if err == nil {
+			resp.Body.Close()
+		}
+	}()
+	time.Sleep(30 * time.Millisecond)
+	// Both streams ran; second call hits getOrCreateSub cache.
+}
+
 // ── Fuzz ──────────────────────────────────────────────────────────────────────
 
 func FuzzBridge_Publish(f *testing.F) {

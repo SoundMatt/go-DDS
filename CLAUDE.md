@@ -83,7 +83,8 @@ history expansion on `%`, `!`, and `(`.
 | v0.21.0  | cyclone optional interface parity; bridge/grpc coverage 75.6%→86.7% |
 | v0.22.0  | bridge/rest coverage 78.8%→91.2%; cdr/ coverage 91.7%→94.2% |
 | v0.23.0  | idl/ 87.2%→88.1%; idl/roundtrip 80%→85.3%; monitor/ 90.0%→90.5% |
-| **main** | **bridge/grpc 86.7%→91.1%; bridge/wan readFrame JSON error; 7 new error-path tests** |
+| v0.24.0  | bridge/grpc 86.7%→91.1%; bridge/wan 92.8%→93.6% |
+| **main** | **cdr/ 94.2%→99.2%; bridge/rest 91.2%→95.6%; bridge/mqtt 97.5%→100%** |
 
 ## CI matrix
 

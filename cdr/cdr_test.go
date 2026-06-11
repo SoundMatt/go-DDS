@@ -332,3 +332,68 @@ func TestDecoder_Underrun(t *testing.T) {
 		t.Error("expected error on underrun")
 	}
 }
+
+// TestDecoder_Underrun_AllTypes covers the need() error return branch in every
+// typed Read* method that has no prior underrun test.
+func TestDecoder_Underrun_AllTypes(t *testing.T) {
+	// emptyDecoder returns a Decoder backed by a CDR buffer with no payload.
+	emptyDecoder := func(t *testing.T) *cdr.Decoder {
+		t.Helper()
+		d, err := cdr.NewDecoder(cdr.NewEncoder().Bytes())
+		if err != nil {
+			t.Fatalf("NewDecoder: %v", err)
+		}
+		return d
+	}
+
+	t.Run("ReadBool", func(t *testing.T) {
+		_, err := emptyDecoder(t).ReadBool()
+		if err == nil {
+			t.Fatal("expected underrun error")
+		}
+	})
+	t.Run("ReadUint8", func(t *testing.T) {
+		_, err := emptyDecoder(t).ReadUint8()
+		if err == nil {
+			t.Fatal("expected underrun error")
+		}
+	})
+	t.Run("ReadInt16", func(t *testing.T) {
+		_, err := emptyDecoder(t).ReadInt16()
+		if err == nil {
+			t.Fatal("expected underrun error")
+		}
+	})
+	t.Run("ReadUint16", func(t *testing.T) {
+		_, err := emptyDecoder(t).ReadUint16()
+		if err == nil {
+			t.Fatal("expected underrun error")
+		}
+	})
+	t.Run("ReadString_data", func(t *testing.T) {
+		// Write a uint32 length = 4, but no actual string bytes follow.
+		e := cdr.NewEncoder()
+		e.WriteUint32(4)
+		d, err := cdr.NewDecoder(e.Bytes())
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, readErr := d.ReadString()
+		if readErr == nil {
+			t.Fatal("expected underrun error for string data")
+		}
+	})
+	t.Run("ReadBytes_data", func(t *testing.T) {
+		// Write a uint32 length = 4, but no actual bytes follow.
+		e := cdr.NewEncoder()
+		e.WriteUint32(4)
+		d, err := cdr.NewDecoder(e.Bytes())
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, readErr := d.ReadBytes()
+		if readErr == nil {
+			t.Fatal("expected underrun error for bytes data")
+		}
+	})
+}
