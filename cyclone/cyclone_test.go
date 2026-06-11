@@ -134,3 +134,60 @@ func TestCyclone_StubReturnsError(t *testing.T) {
 	}
 	p.Close()
 }
+
+// ── Optional interfaces ───────────────────────────────────────────────────────
+
+func TestCyclone_DiscoveryMetrics(t *testing.T) {
+	p := newParticipant(t)
+	mp, ok := p.(dds.DiscoveryMetricsProvider)
+	if !ok {
+		t.Fatal("cyclone participant does not implement dds.DiscoveryMetricsProvider")
+	}
+	m := mp.DiscoveryMetrics()
+	// Cyclone returns zeros for all fields (CGo metrics are not surfaced).
+	_ = m
+}
+
+func TestCyclone_TopicMetrics(t *testing.T) {
+	p := newParticipant(t)
+	mp, ok := p.(dds.TopicMetricsProvider)
+	if !ok {
+		t.Fatal("cyclone participant does not implement dds.TopicMetricsProvider")
+	}
+	metrics := mp.TopicMetrics()
+	// Cyclone returns nil (no per-topic counters in CGo shim).
+	if metrics != nil {
+		t.Errorf("expected nil TopicMetrics, got %v", metrics)
+	}
+}
+
+func TestCyclone_Health_Open(t *testing.T) {
+	p := newParticipant(t)
+	hp, ok := p.(dds.HealthProvider)
+	if !ok {
+		t.Fatal("cyclone participant does not implement dds.HealthProvider")
+	}
+	h := hp.Health()
+	if h.Status != dds.HealthOK {
+		t.Errorf("expected HealthOK, got %v", h.Status)
+	}
+}
+
+func TestCyclone_Health_Closed(t *testing.T) {
+	p, err := cyclone.New(testDomain)
+	if err != nil {
+		t.Skipf("CycloneDDS unavailable: %v", err)
+	}
+	hp, ok := p.(dds.HealthProvider)
+	if !ok {
+		t.Fatal("cyclone participant does not implement dds.HealthProvider")
+	}
+	p.Close()
+	h := hp.Health()
+	if h.Status != dds.HealthDown {
+		t.Errorf("expected HealthDown after Close, got %v", h.Status)
+	}
+	if h.Details["state"] != "closed" {
+		t.Errorf("expected details[state]=closed, got %v", h.Details)
+	}
+}

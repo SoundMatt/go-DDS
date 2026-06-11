@@ -3,10 +3,15 @@
   "project": {
     "name": "go-DDS",
     "module": "github.com/SoundMatt/go-DDS",
-    "standard": "iso26262"
+    "standard": "iso26262",
+    "asil": "ASIL-B"
   },
-  "rules": {},
+  "rules": {
+    "exclude": [],
+    "severity": {}
+  },
   "report": {
-    "format": "text"
+    "format": "json",
+    "output": "check-report.json"
   }
 }

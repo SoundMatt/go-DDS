@@ -226,6 +226,32 @@ func (p *participant) Close() error {
 	return nil
 }
 
+// DiscoveryMetrics implements dds.DiscoveryMetricsProvider.
+// CycloneDDS metrics are not surfaced through the CGo shim; returns zeros.
+func (p *participant) DiscoveryMetrics() dds.DiscoveryMetrics {
+	return dds.DiscoveryMetrics{}
+}
+
+// TopicMetrics implements dds.TopicMetricsProvider.
+// CycloneDDS metrics are not surfaced through the CGo shim; returns nil.
+func (p *participant) TopicMetrics() []dds.TopicMetrics {
+	return nil
+}
+
+// Health implements dds.HealthProvider.
+func (p *participant) Health() dds.Health {
+	p.mu.Lock()
+	closed := p.closed
+	p.mu.Unlock()
+	if closed {
+		return dds.Health{
+			Status:  dds.HealthDown,
+			Details: map[string]string{"state": "closed"},
+		}
+	}
+	return dds.Health{Status: dds.HealthOK}
+}
+
 // publisher implements dds.Publisher.
 type publisher struct {
 	topic  string

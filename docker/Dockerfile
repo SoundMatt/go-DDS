@@ -14,6 +14,9 @@ RUN CGO_ENABLED=0 go build -trimpath -o /bin/sub     ./examples/quickstart/sub
 FROM alpine:3.20 AS monitor
 RUN apk add --no-cache ca-certificates
 COPY --from=builder /bin/monitor /usr/local/bin/monitor
+LABEL org.opencontainers.image.title="go-DDS monitor" \
+      org.opencontainers.image.source="https://github.com/SoundMatt/go-DDS" \
+      org.opencontainers.image.licenses="MPL-2.0"
 EXPOSE 8080
 ENV MONITOR_ADDR=:8080
 ENTRYPOINT ["monitor"]
@@ -22,10 +25,16 @@ ENTRYPOINT ["monitor"]
 FROM alpine:3.20 AS pub
 RUN apk add --no-cache ca-certificates
 COPY --from=builder /bin/pub /usr/local/bin/pub
+LABEL org.opencontainers.image.title="go-DDS publisher" \
+      org.opencontainers.image.source="https://github.com/SoundMatt/go-DDS" \
+      org.opencontainers.image.licenses="MPL-2.0"
 ENTRYPOINT ["pub"]
 
 # ── subscriber image ───────────────────────────────────────────────────────────
 FROM alpine:3.20 AS sub
 RUN apk add --no-cache ca-certificates
 COPY --from=builder /bin/sub /usr/local/bin/sub
+LABEL org.opencontainers.image.title="go-DDS subscriber" \
+      org.opencontainers.image.source="https://github.com/SoundMatt/go-DDS" \
+      org.opencontainers.image.licenses="MPL-2.0"
 ENTRYPOINT ["sub"]
