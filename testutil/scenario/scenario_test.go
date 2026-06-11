@@ -215,3 +215,118 @@ func TestScenario_multi_publish(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// ── helpers for error-path coverage ──────────────────────────────────────────
+
+// closedChannelSub is a Subscriber whose channel is already closed, so the
+// first receive from C() immediately returns (zero, false).
+type closedChannelSub struct{ ch chan dds.Sample }
+
+func (s *closedChannelSub) C() <-chan dds.Sample        { return s.ch }
+func (s *closedChannelSub) TryRead() (dds.Sample, bool) { return dds.Sample{}, false }
+func (s *closedChannelSub) Unsubscribe() error           { return nil }
+func (s *closedChannelSub) Close() error                 { return nil }
+
+// preClosedParticipant wraps a Participant but returns a pre-closed subscriber
+// from NewSubscriber, exercising the !ok branch in expectStep.
+type preClosedParticipant struct{ dds.Participant }
+
+func (p *preClosedParticipant) NewSubscriber(topic string, qos dds.QoS, opts ...dds.SubscriberOption) (dds.Subscriber, error) {
+	ch := make(chan dds.Sample)
+	close(ch)
+	return &closedChannelSub{ch: ch}, nil
+}
+
+// ── error-path tests ──────────────────────────────────────────────────────────
+
+func TestScenario_publish_write_error(t *testing.T) {
+	p := newParticipant(t)
+	ctx := context.Background()
+
+	// MaxSampleSize:1 forces WriteCtx to fail for any payload larger than 1 byte.
+	err := scenario.Run(ctx, p,
+		scenario.Publish("x/y", []byte("hello"), dds.QoS{MaxSampleSize: 1}),
+	)
+	if err == nil {
+		t.Fatal("expected write error from publishStep")
+	}
+}
+
+func TestScenario_expect_timeout(t *testing.T) {
+	p := newParticipant(t)
+	ctx := context.Background()
+
+	// 1ms timeout with no publisher — deadline fires before any sample arrives.
+	err := scenario.Run(ctx, p,
+		scenario.Expect("silent/topic", dds.DefaultQoS, 1*time.Millisecond, nil),
+	)
+	if err == nil {
+		t.Fatal("expected timeout error from expectStep")
+	}
+}
+
+func TestScenario_expect_sub_channel_closed(t *testing.T) {
+	// Use a participant that returns a pre-closed subscriber channel, triggering
+	// the !ok branch in expectStep.run.
+	p := newParticipant(t)
+	wrapped := &preClosedParticipant{Participant: p}
+	ctx := context.Background()
+
+	err := scenario.Run(ctx, wrapped,
+		scenario.Expect("x/y", dds.DefaultQoS, time.Second, nil),
+	)
+	if err == nil {
+		t.Fatal("expected subscriber-closed error from expectStep")
+	}
+}
+
+func TestScenario_wait_ctx_cancel_during_wait(t *testing.T) {
+	p := newParticipant(t)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Cancel context while Wait is blocking, not before Run is entered.
+	go func() {
+		time.Sleep(10 * time.Millisecond)
+		cancel()
+	}()
+
+	err := scenario.Run(ctx, p,
+		scenario.Wait(time.Second),
+	)
+	if err == nil {
+		t.Fatal("expected context-cancel error from waitStep")
+	}
+}
+
+func TestScenario_expect_none_sub_error(t *testing.T) {
+	p := newParticipant(t)
+	ctx := context.Background()
+
+	// Closed participant causes NewSubscriber to fail inside expectNoneStep.
+	_ = p.Close()
+
+	err := scenario.Run(ctx, p,
+		scenario.ExpectNone("x/y", dds.DefaultQoS, 50*time.Millisecond),
+	)
+	if err == nil {
+		t.Fatal("expected subscriber-creation error from expectNoneStep")
+	}
+}
+
+func TestScenario_expect_none_ctx_cancel(t *testing.T) {
+	p := newParticipant(t)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Cancel context while ExpectNone is waiting, not before Run is entered.
+	go func() {
+		time.Sleep(10 * time.Millisecond)
+		cancel()
+	}()
+
+	err := scenario.Run(ctx, p,
+		scenario.ExpectNone("silent/topic", dds.DefaultQoS, time.Second),
+	)
+	if err == nil {
+		t.Fatal("expected context-cancel error from expectNoneStep")
+	}
+}

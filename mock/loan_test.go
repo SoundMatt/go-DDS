@@ -18,6 +18,20 @@ import (
 	"github.com/SoundMatt/go-DDS/mock"
 )
 
+// wrappedParticipant delegates to the underlying participant but wraps the
+// Publisher in wrappedPub so the type assertion inside NewLoaningPublisher fails.
+type wrappedParticipant struct{ dds.Participant }
+
+func (w *wrappedParticipant) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, error) {
+	pub, err := w.Participant.NewPublisher(topic, qos)
+	if err != nil {
+		return nil, err
+	}
+	return &wrappedPub{pub}, nil
+}
+
+type wrappedPub struct{ dds.Publisher }
+
 func TestLoaningPublisher_roundtrip(t *testing.T) {
 	p, _ := mock.New(dds.Domain(0))
 	defer p.Close()
@@ -83,5 +97,28 @@ func TestLoaningPublisher_closed(t *testing.T) {
 	_, err = lp.Loan(10)
 	if !errors.Is(err, dds.ErrClosed) {
 		t.Fatalf("expected ErrClosed, got %v", err)
+	}
+}
+
+// TestNewLoaningPublisher_PublisherError covers the "publisher creation failed"
+// error path in NewLoaningPublisher by using a closed participant.
+func TestNewLoaningPublisher_PublisherError(t *testing.T) {
+	p, _ := mock.New(dds.Domain(0))
+	_ = p.Close()
+	_, err := mock.NewLoaningPublisher(p, "loan/pub-err", dds.DefaultQoS, 256)
+	if err == nil {
+		t.Fatal("expected error when participant is closed")
+	}
+}
+
+// TestNewLoaningPublisher_NonMockParticipant covers the "not a mock participant"
+// error path by wrapping the publisher in a type that fails the *publisher assertion.
+func TestNewLoaningPublisher_NonMockParticipant(t *testing.T) {
+	p, _ := mock.New(dds.Domain(0))
+	defer p.Close()
+	wrapped := &wrappedParticipant{p}
+	_, err := mock.NewLoaningPublisher(wrapped, "loan/wrap-err", dds.DefaultQoS, 256)
+	if !errors.Is(err, dds.ErrLoanBuffer) {
+		t.Fatalf("expected ErrLoanBuffer, got %v", err)
 	}
 }

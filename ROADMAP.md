@@ -71,7 +71,9 @@ API parity does not.
 | v0.23.0 | — | idl/ 87.2%→88.1%; idl/roundtrip 80%→85.3%; monitor/ 90.0%→90.5% ✅ |
 | v0.24.0 | — | bridge/grpc 86.7%→91.1%; bridge/wan 92.8%→93.6% ✅ |
 | v0.25.0 | — | cdr/ 94.2%→100%; bridge/rest 91.2%→98.2%; bridge/mqtt 97.5%→100% ✅ |
-| **main** | — | **rpc/ 86.1%→98.1%; bridge/rest error-path coverage** |
+| v0.26.0 | — | rpc/ 86.1%→98.1%; cdr/ 99.2%→100%; bridge/rest 95.6%→98.2% ✅ |
+| v0.27.0 | — | mock/ 96.4%→98.0%; bridge/wan 93.6%→98.4%; testutil/scenario/ →100% ✅ |
+| **main** | — | **next coverage target** |
 
 ### Released — v0.1 – v0.8
 
@@ -105,7 +107,8 @@ API parity does not.
 - **v0.19.0** — `shmem.NewLoaningPublisher` (LoaningPublisher parity across all transports); fuzz targets for `cdr/` (`FuzzCDRDecode`, `FuzzCDRRoundtrip`) and `xtypes/` (`FuzzDynamicDataFromJSON`, `FuzzTypeIdentifier`); `auto/` coverage 69.2%→76.9% via `WithRTPSOpts` test; shmem/ coverage at 93.8%
 - **v0.20.0** — shmem `DiscoveryMetrics`/`TopicMetrics`/`Health` interface parity with mock/rtps (per-topic `sync.Map` counters, `shmTopicCounter`); `idl/roundtrip` typed-factory coverage 61.3%→80.0%; shmem/ coverage →96%+
 - **v0.21.0** — cyclone `DiscoveryMetrics`/`TopicMetrics`/`Health` optional interface parity (stub returns zeros/nil/HealthOK); cyclone interface tests; `bridge/grpc` coverage 75.6%→86.7% (`ApplyConfig`, `qos()`, `NewClient`, `authStream` now tested)
-- **main (unreleased)** — `cdr/` 94.2%→99.2% (ReadBool/ReadUint8/ReadInt16/ReadUint16/ReadString/ReadBytes underrun error returns); `bridge/rest` 91.2%→95.6% (non-Flusher ResponseWriter, body read error, getOrCreateSub cache-hit); `bridge/mqtt` 97.5%→100% (NewBridge DDS subscriber creation error)
+- **v0.26.0** — `rpc/` 86.1%→98.1% (NewRequester/NewReplier publisher+subscriber error paths; Request encode/unmarshal/done-channel errors; Reply encode/write errors; demux/pump short+invalid payload continue branches); `cdr/` 99.2%→100% (ReadString n==0 defensive branch); `bridge/rest` 95.6%→98.2% (SSE channel-close, write-error-on-message, keepalive write error)
+- **v0.27.0** — `mock/` 96.4%→98.0% (NewLoaningPublisher publisher error + non-mock participant; TryRead closed-subscriber); `bridge/wan/` 93.6%→98.4% (Connect multi-topic cleanup; ErrFrameTooLarge/body-read-error via server-side TCP; sendLoop writeFrame error + subscriber-channel-closed + writeFrame header error via `net.Pipe` internal test); `testutil/scenario/` →100% (publishStep write error; expectStep timeout + closed-subscriber; waitStep/expectNoneStep ctx-cancel)
 
 ---
 
