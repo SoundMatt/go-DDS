@@ -99,38 +99,38 @@ API parity does not.
 
 ### Core DDS
 
-- Participant API
-- Publisher API
-- Subscriber API
-- Topic abstraction
-- WaitSets
-- QoS foundations
+- Participant API ✅
+- Publisher API ✅
+- Subscriber API ✅
+- Topic abstraction ✅
+- WaitSets ✅
+- QoS foundations ✅
 
 ### RTPS
 
-- Native RTPS implementation
-- Discovery
-- Reliability
-- UDP transport
+- Native RTPS implementation ✅
+- Discovery ✅
+- Reliability ✅
+- UDP transport ✅
 
 ### Backends
 
-- Native RTPS
-- CycloneDDS
-- Mock runtime
-- Shared Memory
+- Native RTPS ✅
+- CycloneDDS ✅
+- Mock runtime ✅
+- Shared Memory ✅
 
 ### Integration
 
-- MQTT bridge
-- TSN stream model
+- MQTT bridge ✅
+- TSN stream model ✅
 
 ### Quality
 
-- Unit testing
-- Interoperability testing
-- Fuzzing
-- CI/CD
+- Unit testing ✅
+- Interoperability testing ✅
+- Fuzzing ✅
+- CI/CD ✅
 
 ---
 
@@ -141,31 +141,31 @@ Deliver a production-grade DDS runtime.
 
 ### Discovery
 
-- Robust SPDP
-- Robust SEDP
-- Discovery diagnostics
-- Discovery metrics
-- Discovery health reporting
+- Robust SPDP ✅
+- Robust SEDP ✅
+- Discovery diagnostics ✅
+- Discovery metrics ✅ (`dds.DiscoveryMetrics`, `DiscoveryMetricsProvider`)
+- Discovery health reporting ✅ (`dds.HealthProvider`)
 
 ### Reliability
 
-- Complete RTPS reliability
-- DATA_FRAG
-- Fragmentation
-- Reassembly
-- Recovery tuning
+- Complete RTPS reliability ✅
+- DATA_FRAG ✅
+- Fragmentation ✅
+- Reassembly ✅
+- Recovery tuning ✅ (`rtps.WithHeartbeatPeriod`)
 
 ### Configuration
 
-- YAML configuration
-- JSON configuration
-- Configuration validation
+- YAML configuration ✅ (`config/`)
+- JSON configuration ✅ (`config/`)
+- Configuration validation ✅
 
 ### Operations
 
-- Runtime diagnostics
-- Runtime inspection
-- Runtime health
+- Runtime diagnostics ✅ (`monitor/` — SSE `/api/diagnostics`)
+- Runtime inspection ✅ (`monitor/` — `/api/topics`, `/api/peers`)
+- Runtime health ✅ (`dds.HealthProvider`, `/health` endpoint)
 
 Success Criteria:
 A deployment can be operated and debugged without custom tooling.
@@ -179,34 +179,34 @@ Make go-DDS the easiest DDS implementation to develop against.
 
 ### Code Generation
 
-- IDL parser
-- Go code generation
-- Typed publishers
-- Typed subscribers
+- IDL parser ✅ (`idl/`)
+- Go code generation ✅ (`idl/` — structs, enums, arrays, @key, typedef)
+- Typed publishers ✅ (`dds.TypedPublisher[T]`)
+- Typed subscribers ✅ (`dds.TypedSubscriber[T]`)
 
 ### Serialization
 
-- CDR
-- XCDR
+- CDR ✅ (`cdr/`)
+- XCDR ✅ (XCDR2 subset via `cdr/`)
 
 ### Local Development
 
-- Virtual DDS runtime
-- In-memory transport
-- Single-process simulation
+- Virtual DDS runtime ✅ (`mock/`)
+- In-memory transport ✅ (`mock/`)
+- Single-process simulation ✅ (`mock/`)
 
 ### Testing
 
-- Mock participants
-- Topic simulators
-- Test harnesses
+- Mock participants ✅ (`mock/`, `testutil/`)
+- Topic simulators ✅ (`testutil/scenario`)
+- Test harnesses ✅ (`testutil/` — AssertSample, TopicRecorder, BurstPublish)
 
 ### CLI
 
-- Topic inspection
-- Publish tool
-- Subscribe tool
-- Discovery inspection
+- Topic inspection ✅ (`ddstool sub`)
+- Publish tool ✅ (`ddstool pub`)
+- Subscribe tool ✅ (`ddstool sub`)
+- Discovery inspection ✅ (`ddstool peers`)
 
 Success Criteria:
 A developer can go from interface definition to running system in minutes.
