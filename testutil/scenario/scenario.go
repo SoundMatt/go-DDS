@@ -62,7 +62,7 @@ func (s *publishStep) run(ctx context.Context, p dds.Participant) error {
 	if err != nil {
 		return fmt.Errorf("publish %q: new publisher: %w", s.topic, err)
 	}
-	defer pub.Close() //nolint:errcheck
+	defer pub.Close() //nolint:errcheck // step-scoped publisher; close errors are not actionable here
 	if err := pub.WriteCtx(ctx, s.payload); err != nil {
 		return fmt.Errorf("publish %q: write: %w", s.topic, err)
 	}
@@ -89,7 +89,7 @@ func (s *expectStep) run(ctx context.Context, p dds.Participant) error {
 	if err != nil {
 		return fmt.Errorf("expect %q: new subscriber: %w", s.topic, err)
 	}
-	defer sub.Close() //nolint:errcheck
+	defer sub.Close() //nolint:errcheck // step-scoped subscriber; close errors are not actionable here
 
 	deadline := time.After(s.timeout)
 	for {
@@ -159,7 +159,7 @@ func (s *expectNoneStep) run(ctx context.Context, p dds.Participant) error {
 	if err != nil {
 		return fmt.Errorf("expect-none %q: new subscriber: %w", s.topic, err)
 	}
-	defer sub.Close() //nolint:errcheck
+	defer sub.Close() //nolint:errcheck // step-scoped subscriber; close errors are not actionable here
 
 	select {
 	case <-ctx.Done():

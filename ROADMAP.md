@@ -62,7 +62,8 @@ API parity does not.
 | v0.14.5 | — | Docker: golang:1.22→1.25 builder; Node.js 24 opt-in for docker/* actions ✅ |
 | v0.15.0 | — | go-FuSa v0.25.1; OpenTelemetry adapter (`otel/`); roadmap ✅ audit ✅ |
 | v0.16.0 | — | Loaned samples API (`dds.LoaningPublisher`); scenario test runner (`testutil/scenario`) ✅ |
-| **main** | — | **Automatic transport selection (`auto/` package — shmem → RTPS fallback)** |
+| v0.17.0 | — | Automatic transport selection (`auto/` package — shmem → RTPS fallback) ✅ |
+| **main** | — | **Quality polish: rtps/scenario coverage, fusa:req traceability, CONTRIBUTING.md expansion, new examples** |
 
 ### Released — v0.1 – v0.8
 
@@ -91,7 +92,8 @@ API parity does not.
 - **v0.14.5** — Docker builder bumped from golang:1.22 to golang:1.25; `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` for docker/* actions
 - **v0.15.0** — go-FuSa v0.25.1; `otel/` OpenTelemetry adapter (`NewTracer(tp)` bridges `dds.Tracer` to any OTel provider); roadmap ✅ audit (all implemented items marked)
 - **v0.16.0** — `dds.LoaningPublisher` interface with zero-copy loaned-sample API (`mock.NewLoaningPublisher`, `rtps.NewLoaningPublisher`); `testutil/scenario` declarative scenario test runner (Publish, Expect, ExpectNone, Wait, Assert steps); 241 requirements
-- **main (unreleased)** — `auto.NewParticipant` automatic transport selection (shmem → RTPS fallback, explicit override via `WithTransport`); 244 requirements (REQ-AUTO-001–003 added)
+- **v0.17.0** — `auto.NewParticipant` automatic transport selection (shmem → RTPS fallback, explicit override via `WithTransport`); 244 requirements (REQ-AUTO-001–003 added)
+- **main (unreleased)** — Quality polish: rtps/ coverage tests (loan, heartbeat, metrics, health, config, IPv6); testutil/scenario coverage tests (error paths, cancellation); `//fusa:req` traceability annotations on 10 foundational types in `dds.go`; `CONTRIBUTING.md` expanded to all 25 packages with contract notes; new examples (loaned-samples, auto-transport, scenario-dsl, otel-tracing); `nolint` explanatory comments
 
 ---
 

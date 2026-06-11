@@ -11,6 +11,7 @@ package scenario_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -106,6 +107,94 @@ func TestScenario_context_cancel(t *testing.T) {
 	)
 	if err == nil {
 		t.Fatal("expected error on cancelled context")
+	}
+}
+
+func TestScenario_publish_error_propagates(t *testing.T) {
+	p := newParticipant(t)
+	ctx := context.Background()
+
+	// Closed participant returns errors from NewPublisher.
+	_ = p.Close()
+
+	err := scenario.Run(ctx, p,
+		scenario.Publish("x/y", []byte("data"), dds.DefaultQoS),
+	)
+	if err == nil {
+		t.Fatal("expected error when publishing on closed participant")
+	}
+}
+
+func TestScenario_expect_subscriber_closed(t *testing.T) {
+	p := newParticipant(t)
+	ctx := context.Background()
+
+	// Close participant before Expect runs to trigger subscriber-closed path.
+	_ = p.Close()
+
+	err := scenario.Run(ctx, p,
+		scenario.Expect("x/y", dds.DefaultQoS, 50*time.Millisecond, nil),
+	)
+	if err == nil {
+		t.Fatal("expected error when expecting on closed participant")
+	}
+}
+
+func TestScenario_expect_ctx_cancel(t *testing.T) {
+	p := newParticipant(t)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func() {
+		time.Sleep(20 * time.Millisecond)
+		cancel()
+	}()
+
+	err := scenario.Run(ctx, p,
+		scenario.Expect("never/fires", dds.DefaultQoS, 10*time.Second, nil),
+	)
+	if err == nil {
+		t.Fatal("expected error on context cancel during Expect")
+	}
+}
+
+func TestScenario_expect_none_unexpected_sample(t *testing.T) {
+	p := newParticipant(t)
+	ctx := context.Background()
+
+	// Publish first so the subscriber created by ExpectNone receives it.
+	err := scenario.Run(ctx, p,
+		scenario.Publish("noisy/topic", []byte("boom"), dds.ReliableQoS),
+		scenario.ExpectNone("noisy/topic", dds.ReliableQoS, 100*time.Millisecond),
+	)
+	if err == nil {
+		t.Fatal("expected failure: ExpectNone should fail when a sample arrives")
+	}
+}
+
+func TestScenario_assert_error(t *testing.T) {
+	p := newParticipant(t)
+	ctx := context.Background()
+
+	err := scenario.Run(ctx, p,
+		scenario.Assert("always fail", func(_ context.Context, _ dds.Participant) error {
+			return fmt.Errorf("deliberate failure")
+		}),
+	)
+	if err == nil {
+		t.Fatal("expected assert error to propagate")
+	}
+}
+
+func TestScenario_wait_ctx_cancel(t *testing.T) {
+	p := newParticipant(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := scenario.Run(ctx, p,
+		scenario.Wait(time.Second),
+	)
+	if err == nil {
+		t.Fatal("expected context cancellation error from Wait")
 	}
 }
 

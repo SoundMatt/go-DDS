@@ -1,6 +1,6 @@
 {
   "format": "go-FuSa Safety Case v1",
-  "generatedAt": "2026-06-11T15:18:40.673264Z",
+  "generatedAt": "2026-06-11T16:10:17.67499Z",
   "module": "github.com/SoundMatt/go-DDS",
   "standard": "generic",
   "evidence": [
@@ -8,8 +8,7 @@
       "id": "check",
       "description": "Coding standard and static analysis checks",
       "file": "check-report.json",
-      "status": "absent",
-      "detail": "run 'gofusa check --output check-report.json' to generate"
+      "status": "present"
     },
     {
       "id": "trace",
@@ -88,7 +87,5 @@
       ]
     }
   ],
-  "gaps": [
-    "check"
-  ]
+  "gaps": null
 }

@@ -47,7 +47,7 @@ func (c *TAPRIOConfig) Apply() error {
 	if err != nil {
 		return fmt.Errorf("tsn: taprio: netlink socket: %w", err)
 	}
-	defer unix.Close(fd) //nolint:errcheck
+	defer unix.Close(fd) //nolint:errcheck // netlink fd cleanup; close errors are not actionable after the request is complete
 
 	sa := &unix.SockaddrNetlink{Family: unix.AF_NETLINK}
 	if bindErr := unix.Bind(fd, sa); bindErr != nil {
@@ -80,7 +80,7 @@ func (c *TAPRIOConfig) VerifyApplied() error {
 	if err != nil {
 		return fmt.Errorf("tsn: VerifyApplied: netlink socket: %w", err)
 	}
-	defer unix.Close(fd) //nolint:errcheck
+	defer unix.Close(fd) //nolint:errcheck // netlink fd cleanup; close errors are not actionable after the request is complete
 
 	sa := &unix.SockaddrNetlink{Family: unix.AF_NETLINK}
 	if bindErr := unix.Bind(fd, sa); bindErr != nil {

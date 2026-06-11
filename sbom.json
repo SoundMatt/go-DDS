@@ -5,7 +5,7 @@
       "type": "CreationInfo",
       "spdxId": "_:creationInfo0",
       "specVersion": "SPDX-3.0.1",
-      "created": "2026-06-11T15:18:41Z",
+      "created": "2026-06-11T16:10:27Z",
       "createdBy": [
         "_:tool0"
       ]
@@ -15,6 +15,62 @@
       "spdxId": "_:tool0",
       "name": "go-FuSa/0.25.0",
       "creationInfo": "_:creationInfo0"
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/go.opentelemetry.io/otel@v1.44.0",
+      "name": "go.opentelemetry.io/otel",
+      "creationInfo": "_:creationInfo0",
+      "software_packageVersion": "v1.44.0",
+      "verifiedUsing": [
+        {
+          "type": "Hash",
+          "algorithm": "SHA-256",
+          "hashValue": "263c07987a40e22677c01c65baed9f6db13b8f892a944f235f20323d71fb1ea5"
+        }
+      ]
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/go.opentelemetry.io/otel/exporters/stdout/stdouttrace@v1.44.0",
+      "name": "go.opentelemetry.io/otel/exporters/stdout/stdouttrace",
+      "creationInfo": "_:creationInfo0",
+      "software_packageVersion": "v1.44.0",
+      "verifiedUsing": [
+        {
+          "type": "Hash",
+          "algorithm": "SHA-256",
+          "hashValue": "6e5d92ed46ee6b4366b3e0ff8009b39d04dde1dc71300f7768a6dca4aaa24c2b"
+        }
+      ]
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/go.opentelemetry.io/otel/sdk@v1.44.0",
+      "name": "go.opentelemetry.io/otel/sdk",
+      "creationInfo": "_:creationInfo0",
+      "software_packageVersion": "v1.44.0",
+      "verifiedUsing": [
+        {
+          "type": "Hash",
+          "algorithm": "SHA-256",
+          "hashValue": "9c76306fd94af9f24f53f7674fab3b5bb67c8ad316caaae755f6e179562b679f"
+        }
+      ]
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/go.opentelemetry.io/otel/trace@v1.44.0",
+      "name": "go.opentelemetry.io/otel/trace",
+      "creationInfo": "_:creationInfo0",
+      "software_packageVersion": "v1.44.0",
+      "verifiedUsing": [
+        {
+          "type": "Hash",
+          "algorithm": "SHA-256",
+          "hashValue": "8f11790ac19809eef8302471d97e20ed6b18fd504a46aaa936f5e55ffea0b489"
+        }
+      ]
     },
     {
       "type": "software_Package",
@@ -74,6 +130,20 @@
     },
     {
       "type": "software_Package",
+      "spdxId": "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/github.com/google/uuid@v1.6.0",
+      "name": "github.com/google/uuid",
+      "creationInfo": "_:creationInfo0",
+      "software_packageVersion": "v1.6.0",
+      "verifiedUsing": [
+        {
+          "type": "Hash",
+          "algorithm": "SHA-256",
+          "hashValue": "348bda24330eb231c0f27d630212d2833ac0cf2d4782bfa136b6f9edefbde05d"
+        }
+      ]
+    },
+    {
+      "type": "software_Package",
       "spdxId": "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/go.opentelemetry.io/auto/sdk@v1.2.1",
       "name": "go.opentelemetry.io/auto/sdk",
       "creationInfo": "_:creationInfo0",
@@ -88,20 +158,6 @@
     },
     {
       "type": "software_Package",
-      "spdxId": "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/go.opentelemetry.io/otel@v1.44.0",
-      "name": "go.opentelemetry.io/otel",
-      "creationInfo": "_:creationInfo0",
-      "software_packageVersion": "v1.44.0",
-      "verifiedUsing": [
-        {
-          "type": "Hash",
-          "algorithm": "SHA-256",
-          "hashValue": "263c07987a40e22677c01c65baed9f6db13b8f892a944f235f20323d71fb1ea5"
-        }
-      ]
-    },
-    {
-      "type": "software_Package",
       "spdxId": "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/go.opentelemetry.io/otel/metric@v1.44.0",
       "name": "go.opentelemetry.io/otel/metric",
       "creationInfo": "_:creationInfo0",
@@ -111,20 +167,6 @@
           "type": "Hash",
           "algorithm": "SHA-256",
           "hashValue": "d70d2020b4dc1ddaf7608fa2c4bca37a6c2b567b0c5116d3645ad26027437667"
-        }
-      ]
-    },
-    {
-      "type": "software_Package",
-      "spdxId": "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/go.opentelemetry.io/otel/trace@v1.44.0",
-      "name": "go.opentelemetry.io/otel/trace",
-      "creationInfo": "_:creationInfo0",
-      "software_packageVersion": "v1.44.0",
-      "verifiedUsing": [
-        {
-          "type": "Hash",
-          "algorithm": "SHA-256",
-          "hashValue": "8f11790ac19809eef8302471d97e20ed6b18fd504a46aaa936f5e55ffea0b489"
         }
       ]
     },
@@ -218,14 +260,17 @@
       "name": "github.com/SoundMatt/go-DDS",
       "creationInfo": "_:creationInfo0",
       "element": [
+        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/go.opentelemetry.io/otel@v1.44.0",
+        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/go.opentelemetry.io/otel/exporters/stdout/stdouttrace@v1.44.0",
+        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/go.opentelemetry.io/otel/sdk@v1.44.0",
+        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/go.opentelemetry.io/otel/trace@v1.44.0",
         "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/google.golang.org/protobuf@v1.36.11",
         "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/github.com/cespare/xxhash/v2@v2.3.0",
         "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/github.com/go-logr/logr@v1.4.3",
         "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/github.com/go-logr/stdr@v1.2.2",
+        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/github.com/google/uuid@v1.6.0",
         "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/go.opentelemetry.io/auto/sdk@v1.2.1",
-        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/go.opentelemetry.io/otel@v1.44.0",
         "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/go.opentelemetry.io/otel/metric@v1.44.0",
-        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/go.opentelemetry.io/otel/trace@v1.44.0",
         "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/golang.org/x/net@v0.55.0",
         "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/golang.org/x/sys@v0.46.0",
         "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/golang.org/x/text@v0.37.0",
@@ -234,14 +279,17 @@
         "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/gopkg.in/yaml.v3@v3.0.1"
       ],
       "rootElement": [
+        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/go.opentelemetry.io/otel@v1.44.0",
+        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/go.opentelemetry.io/otel/exporters/stdout/stdouttrace@v1.44.0",
+        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/go.opentelemetry.io/otel/sdk@v1.44.0",
+        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/go.opentelemetry.io/otel/trace@v1.44.0",
         "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/google.golang.org/protobuf@v1.36.11",
         "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/github.com/cespare/xxhash/v2@v2.3.0",
         "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/github.com/go-logr/logr@v1.4.3",
         "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/github.com/go-logr/stdr@v1.2.2",
+        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/github.com/google/uuid@v1.6.0",
         "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/go.opentelemetry.io/auto/sdk@v1.2.1",
-        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/go.opentelemetry.io/otel@v1.44.0",
         "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/go.opentelemetry.io/otel/metric@v1.44.0",
-        "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/go.opentelemetry.io/otel/trace@v1.44.0",
         "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/golang.org/x/net@v0.55.0",
         "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/golang.org/x/sys@v0.46.0",
         "https://spdx.org/spdxdocs/github.com-SoundMatt-go-DDS/pkg/golang.org/x/text@v0.37.0",

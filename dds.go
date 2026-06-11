@@ -65,6 +65,9 @@ var ErrLoanBuffer = errors.New("dds: loan buffer unavailable or invalid")
 
 // ── Domain ────────────────────────────────────────────────────────────────────
 
+//fusa:req REQ-PART-001
+//fusa:req REQ-PART-006
+
 // Domain is a DDS domain identifier (0–232 inclusive per the DDS spec).
 // Participants on the same domain and network segment discover each other
 // automatically without a broker.
@@ -150,6 +153,10 @@ var ReliableQoS = QoS{
 
 // ── Sample ────────────────────────────────────────────────────────────────────
 
+//fusa:req REQ-SUB-001
+//fusa:req REQ-SUB-002
+//fusa:req REQ-SUB-003
+
 // Sample is a single data sample delivered to a Subscriber.
 // Timestamp is the source time of the write; zero means no timestamp was set
 // (INFO_TS was not present in the RTPS message, or the mock transport was used).
@@ -162,6 +169,10 @@ type Sample struct {
 }
 
 // ── BackPressurePolicy ────────────────────────────────────────────────────────
+
+//fusa:req REQ-QOS-005
+//fusa:req REQ-QOS-006
+//fusa:req REQ-QOS-007
 
 // BackPressurePolicy controls what happens when a subscriber's channel is full.
 type BackPressurePolicy int
@@ -178,11 +189,17 @@ const (
 
 // ── GUID ──────────────────────────────────────────────────────────────────────
 
+//fusa:req REQ-GUID-001
+//fusa:req REQ-GUID-002
+
 // GUID is a globally unique 16-byte DDS participant or endpoint identifier.
 // The first 12 bytes are the GuidPrefix; the last 4 bytes are the EntityId.
 type GUID [16]byte
 
 // ── Liveliness ────────────────────────────────────────────────────────────────
+
+//fusa:req REQ-DISC-006
+//fusa:req REQ-DISC-007
 
 // LivelinessEvent reports whether a remote participant has been discovered or
 // lost its lease.
@@ -235,6 +252,11 @@ func (noopTracerImpl) Start(ctx context.Context, _ string, _ ...SpanAttribute) (
 var NoopTracer Tracer = noopTracerImpl{}
 
 // ── SubscriberOption ──────────────────────────────────────────────────────────
+
+//fusa:req REQ-SUB-006
+//fusa:req REQ-QOS-005
+//fusa:req REQ-QOS-006
+//fusa:req REQ-QOS-007
 
 // SubscriberConfig holds per-subscriber options applied at construction time.
 // It is exported so that implementation packages (mock, rtps, cyclone) can
@@ -295,6 +317,9 @@ func (c SubscriberConfig) ChanDepth(defaultDepth int) int {
 
 // ── Metrics ───────────────────────────────────────────────────────────────────
 
+//fusa:req REQ-MON-001
+//fusa:req REQ-MON-002
+
 // Metrics holds cumulative statistics for a participant.
 type Metrics struct {
 	WriteCount     uint64
@@ -310,6 +335,9 @@ type MetricsProvider interface {
 }
 
 // ── Discovery Metrics ─────────────────────────────────────────────────────────
+
+//fusa:req REQ-DISC-012
+//fusa:req REQ-DISC-013
 
 // DiscoveryMetrics holds cumulative discovery statistics for a participant.
 type DiscoveryMetrics struct {
@@ -328,6 +356,9 @@ type DiscoveryMetricsProvider interface {
 
 // ── Per-Topic Metrics ─────────────────────────────────────────────────────────
 
+//fusa:req REQ-MON-003
+//fusa:req REQ-MON-004
+
 // TopicMetrics holds per-topic statistics for a single DDS topic.
 type TopicMetrics struct {
 	Topic          string
@@ -345,6 +376,9 @@ type TopicMetricsProvider interface {
 }
 
 // ── Health ────────────────────────────────────────────────────────────────────
+
+//fusa:req REQ-MON-005
+//fusa:req REQ-MON-006
 
 // HealthStatus is the overall operational status of a participant.
 type HealthStatus int

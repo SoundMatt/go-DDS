@@ -76,7 +76,8 @@ history expansion on `%`, `!`, and `(`.
 | v0.14.5  | Docker Node.js 24 opt-in; go-FuSa v0.21.0 |
 | v0.15.0  | go-FuSa v0.25.1; otel/ OpenTelemetry adapter; roadmap ✅ audit |
 | v0.16.0  | LoaningPublisher API; testutil/scenario runner; 241 requirements |
-| **main** | **auto/ transport selection (shmem→RTPS fallback); 244 requirements** |
+| v0.17.0  | auto/ transport selection (shmem→RTPS fallback); 244 requirements |
+| **main** | **Quality polish: coverage tests, fusa:req traceability, CONTRIBUTING.md expansion, new examples** |
 
 ## CI matrix
 

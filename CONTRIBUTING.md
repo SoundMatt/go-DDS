@@ -58,12 +58,35 @@ have the right to contribute under the existing license.
 
 | Directory | What it contains |
 |---|---|
-| `.` | `dds` package — interfaces (`Participant`, `Publisher`, `Subscriber`, `QoS`, `WaitSet`) |
-| `mock/` | In-process pub/sub. Zero dependencies. Use for unit tests. |
-| `rtps/` | Pure-Go RTPS/UDP transport. No CGo. |
-| `cyclone/` | CycloneDDS via CGo (`-tags cyclone`). |
-| `security/` | Pluggable payload security (NullPlugin, HMAC-SHA-256, AES-256-GCM). |
+| `.` | `dds` package — core interfaces (`Participant`, `Publisher`, `Subscriber`, `QoS`, `WaitSet`, `LoaningPublisher`) |
+| `admin/` | Participant administration — statistics, topic enumeration, remote control |
+| `auto/` | `NewParticipant` factory that auto-selects transport (shmem → RTPS fallback) |
+| `bridge/domain/` | Cross-domain bridge for routing samples between DDS domains |
+| `bridge/grpc/` | gRPC bridge — expose a DDS topic over a gRPC stream for WAN connectivity |
+| `bridge/mqtt/` | MQTT bridge — forward DDS samples to/from an MQTT broker |
+| `cdr/` | OMG Common Data Representation (CDR) encoder/decoder |
+| `cmd/ddstool/` | CLI: IDL compilation, topic echo, latency probe, pub/sub |
+| `cmd/latmon/` | Latency monitor daemon |
+| `cmd/monitor/` | Real-time web monitor daemon |
+| `config/` | `ParticipantConfig` — YAML/TOML-loadable runtime tuning (heartbeat, SPDP, peer locators) |
+| `cyclone/` | CycloneDDS via CGo (`-tags cyclone`) |
+| `idl/` | IDL parser and Go code generator (`ddstool idl` uses this) |
 | `interop/` | Wire-compatibility tests against CycloneDDS. Requires Docker and `-tags interop`. |
+| `mock/` | In-process pub/sub. Zero dependencies. Use for unit tests. |
+| `monitor/` | Real-time web monitor server (SSE push, no external deps) |
+| `otel/` | OpenTelemetry tracing adapter — wraps a `Participant` with OTLP spans |
+| `pool/` | `BytePool` — sync.Pool-backed buffer recycling used by `LoaningPublisher` |
+| `record/` | Fault injection and sample recording/replay for deterministic testing |
+| `rpc/` | Request/response RPC layer built on DDS pub/sub |
+| `rtps/` | Pure-Go RTPS/UDP transport. No CGo. |
+| `safety/` | E2E safety wrapper: CRC framing, GC latency profiling, ASIL-B compliance helpers |
+| `security/` | Pluggable payload security (NullPlugin, HMAC-SHA-256, AES-256-GCM) |
+| `services/` | Higher-level service patterns (service server, service client) |
+| `shmem/` | Shared-memory transport for intra-host zero-copy messaging |
+| `testutil/` | Test helpers: `Eventually`, `Drain`, channel utilities |
+| `testutil/scenario/` | Declarative scenario DSL: `Publish`, `Expect`, `ExpectNone`, `Wait`, `Assert`, `Run` |
+| `tsn/` | TSN stream model and Linux TAPRIO scheduler integration |
+| `xtypes/` | DDS XTypes dynamic topic registry |
 
 ## Running tests
 
@@ -107,6 +130,32 @@ and is Linux-only; it is skipped with `-short` in CI.
 The `SecurityPlugin` interface (`Seal` / `Open`) is applied at the payload
 level, not the transport level. All participants sharing a topic must use the
 same plugin and key.
+
+### auto
+
+`auto.NewParticipant` tries shmem first, then falls back to RTPS. Pass
+`auto.WithTransport(auto.TransportRTPS)` to force a specific transport. Callers
+do not need to import `rtps` or `shmem` directly.
+
+### pool / LoaningPublisher
+
+`pool.BytePool` is a `sync.Pool` of fixed-size byte slices. `LoaningPublisher`
+wraps a pool and a `Publisher`; `Loan(n)` returns a slice, `Commit(buf)` writes
+and recycles it. Buffers must not be used after `Commit` or `Close`.
+
+### testutil/scenario
+
+Steps run sequentially. The first error aborts the run. `Expect` creates a
+subscriber internally and blocks until the predicate matches or the deadline
+expires. `ExpectNone` fails if any sample arrives within the window. Topic
+names must be unique per scenario to avoid cross-test interference when the
+mock broker is in use.
+
+### otel
+
+`otel.WrapParticipant(p, tracer)` returns a `dds.Participant` that injects
+OTLP spans around each `Write` and `Receive`. Wire the tracer from your
+`otel.SetupSDK` call before creating participants.
 
 ## Adding a new transport backend
 
