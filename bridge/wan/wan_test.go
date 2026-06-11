@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -20,6 +21,22 @@ import (
 	"github.com/SoundMatt/go-DDS/bridge/wan"
 	"github.com/SoundMatt/go-DDS/mock"
 )
+
+// failAfterNSubs wraps a Participant and makes NewSubscriber fail after N
+// successful calls. Used to test multi-topic cleanup in Connect.
+type failAfterNSubs struct {
+	dds.Participant
+	limit int64
+	count atomic.Int64
+}
+
+func (f *failAfterNSubs) NewSubscriber(topic string, qos dds.QoS, opts ...dds.SubscriberOption) (dds.Subscriber, error) {
+	n := f.count.Add(1)
+	if n > f.limit {
+		return nil, fmt.Errorf("forced subscriber failure on call %d", n)
+	}
+	return f.Participant.NewSubscriber(topic, qos, opts...)
+}
 
 func newPart(t *testing.T) dds.Participant {
 	t.Helper()
@@ -328,6 +345,140 @@ func TestWANBridge_ErrFrameTooLarge_Sentinel(t *testing.T) {
 }
 
 // ── Server closed-participant ──────────────────────────────────────────────────
+
+// TestWANBridge_Connect_MultiTopicCleanup covers the error path in Connect where
+// the first topic subscribes successfully but the second subscription fails.
+// Connect must close already-created subscribers before returning the error.
+func TestWANBridge_Connect_MultiTopicCleanup(t *testing.T) {
+	base := newPart(t)
+	srv := mustServe(t, newPart(t))
+
+	// Allow exactly 1 subscriber before failing: first topic succeeds, second fails.
+	p := &failAfterNSubs{Participant: base, limit: 1}
+	_, err := wan.Connect(p, srv.Addr(), wan.Options{
+		Topics: []string{"wan/topic-a", "wan/topic-b"},
+	})
+	if err == nil {
+		t.Fatal("expected error when second subscriber creation fails")
+	}
+}
+
+// TestWANBridge_ReadFrame_ErrFrameTooLarge covers the ErrFrameTooLarge branch
+// in readFrame by sending a valid 4-byte header claiming > maxFrameBytes.
+func TestWANBridge_ReadFrame_ErrFrameTooLarge(t *testing.T) {
+	p := newPart(t)
+	srv := mustServe(t, p)
+
+	conn, dialErr := net.Dial("tcp", srv.Addr())
+	if dialErr != nil {
+		t.Fatalf("dial: %v", dialErr)
+	}
+	defer conn.Close()
+
+	var hdr [4]byte
+	binary.BigEndian.PutUint32(hdr[:], 32*1024*1024) // 32 MiB > maxFrameBytes
+	if _, err := conn.Write(hdr[:]); err != nil {
+		t.Fatalf("write header: %v", err)
+	}
+
+	// Wait for the server to process the oversized frame header and close.
+	time.Sleep(50 * time.Millisecond)
+
+	// The server should have closed the connection; any read should return EOF.
+	_ = conn.SetDeadline(time.Now().Add(200 * time.Millisecond))
+	_, readErr := conn.Read(make([]byte, 1))
+	if readErr == nil {
+		t.Error("expected server to close connection after ErrFrameTooLarge")
+	}
+}
+
+// TestWANBridge_ReadFrame_BodyReadError covers the io.ReadFull body error in
+// readFrame by closing the client connection after writing the 4-byte size header
+// but before writing the body bytes.
+func TestWANBridge_ReadFrame_BodyReadError(t *testing.T) {
+	p := newPart(t)
+	srv := mustServe(t, p)
+
+	conn, dialErr := net.Dial("tcp", srv.Addr())
+	if dialErr != nil {
+		t.Fatalf("dial: %v", dialErr)
+	}
+
+	var hdr [4]byte
+	binary.BigEndian.PutUint32(hdr[:], 64) // claims 64 bytes but we close before sending them
+	if _, writeErr := conn.Write(hdr[:]); writeErr != nil {
+		t.Fatalf("write header: %v", writeErr)
+	}
+	conn.Close() // close without writing body → server io.ReadFull(buf) returns error
+
+	time.Sleep(50 * time.Millisecond)
+}
+
+// TestWANBridge_ReceiveLoop_WriteError covers the pub.Write error path in
+// receiveLoop. The server is configured with MaxSampleSize:1 so any real
+// payload Write fails, causing receiveLoop to exit.
+func TestWANBridge_ReceiveLoop_WriteError(t *testing.T) {
+	dst := newPart(t)
+	src := newPart(t)
+	topic := uniqueTopic("wan/write-err")
+
+	srv, err := wan.Serve(dst, "127.0.0.1:0", wan.Options{QoS: dds.QoS{MaxSampleSize: 1}})
+	if err != nil {
+		t.Fatalf("Serve: %v", err)
+	}
+	t.Cleanup(func() { _ = srv.Close() })
+
+	cli, err := wan.Connect(src, srv.Addr(), wan.Options{Topics: []string{topic}})
+	if err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer cli.Close()
+
+	pub, err := src.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+	_ = pub.Write([]byte("payload-longer-than-one-byte")) // > 1 byte → pub.Write fails on server
+
+	time.Sleep(50 * time.Millisecond)
+}
+
+// TestWANBridge_SendLoop_WriteError covers the closeAllSubs+return branch in
+// sendLoop and the return-werr branch in writeFrame. After the server is closed
+// the TCP connection breaks, so the client's next writeFrame call fails.
+func TestWANBridge_SendLoop_WriteError(t *testing.T) {
+	src := newPart(t)
+	dst := newPart(t)
+	topic := uniqueTopic("wan/send-write-err")
+
+	srv := mustServe(t, dst)
+
+	cli, err := wan.Connect(src, srv.Addr(), wan.Options{Topics: []string{topic}})
+	if err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer cli.Close()
+
+	pub, err := src.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	// Send one sample to confirm the path is working before breaking the connection.
+	_ = pub.Write([]byte("ping"))
+	time.Sleep(30 * time.Millisecond)
+
+	// Close the server — this breaks the TCP connection on the server side.
+	_ = srv.Close()
+	time.Sleep(30 * time.Millisecond) // let RST/FIN propagate to the client
+
+	// Publish again: sendLoop reads the sample and calls writeFrame on the now-broken
+	// connection, which returns an error → closeAllSubs() + return.
+	_ = pub.Write([]byte("ping2"))
+	time.Sleep(50 * time.Millisecond)
+}
 
 // TestWANBridge_Server_ClosedParticipant verifies that the receiveLoop exits
 // cleanly when the server's participant is closed (NewPublisher fails).

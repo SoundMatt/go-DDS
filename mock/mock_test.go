@@ -1480,3 +1480,18 @@ func TestTryRead_HasSample(t *testing.T) {
 		t.Errorf("payload: got %q, want ready", s.Payload)
 	}
 }
+
+// TestTryRead_ClosedSubscriber covers the !ok branch in TryRead, which fires
+// when the subscriber channel has been closed (via sub.Close()).
+func TestTryRead_ClosedSubscriber(t *testing.T) {
+	p := newParticipant(t)
+	sub, err := p.NewSubscriber("tryread/closed", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	sub.Close()
+	_, ok := sub.TryRead()
+	if ok {
+		t.Error("TryRead on closed subscriber should return (zero, false)")
+	}
+}
