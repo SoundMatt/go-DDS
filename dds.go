@@ -58,6 +58,11 @@ var ErrSampleRejected = errors.New("dds: sample rejected — resource limits exc
 // ErrResourceLimits is returned when a resource limit is exceeded.
 var ErrResourceLimits = errors.New("dds: resource limit exceeded")
 
+// ErrLoanBuffer is returned when a loaned buffer cannot be obtained (pool
+// exhausted or size exceeds pool capacity) or when Commit is called with a
+// buffer that was not issued by the same LoaningPublisher.
+var ErrLoanBuffer = errors.New("dds: loan buffer unavailable or invalid")
+
 // ── Domain ────────────────────────────────────────────────────────────────────
 
 // Domain is a DDS domain identifier (0–232 inclusive per the DDS spec).
@@ -450,6 +455,25 @@ type Publisher interface {
 	// done when WriteCtx is called it returns ctx.Err() immediately.
 	WriteCtx(ctx context.Context, payload []byte) error
 	Close() error
+}
+
+// LoaningPublisher extends Publisher with zero-copy loaned-sample support.
+// Use Loan to obtain a pre-allocated buffer from the publisher's internal pool,
+// write payload data into it, then call Commit to publish and return the buffer.
+// Commit calls Write internally; the buffer is returned to the pool afterwards
+// regardless of whether Write succeeds.
+//
+// The loaned buffer must not be used after Commit returns.
+type LoaningPublisher interface {
+	Publisher
+	// Loan returns a pre-allocated byte slice of the given size backed by the
+	// publisher's internal pool. Returns ErrLoanBuffer if the pool is exhausted
+	// or size exceeds the pool's configured capacity.
+	Loan(size int) ([]byte, error)
+	// Commit publishes the loaned buffer (by calling Write) and returns it to
+	// the pool. buf must be a slice previously returned by Loan on this same
+	// publisher. The buffer must not be used after Commit returns.
+	Commit(buf []byte) error
 }
 
 // Subscriber reads samples from a single DDS topic as a Go channel.

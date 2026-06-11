@@ -60,7 +60,8 @@ API parity does not.
 | v0.14.3 | — | Release workflow; gitignore check-report.json; gofusa v0.21.0 ✅ |
 | v0.14.4 | — | Fix GC latency test races; independence policy (no IV&V required); cert docs updated ✅ |
 | v0.14.5 | — | Docker: golang:1.22→1.25 builder; Node.js 24 opt-in for docker/* actions ✅ |
-| **main** | — | **go-FuSa v0.25.1; OpenTelemetry adapter (`otel/`); roadmap ✅ audit** |
+| v0.15.0 | — | go-FuSa v0.25.1; OpenTelemetry adapter (`otel/`); roadmap ✅ audit ✅ |
+| **main** | — | **Loaned samples API (`dds.LoaningPublisher`); scenario test runner (`testutil/scenario`)** |
 
 ### Released — v0.1 – v0.8
 
@@ -87,7 +88,8 @@ API parity does not.
 - **v0.14.3** — Release workflow (`.github/workflows/release.yml`) regenerates safety artifacts on every `v*` tag; `.gitignore` excludes `check-report.json`
 - **v0.14.4** — Fix two data races in `gc_latency_test.go` (payload-reuse + close/send); drop IV&V requirement (structural CI independence documented in `SAFETY_PLAN.md §3.1`); close G-61508-02 and G-DO178-09 in `STANDARDS_GAP.md`
 - **v0.14.5** — Docker builder bumped from golang:1.22 to golang:1.25; `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` for docker/* actions
-- **main (unreleased)** — go-FuSa v0.25.1; `otel/` OpenTelemetry adapter (`NewTracer(tp)` bridges `dds.Tracer` to any OTel provider); roadmap ✅ audit (all implemented items marked)
+- **v0.15.0** — go-FuSa v0.25.1; `otel/` OpenTelemetry adapter (`NewTracer(tp)` bridges `dds.Tracer` to any OTel provider); roadmap ✅ audit (all implemented items marked)
+- **main (unreleased)** — `dds.LoaningPublisher` interface with zero-copy loaned-sample API (`mock.NewLoaningPublisher`, `rtps.NewLoaningPublisher`); `testutil/scenario` declarative scenario test runner (Publish, Expect, ExpectNone, Wait, Assert steps); 241 requirements (REQ-LOAN-001–003 added)
 
 ---
 
@@ -228,9 +230,9 @@ Support the complete software lifecycle from unit testing through system validat
 
 ### Scenario Testing
 
-- Scenario runner _(deferred — `testutil/` helpers cover current needs; full framework planned for v0.16)_
-- Automated test scripts _(deferred)_
-- Expected behavior validation _(deferred)_
+- Scenario runner ✅ (`testutil/scenario` — Publish, Expect, ExpectNone, Wait, Assert steps)
+- Automated test scripts ✅
+- Expected behavior validation ✅
 
 ### Fault Injection
 
@@ -297,7 +299,7 @@ Support high-performance embedded and edge deployments.
 
 ### Zero Copy
 
-- Loaned samples _(deferred — allocation-free path exists via `pool.BytePool`; zero-copy loan API planned for v0.16)_
+- Loaned samples ✅ (`dds.LoaningPublisher` interface; `mock.NewLoaningPublisher`, `rtps.NewLoaningPublisher` backed by `pool.BytePool`)
 - Preallocated buffers ✅
 
 ### Resource Controls
