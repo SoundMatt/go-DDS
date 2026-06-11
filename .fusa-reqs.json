@@ -310,21 +310,21 @@
     },
     {
       "id": "REQ-QOS-005",
-      "title": "Overflow policy — DropOldest",
+      "title": "Overflow policy \u2014 DropOldest",
       "text": "When a subscriber queue is full and QoS DropOldest policy is active, the oldest queued sample shall be evicted to make room for the incoming sample.",
       "standard": "iso26262",
       "level": "ASIL-B"
     },
     {
       "id": "REQ-QOS-006",
-      "title": "Overflow policy — DropNewest",
+      "title": "Overflow policy \u2014 DropNewest",
       "text": "When a subscriber queue is full and QoS DropNewest policy is active, the incoming sample shall be silently discarded. The existing queue contents shall not be modified.",
       "standard": "iso26262",
       "level": "ASIL-B"
     },
     {
       "id": "REQ-QOS-007",
-      "title": "Overflow policy — Block",
+      "title": "Overflow policy \u2014 Block",
       "text": "When a subscriber queue is full and QoS Block policy is active, the publisher shall block until queue capacity is available.",
       "standard": "iso26262",
       "level": "ASIL-B"
@@ -731,7 +731,7 @@
     {
       "id": "REQ-SAFETY-005",
       "title": "E2E CRC algorithm",
-      "text": "The E2E CRC shall use the CRC-16/CCITT-FALSE algorithm (polynomial 0x1021, initial value 0xFFFF, no reflection). The CRC slot (bytes 16–17) shall be treated as zero during CRC computation.",
+      "text": "The E2E CRC shall use the CRC-16/CCITT-FALSE algorithm (polynomial 0x1021, initial value 0xFFFF, no reflection). The CRC slot (bytes 16\u201317) shall be treated as zero during CRC computation.",
       "standard": "iso26262",
       "level": "ASIL-B"
     },
@@ -955,7 +955,7 @@
     {
       "id": "REQ-RT-001",
       "title": "Goroutine lifecycle management",
-      "text": "Every goroutine started by a public API (participant, recorder, bridge) shall receive a termination signal — either a done <-chan struct{} or context.Context — as an explicit parameter at launch. The goroutine shall exit within a finite time after the signal is fired.",
+      "text": "Every goroutine started by a public API (participant, recorder, bridge) shall receive a termination signal \u2014 either a done <-chan struct{} or context.Context \u2014 as an explicit parameter at launch. The goroutine shall exit within a finite time after the signal is fired.",
       "standard": "iec61508",
       "level": "SIL-2"
     },
@@ -1207,7 +1207,7 @@
     {
       "id": "REQ-CONF-001",
       "title": "Config domain range",
-      "text": "ParticipantConfig Domain shall be validated in the range 0–232 inclusive. Out-of-range values shall cause Validate() to return an error.",
+      "text": "ParticipantConfig Domain shall be validated in the range 0\u2013232 inclusive. Out-of-range values shall cause Validate() to return an error.",
       "standard": "iso26262",
       "level": "ASIL-A"
     },
@@ -1263,7 +1263,7 @@
     {
       "id": "REQ-TSN-002",
       "title": "TSN PCP and DSCP range validation",
-      "text": "TSN stream PCP shall be validated in range 0–7. DSCP shall be validated in range 0–63. Out-of-range values shall cause LoadConfig to return an error.",
+      "text": "TSN stream PCP shall be validated in range 0\u20137. DSCP shall be validated in range 0\u201363. Out-of-range values shall cause LoadConfig to return an error.",
       "standard": "iso26262",
       "level": "ASIL-A"
     },
@@ -1333,7 +1333,7 @@
     {
       "id": "REQ-TREG-002",
       "title": "TopicTypeRegistry sorted snapshot",
-      "text": "TopicTypeRegistry.All() shall return a snapshot of all topic→type pairs sorted lexicographically by topic name.",
+      "text": "TopicTypeRegistry.All() shall return a snapshot of all topic\u2192type pairs sorted lexicographically by topic name.",
       "standard": "iso26262",
       "level": "ASIL-A"
     },
@@ -1663,6 +1663,27 @@
       "id": "REQ-IDL-004",
       "title": "IDL code generator",
       "text": "idl.Generate shall produce a valid Go source file containing: a package declaration derived from the top-level module name; a Go struct for every IDL struct with exported field names and JSON tags; and a Codec type per struct implementing CDR/XCDR1 encode/decode using the cdr package.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-LOAN-001",
+      "title": "LoaningPublisher.Loan returns pool-backed buffer",
+      "text": "LoaningPublisher.Loan(size) shall return a pre-allocated byte slice of the requested size backed by the publisher's internal pool. It shall return ErrLoanBuffer if the pool capacity is smaller than size, or ErrClosed if the publisher is closed.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-LOAN-002",
+      "title": "LoaningPublisher.Commit publishes and recycles buffer",
+      "text": "LoaningPublisher.Commit(buf) shall publish buf via Write and return the buffer to the pool regardless of whether Write succeeds. The caller must not use buf after Commit returns.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-LOAN-003",
+      "title": "LoaningPublisher implements Publisher",
+      "text": "LoaningPublisher shall implement all methods of the Publisher interface (Write, WriteCtx, Close) in addition to Loan and Commit.",
       "standard": "iso26262",
       "level": "ASIL-A"
     }

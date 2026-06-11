@@ -4,16 +4,16 @@
   "tool": "go-FuSa",
   "toolVersion": "0.25.0",
   "language": "go",
-  "generatedAt": "2026-06-11T12:48:32.986448Z",
+  "generatedAt": "2026-06-11T13:13:17.489469Z",
   "format": "x-FuSa manifest v1",
   "artifacts": [
     {
       "path": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/sbom.json",
-      "sha256": "440dc500a0b8536deed3e5cdd9865e25d201cb084ab042103e6eea8bc516a43d"
+      "sha256": "cf8774ab369ce6691ad5eeffe47f699c4ccacd27b3f47267c40ee4086ec8c4d7"
     },
     {
       "path": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/provenance.json",
-      "sha256": "e4265aab4957b8e9b9c5b27e46a3bba0b9287d5e43babc5c7c08bfc7ad69dd82"
+      "sha256": "ec84792a17c97d8c0a9a50d1611e502b9d083d496e146b7e78e920979d7a622e"
     }
   ]
 }

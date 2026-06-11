@@ -72,7 +72,10 @@ history expansion on `%`, `!`, and `(`.
 | v0.14.1  | go-FuSa v0.19.0 upgrade: LINT001/ANA007/CYBER017 fixes across idl/, ddstool |
 | v0.14.2  | CI: pinned gofusa v0.19.0 gate job |
 | v0.14.3  | Release workflow; gitignore check-report.json |
-| **main** | **go-FuSa v0.25.1; HARA, GC_LATENCY, latmon, cert/ package (ASIL-B/SIL-2/DAL-C)** |
+| v0.14.4  | Fix GC latency races; independence policy (no IV&V); Docker golang:1.22→1.25 |
+| v0.14.5  | Docker Node.js 24 opt-in; go-FuSa v0.21.0 |
+| v0.15.0  | go-FuSa v0.25.1; otel/ OpenTelemetry adapter; roadmap ✅ audit |
+| **main** | **LoaningPublisher API; testutil/scenario runner; 241 requirements** |
 
 ## CI matrix
 

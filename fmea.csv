@@ -115,12 +115,15 @@ mock,Close,Returns unexpected error,Silent failure propagated to caller,medium,u
 mock,Close,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
 mock,Close,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
 mock,CloseWithDrain,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
+mock,Commit,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,
 mock,DiscoveryMetrics,Incorrect output,Incorrect system behavior,low,unit tests,,CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
 mock,Domain,Incorrect output,Incorrect system behavior,low,unit tests,,CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
 mock,Health,Incorrect output,Incorrect system behavior,low,unit tests,,CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
 mock,IsolatedBroker,Incorrect output,Incorrect system behavior,low,unit tests,,CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
+mock,Loan,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,
 mock,Metrics,Incorrect output,Incorrect system behavior,low,unit tests,,CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
 mock,New,Returns unexpected error; Goroutine not terminated,Silent failure propagated to caller; Memory leak or deadlock,medium,unit tests,,CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
+mock,NewLoaningPublisher,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,
 mock,NewPublisher,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
 mock,NewSubscriber,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
 mock,TopicMetrics,Incorrect output,Incorrect system behavior,low,unit tests,,CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
@@ -198,11 +201,14 @@ rtps,Close,Returns unexpected error,Silent failure propagated to caller,medium,u
 rtps,Close,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
 rtps,Close,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
 rtps,CloseWithDrain,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
+rtps,Commit,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,
 rtps,DiscoveryMetrics,Incorrect output,Incorrect system behavior,low,unit tests,,CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
 rtps,Domain,Incorrect output,Incorrect system behavior,low,unit tests,,CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
 rtps,Health,Incorrect output,Incorrect system behavior,low,unit tests,,CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
+rtps,Loan,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,
 rtps,Metrics,Incorrect output,Incorrect system behavior,low,unit tests,,CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
 rtps,New,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
+rtps,NewLoaningPublisher,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,
 rtps,NewPublisher,Returns unexpected error; Goroutine not terminated,Silent failure propagated to caller; Memory leak or deadlock,medium,unit tests,,CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
 rtps,NewSubscriber,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,CYBER009: uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
 rtps,String,Incorrect output,Incorrect system behavior,low,unit tests,,CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range; CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range; CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range; CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range; CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range; CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range; CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range; CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range; CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range; CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range; CYBER009: byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
@@ -250,6 +256,12 @@ safety,Stop,Incorrect output,Incorrect system behavior,low,unit tests,,
 safety,Stop,Incorrect output,Incorrect system behavior,low,unit tests,,
 safety,String,Incorrect output,Incorrect system behavior,low,unit tests,,
 safety,Write,Returns unexpected error; Partial write / data corruption,Silent failure propagated to caller; Incorrect system state,medium,unit tests,,CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
+scenario,Assert,Incorrect output,Incorrect system behavior,low,unit tests,,
+scenario,Expect,Incorrect output,Incorrect system behavior,low,unit tests,,
+scenario,ExpectNone,Incorrect output,Incorrect system behavior,low,unit tests,,
+scenario,Publish,Incorrect output,Incorrect system behavior,low,unit tests,,
+scenario,Run,Returns unexpected error; Uncontrolled execution,Silent failure propagated to caller; Resource exhaustion,medium,unit tests,,
+scenario,Wait,Incorrect output,Incorrect system behavior,low,unit tests,,
 security,CanRead,Incorrect output,Incorrect system behavior,low,unit tests,,
 security,CanWrite,Partial write / data corruption,Incorrect system state,low,unit tests,,
 security,Check,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,
@@ -261,14 +273,14 @@ security,NewHMACDiscoveryPlugin,Incorrect output,Incorrect system behavior,low,u
 security,NewHMACPlugin,Incorrect output,Incorrect system behavior,low,unit tests,,
 security,NewRandomKey,Incorrect output,Incorrect system behavior,low,unit tests,,
 security,NewReplayGuard,Incorrect output,Incorrect system behavior,low,unit tests,,
-security,Open,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range; CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
 security,Open,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,
+security,Open,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range; CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
 security,Open,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,
 security,Open,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,
 security,Purge,Incorrect output,Incorrect system behavior,low,unit tests,,
 security,Rekey,Incorrect output,Incorrect system behavior,low,unit tests,,
-security,Seal,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,
 security,Seal,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range; CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range
+security,Seal,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,
 security,Seal,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,
 security,Seal,Returns unexpected error,Silent failure propagated to caller,medium,unit tests,,
 security,SignDiscovery,Incorrect output,Incorrect system behavior,low,unit tests,,
