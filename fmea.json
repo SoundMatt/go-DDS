@@ -1,6 +1,6 @@
 {
   "format": "go-FuSa dFMEA v1",
-  "generated_at": "2026-06-11T16:39:36.270884Z",
+  "generated_at": "2026-06-11T16:53:11.260464Z",
   "module": "github.com/SoundMatt/go-DDS",
   "entries": [
     {
@@ -660,7 +660,7 @@
     {
       "component": "cyclone",
       "function": "NewWithOptions",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/cyclone/stub.go",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/cyclone/cyclone.go",
       "failure_modes": [
         "Returns unexpected error"
       ],
@@ -673,7 +673,7 @@
     {
       "component": "cyclone",
       "function": "NewWithOptions",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/cyclone/cyclone.go",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/cyclone/stub.go",
       "failure_modes": [
         "Returns unexpected error"
       ],
@@ -3253,7 +3253,7 @@
     {
       "component": "safety",
       "function": "Errors",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/queue.go",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e.go",
       "failure_modes": [
         "Incorrect output"
       ],
@@ -3266,7 +3266,7 @@
     {
       "component": "safety",
       "function": "Errors",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e.go",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/queue.go",
       "failure_modes": [
         "Incorrect output"
       ],
@@ -3383,7 +3383,7 @@
     {
       "component": "safety",
       "function": "Stop",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/rate.go",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/queue.go",
       "failure_modes": [
         "Incorrect output"
       ],
@@ -3396,7 +3396,7 @@
     {
       "component": "safety",
       "function": "Stop",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/queue.go",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/rate.go",
       "failure_modes": [
         "Incorrect output"
       ],
@@ -3751,7 +3751,7 @@
     {
       "component": "security",
       "function": "Seal",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security.go",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert.go",
       "failure_modes": [
         "Returns unexpected error"
       ],
@@ -3764,7 +3764,7 @@
     {
       "component": "security",
       "function": "Seal",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert.go",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security.go",
       "failure_modes": [
         "Returns unexpected error"
       ],
@@ -4079,7 +4079,33 @@
     },
     {
       "component": "shmem",
+      "function": "DiscoveryMetrics",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem.go",
+      "failure_modes": [
+        "Incorrect output"
+      ],
+      "effects": [
+        "Incorrect system behavior"
+      ],
+      "severity": "low",
+      "detection_control": "unit tests"
+    },
+    {
+      "component": "shmem",
       "function": "Domain",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem.go",
+      "failure_modes": [
+        "Incorrect output"
+      ],
+      "effects": [
+        "Incorrect system behavior"
+      ],
+      "severity": "low",
+      "detection_control": "unit tests"
+    },
+    {
+      "component": "shmem",
+      "function": "Health",
       "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem.go",
       "failure_modes": [
         "Incorrect output"
@@ -4166,6 +4192,19 @@
         "Silent failure propagated to caller"
       ],
       "severity": "medium",
+      "detection_control": "unit tests"
+    },
+    {
+      "component": "shmem",
+      "function": "TopicMetrics",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem.go",
+      "failure_modes": [
+        "Incorrect output"
+      ],
+      "effects": [
+        "Incorrect system behavior"
+      ],
+      "severity": "low",
       "detection_control": "unit tests"
     },
     {
@@ -4383,7 +4422,7 @@
     {
       "component": "tsn",
       "function": "Apply",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_stub.go",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_linux.go",
       "failure_modes": [
         "Returns unexpected error"
       ],
@@ -4396,7 +4435,7 @@
     {
       "component": "tsn",
       "function": "Apply",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_linux.go",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_stub.go",
       "failure_modes": [
         "Returns unexpected error"
       ],
@@ -4604,7 +4643,7 @@
     {
       "component": "tsn",
       "function": "VerifyApplied",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_stub.go",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_linux.go",
       "failure_modes": [
         "Returns unexpected error"
       ],
@@ -4617,7 +4656,7 @@
     {
       "component": "tsn",
       "function": "VerifyApplied",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_linux.go",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_stub.go",
       "failure_modes": [
         "Returns unexpected error"
       ],

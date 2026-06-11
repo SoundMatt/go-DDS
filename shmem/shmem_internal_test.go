@@ -185,7 +185,7 @@ func TestDeliverSub_BlockPolicy(t *testing.T) {
 	sample := dds.Sample{Topic: "t", Payload: []byte("x")}
 
 	// Block policy: sample is delivered without a default/drop branch.
-	b.deliverSub(sub, sample)
+	b.deliverSub(sub, sample, &shmTopicCounter{})
 
 	select {
 	case s := <-ch:
@@ -209,7 +209,7 @@ func TestDeliverSub_DefaultDrop(t *testing.T) {
 	ch <- dds.Sample{Payload: []byte("existing")}
 
 	// deliverSub with a full channel → drop branch.
-	b.deliverSub(sub, sample)
+	b.deliverSub(sub, sample, &shmTopicCounter{})
 
 	if b.drops.Load() != 1 {
 		t.Errorf("expected 1 drop, got %d", b.drops.Load())

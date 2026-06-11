@@ -64,7 +64,8 @@ API parity does not.
 | v0.16.0 | — | Loaned samples API (`dds.LoaningPublisher`); scenario test runner (`testutil/scenario`) ✅ |
 | v0.17.0 | — | Automatic transport selection (`auto/` package — shmem → RTPS fallback) ✅ |
 | v0.18.0 | — | Quality polish: rtps/scenario coverage, fusa:req traceability, CONTRIBUTING.md expansion, new examples ✅ |
-| **main** | — | **shmem.NewLoaningPublisher (API parity); cdr/xtypes fuzz targets; auto/ coverage improvement** |
+| v0.19.0 | — | shmem.NewLoaningPublisher (API parity); cdr/xtypes fuzz targets; auto/ coverage 76.9% ✅ |
+| **main** | — | **shmem metrics parity (DiscoveryMetrics, TopicMetrics, Health); idl/roundtrip coverage 80%** |
 
 ### Released — v0.1 – v0.8
 
@@ -95,7 +96,8 @@ API parity does not.
 - **v0.16.0** — `dds.LoaningPublisher` interface with zero-copy loaned-sample API (`mock.NewLoaningPublisher`, `rtps.NewLoaningPublisher`); `testutil/scenario` declarative scenario test runner (Publish, Expect, ExpectNone, Wait, Assert steps); 241 requirements
 - **v0.17.0** — `auto.NewParticipant` automatic transport selection (shmem → RTPS fallback, explicit override via `WithTransport`); 244 requirements (REQ-AUTO-001–003 added)
 - **v0.18.0** — Quality polish: rtps/ coverage tests (loan, heartbeat, metrics, health, config, IPv6); testutil/scenario coverage tests (error paths, cancellation); `//fusa:req` traceability annotations on 10 foundational types in `dds.go`; `CONTRIBUTING.md` expanded to all 25 packages with contract notes; new examples (loaned-samples, auto-transport, scenario-dsl, otel-tracing); `nolint` explanatory comments
-- **main (unreleased)** — `shmem.NewLoaningPublisher` (LoaningPublisher parity across all transports); fuzz targets for `cdr/` (`FuzzCDRDecode`, `FuzzCDRRoundtrip`) and `xtypes/` (`FuzzDynamicDataFromJSON`, `FuzzTypeIdentifier`); `auto/` coverage 69.2%→76.9% via `WithRTPSOpts` test; shmem/ coverage at 93.8%
+- **v0.19.0** — `shmem.NewLoaningPublisher` (LoaningPublisher parity across all transports); fuzz targets for `cdr/` (`FuzzCDRDecode`, `FuzzCDRRoundtrip`) and `xtypes/` (`FuzzDynamicDataFromJSON`, `FuzzTypeIdentifier`); `auto/` coverage 69.2%→76.9% via `WithRTPSOpts` test; shmem/ coverage at 93.8%
+- **main (unreleased)** — shmem `DiscoveryMetrics`/`TopicMetrics`/`Health` interface parity with mock/rtps; `idl/roundtrip` factory function tests (61.3%→80.0%); shmem/ coverage →96%+
 
 ---
 
