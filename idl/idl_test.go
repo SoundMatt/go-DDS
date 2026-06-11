@@ -608,6 +608,81 @@ func TestParseString_BoundedString(t *testing.T) {
 
 // ── go/format ─────────────────────────────────────────────────────────────────
 
+// ── parseTypeSpec additional branches ────────────────────────────────────────
+
+// TestParseString_OctetField covers the "octet" case in parseTypeSpec.
+func TestParseString_OctetField(t *testing.T) {
+	src := `struct Raw { octet byte_val; };`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	if len(m.Structs) != 1 {
+		t.Fatalf("want 1 struct, got %d", len(m.Structs))
+	}
+	if m.Structs[0].Fields[0].Type.Kind != idl.KindOctet {
+		t.Errorf("expected KindOctet, got %v", m.Structs[0].Fields[0].Type.Kind)
+	}
+}
+
+// TestParseString_UnsignedLongLong covers the "unsigned long long" case.
+func TestParseString_UnsignedLongLong(t *testing.T) {
+	src := `struct Counter { unsigned long long count; };`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	if len(m.Structs) != 1 {
+		t.Fatalf("want 1 struct, got %d", len(m.Structs))
+	}
+	if m.Structs[0].Fields[0].Type.Kind != idl.KindULongLong {
+		t.Errorf("expected KindULongLong, got %v", m.Structs[0].Fields[0].Type.Kind)
+	}
+}
+
+// ── packageName non-empty module ──────────────────────────────────────────────
+
+// TestGenerate_NamedModule covers the packageName() non-empty branch by passing
+// a named sub-module directly to Generate.
+func TestGenerate_NamedModule(t *testing.T) {
+	m, err := idl.ParseString(vehicleIDL)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	if len(m.Modules) == 0 {
+		t.Fatal("expected at least one sub-module in vehicleIDL")
+	}
+	// m.Modules[0] is "VehicleData" — Name != "" → packageName returns "vehicledata".
+	src, err := idl.Generate(m.Modules[0])
+	if err != nil {
+		t.Fatalf("Generate(sub-module): %v", err)
+	}
+	if !strings.Contains(src, "package vehicledata") {
+		t.Errorf("expected 'package vehicledata' in output, got:\n%s", src[:min(200, len(src))])
+	}
+}
+
+// ── searchStruct nil return ───────────────────────────────────────────────────
+
+// TestGenerate_UnknownStructRef covers the searchStruct nil return path. When
+// a struct field references a qualified type that doesn't exist, Generate
+// emits a // TODO: comment rather than panicking.
+func TestGenerate_UnknownStructRef(t *testing.T) {
+	src := `struct Ghost { Unknown::Phantom field; };`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	out, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	// The unknown reference must produce a TODO rather than a panic.
+	if !strings.Contains(out, "TODO") {
+		t.Errorf("expected // TODO comment for unknown struct ref, got:\n%s", out)
+	}
+}
+
 func TestGenerate_OutputIsGofmtFormatted(t *testing.T) {
 	m, err := idl.ParseString(vehicleIDL)
 	if err != nil {
