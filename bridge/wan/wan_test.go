@@ -266,6 +266,42 @@ func TestWANBridge_LargeFrame_Rejected(t *testing.T) {
 	}
 }
 
+// TestWANBridge_ReadFrame_InvalidJSON verifies that the server's receiveLoop
+// exits cleanly when a client sends a valid-size frame containing invalid JSON,
+// covering the json.Unmarshal error path in readFrame.
+func TestWANBridge_ReadFrame_InvalidJSON(t *testing.T) {
+	p := newPart(t)
+	srv := mustServe(t, p)
+
+	conn, err := net.Dial("tcp", srv.Addr())
+	if err != nil {
+		t.Fatalf("dial server: %v", err)
+	}
+	defer conn.Close()
+
+	body := []byte("this is not valid JSON {{{{")
+	var hdr [4]byte
+	binary.BigEndian.PutUint32(hdr[:], uint32(len(body)))
+	if _, err := conn.Write(hdr[:]); err != nil {
+		t.Fatalf("write header: %v", err)
+	}
+	if _, err := conn.Write(body); err != nil {
+		t.Fatalf("write body: %v", err)
+	}
+
+	// The server should close the connection after failing to decode the frame.
+	done := make(chan struct{})
+	go func() {
+		_ = srv.Close()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("srv.Close() did not complete promptly after invalid JSON frame")
+	}
+}
+
 // ── ErrFrameTooLarge exported ─────────────────────────────────────────────────
 
 func TestWANBridge_ErrFrameTooLarge_Sentinel(t *testing.T) {
