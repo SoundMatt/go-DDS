@@ -24,6 +24,43 @@ import (
 	"github.com/SoundMatt/go-DDS/rpc"
 )
 
+// failCodec always returns an error on Marshal/Unmarshal, used to cover
+// codec-error paths in Requester.Request and Replier.Reply.
+type failCodec[T any] struct{}
+
+func (failCodec[T]) Marshal(_ T) ([]byte, error)   { return nil, errors.New("marshal failed") }
+func (failCodec[T]) Unmarshal(_ []byte) (T, error) { var z T; return z, errors.New("unmarshal failed") }
+
+// decodeFailCodec marshals successfully but fails on Unmarshal, used to cover
+// the unmarshal-reply error path in Requester.Request.
+type decodeFailCodec[T any] struct{ inner dds.Codec[T] }
+
+func (c decodeFailCodec[T]) Marshal(v T) ([]byte, error) { return c.inner.Marshal(v) }
+func (decodeFailCodec[T]) Unmarshal(_ []byte) (T, error) {
+	var z T
+	return z, errors.New("unmarshal failed")
+}
+
+// brokenSubParticipant wraps a real participant but always fails NewSubscriber,
+// letting NewPublisher succeed so we can cover the second error path in NewRequester.
+type brokenSubParticipant struct {
+	dds.Participant
+}
+
+func (p *brokenSubParticipant) NewSubscriber(_ string, _ dds.QoS, _ ...dds.SubscriberOption) (dds.Subscriber, error) {
+	return nil, errors.New("injected subscriber failure")
+}
+
+// brokenPubParticipant wraps a real participant but always fails NewPublisher,
+// letting NewSubscriber succeed so we can cover the second error path in NewReplier.
+type brokenPubParticipant struct {
+	dds.Participant
+}
+
+func (p *brokenPubParticipant) NewPublisher(_ string, _ dds.QoS) (dds.Publisher, error) {
+	return nil, errors.New("injected publisher failure")
+}
+
 type addReq struct{ A, B int }
 type addRep struct{ Sum int }
 
@@ -240,4 +277,217 @@ func TestRPC_CorrelationIsolation(t *testing.T) {
 		}(i, req)
 	}
 	wg.Wait()
+}
+
+// ── Error-path coverage ───────────────────────────────────────────────────────
+
+func TestNewRequester_PublisherError(t *testing.T) {
+	p := newPart(t)
+	_ = p.Close() // closed → NewPublisher fails
+	_, err := rpc.NewRequester[addReq, addRep](p, "rpc/pub-err",
+		dds.JSONCodec[addReq]{}, dds.JSONCodec[addRep]{}, dds.DefaultQoS)
+	if err == nil {
+		t.Fatal("expected error when participant is closed")
+	}
+}
+
+func TestNewRequester_SubscriberError(t *testing.T) {
+	p := newPart(t)
+	bp := &brokenSubParticipant{p}
+	_, err := rpc.NewRequester[addReq, addRep](bp, "rpc/sub-err",
+		dds.JSONCodec[addReq]{}, dds.JSONCodec[addRep]{}, dds.DefaultQoS)
+	if err == nil {
+		t.Fatal("expected error when subscriber creation fails")
+	}
+}
+
+func TestNewReplier_SubscriberError(t *testing.T) {
+	p := newPart(t)
+	_ = p.Close() // closed → NewSubscriber fails
+	_, err := rpc.NewReplier[addReq, addRep](p, "rpc/rsub-err",
+		dds.JSONCodec[addReq]{}, dds.JSONCodec[addRep]{}, dds.DefaultQoS)
+	if err == nil {
+		t.Fatal("expected error when participant is closed")
+	}
+}
+
+func TestNewReplier_PublisherError(t *testing.T) {
+	p := newPart(t)
+	bp := &brokenPubParticipant{p}
+	_, err := rpc.NewReplier[addReq, addRep](bp, "rpc/rpub-err",
+		dds.JSONCodec[addReq]{}, dds.JSONCodec[addRep]{}, dds.DefaultQoS)
+	if err == nil {
+		t.Fatal("expected error when publisher creation fails")
+	}
+}
+
+func TestRequest_EncodeError(t *testing.T) {
+	p := newPart(t)
+	req, err := rpc.NewRequester[addReq, addRep](p, "rpc/enc-err",
+		failCodec[addReq]{}, dds.JSONCodec[addRep]{}, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewRequester: %v", err)
+	}
+	defer req.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	_, reqErr := req.Request(ctx, addReq{A: 1, B: 2})
+	if reqErr == nil {
+		t.Fatal("expected error from marshal failure")
+	}
+}
+
+func TestRequest_DoneCase(t *testing.T) {
+	// Close the requester while a request is in flight (no replier) so
+	// the r.done case in Request fires.
+	p := newPart(t)
+	req, err := rpc.NewRequester[addReq, addRep](p, "rpc/done-case",
+		dds.JSONCodec[addReq]{}, dds.JSONCodec[addRep]{}, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewRequester: %v", err)
+	}
+
+	got := make(chan error, 1)
+	go func() {
+		_, e := req.Request(context.Background(), addReq{A: 1, B: 2})
+		got <- e
+	}()
+	time.Sleep(20 * time.Millisecond)
+	_ = req.Close() // triggers r.done → Request returns dds.ErrClosed
+
+	select {
+	case e := <-got:
+		if !errors.Is(e, dds.ErrClosed) {
+			t.Errorf("expected ErrClosed, got %v", e)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Request did not return after Close")
+	}
+}
+
+func TestReply_EncodeError(t *testing.T) {
+	p := newPart(t)
+	replier, err := rpc.NewReplier[addReq, addRep](p, "rpc/rep-enc-err",
+		dds.JSONCodec[addReq]{}, failCodec[addRep]{}, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewReplier: %v", err)
+	}
+	defer replier.Close()
+
+	req := rpc.Request[addReq]{Value: addReq{A: 1, B: 2}}
+	if repErr := replier.Reply(context.Background(), req, addRep{Sum: 3}); repErr == nil {
+		t.Fatal("expected error from marshal failure")
+	}
+}
+
+func TestRequest_UnmarshalReplyError(t *testing.T) {
+	// decodeFailCodec encodes requests fine but fails to decode replies,
+	// covering the unmarshal-reply error branch in Requester.Request.
+	p := newPart(t)
+	req, err := rpc.NewRequester[addReq, addRep](p, "rpc/unmarshal-rep",
+		dds.JSONCodec[addReq]{}, decodeFailCodec[addRep]{inner: dds.JSONCodec[addRep]{}}, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewRequester: %v", err)
+	}
+	replier, err := rpc.NewReplier[addReq, addRep](p, "rpc/unmarshal-rep",
+		dds.JSONCodec[addReq]{}, dds.JSONCodec[addRep]{}, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewReplier: %v", err)
+	}
+	defer replier.Close()
+	defer req.Close()
+
+	go func() {
+		for r := range replier.Requests() {
+			_ = replier.Reply(context.Background(), r, addRep{Sum: r.Value.A + r.Value.B})
+		}
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	_, reqErr := req.Request(ctx, addReq{A: 1, B: 2})
+	if reqErr == nil {
+		t.Fatal("expected unmarshal error from decodeFailCodec")
+	}
+}
+
+func TestReply_WriteError(t *testing.T) {
+	p := newPart(t)
+	// MaxSampleSize: 1 forces WriteCtx to fail (reply payload is always > 1 byte).
+	qos := dds.QoS{MaxSampleSize: 1}
+	replier, replErr := rpc.NewReplier[addReq, addRep](p, "rpc/rep-write-err",
+		dds.JSONCodec[addReq]{}, dds.JSONCodec[addRep]{}, qos)
+	if replErr != nil {
+		t.Fatalf("NewReplier: %v", replErr)
+	}
+	defer replier.Close()
+
+	req := rpc.Request[addReq]{Value: addReq{A: 1, B: 2}}
+	if repErr := replier.Reply(context.Background(), req, addRep{Sum: 3}); repErr == nil {
+		t.Fatal("expected write error due to MaxSampleSize constraint")
+	}
+}
+
+// TestRequester_Demux_ShortReply exercises the decodeRPC-error continue branch
+// inside demux by publishing a short (<16 byte) payload directly to the reply topic.
+func TestRequester_Demux_ShortReply(t *testing.T) {
+	p := newPart(t)
+	req, err := rpc.NewRequester[addReq, addRep](p, "rpc/demux-short",
+		dds.JSONCodec[addReq]{}, dds.JSONCodec[addRep]{}, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewRequester: %v", err)
+	}
+	defer req.Close()
+
+	pub, err := p.NewPublisher("rpc/demux-short/reply", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+	_ = pub.Write([]byte("short")) // <16 bytes → decodeRPC error → continue
+	time.Sleep(20 * time.Millisecond)
+}
+
+// TestReplier_Pump_ShortRequest exercises the decodeRPC-error continue branch
+// inside pump by publishing a short (<16 byte) payload directly to the request topic.
+func TestReplier_Pump_ShortRequest(t *testing.T) {
+	p := newPart(t)
+	replier, err := rpc.NewReplier[addReq, addRep](p, "rpc/pump-short",
+		dds.JSONCodec[addReq]{}, dds.JSONCodec[addRep]{}, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewReplier: %v", err)
+	}
+	defer replier.Close()
+
+	pub, err := p.NewPublisher("rpc/pump-short/request", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+	_ = pub.Write([]byte("short")) // <16 bytes → decodeRPC error → continue
+	time.Sleep(20 * time.Millisecond)
+}
+
+// TestReplier_Pump_InvalidJSON exercises the Unmarshal-error continue branch
+// inside pump by publishing a valid 16-byte RPC header followed by invalid JSON.
+func TestReplier_Pump_InvalidJSON(t *testing.T) {
+	p := newPart(t)
+	replier, err := rpc.NewReplier[addReq, addRep](p, "rpc/pump-invalid",
+		dds.JSONCodec[addReq]{}, dds.JSONCodec[addRep]{}, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewReplier: %v", err)
+	}
+	defer replier.Close()
+
+	pub, err := p.NewPublisher("rpc/pump-invalid/request", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	var id [16]byte // zero correlation ID
+	payload := append(id[:], []byte("{not valid json}")...)
+	_ = pub.Write(payload) // valid header + bad JSON → Unmarshal error → continue
+	time.Sleep(20 * time.Millisecond)
 }

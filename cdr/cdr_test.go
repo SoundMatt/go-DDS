@@ -383,6 +383,22 @@ func TestDecoder_Underrun_AllTypes(t *testing.T) {
 			t.Fatal("expected underrun error for string data")
 		}
 	})
+	t.Run("ReadString_zero_length", func(t *testing.T) {
+		// CDR string with explicit length=0 covers the n==0 defensive branch.
+		e := cdr.NewEncoder()
+		e.WriteUint32(0)
+		d, err := cdr.NewDecoder(e.Bytes())
+		if err != nil {
+			t.Fatal(err)
+		}
+		s, readErr := d.ReadString()
+		if readErr != nil {
+			t.Fatalf("ReadString: %v", readErr)
+		}
+		if s != "" {
+			t.Errorf("got %q, want empty string", s)
+		}
+	})
 	t.Run("ReadBytes_data", func(t *testing.T) {
 		// Write a uint32 length = 4, but no actual bytes follow.
 		e := cdr.NewEncoder()

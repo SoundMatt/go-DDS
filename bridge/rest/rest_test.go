@@ -14,6 +14,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -518,6 +519,138 @@ func TestBridge_Subscribe_SameTopicCache(t *testing.T) {
 	}()
 	time.Sleep(30 * time.Millisecond)
 	// Both streams ran; second call hits getOrCreateSub cache.
+}
+
+// ── handleSubscribe: channel closed ──────────────────────────────────────────
+
+// TestBridge_Subscribe_ChannelClosed covers the !ok branch in the SSE select
+// loop when b.Close() is called, which closes the subscriber channel.
+// Uses b.ServeHTTP directly so r.Context() never cancels — only the channel
+// close can terminate the handler.
+func TestBridge_Subscribe_ChannelClosed(t *testing.T) {
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
+	defer p.Close()
+	b := rest.New(p, rest.Options{})
+
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "/topics/chan-close", nil)
+	rw := httptest.NewRecorder()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		b.ServeHTTP(rw, req) // blocks in SSE select loop
+	}()
+
+	time.Sleep(30 * time.Millisecond) // let subscribe establish
+	_ = b.Close()                     // closes subscriber channel → !ok branch fires
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("SSE handler did not exit after subscriber channel closed")
+	}
+}
+
+// ── handleSubscribe: write error ─────────────────────────────────────────────
+
+// failWriter wraps a ResponseWriter and implements http.Flusher. It allows the
+// initial headers/flush through, then returns an error on the first Write call
+// that carries SSE data (triggered after the first Flush).
+type failWriter struct {
+	http.ResponseWriter
+	flushed bool
+	failed  bool
+}
+
+func (w *failWriter) Write(b []byte) (int, error) {
+	if w.flushed {
+		w.failed = true
+		return 0, errors.New("injected write error")
+	}
+	return w.ResponseWriter.Write(b)
+}
+func (w *failWriter) Flush() {
+	if flusher, ok := w.ResponseWriter.(http.Flusher); ok {
+		flusher.Flush()
+	}
+	w.flushed = true
+}
+
+// TestBridge_Subscribe_KeepaliveWriteError covers the write-error return in
+// the keepalive case of the SSE select loop.
+func TestBridge_Subscribe_KeepaliveWriteError(t *testing.T) {
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
+	defer p.Close()
+	opts := rest.Options{SSEKeepalive: 5 * time.Millisecond}
+	b := rest.New(p, opts)
+	defer b.Close()
+
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "/topics/ka/we", nil)
+	rw := httptest.NewRecorder()
+	fw := &failWriter{ResponseWriter: rw}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		b.ServeHTTP(fw, req)
+	}()
+
+	select {
+	case <-done: // keepalive write error caused handler to return
+	case <-time.After(2 * time.Second):
+		t.Fatal("handleSubscribe did not exit after keepalive write error")
+	}
+}
+
+// TestBridge_Subscribe_WriteError covers the write-error return in the SSE
+// message loop when fmt.Fprintf fails after a sample is delivered.
+func TestBridge_Subscribe_WriteError(t *testing.T) {
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
+	defer p.Close()
+	b := rest.New(p, rest.Options{})
+	defer b.Close()
+
+	pub, err := p.NewPublisher("we/test", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "/topics/we/test", nil)
+	rw := httptest.NewRecorder()
+	fw := &failWriter{ResponseWriter: rw}
+
+	// handleSubscribe blocks until context done or write error.
+	// Drive it: start in a goroutine, publish a sample to trigger the write,
+	// then wait for the handler to return.
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		b.ServeHTTP(fw, req)
+	}()
+
+	time.Sleep(30 * time.Millisecond) // let subscribe establish + initial flush set flushed=true
+	if writeErr := pub.Write([]byte("trigger")); writeErr != nil {
+		t.Fatalf("Write: %v", writeErr)
+	}
+
+	select {
+	case <-done:
+		if !fw.failed {
+			t.Error("write error was not injected")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("handleSubscribe did not exit after write error")
+	}
 }
 
 // ── Fuzz ──────────────────────────────────────────────────────────────────────
