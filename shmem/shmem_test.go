@@ -701,3 +701,110 @@ func TestDeadline_Shmem(t *testing.T) {
 		t.Fatal("DeadlineMissedCallback did not fire")
 	}
 }
+
+// ── LoaningPublisher ──────────────────────────────────────────────────────────
+
+func TestShmem_LoaningPublisher_roundtrip(t *testing.T) {
+	p := newPart(t)
+
+	sub, err := p.NewSubscriber("shmem/loan/rt", dds.DefaultQoS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+
+	lp, err := shmem.NewLoaningPublisher(p, "shmem/loan/rt", dds.DefaultQoS, 256)
+	if err != nil {
+		t.Fatalf("NewLoaningPublisher: %v", err)
+	}
+	defer lp.Close()
+
+	buf, err := lp.Loan(12)
+	if err != nil {
+		t.Fatalf("Loan: %v", err)
+	}
+	copy(buf, "hello-shmem!")
+
+	if err := lp.Commit(buf); err != nil {
+		t.Fatalf("Commit: %v", err)
+	}
+
+	select {
+	case s := <-sub.C():
+		if string(s.Payload) != "hello-shmem!" {
+			t.Fatalf("got %q want %q", s.Payload, "hello-shmem!")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for loaned sample")
+	}
+}
+
+func TestShmem_LoaningPublisher_size_exceeded(t *testing.T) {
+	p := newPart(t)
+
+	lp, err := shmem.NewLoaningPublisher(p, "shmem/loan/size", dds.DefaultQoS, 64)
+	if err != nil {
+		t.Fatalf("NewLoaningPublisher: %v", err)
+	}
+	defer lp.Close()
+
+	_, err = lp.Loan(4096)
+	if !errors.Is(err, dds.ErrLoanBuffer) {
+		t.Fatalf("expected ErrLoanBuffer for oversized loan, got %v", err)
+	}
+}
+
+func TestShmem_LoaningPublisher_closed(t *testing.T) {
+	p := newPart(t)
+
+	lp, err := shmem.NewLoaningPublisher(p, "shmem/loan/closed", dds.DefaultQoS, 256)
+	if err != nil {
+		t.Fatalf("NewLoaningPublisher: %v", err)
+	}
+	_ = lp.Close()
+
+	_, err = lp.Loan(10)
+	if !errors.Is(err, dds.ErrClosed) {
+		t.Fatalf("expected ErrClosed after close, got %v", err)
+	}
+}
+
+type stubShmPublisher struct{}
+
+func (s *stubShmPublisher) Write(_ []byte) error                       { return nil }
+func (s *stubShmPublisher) WriteCtx(_ context.Context, _ []byte) error { return nil }
+func (s *stubShmPublisher) Close() error                               { return nil }
+
+type stubShmParticipant struct{}
+
+func (s *stubShmParticipant) NewPublisher(_ string, _ dds.QoS) (dds.Publisher, error) {
+	return &stubShmPublisher{}, nil
+}
+func (s *stubShmParticipant) NewSubscriber(_ string, _ dds.QoS, _ ...dds.SubscriberOption) (dds.Subscriber, error) {
+	return nil, nil
+}
+func (s *stubShmParticipant) Domain() dds.Domain { return 0 }
+func (s *stubShmParticipant) Close() error       { return nil }
+
+func TestShmem_LoaningPublisher_wrong_participant(t *testing.T) {
+	_, err := shmem.NewLoaningPublisher(&stubShmParticipant{}, "topic", dds.DefaultQoS, 256)
+	if !errors.Is(err, dds.ErrLoanBuffer) {
+		t.Fatalf("expected ErrLoanBuffer for non-shmem participant, got %v", err)
+	}
+}
+
+func TestShmem_LoaningPublisher_write_and_close(t *testing.T) {
+	p := newPart(t)
+
+	lp, err := shmem.NewLoaningPublisher(p, "shmem/loan/write", dds.DefaultQoS, 256)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := lp.Write([]byte("direct")); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	if err := lp.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+}

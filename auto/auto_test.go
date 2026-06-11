@@ -15,6 +15,7 @@ import (
 
 	dds "github.com/SoundMatt/go-DDS"
 	"github.com/SoundMatt/go-DDS/auto"
+	"github.com/SoundMatt/go-DDS/rtps"
 )
 
 func TestNewParticipant_auto_roundtrip(t *testing.T) {
@@ -99,5 +100,46 @@ func TestNewParticipant_domain_preserved(t *testing.T) {
 
 	if p.Domain() != dds.Domain(42) {
 		t.Fatalf("domain: got %v want 42", p.Domain())
+	}
+}
+
+func TestNewParticipant_with_rtps_opts(t *testing.T) {
+	// WithRTPSOpts passes options through to the RTPS backend.
+	p, err := auto.NewParticipant(dds.Domain(5),
+		auto.WithTransport(auto.TransportRTPS),
+		auto.WithRTPSOpts(rtps.WithNoMulticast()),
+	)
+	if err != nil {
+		t.Fatalf("NewParticipant with rtps opts: %v", err)
+	}
+	defer p.Close()
+
+	if p.Domain() != dds.Domain(5) {
+		t.Fatalf("domain: got %v want 5", p.Domain())
+	}
+
+	// Verify pub/sub still works with the option applied.
+	sub, err := p.NewSubscriber("auto/opts/test", dds.DefaultQoS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+
+	pub, err := p.NewPublisher("auto/opts/test", dds.DefaultQoS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pub.Close()
+
+	if writeErr := pub.Write([]byte("opts")); writeErr != nil {
+		t.Fatalf("Write: %v", writeErr)
+	}
+	select {
+	case s := <-sub.C():
+		if string(s.Payload) != "opts" {
+			t.Fatalf("got %q want opts", s.Payload)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout")
 	}
 }
