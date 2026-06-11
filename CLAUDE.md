@@ -77,7 +77,8 @@ history expansion on `%`, `!`, and `(`.
 | v0.15.0  | go-FuSa v0.25.1; otel/ OpenTelemetry adapter; roadmap ✅ audit |
 | v0.16.0  | LoaningPublisher API; testutil/scenario runner; 241 requirements |
 | v0.17.0  | auto/ transport selection (shmem→RTPS fallback); 244 requirements |
-| **main** | **Quality polish: coverage tests, fusa:req traceability, CONTRIBUTING.md expansion, new examples** |
+| v0.18.0  | Quality polish: coverage tests, fusa:req traceability, CONTRIBUTING.md expansion, new examples |
+| **main** | **shmem.NewLoaningPublisher; cdr/xtypes fuzz targets; auto/ coverage 76.9%** |
 
 ## CI matrix
 

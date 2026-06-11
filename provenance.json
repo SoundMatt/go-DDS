@@ -4,12 +4,12 @@
   "tool": "go-FuSa",
   "toolVersion": "0.25.0",
   "language": "go",
-  "generatedAt": "2026-06-11T16:10:27.944266Z",
+  "generatedAt": "2026-06-11T16:39:36.304193Z",
   "format": "x-FuSa provenance v1",
   "module": "github.com/SoundMatt/go-DDS",
   "goVersion": "go1.26.3",
   "goos": "darwin",
   "goarch": "arm64",
-  "vcsRevision": "90fcf1ddfe39608797eec41286cf1fe991040a56",
+  "vcsRevision": "717dec489b69aef211e7172bca127e4aba9c5ddc",
   "vcsModified": true
 }

@@ -1,6 +1,6 @@
 {
   "format": "go-FuSa dFMEA v1",
-  "generated_at": "2026-06-11T16:10:27.904919Z",
+  "generated_at": "2026-06-11T16:39:36.270884Z",
   "module": "github.com/SoundMatt/go-DDS",
   "entries": [
     {
@@ -3764,7 +3764,7 @@
     {
       "component": "security",
       "function": "Seal",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security.go",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert.go",
       "failure_modes": [
         "Returns unexpected error"
       ],
@@ -3777,7 +3777,7 @@
     {
       "component": "security",
       "function": "Seal",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert.go",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security.go",
       "failure_modes": [
         "Returns unexpected error"
       ],
@@ -4066,6 +4066,19 @@
     },
     {
       "component": "shmem",
+      "function": "Commit",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/loan.go",
+      "failure_modes": [
+        "Returns unexpected error"
+      ],
+      "effects": [
+        "Silent failure propagated to caller"
+      ],
+      "severity": "medium",
+      "detection_control": "unit tests"
+    },
+    {
+      "component": "shmem",
       "function": "Domain",
       "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem.go",
       "failure_modes": [
@@ -4075,6 +4088,19 @@
         "Incorrect system behavior"
       ],
       "severity": "low",
+      "detection_control": "unit tests"
+    },
+    {
+      "component": "shmem",
+      "function": "Loan",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/loan.go",
+      "failure_modes": [
+        "Returns unexpected error"
+      ],
+      "effects": [
+        "Silent failure propagated to caller"
+      ],
+      "severity": "medium",
       "detection_control": "unit tests"
     },
     {
@@ -4094,6 +4120,19 @@
       "component": "shmem",
       "function": "New",
       "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/shmem.go",
+      "failure_modes": [
+        "Returns unexpected error"
+      ],
+      "effects": [
+        "Silent failure propagated to caller"
+      ],
+      "severity": "medium",
+      "detection_control": "unit tests"
+    },
+    {
+      "component": "shmem",
+      "function": "NewLoaningPublisher",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/shmem/loan.go",
       "failure_modes": [
         "Returns unexpected error"
       ],
@@ -4344,7 +4383,7 @@
     {
       "component": "tsn",
       "function": "Apply",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_linux.go",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_stub.go",
       "failure_modes": [
         "Returns unexpected error"
       ],
@@ -4357,7 +4396,7 @@
     {
       "component": "tsn",
       "function": "Apply",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_stub.go",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_linux.go",
       "failure_modes": [
         "Returns unexpected error"
       ],
