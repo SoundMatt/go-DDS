@@ -894,3 +894,89 @@ func TestShmem_Health_Closed(t *testing.T) {
 		t.Errorf("expected HealthDown after close, got %v", h.Status)
 	}
 }
+
+// ── v0.28 coverage additions ──────────────────────────────────────────────────
+
+// TestTryRead_ClosedSubscriber_Shmem covers the !ok branch in TryRead when the
+// subscriber channel has been closed by the pump goroutine.
+func TestTryRead_ClosedSubscriber_Shmem(t *testing.T) {
+	p := newPart(t)
+	sub, err := p.NewSubscriber("shmem/tryread/closed-ch", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	ch := sub.C() // starts the pump goroutine
+	_ = sub.Close()
+	for range ch {
+	} // drain until closed by pump
+	_, ok := sub.TryRead()
+	if ok {
+		t.Error("TryRead on closed channel must return false")
+	}
+}
+
+// TestWildcard_Hash_Shmem covers the shmMatchSegs "#" return-true branch:
+// a subscriber on "#" must receive samples from any topic.
+func TestWildcard_Hash_Shmem(t *testing.T) {
+	p := newPart(t)
+	sub, err := p.NewSubscriber("#", dds.DefaultQoS, dds.WithChannelDepth(4))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+
+	pub, err := p.NewPublisher("a/b/c/deep", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	_ = pub.Write([]byte("hash-match"))
+	select {
+	case s := <-sub.C():
+		if string(s.Payload) != "hash-match" {
+			t.Errorf("got %q, want hash-match", s.Payload)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for '#' wildcard match")
+	}
+}
+
+// TestWildcard_PatternLongerThanTopic_Shmem covers the shmMatchSegs len(t)==0
+// return-false branch: a pattern with more segments than the topic must not match.
+func TestWildcard_PatternLongerThanTopic_Shmem(t *testing.T) {
+	p := newPart(t)
+	sub, err := p.NewSubscriber("a/b/c", dds.DefaultQoS, dds.WithChannelDepth(2))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+
+	pub, err := p.NewPublisher("a/b", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	_ = pub.Write([]byte("no-match"))
+	select {
+	case <-sub.C():
+		t.Error("received sample from shorter topic that should not match 'a/b/c'")
+	case <-time.After(50 * time.Millisecond):
+		// Correct: no sample.
+	}
+}
+
+// TestNewLoaningPublisher_ClosedParticipant covers the NewPublisher-error path
+// in NewLoaningPublisher (loan.go) when the participant is already closed.
+func TestNewLoaningPublisher_ClosedParticipant(t *testing.T) {
+	p, err := shmem.New(0)
+	if err != nil {
+		t.Fatalf("shmem.New: %v", err)
+	}
+	_ = p.Close()
+	_, err = shmem.NewLoaningPublisher(p, "shmem/loan/closed-part", dds.DefaultQoS, 256)
+	if err == nil {
+		t.Fatal("expected error from NewLoaningPublisher on closed participant")
+	}
+}

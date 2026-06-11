@@ -669,3 +669,50 @@ func TestMonitor_DefaultAddr_ListensOnPort8080(t *testing.T) {
 		t.Fatal("Addr() must not be empty")
 	}
 }
+
+// TestMonitor_WatchSafety_ChannelClosed covers the !ok branch in WatchSafety:
+// closing the events channel must cause the goroutine to exit cleanly.
+func TestMonitor_WatchSafety_ChannelClosed(t *testing.T) {
+	p := newMockParticipant(t)
+	defer p.Close()
+	mon, err := monitor.New(p, monitor.Options{Addr: "127.0.0.1:0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mon.Close()
+
+	events := make(chan safety.SafetyEvent)
+	mon.WatchSafety(events)
+	// Close the channel — the goroutine exits via the !ok branch.
+	close(events)
+	// Give the goroutine time to pick up the close signal.
+	time.Sleep(20 * time.Millisecond)
+}
+
+// noHealthPart wraps a Participant without implementing HealthProvider, so
+// monitor.New leaves m.hp == nil. This covers the 501 path in handleHealth.
+type noHealthPart struct{ dds.Participant }
+
+// TestMonitor_Health_NilProvider covers handleHealth when m.hp == nil.
+// The monitor must return 501 Not Implemented.
+func TestMonitor_Health_NilProvider(t *testing.T) {
+	realPart := newMockParticipant(t)
+	defer realPart.Close()
+	stub := &noHealthPart{Participant: realPart}
+
+	mon, err := monitor.New(stub, monitor.Options{Addr: "127.0.0.1:0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mon.Close()
+
+	ctx := context.Background()
+	resp, err := get(ctx, "http://"+mon.Addr()+"/health")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNotImplemented {
+		t.Fatalf("expected 501 for nil hp, got %d", resp.StatusCode)
+	}
+}

@@ -249,6 +249,20 @@ func TestReadData_OversizeRejected(t *testing.T) {
 	}
 }
 
+// TestDeliverSub_ResetDeadline exercises the deadline-reset branch in
+// deliverSub: when resetDeadline is non-nil it must be called after delivery.
+func TestDeliverSub_ResetDeadline(t *testing.T) {
+	b := &shmBroker{}
+	ch := make(chan dds.Sample, 2)
+	var reset bool
+	sub := shmSub{ch: ch, resetDeadline: func() { reset = true }}
+	sample := dds.Sample{Topic: "t", Payload: []byte("x")}
+	b.deliverSub(sub, sample, &shmTopicCounter{})
+	if !reset {
+		t.Error("resetDeadline was not called after successful delivery")
+	}
+}
+
 // TestReadData_TruncatedBody verifies that readData returns an error when the
 // file body is shorter than the declared length.
 func TestReadData_TruncatedBody(t *testing.T) {
