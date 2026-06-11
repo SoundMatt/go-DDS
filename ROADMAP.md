@@ -65,7 +65,8 @@ API parity does not.
 | v0.17.0 | — | Automatic transport selection (`auto/` package — shmem → RTPS fallback) ✅ |
 | v0.18.0 | — | Quality polish: rtps/scenario coverage, fusa:req traceability, CONTRIBUTING.md expansion, new examples ✅ |
 | v0.19.0 | — | shmem.NewLoaningPublisher (API parity); cdr/xtypes fuzz targets; auto/ coverage 76.9% ✅ |
-| **main** | — | **shmem metrics parity (DiscoveryMetrics, TopicMetrics, Health); idl/roundtrip coverage 80%** |
+| v0.20.0 | — | shmem DiscoveryMetrics/TopicMetrics/Health parity; idl/roundtrip coverage 80% ✅ |
+| **main** | — | **cyclone optional interface parity (DiscoveryMetrics, TopicMetrics, Health); bridge/grpc coverage 75.6%→86.7%** |
 
 ### Released — v0.1 – v0.8
 
@@ -97,7 +98,8 @@ API parity does not.
 - **v0.17.0** — `auto.NewParticipant` automatic transport selection (shmem → RTPS fallback, explicit override via `WithTransport`); 244 requirements (REQ-AUTO-001–003 added)
 - **v0.18.0** — Quality polish: rtps/ coverage tests (loan, heartbeat, metrics, health, config, IPv6); testutil/scenario coverage tests (error paths, cancellation); `//fusa:req` traceability annotations on 10 foundational types in `dds.go`; `CONTRIBUTING.md` expanded to all 25 packages with contract notes; new examples (loaned-samples, auto-transport, scenario-dsl, otel-tracing); `nolint` explanatory comments
 - **v0.19.0** — `shmem.NewLoaningPublisher` (LoaningPublisher parity across all transports); fuzz targets for `cdr/` (`FuzzCDRDecode`, `FuzzCDRRoundtrip`) and `xtypes/` (`FuzzDynamicDataFromJSON`, `FuzzTypeIdentifier`); `auto/` coverage 69.2%→76.9% via `WithRTPSOpts` test; shmem/ coverage at 93.8%
-- **main (unreleased)** — shmem `DiscoveryMetrics`/`TopicMetrics`/`Health` interface parity with mock/rtps; `idl/roundtrip` factory function tests (61.3%→80.0%); shmem/ coverage →96%+
+- **v0.20.0** — shmem `DiscoveryMetrics`/`TopicMetrics`/`Health` interface parity with mock/rtps (per-topic `sync.Map` counters, `shmTopicCounter`); `idl/roundtrip` typed-factory coverage 61.3%→80.0%; shmem/ coverage →96%+
+- **main (unreleased)** — cyclone `DiscoveryMetrics`/`TopicMetrics`/`Health` optional interface parity (stub returns zeros/nil/HealthOK); cyclone interface tests; `bridge/grpc` coverage 75.6%→86.7% (`ApplyConfig`, `qos()`, `NewClient`, `authStream` now tested)
 
 ---
 

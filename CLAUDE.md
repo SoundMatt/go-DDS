@@ -79,7 +79,8 @@ history expansion on `%`, `!`, and `(`.
 | v0.17.0  | auto/ transport selection (shmem→RTPS fallback); 244 requirements |
 | v0.18.0  | Quality polish: coverage tests, fusa:req traceability, CONTRIBUTING.md expansion, new examples |
 | v0.19.0  | shmem.NewLoaningPublisher; cdr/xtypes fuzz targets; auto/ coverage 76.9% |
-| **main** | **shmem DiscoveryMetrics/TopicMetrics/Health; idl/roundtrip coverage 80%** |
+| v0.20.0  | shmem DiscoveryMetrics/TopicMetrics/Health parity; idl/roundtrip coverage 80% |
+| **main** | **cyclone optional interface parity; bridge/grpc coverage 75.6%→86.7%** |
 
 ## CI matrix
 

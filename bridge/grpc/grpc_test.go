@@ -405,6 +405,176 @@ func TestLoadConfig_InvalidYAML(t *testing.T) {
 	}
 }
 
+// ── Config application ────────────────────────────────────────────────────────
+
+// TestApplyConfig_PreSubscribes exercises ApplyConfig with reliable, best_effort,
+// default-QoS, and empty-name topics, covering all three branches of TopicConfig.qos().
+func TestApplyConfig_PreSubscribes(t *testing.T) {
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+	b := grpcbridge.New(p, grpcbridge.Options{})
+	defer b.Close()
+
+	cfg := &grpcbridge.Config{
+		Topics: []grpcbridge.TopicConfig{
+			{Name: "cfg/reliable", QoS: "reliable"},
+			{Name: "cfg/best-effort", QoS: "best_effort"},
+			{Name: "cfg/default", QoS: ""}, // default branch
+			{Name: "", QoS: "reliable"},    // empty name — skipped silently
+		},
+	}
+	if err := grpcbridge.ApplyConfig(b, cfg); err != nil {
+		t.Fatalf("ApplyConfig: %v", err)
+	}
+}
+
+// TestApplyConfig_SubscriberError verifies that ApplyConfig propagates a
+// subscriber creation error (caused by a closed participant).
+func TestApplyConfig_SubscriberError(t *testing.T) {
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	p.Close() // close before ApplyConfig so NewSubscriber fails
+	b := grpcbridge.New(p, grpcbridge.Options{})
+	defer b.Close()
+
+	cfg := &grpcbridge.Config{
+		Topics: []grpcbridge.TopicConfig{{Name: "cfg/fail", QoS: "reliable"}},
+	}
+	if err := grpcbridge.ApplyConfig(b, cfg); err == nil {
+		t.Fatal("expected error from ApplyConfig with closed participant")
+	}
+}
+
+// ── NewClient ─────────────────────────────────────────────────────────────────
+
+// TestNewClient_ConnectsAndPublishes verifies that NewClient returns a usable
+// DDSBridgeClient that can successfully call Publish.
+func TestNewClient_ConnectsAndPublishes(t *testing.T) {
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+	b := grpcbridge.New(p, grpcbridge.Options{})
+	lis := listenLocal(t)
+	go func() { _ = b.Server().Serve(lis) }()
+	defer b.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	c, conn, err := grpcbridge.NewClient(ctx, lis.Addr().String(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+	defer conn.Close()
+
+	ack, err := c.Publish(ctx, &grpcbridge.PublishRequest{Topic: "nc/test", Payload: []byte("hi")})
+	if err != nil {
+		t.Fatalf("Publish via NewClient: %v", err)
+	}
+	if ack.Count != 1 {
+		t.Errorf("count: got %d, want 1", ack.Count)
+	}
+}
+
+// ── Auth stream interceptor ───────────────────────────────────────────────────
+
+// TestBridge_Auth_Stream_NoToken_Unauthenticated verifies that Subscribe fails
+// when the server requires an auth token but the client provides none.
+// This exercises the authStream interceptor, which wraps streaming RPCs.
+func TestBridge_Auth_Stream_NoToken_Unauthenticated(t *testing.T) {
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer p.Close()
+	b := grpcbridge.New(p, grpcbridge.Options{AuthToken: "secret"})
+	lis := listenLocal(t)
+	go func() { _ = b.Server().Serve(lis) }()
+	defer b.Close()
+
+	conn := dialJSON(t, lis.Addr().String())
+	defer conn.Close()
+
+	client := grpcbridge.NewRawClient(conn)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	stream, err := client.Subscribe(ctx, &grpcbridge.SubscribeRequest{Topic: "auth/stream"})
+	if err != nil {
+		if !strings.Contains(err.Error(), "Unauthenticated") && !strings.Contains(err.Error(), "unauthenticated") {
+			t.Errorf("expected Unauthenticated, got %v", err)
+		}
+		return
+	}
+	ignoredRet, recvErr := stream.Recv()
+	_ = ignoredRet
+	if recvErr == nil {
+		t.Fatal("expected unauthenticated error on Recv")
+	}
+	if !strings.Contains(recvErr.Error(), "Unauthenticated") && !strings.Contains(recvErr.Error(), "unauthenticated") {
+		t.Errorf("expected Unauthenticated, got %v", recvErr)
+	}
+}
+
+// TestBridge_Auth_Stream_CorrectToken_Passes verifies that Subscribe succeeds
+// when the correct auth token is supplied (authStream interceptor allows it).
+func TestBridge_Auth_Stream_CorrectToken_Passes(t *testing.T) {
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer p.Close()
+	b := grpcbridge.New(p, grpcbridge.Options{AuthToken: "secret"})
+	lis := listenLocal(t)
+	go func() { _ = b.Server().Serve(lis) }()
+	defer b.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	conn, dialErr := grpc.DialContext(ctx, lis.Addr().String(), //nolint:staticcheck
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.ForceCodec(grpcbridge.JSONCodec{})),
+		grpc.WithPerRPCCredentials(bearerToken("secret")),
+	)
+	if dialErr != nil {
+		t.Fatalf("dial: %v", dialErr)
+	}
+	defer conn.Close()
+
+	client := grpcbridge.NewRawClient(conn)
+	stream, err := client.Subscribe(ctx, &grpcbridge.SubscribeRequest{Topic: "auth/stream-ok"})
+	if err != nil {
+		t.Fatalf("Subscribe with valid token: %v", err)
+	}
+
+	// Publish so the stream has a sample to receive (confirming it's open).
+	pub, err := p.NewPublisher("auth/stream-ok", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+	time.Sleep(20 * time.Millisecond)
+	_ = pub.Write([]byte("authenticated"))
+
+	got, err := stream.Recv()
+	if err != nil {
+		t.Fatalf("Recv: %v", err)
+	}
+	if string(got.Payload) != "authenticated" {
+		t.Errorf("payload: %q", got.Payload)
+	}
+}
+
 // ── Fuzz ──────────────────────────────────────────────────────────────────────
 
 func FuzzBridge_Publish(f *testing.F) {
