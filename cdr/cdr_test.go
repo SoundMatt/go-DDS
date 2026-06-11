@@ -264,6 +264,55 @@ func TestDecoder_BadScheme(t *testing.T) {
 	}
 }
 
+func TestEncoder_Len(t *testing.T) {
+	e := cdr.NewEncoder()
+	initial := e.Len()
+	if initial != 4 { // encapsulation header is 4 bytes
+		t.Errorf("initial Len: got %d, want 4", initial)
+	}
+	e.WriteInt32(42)
+	if e.Len() != 8 {
+		t.Errorf("after WriteInt32 Len: got %d, want 8", e.Len())
+	}
+}
+
+func TestEncoder_WriteInt8(t *testing.T) {
+	roundtrip(t,
+		func(e *cdr.Encoder) { e.WriteInt8(-7) },
+		func(d *cdr.Decoder) {
+			v, err := d.ReadInt8()
+			if err != nil {
+				t.Fatalf("ReadInt8: %v", err)
+			}
+			if v != -7 {
+				t.Errorf("got %d, want -7", v)
+			}
+		},
+	)
+}
+
+func TestDecoder_Remaining(t *testing.T) {
+	e := cdr.NewEncoder()
+	e.WriteInt32(1)
+	e.WriteInt32(2)
+	d, err := cdr.NewDecoder(e.Bytes())
+	if err != nil {
+		t.Fatalf("NewDecoder: %v", err)
+	}
+	before := d.Remaining()
+	if before != 8 { // two int32 fields = 8 bytes
+		t.Errorf("Remaining before read: got %d, want 8", before)
+	}
+	_, readErr := d.ReadInt32()
+	if readErr != nil {
+		t.Fatalf("ReadInt32: %v", readErr)
+	}
+	after := d.Remaining()
+	if after != 4 {
+		t.Errorf("Remaining after one read: got %d, want 4", after)
+	}
+}
+
 func TestDecoder_Underrun(t *testing.T) {
 	e := cdr.NewEncoder()
 	e.WriteInt32(1)

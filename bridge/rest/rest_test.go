@@ -347,6 +347,92 @@ func TestBridge_Close_Idempotent(t *testing.T) {
 	}
 }
 
+// ── Error paths ───────────────────────────────────────────────────────────────
+
+// TestBridge_Publish_PublisherCreateError covers the handlePublish path where
+// getOrCreatePub fails because the participant has been closed.
+func TestBridge_Publish_PublisherCreateError(t *testing.T) {
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := rest.New(p, rest.Options{})
+	srv := httptest.NewServer(b)
+	t.Cleanup(func() { srv.Close(); b.Close() })
+
+	p.Close() // close before any publish so NewPublisher fails
+
+	resp := doPost(t, srv.URL+"/topics/err/pub", "hello")
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", resp.StatusCode)
+	}
+}
+
+// TestBridge_Publish_WriteCtxError covers the handlePublish path where
+// WriteCtx fails due to MaxSampleSize QoS rejection. This also exercises
+// the Options.qos() non-default branch.
+func TestBridge_Publish_WriteCtxError(t *testing.T) {
+	opts := rest.Options{QoS: dds.QoS{MaxSampleSize: 1}}
+	ignoredRet, srv := newBridgeServer(t, opts)
+	_ = ignoredRet
+
+	resp := doPost(t, srv.URL+"/topics/err/write", "hi") // 2 bytes > MaxSampleSize 1
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", resp.StatusCode)
+	}
+}
+
+// TestBridge_Subscribe_SubscriberCreateError covers the handleSubscribe path
+// where getOrCreateSub fails because the participant has been closed.
+func TestBridge_Subscribe_SubscriberCreateError(t *testing.T) {
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := rest.New(p, rest.Options{})
+	srv := httptest.NewServer(b)
+	t.Cleanup(func() { srv.Close(); b.Close() })
+
+	p.Close() // close before subscribe so NewSubscriber fails
+
+	resp := doGet(t, srv.URL+"/topics/err/sub")
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", resp.StatusCode)
+	}
+}
+
+// TestBridge_Subscribe_Keepalive_FiresComment covers the keepalive case in
+// handleSubscribe and the Options.keepalive() non-default branch.
+func TestBridge_Subscribe_Keepalive_FiresComment(t *testing.T) {
+	opts := rest.Options{SSEKeepalive: 5 * time.Millisecond}
+	ignoredRet, srv := newBridgeServer(t, opts)
+	_ = ignoredRet
+
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL+"/topics/ka/test", nil)
+	if err != nil {
+		t.Fatalf("NewRequestWithContext: %v", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	scanner := bufio.NewScanner(resp.Body)
+	for scanner.Scan() {
+		if strings.HasPrefix(scanner.Text(), ": keepalive") {
+			return // keepalive comment confirmed
+		}
+	}
+	t.Error("no keepalive comment received in SSE stream within timeout")
+}
+
 // ── Fuzz ──────────────────────────────────────────────────────────────────────
 
 func FuzzBridge_Publish(f *testing.F) {
