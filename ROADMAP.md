@@ -73,6 +73,7 @@ API parity does not.
 | v0.25.0 | — | cdr/ 94.2%→100%; bridge/rest 91.2%→98.2%; bridge/mqtt 97.5%→100% ✅ |
 | v0.26.0 | — | rpc/ 86.1%→98.1%; cdr/ 99.2%→100%; bridge/rest 95.6%→98.2% ✅ |
 | v0.27.0 | — | mock/ 96.4%→98.0%; testutil/scenario/ 86.7%→100%; bridge/wan 93.6%→99.2% ✅ |
+| v0.28.0 | — | shmem/ 93.3%→95.2%; monitor/ 90.5%→91.0% ✅ |
 | **main** | — | **next coverage target** |
 
 ### Released — v0.1 – v0.8
@@ -109,6 +110,7 @@ API parity does not.
 - **v0.21.0** — cyclone `DiscoveryMetrics`/`TopicMetrics`/`Health` optional interface parity (stub returns zeros/nil/HealthOK); cyclone interface tests; `bridge/grpc` coverage 75.6%→86.7% (`ApplyConfig`, `qos()`, `NewClient`, `authStream` now tested)
 - **v0.26.0** — `rpc/` 86.1%→98.1% (NewRequester/NewReplier publisher+subscriber error paths; Request encode/unmarshal/done-channel errors; Reply encode/write errors; demux/pump short+invalid payload continue branches); `cdr/` 99.2%→100% (ReadString n==0 defensive branch); `bridge/rest` 95.6%→98.2% (SSE channel-close, write-error-on-message, keepalive write error)
 - **v0.27.0** — `mock/` 96.4%→98.0% (NewLoaningPublisher publisher error + non-mock participant; TryRead closed-subscriber); `testutil/scenario/` 86.7%→100% (publishStep write error via MaxSampleSize; expectStep timeout + subscriber-closed via pre-closed-channel participant wrapper; waitStep/expectNoneStep ctx-cancel-during-wait; expectNoneStep subscriber error); `bridge/wan/` 93.6%→99.2% (Connect multi-topic cleanup; ErrFrameTooLarge/body-read-error/invalid-JSON via server-side tests; sendLoop writeFrame error + subscriber-channel-closed + writeFrame header error via `net.Pipe` internal test)
+- **v0.28.0** — `shmem/` 93.3%→95.2% (deliverSub resetDeadline call; TryRead closed-channel; "#" wildcard match; pattern-longer-than-topic mismatch; NewLoaningPublisher publisher-error path); `monitor/` 90.5%→91.0% (WatchSafety events-channel-closed; handleHealth nil-hp 501 path)
 
 ---
 
