@@ -718,7 +718,9 @@ func TestBridge_Subscribe_SameTopic_Cache(t *testing.T) {
 	_ = pub.Write([]byte("cached-2"))
 
 	got := make(chan string, 2)
-	recvFrom := func(s interface{ Recv() (*grpcbridge.Sample, error) }) {
+	recvFrom := func(s interface {
+		Recv() (*grpcbridge.Sample, error)
+	}) {
 		sample, recvErr := s.Recv()
 		if recvErr == nil {
 			got <- string(sample.Payload)
