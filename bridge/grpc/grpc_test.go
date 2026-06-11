@@ -683,11 +683,13 @@ func TestBridge_StreamPublish_EmptyTopic(t *testing.T) {
 
 // TestBridge_Subscribe_SameTopic_Cache verifies that subscribing to the same
 // topic twice reuses the cached subscriber, covering the cache-hit branch in
-// Bridge.getOrCreateSub.
+// Bridge.getOrCreateSub. Two streams share one DDS subscriber, so messages
+// are delivered to whichever goroutine reads first — we publish two messages
+// and verify at least one arrives on any stream.
 func TestBridge_Subscribe_SameTopic_Cache(t *testing.T) {
 	client, _, p := newTestBridge(t, grpcbridge.Options{})
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	// First Subscribe — creates subscriber and caches it.
@@ -709,17 +711,31 @@ func TestBridge_Subscribe_SameTopic_Cache(t *testing.T) {
 		t.Fatalf("NewPublisher: %v", err)
 	}
 	defer pub.Close()
-	_ = pub.Write([]byte("cached"))
 
-	// Either stream should receive the sample.
-	sample, err := stream1.Recv()
-	if err != nil {
-		t.Fatalf("Recv on stream1: %v", err)
+	// Publish two messages; the two competing goroutines (stream1 and stream2)
+	// each consume one. At least one arrival confirms the cache-hit path works.
+	_ = pub.Write([]byte("cached-1"))
+	_ = pub.Write([]byte("cached-2"))
+
+	got := make(chan string, 2)
+	recvFrom := func(s interface{ Recv() (*grpcbridge.Sample, error) }) {
+		sample, recvErr := s.Recv()
+		if recvErr == nil {
+			got <- string(sample.Payload)
+		}
 	}
-	if string(sample.Payload) != "cached" {
-		t.Errorf("stream1 payload: %q", sample.Payload)
+	go recvFrom(stream1)
+	go recvFrom(stream2)
+
+	// Expect at least one delivery within the context deadline.
+	select {
+	case payload := <-got:
+		if payload != "cached-1" && payload != "cached-2" {
+			t.Errorf("unexpected payload: %q", payload)
+		}
+	case <-ctx.Done():
+		t.Fatal("timeout: no message received on either stream")
 	}
-	_ = stream2
 }
 
 // ── Bridge.Publish WriteCtx error ────────────────────────────────────────────
