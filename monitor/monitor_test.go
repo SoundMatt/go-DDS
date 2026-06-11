@@ -693,8 +693,6 @@ func TestMonitor_WatchSafety_ChannelClosed(t *testing.T) {
 // monitor.New leaves m.hp == nil. This covers the 501 path in handleHealth.
 type noHealthPart struct{ dds.Participant }
 
-func (n *noHealthPart) Metrics() dds.Metrics { return n.Participant.(dds.MetricsProvider).Metrics() }
-
 // TestMonitor_Health_NilProvider covers handleHealth when m.hp == nil.
 // The monitor must return 501 Not Implemented.
 func TestMonitor_Health_NilProvider(t *testing.T) {

@@ -907,7 +907,8 @@ func TestTryRead_ClosedSubscriber_Shmem(t *testing.T) {
 	}
 	ch := sub.C() // starts the pump goroutine
 	_ = sub.Close()
-	for range ch {} // drain until closed by pump
+	for range ch {
+	} // drain until closed by pump
 	_, ok := sub.TryRead()
 	if ok {
 		t.Error("TryRead on closed channel must return false")
