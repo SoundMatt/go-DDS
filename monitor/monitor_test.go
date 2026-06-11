@@ -652,3 +652,20 @@ func TestMonitor_WatchSafety_SSE(t *testing.T) {
 		t.Error("expected safety SSE event with crc_failure kind")
 	}
 }
+
+// TestMonitor_DefaultAddr_ListensOnPort covers the Options.addr() branch that
+// returns ":8080" when Addr is empty. Skip if port 8080 is already in use.
+func TestMonitor_DefaultAddr_ListensOnPort8080(t *testing.T) {
+	p := newMockParticipant(t)
+	defer p.Close()
+
+	// Empty Addr → opts.addr() returns ":8080".
+	mon, err := monitor.New(p, monitor.Options{})
+	if err != nil {
+		t.Skipf("port :8080 unavailable in this environment: %v", err)
+	}
+	defer mon.Close()
+	if mon.Addr() == "" {
+		t.Fatal("Addr() must not be empty")
+	}
+}

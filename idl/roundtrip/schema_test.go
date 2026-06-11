@@ -201,3 +201,43 @@ func TestNewHeaderSubscriber_error_on_closed_participant(t *testing.T) {
 		t.Fatal("expected error from closed participant")
 	}
 }
+
+// ── Unmarshal error paths ─────────────────────────────────────────────────────
+
+// TestHeaderCodec_Unmarshal_BadData covers the NewDecoder error path.
+func TestHeaderCodec_Unmarshal_BadData(t *testing.T) {
+	_, err := HeaderCodec{}.Unmarshal([]byte{0x00}) // too short for CDR header
+	if err == nil {
+		t.Fatal("expected error for too-short CDR buffer")
+	}
+}
+
+// TestTelemetryCodec_Unmarshal_BadData covers the NewDecoder error path.
+func TestTelemetryCodec_Unmarshal_BadData(t *testing.T) {
+	_, err := TelemetryCodec{}.Unmarshal([]byte{0x00}) // too short for CDR header
+	if err == nil {
+		t.Fatal("expected error for too-short CDR buffer")
+	}
+}
+
+// TestNewTelemetryPublisher_error covers the publisher creation error path.
+func TestNewTelemetryPublisher_error(t *testing.T) {
+	p := newMockParticipant(t)
+	_ = p.Close()
+
+	_, err := NewTelemetryPublisher(p, "idl/telemetry/err", dds.DefaultQoS)
+	if err == nil {
+		t.Fatal("expected error from closed participant")
+	}
+}
+
+// TestNewTelemetrySubscriber_error covers the subscriber creation error path.
+func TestNewTelemetrySubscriber_error(t *testing.T) {
+	p := newMockParticipant(t)
+	_ = p.Close()
+
+	_, err := NewTelemetrySubscriber(p, "idl/telemetry/err", dds.DefaultQoS)
+	if err == nil {
+		t.Fatal("expected error from closed participant")
+	}
+}

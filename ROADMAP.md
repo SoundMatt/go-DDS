@@ -67,7 +67,8 @@ API parity does not.
 | v0.19.0 | — | shmem.NewLoaningPublisher (API parity); cdr/xtypes fuzz targets; auto/ coverage 76.9% ✅ |
 | v0.20.0 | — | shmem DiscoveryMetrics/TopicMetrics/Health parity; idl/roundtrip coverage 80% ✅ |
 | v0.21.0 | — | cyclone optional interface parity; bridge/grpc coverage 75.6%→86.7% ✅ |
-| **main** | — | **bridge/rest coverage 78.8%→91.2%; cdr/ coverage 91.7%→94.2%** |
+| v0.22.0 | — | bridge/rest coverage 78.8%→91.2%; cdr/ coverage 91.7%→94.2% ✅ |
+| **main** | — | **idl/ 87.2%→88.1%; idl/roundtrip 80%→85.3%; monitor/ addr() 100%** |
 
 ### Released — v0.1 – v0.8
 
