@@ -1,14 +1,19 @@
 {
-  "format": "go-FuSa Manifest v1",
-  "generatedAt": "2026-06-09T16:45:49.735774Z",
+  "schemaVersion": "1.9",
+  "kind": "artifact-manifest",
+  "tool": "go-FuSa",
+  "toolVersion": "0.25.0",
+  "language": "go",
+  "generatedAt": "2026-06-11T12:48:32.986448Z",
+  "format": "x-FuSa manifest v1",
   "artifacts": [
     {
       "path": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/sbom.json",
-      "sha256": "31672e6860ab155177e4d9ee7c75f2df850a073607d877346f8737120c0b0903"
+      "sha256": "440dc500a0b8536deed3e5cdd9865e25d201cb084ab042103e6eea8bc516a43d"
     },
     {
       "path": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/provenance.json",
-      "sha256": "cdfba68f9a62a03ecfea52cdcd9b64b8fa1e6a3a110d598bcb1a7b55e8818669"
+      "sha256": "e4265aab4957b8e9b9c5b27e46a3bba0b9287d5e43babc5c7c08bfc7ad69dd82"
     }
   ]
 }

@@ -72,7 +72,7 @@ history expansion on `%`, `!`, and `(`.
 | v0.14.1  | go-FuSa v0.19.0 upgrade: LINT001/ANA007/CYBER017 fixes across idl/, ddstool |
 | v0.14.2  | CI: pinned gofusa v0.19.0 gate job |
 | v0.14.3  | Release workflow; gitignore check-report.json |
-| **main** | **go-FuSa v0.21.0; HARA, GC_LATENCY, latmon, cert/ package (ASIL-B/SIL-2/DAL-C)** |
+| **main** | **go-FuSa v0.25.1; HARA, GC_LATENCY, latmon, cert/ package (ASIL-B/SIL-2/DAL-C)** |
 
 ## CI matrix
 
@@ -84,7 +84,7 @@ history expansion on `%`, `!`, and `(`.
 | benchmark-smoke | ubuntu, 1 iter each |
 | fuzz-short     | ubuntu, 10 s per target |
 | lint           | golangci-lint |
-| gofusa         | go-FuSa v0.21.0 safety check (0 errors required) |
+| gofusa         | go-FuSa v0.25.1 safety check (0 errors required) |
 | dco            | DCO sign-off check |
 | test-interop   | Docker probe-and-skip |
 

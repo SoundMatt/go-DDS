@@ -5,7 +5,7 @@
 **Version:** 1.0  
 **Date:** 2026-06-09  
 **Standard:** DO-330:2011  
-**Tool:** `gofusa` v0.21.0 (`github.com/SoundMatt/go-FuSa/cmd/gofusa`)  
+**Tool:** `gofusa` v0.25.1 (`github.com/SoundMatt/go-FuSa/cmd/gofusa`)  
 
 ---
 
@@ -14,7 +14,7 @@
 | Attribute | Value |
 |---|---|
 | Tool name | `gofusa` (go-FuSa safety analyser) |
-| Tool version | v0.21.0 (pinned in CI) |
+| Tool version | v0.25.1 (pinned in CI) |
 | Source | `github.com/SoundMatt/go-FuSa` |
 | Output type | Static analysis report; `fmea.csv`, `safety-case.md`, `sbom.json`, `provenance.json` |
 
@@ -56,10 +56,10 @@ gofusa's output is validated within go-DDS by:
 
 ### 3.2 Upgrade validation procedure
 
-When gofusa is upgraded (e.g. v0.21.0 → vX.Y.Z):
+When gofusa is upgraded (e.g. v0.25.1 → vX.Y.Z):
 
 1. Install new version in a separate environment
-2. Run `gofusa check ./...` and compare results against v0.21.0 baseline
+2. Run `gofusa check ./...` and compare results against v0.25.1 baseline
 3. Investigate any new findings — fix or document as accepted deviation
 4. Update version pin in `.github/workflows/ci.yml` and `release.yml`
 5. Record the upgrade in `cert/RELEASE_LOG.md`
@@ -79,7 +79,7 @@ When gofusa is upgraded (e.g. v0.21.0 → vX.Y.Z):
 gofusa is version-pinned in CI:
 
 ```yaml
-run: go install github.com/SoundMatt/go-FuSa/cmd/gofusa@v0.21.0
+run: go install github.com/SoundMatt/go-FuSa/cmd/gofusa@v0.25.1
 ```
 
 `go.sum` equivalence is verified by `go install` fetching the exact module hash.

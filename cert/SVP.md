@@ -108,7 +108,7 @@ test-mock:   ubuntu-latest, macos-latest, windows-latest × go1.25, go1.26
 test-rtps:   ubuntu-latest, go1.25 (-short)
 fuzz-short:  ubuntu-latest, 10s per fuzz target
 lint:        ubuntu-latest (golangci-lint)
-gofusa:      ubuntu-latest (gofusa v0.21.0)
+gofusa:      ubuntu-latest (gofusa v0.25.1)
 ```
 
 No hardware-in-the-loop is required for SEOOC verification. The `safety/`

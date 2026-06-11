@@ -33,7 +33,7 @@ DO-178C §11.2 and satisfies the equivalent planning requirement of IEC 61508-3.
 | Go compiler (`gc`) | ≥ 1.25 | https://go.dev/dl |
 | Go standard library | matches compiler | bundled |
 | golangci-lint | latest stable | GitHub Actions |
-| gofusa | v0.21.0 (pinned) | `go install` in CI |
+| gofusa | v0.25.1 (pinned) | `go install` in CI |
 
 ### 2.3 Development tools
 

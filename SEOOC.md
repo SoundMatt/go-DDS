@@ -3,7 +3,7 @@
 **Standard**: ISO 26262:2018 Part 10 — Guidelines on ISO 26262  
 **Claimed ASIL**: ASIL-B (for elements annotated `level: ASIL-B` in `.fusa-reqs.json`)  
 **Version**: v0.14.0 and later  
-**go-FuSa**: v0.21.0 (pinned in CI)  
+**go-FuSa**: v0.25.1 (pinned in CI)  
 **Maintainer**: Matt Jones &lt;matt@jellybaby.com&gt;
 
 ---
@@ -152,7 +152,7 @@ All 238 requirements (228 functional + 10 SEOOC AoUs) are covered by at least on
 
 ```bash
 gofusa trace          # traceability matrix — must show zero orphan/untested
-gofusa check ./...    # safety analysis — must show 0 errors (v0.21.0)
+gofusa check ./...    # safety analysis — must show 0 errors (v0.25.1)
 gofusa safety-case    # regenerate safety-case.md / .json / .mermaid
 gofusa fmea -cyber    # regenerate fmea.csv / fmea.json
 gofusa release        # regenerate sbom.json, provenance.json, artifact-manifest.json

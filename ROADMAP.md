@@ -58,7 +58,9 @@ API parity does not.
 | v0.14.1 | — | go-FuSa v0.19.0: LINT001/ANA007/CYBER017 fixes, parseEnum infinite-loop fix, cycle detection in IDL gen ✅ |
 | v0.14.2 | — | CI: pinned gofusa v0.19.0 safety gate job ✅ |
 | v0.14.3 | — | Release workflow; gitignore check-report.json; gofusa v0.21.0 ✅ |
-| **main** | — | **HARA, GC latency profile, latmon tool, full cert/ package (ASIL-B/SIL-2/DAL-C)** |
+| v0.14.4 | — | Fix GC latency test races; independence policy (no IV&V required); cert docs updated ✅ |
+| v0.14.5 | — | Docker: golang:1.22→1.25 builder; Node.js 24 opt-in for docker/* actions ✅ |
+| **main** | — | **go-FuSa v0.25.1; OpenTelemetry adapter (`otel/`); roadmap ✅ audit** |
 
 ### Released — v0.1 – v0.8
 
@@ -83,7 +85,9 @@ API parity does not.
 - **v0.14.1** — go-FuSa v0.19.0 compliance: LINT001/ANA007/CYBER017 fixes across `idl/` and `cmd/ddstool`; parseEnum infinite-loop fix (fuzz corpus entry); cycle detection in IDL code generator (self-referential struct `A{A g}`); `idl/parser.go` refactor (`expectTok`/`expect` split)
 - **v0.14.2** — CI: pinned `gofusa@v0.19.0` safety gate job added to `.github/workflows/ci.yml`
 - **v0.14.3** — Release workflow (`.github/workflows/release.yml`) regenerates safety artifacts on every `v*` tag; `.gitignore` excludes `check-report.json`
-- **main (unreleased)** — go-FuSa v0.21.0; `HARA.md` (tabletop HARA, ASIL-B derivation); `GC_LATENCY.md` (STW max 146µs, E2E max 305µs); `cmd/latmon` continuous monitoring tool; `STANDARDS_GAP.md`; full `cert/` certification package (PSAC, SDP, SVP, SCMP, SQAP, LLR, SCR, DCA, TQPs, PRP, DEVIATIONS, RELEASE_LOG); `SAFETY_PLAN.md`; `CODING_STANDARD.md`; 238 requirements all traced+tested
+- **v0.14.4** — Fix two data races in `gc_latency_test.go` (payload-reuse + close/send); drop IV&V requirement (structural CI independence documented in `SAFETY_PLAN.md §3.1`); close G-61508-02 and G-DO178-09 in `STANDARDS_GAP.md`
+- **v0.14.5** — Docker builder bumped from golang:1.22 to golang:1.25; `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` for docker/* actions
+- **main (unreleased)** — go-FuSa v0.25.1; `otel/` OpenTelemetry adapter (`NewTracer(tp)` bridges `dds.Tracer` to any OTel provider); roadmap ✅ audit (all implemented items marked)
 
 ---
 
@@ -213,7 +217,7 @@ Support the complete software lifecycle from unit testing through system validat
 ### Recording
 
 - Topic recording ✅
-- RTPS recording
+- RTPS recording _(not targeted — packet-level RTPS capture is out of scope for SEOOC)_
 - Metadata recording ✅
 
 ### Replay
@@ -224,23 +228,23 @@ Support the complete software lifecycle from unit testing through system validat
 
 ### Scenario Testing
 
-- Scenario runner
-- Automated test scripts
-- Expected behavior validation
+- Scenario runner _(deferred — `testutil/` helpers cover current needs; full framework planned for v0.16)_
+- Automated test scripts _(deferred)_
+- Expected behavior validation _(deferred)_
 
 ### Fault Injection
 
 - Packet loss ✅
 - Delay ✅
-- Reordering
+- Reordering ✅
 - Duplication ✅
 - Corruption ✅
 
 ### Test Reporting
 
-- Coverage integration
-- Validation reports
-- Test artifacts
+- Coverage integration ✅
+- Validation reports ✅ (`cert/SCR.md`, `gofusa safety-case`)
+- Test artifacts ✅ (CI uploads coverage, safety-case, FMEA per release)
 
 Success Criteria:
 DDS deployments become fully testable and reproducible.
@@ -254,27 +258,27 @@ Provide first-class visibility into distributed systems.
 
 ### Metrics
 
-- Participant metrics
-- Topic metrics
-- Discovery metrics
-- Transport metrics
+- Participant metrics ✅
+- Topic metrics ✅
+- Discovery metrics ✅
+- Transport metrics ✅
 
 ### Tracing
 
-- OpenTelemetry support
-- Distributed tracing
+- OpenTelemetry support ✅ (`otel/` package — `NewTracer(tp)` bridges `dds.Tracer` to any OTel provider)
+- Distributed tracing ✅ (`rtps.WithTracer(ddsotel.NewTracer(tp))` propagates spans through dispatch)
 
 ### Monitoring
 
-- Health monitoring
-- Runtime statistics
-- Topology visualization
+- Health monitoring ✅
+- Runtime statistics ✅
+- Topology visualization ✅ (monitor SSE + `/api/topics`)
 
 ### Dashboard
 
-- Web monitoring
-- Traffic inspection
-- Performance visualization
+- Web monitoring ✅
+- Traffic inspection ✅
+- Performance visualization ✅
 
 Success Criteria:
 Engineers can understand system behavior without packet captures.
@@ -289,24 +293,24 @@ Support high-performance embedded and edge deployments.
 ### Shared Memory
 
 - Cross-process transport ✅
-- Automatic transport selection
+- Automatic transport selection _(deferred — planned for v0.16; requires unified participant wrapping shmem+UDP)_
 
 ### Zero Copy
 
-- Loaned samples
+- Loaned samples _(deferred — allocation-free path exists via `pool.BytePool`; zero-copy loan API planned for v0.16)_
 - Preallocated buffers ✅
 
 ### Resource Controls
 
 - Bounded queues ✅
-- Memory limits
-- Flow control
+- Memory limits ✅ (via Go runtime `GOMEMLIMIT`; documented as AoU-02 in `HARA.md §5`)
+- Flow control ✅ (`BackPressurePolicy`: `DropNewest`, `DropOldest`, `Block`)
 
 ### Benchmarking
 
-- Latency benchmarks
-- Throughput benchmarks
-- Scalability testing
+- Latency benchmarks ✅ (`mock/mock_bench_test.go` — `BenchmarkPublish_RoundTrip`)
+- Throughput benchmarks ✅ (`BenchmarkPublish_FireAndForget`, `BenchmarkPublish_Parallel`)
+- Scalability testing ✅ (`BenchmarkPublish_FanOut`, `BenchmarkPublish_ManyTopics`)
 
 Success Criteria:
 High-volume data can be distributed efficiently on constrained hardware.
@@ -325,19 +329,19 @@ Support safety-oriented communication architectures.
 - Sequence counters ✅
 - CRC protection ✅
 - Freshness checking ✅
-- Schema validation
+- Schema validation ✅
 
 ### Safety Runtime
 
 - Deterministic queues ✅
 - Panic containment ✅
-- Runtime monitoring
+- Runtime monitoring ✅ (`cmd/latmon` continuous GC+latency monitor; `safety.RateMonitor`)
 
 ### Safety Visibility
 
-- Safety metrics
+- Safety metrics ✅ (`safety.Metrics` per-topic violation counters)
 - Safety events ✅
-- Safety diagnostics
+- Safety diagnostics ✅ (`HARA.md`, `GC_LATENCY.md`, `cert/DCA.md`)
 
 ### Schema Validation (v0.12)
 
@@ -386,13 +390,13 @@ Become the easiest DDS implementation to deploy on TSN networks.
 - CLOCK_TAI ✅
 - gPTP awareness ✅
 - ETF integration ✅
-- TAPRIO integration
+- TAPRIO integration ✅ (`tsn.TAPRIOConfig.Apply()`, `TAPRIOFromStreams()`)
 
 ### TSN Diagnostics
 
-- Timing validation
-- Stream health
-- Schedule monitoring
+- Timing validation ✅ (`tsn.HealthTracker`)
+- Stream health ✅ (`tsn.StreamHealth`, monitor `/api/tsn`)
+- Schedule monitoring ✅ (`tsn.TAPRIOConfig.VerifyApplied()`)
 
 Success Criteria:
 DDS topics map directly to deterministic TSN streams.
@@ -406,24 +410,24 @@ Provide secure communication for enterprise and automotive deployments.
 
 ### Authentication
 
-- Certificate identity
-- Mutual authentication
+- Certificate identity ✅ (`security.CertPlugin`)
+- Mutual authentication ✅ (mTLS via `CertPlugin`)
 
 ### Authorization
 
-- Topic permissions
-- Access policies
+- Topic permissions ✅ (`security.AccessPolicy`)
+- Access policies ✅ (`security.AccessPolicy.Allow`/`Deny`)
 
 ### Protection
 
 - Encryption ✅
 - Signing ✅
-- Replay protection
+- Replay protection ✅ (`security.ReplayGuard` sliding-window anti-replay)
 
 ### Secure Discovery
 
-- Discovery protection
-- Identity validation
+- Discovery protection ✅ (`HMACDiscoveryPlugin` — SPDP+SEDP signing)
+- Identity validation ✅ (`HMACDiscoveryPlugin.VerifyEndpoint`)
 
 Success Criteria:
 Deployments can securely operate across untrusted networks.
@@ -437,19 +441,19 @@ Support evolving distributed systems.
 
 ### XTypes
 
-- TypeObject
-- TypeIdentifier
-- DynamicData
+- TypeObject ✅ (`xtypes.TypeObject`)
+- TypeIdentifier ✅ (`xtypes.TypeIdentifier`)
+- DynamicData ✅ (`xtypes.DynamicData`)
 
 ### Runtime Type Discovery
 
-- Dynamic type inspection
-- Compatibility validation
+- Dynamic type inspection ✅ (`xtypes.TypeRegistry`, `LookupTopicType`)
+- Compatibility validation ✅ (`xtypes.CheckCompatibility`)
 
 ### Evolution
 
-- Forward compatibility
-- Backward compatibility
+- Forward compatibility ✅ (optional field additions tolerated)
+- Backward compatibility ✅ (missing required fields detected)
 
 Success Criteria:
 Systems can evolve without lock-step software updates.
@@ -465,19 +469,19 @@ Provide operational services around the middleware.
 
 - Domain bridge ✅
 - WAN bridge ✅
-- Protocol bridge (planned v0.10 — DDS ↔ gRPC/REST gateway)
+- Protocol bridge ✅ (`bridge/grpc`, `bridge/rest`)
 
 ### Administration
 
-- Admin API
-- Remote diagnostics
-- Remote inspection
+- Admin API ✅ (`admin/` HTTP API)
+- Remote diagnostics ✅ (monitor `/api/diagnostics`)
+- Remote inspection ✅ (monitor `/api/topics`, SSE discovery events)
 
 ### Service Framework
 
-- Recorder service
-- Replay service
-- Monitoring service
+- Recorder service ✅ (`RecorderService`)
+- Replay service ✅ (`ReplayService`)
+- Monitoring service ✅ (`MonitorService`)
 
 Success Criteria:
 Large deployments can be operated without custom infrastructure.

@@ -1,6 +1,6 @@
 # Safety Case: github.com/SoundMatt/go-DDS
 
-Generated: 2026-06-09T16:48:30Z  
+Generated: 2026-06-11T12:48:32Z  
 Standard: generic
 
 ## Top Claim
