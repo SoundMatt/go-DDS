@@ -808,3 +808,89 @@ func TestShmem_LoaningPublisher_write_and_close(t *testing.T) {
 		t.Fatalf("Close: %v", err)
 	}
 }
+
+// ── DiscoveryMetrics / TopicMetrics / Health ──────────────────────────────────
+
+func TestShmem_DiscoveryMetrics(t *testing.T) {
+	p := newPart(t)
+	mp, ok := p.(dds.DiscoveryMetricsProvider)
+	if !ok {
+		t.Skip("participant does not implement DiscoveryMetricsProvider")
+	}
+	dm := mp.DiscoveryMetrics()
+	// shmem has no network discovery; all counts should be zero.
+	if dm.AnnouncesSent != 0 || dm.AnnouncesReceived != 0 {
+		t.Errorf("expected zero discovery metrics, got %+v", dm)
+	}
+}
+
+func TestShmem_TopicMetrics(t *testing.T) {
+	p := newPart(t)
+	mp, ok := p.(dds.TopicMetricsProvider)
+	if !ok {
+		t.Skip("participant does not implement TopicMetricsProvider")
+	}
+
+	sub, err := p.NewSubscriber("shmem/tm/test", dds.DefaultQoS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+
+	pub, err := p.NewPublisher("shmem/tm/test", dds.DefaultQoS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pub.Close()
+
+	if err := pub.Write([]byte("metric")); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-sub.C():
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for sample")
+	}
+
+	metrics := mp.TopicMetrics()
+	found := false
+	for _, tm := range metrics {
+		if tm.Topic == "shmem/tm/test" {
+			found = true
+			if tm.WriteCount == 0 {
+				t.Errorf("expected WriteCount > 0")
+			}
+		}
+	}
+	if !found {
+		t.Error("shmem/tm/test not found in TopicMetrics")
+	}
+}
+
+func TestShmem_Health_OK(t *testing.T) {
+	p := newPart(t)
+	hp, ok := p.(dds.HealthProvider)
+	if !ok {
+		t.Skip("participant does not implement HealthProvider")
+	}
+	h := hp.Health()
+	if h.Status != dds.HealthOK {
+		t.Errorf("expected HealthOK, got %v", h.Status)
+	}
+}
+
+func TestShmem_Health_Closed(t *testing.T) {
+	p, err := shmem.New(0)
+	if err != nil {
+		t.Fatalf("shmem.New: %v", err)
+	}
+	hp, ok := p.(dds.HealthProvider)
+	if !ok {
+		t.Skip("participant does not implement HealthProvider")
+	}
+	_ = p.Close()
+	h := hp.Health()
+	if h.Status != dds.HealthDown {
+		t.Errorf("expected HealthDown after close, got %v", h.Status)
+	}
+}

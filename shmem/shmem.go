@@ -64,14 +64,32 @@ var (
 )
 
 type shmBroker struct {
-	mu         sync.RWMutex
-	subs       map[string][]shmSub
-	lastSample map[string]*dds.Sample
-	writes     atomic.Uint64
-	delivers   atomic.Uint64
-	drops      atomic.Uint64
-	bWritten   atomic.Uint64
-	bDeliv     atomic.Uint64
+	mu           sync.RWMutex
+	subs         map[string][]shmSub
+	lastSample   map[string]*dds.Sample
+	writes       atomic.Uint64
+	delivers     atomic.Uint64
+	drops        atomic.Uint64
+	bWritten     atomic.Uint64
+	bDeliv       atomic.Uint64
+	topicMetrics sync.Map // topic string → *shmTopicCounter
+}
+
+type shmTopicCounter struct {
+	writes   atomic.Uint64
+	delivers atomic.Uint64
+	drops    atomic.Uint64
+	bytesW   atomic.Uint64
+	bytesD   atomic.Uint64
+}
+
+func (b *shmBroker) topicCounter(topic string) *shmTopicCounter {
+	v, _ := b.topicMetrics.LoadOrStore(topic, &shmTopicCounter{})
+	tc, _ := v.(*shmTopicCounter)
+	if tc == nil {
+		tc = &shmTopicCounter{}
+	}
+	return tc
 }
 
 type shmSub struct {
@@ -136,6 +154,9 @@ func (b *shmBroker) publish(topic string, payload []byte, qos dds.QoS, seqNum ui
 
 	b.writes.Add(1)
 	b.bWritten.Add(uint64(len(payload)))
+	tc := b.topicCounter(topic)
+	tc.writes.Add(1)
+	tc.bytesW.Add(uint64(len(payload)))
 
 	b.mu.Lock()
 	if qos.Durability == dds.TransientLocal {
@@ -155,14 +176,14 @@ func (b *shmBroker) publish(topic string, payload []byte, qos dds.QoS, seqNum ui
 		if sub.filter != nil && !sub.filter(sample) {
 			continue
 		}
-		b.deliverSub(sub, sample)
+		b.deliverSub(sub, sample, tc)
 	}
 
 	// Notify cross-process subscribers via shared-memory file + socket signal.
 	go shmPublish(topic, payload)
 }
 
-func (b *shmBroker) deliverSub(sub shmSub, sample dds.Sample) {
+func (b *shmBroker) deliverSub(sub shmSub, sample dds.Sample, tc *shmTopicCounter) {
 	byteLen := uint64(len(sample.Payload))
 	delivered := false
 	switch sub.backPressure {
@@ -171,35 +192,46 @@ func (b *shmBroker) deliverSub(sub shmSub, sample dds.Sample) {
 		case sub.ch <- sample:
 			b.delivers.Add(1)
 			b.bDeliv.Add(byteLen)
+			tc.delivers.Add(1)
+			tc.bytesD.Add(byteLen)
 			delivered = true
 		default:
 			select {
 			case <-sub.ch:
 				b.drops.Add(1)
+				tc.drops.Add(1)
 			default:
 			}
 			select {
 			case sub.ch <- sample:
 				b.delivers.Add(1)
 				b.bDeliv.Add(byteLen)
+				tc.delivers.Add(1)
+				tc.bytesD.Add(byteLen)
 				delivered = true
 			default:
 				b.drops.Add(1)
+				tc.drops.Add(1)
 			}
 		}
 	case dds.Block:
 		sub.ch <- sample
 		b.delivers.Add(1)
 		b.bDeliv.Add(byteLen)
+		tc.delivers.Add(1)
+		tc.bytesD.Add(byteLen)
 		delivered = true
 	default:
 		select {
 		case sub.ch <- sample:
 			b.delivers.Add(1)
 			b.bDeliv.Add(byteLen)
+			tc.delivers.Add(1)
+			tc.bytesD.Add(byteLen)
 			delivered = true
 		default:
 			b.drops.Add(1)
+			tc.drops.Add(1)
 		}
 	}
 	if delivered && sub.resetDeadline != nil {
@@ -453,6 +485,51 @@ func (p *participant) Metrics() dds.Metrics {
 		BytesWritten:   p.broker.bWritten.Load(),
 		BytesDelivered: p.broker.bDeliv.Load(),
 	}
+}
+
+// DiscoveryMetrics implements dds.DiscoveryMetricsProvider.
+// Shmem has no network discovery; this always returns zero values.
+func (p *participant) DiscoveryMetrics() dds.DiscoveryMetrics {
+	return dds.DiscoveryMetrics{}
+}
+
+// TopicMetrics implements dds.TopicMetricsProvider.
+func (p *participant) TopicMetrics() []dds.TopicMetrics {
+	var result []dds.TopicMetrics
+	p.broker.topicMetrics.Range(func(k, v any) bool {
+		topic, ok := k.(string)
+		if !ok {
+			return true
+		}
+		tc, ok2 := v.(*shmTopicCounter)
+		if !ok2 {
+			return true
+		}
+		result = append(result, dds.TopicMetrics{
+			Topic:          topic,
+			WriteCount:     tc.writes.Load(),
+			DeliverCount:   tc.delivers.Load(),
+			DropCount:      tc.drops.Load(),
+			BytesWritten:   tc.bytesW.Load(),
+			BytesDelivered: tc.bytesD.Load(),
+		})
+		return true
+	})
+	return result
+}
+
+// Health implements dds.HealthProvider.
+func (p *participant) Health() dds.Health {
+	p.mu.Lock()
+	closed := p.closed
+	p.mu.Unlock()
+	if closed {
+		return dds.Health{
+			Status:  dds.HealthDown,
+			Details: map[string]string{"state": "closed"},
+		}
+	}
+	return dds.Health{Status: dds.HealthOK}
 }
 
 // ── Publisher ─────────────────────────────────────────────────────────────────

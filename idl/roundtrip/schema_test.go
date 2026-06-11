@@ -8,6 +8,10 @@ package idlgen
 import (
 	"reflect"
 	"testing"
+	"time"
+
+	dds "github.com/SoundMatt/go-DDS"
+	"github.com/SoundMatt/go-DDS/mock"
 )
 
 func TestHeader_RoundTrip(t *testing.T) {
@@ -97,5 +101,103 @@ func TestTelemetry_KeyFields_Empty(t *testing.T) {
 	keys := TelemetryCodec{}.KeyFields()
 	if keys != nil {
 		t.Errorf("TelemetryCodec.KeyFields = %v, want nil", keys)
+	}
+}
+
+// ── Factory function tests ────────────────────────────────────────────────────
+
+func newMockParticipant(t *testing.T) dds.Participant {
+	t.Helper()
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
+	t.Cleanup(func() { _ = p.Close() })
+	return p
+}
+
+func TestNewHeaderPublisher_and_Subscriber(t *testing.T) {
+	p := newMockParticipant(t)
+
+	sub, err := NewHeaderSubscriber(p, "idl/header", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewHeaderSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	pub, err := NewHeaderPublisher(p, "idl/header", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewHeaderPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	want := Header{TopicId: "sensors/test", TimestampNs: 12345, Priority: PriorityHIGH}
+	if err := pub.Write(want); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+
+	select {
+	case ts := <-sub.C():
+		if ts.Value != want {
+			t.Errorf("roundtrip mismatch: got %+v want %+v", ts.Value, want)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for sample")
+	}
+}
+
+func TestNewTelemetryPublisher_and_Subscriber(t *testing.T) {
+	p := newMockParticipant(t)
+
+	sub, err := NewTelemetrySubscriber(p, "idl/telemetry", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewTelemetrySubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	pub, err := NewTelemetryPublisher(p, "idl/telemetry", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewTelemetryPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	want := Telemetry{
+		Header:      Header{TopicId: "t", Priority: PriorityCRITICAL},
+		Values:      [4]float64{1, 2, 3, 4},
+		Temperature: 36.6,
+		Valid:       true,
+		Extras:      []float64{0.1},
+	}
+	if err := pub.Write(want); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+
+	select {
+	case ts := <-sub.C():
+		if !reflect.DeepEqual(ts.Value, want) {
+			t.Errorf("roundtrip mismatch: got %+v want %+v", ts.Value, want)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for sample")
+	}
+}
+
+func TestNewHeaderPublisher_error_on_closed_participant(t *testing.T) {
+	p := newMockParticipant(t)
+	_ = p.Close()
+
+	_, err := NewHeaderPublisher(p, "idl/header/err", dds.DefaultQoS)
+	if err == nil {
+		t.Fatal("expected error from closed participant")
+	}
+}
+
+func TestNewHeaderSubscriber_error_on_closed_participant(t *testing.T) {
+	p := newMockParticipant(t)
+	_ = p.Close()
+
+	_, err := NewHeaderSubscriber(p, "idl/header/err", dds.DefaultQoS)
+	if err == nil {
+		t.Fatal("expected error from closed participant")
 	}
 }
