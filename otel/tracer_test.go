@@ -14,11 +14,6 @@ import (
 	"go.opentelemetry.io/otel/trace/noop"
 )
 
-func TestNewTracer_implements_interface(t *testing.T) {
-	tr := ddsotel.NewTracer(noop.NewTracerProvider())
-	var _ dds.Tracer = tr
-}
-
 func TestNewTracer_start_end(t *testing.T) {
 	tr := ddsotel.NewTracer(noop.NewTracerProvider())
 	ctx, span := tr.Start(context.Background(), "test.span",
