@@ -1,6 +1,6 @@
 {
   "format": "go-FuSa dFMEA v1",
-  "generated_at": "2026-06-11T13:13:17.057767Z",
+  "generated_at": "2026-06-11T15:18:40.680258Z",
   "module": "github.com/SoundMatt/go-DDS",
   "entries": [
     {
@@ -42,6 +42,58 @@
         "Memory leak or deadlock"
       ],
       "severity": "medium",
+      "detection_control": "unit tests"
+    },
+    {
+      "component": "auto",
+      "function": "NewParticipant",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/auto/auto.go",
+      "failure_modes": [
+        "Returns unexpected error"
+      ],
+      "effects": [
+        "Silent failure propagated to caller"
+      ],
+      "severity": "medium",
+      "detection_control": "unit tests"
+    },
+    {
+      "component": "auto",
+      "function": "String",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/auto/auto.go",
+      "failure_modes": [
+        "Incorrect output"
+      ],
+      "effects": [
+        "Incorrect system behavior"
+      ],
+      "severity": "low",
+      "detection_control": "unit tests"
+    },
+    {
+      "component": "auto",
+      "function": "WithRTPSOpts",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/auto/auto.go",
+      "failure_modes": [
+        "Incorrect output"
+      ],
+      "effects": [
+        "Incorrect system behavior"
+      ],
+      "severity": "low",
+      "detection_control": "unit tests"
+    },
+    {
+      "component": "auto",
+      "function": "WithTransport",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/auto/auto.go",
+      "failure_modes": [
+        "Incorrect output"
+      ],
+      "effects": [
+        "Incorrect system behavior"
+      ],
+      "severity": "low",
       "detection_control": "unit tests"
     },
     {
@@ -942,6 +994,19 @@
     {
       "component": "cyclone",
       "function": "NewWithOptions",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/cyclone/stub.go",
+      "failure_modes": [
+        "Returns unexpected error"
+      ],
+      "effects": [
+        "Silent failure propagated to caller"
+      ],
+      "severity": "medium",
+      "detection_control": "unit tests"
+    },
+    {
+      "component": "cyclone",
+      "function": "NewWithOptions",
       "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/cyclone/cyclone.go",
       "failure_modes": [
         "Returns unexpected error"
@@ -954,19 +1019,6 @@
       "cyber_risks": [
         "CYBER004: import of \"unsafe\" bypasses Go type safety and memory safety guarantees"
       ]
-    },
-    {
-      "component": "cyclone",
-      "function": "NewWithOptions",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/cyclone/stub.go",
-      "failure_modes": [
-        "Returns unexpected error"
-      ],
-      "effects": [
-        "Silent failure propagated to caller"
-      ],
-      "severity": "medium",
-      "detection_control": "unit tests"
     },
     {
       "component": "cyclone",
@@ -3831,6 +3883,19 @@
     {
       "component": "safety",
       "function": "Errors",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/queue.go",
+      "failure_modes": [
+        "Incorrect output"
+      ],
+      "effects": [
+        "Incorrect system behavior"
+      ],
+      "severity": "low",
+      "detection_control": "unit tests"
+    },
+    {
+      "component": "safety",
+      "function": "Errors",
       "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/e2e.go",
       "failure_modes": [
         "Incorrect output"
@@ -3843,19 +3908,6 @@
       "cyber_risks": [
         "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
       ]
-    },
-    {
-      "component": "safety",
-      "function": "Errors",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/queue.go",
-      "failure_modes": [
-        "Incorrect output"
-      ],
-      "effects": [
-        "Incorrect system behavior"
-      ],
-      "severity": "low",
-      "detection_control": "unit tests"
     },
     {
       "component": "safety",
@@ -3976,7 +4028,7 @@
     {
       "component": "safety",
       "function": "Stop",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/queue.go",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/rate.go",
       "failure_modes": [
         "Incorrect output"
       ],
@@ -3989,7 +4041,7 @@
     {
       "component": "safety",
       "function": "Stop",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/rate.go",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/queue.go",
       "failure_modes": [
         "Incorrect output"
       ],
@@ -4342,6 +4394,45 @@
     {
       "component": "security",
       "function": "Seal",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security.go",
+      "failure_modes": [
+        "Returns unexpected error"
+      ],
+      "effects": [
+        "Silent failure propagated to caller"
+      ],
+      "severity": "medium",
+      "detection_control": "unit tests"
+    },
+    {
+      "component": "security",
+      "function": "Seal",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security.go",
+      "failure_modes": [
+        "Returns unexpected error"
+      ],
+      "effects": [
+        "Silent failure propagated to caller"
+      ],
+      "severity": "medium",
+      "detection_control": "unit tests"
+    },
+    {
+      "component": "security",
+      "function": "Seal",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security.go",
+      "failure_modes": [
+        "Returns unexpected error"
+      ],
+      "effects": [
+        "Silent failure propagated to caller"
+      ],
+      "severity": "medium",
+      "detection_control": "unit tests"
+    },
+    {
+      "component": "security",
+      "function": "Seal",
       "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/cert.go",
       "failure_modes": [
         "Returns unexpected error"
@@ -4355,45 +4446,6 @@
         "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
         "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
       ]
-    },
-    {
-      "component": "security",
-      "function": "Seal",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security.go",
-      "failure_modes": [
-        "Returns unexpected error"
-      ],
-      "effects": [
-        "Silent failure propagated to caller"
-      ],
-      "severity": "medium",
-      "detection_control": "unit tests"
-    },
-    {
-      "component": "security",
-      "function": "Seal",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security.go",
-      "failure_modes": [
-        "Returns unexpected error"
-      ],
-      "effects": [
-        "Silent failure propagated to caller"
-      ],
-      "severity": "medium",
-      "detection_control": "unit tests"
-    },
-    {
-      "component": "security",
-      "function": "Seal",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/security.go",
-      "failure_modes": [
-        "Returns unexpected error"
-      ],
-      "effects": [
-        "Silent failure propagated to caller"
-      ],
-      "severity": "medium",
-      "detection_control": "unit tests"
     },
     {
       "component": "security",
@@ -4557,11 +4609,11 @@
       "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/services/services.go",
       "failure_modes": [
         "Returns unexpected error",
-        "Uncontrolled execution"
+        "Goroutine not terminated"
       ],
       "effects": [
         "Silent failure propagated to caller",
-        "Resource exhaustion"
+        "Memory leak or deadlock"
       ],
       "severity": "medium",
       "detection_control": "unit tests"
@@ -4572,11 +4624,11 @@
       "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/services/services.go",
       "failure_modes": [
         "Returns unexpected error",
-        "Goroutine not terminated"
+        "Uncontrolled execution"
       ],
       "effects": [
         "Silent failure propagated to caller",
-        "Memory leak or deadlock"
+        "Resource exhaustion"
       ],
       "severity": "medium",
       "detection_control": "unit tests"
@@ -5008,19 +5060,6 @@
     {
       "component": "tsn",
       "function": "Apply",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_stub.go",
-      "failure_modes": [
-        "Returns unexpected error"
-      ],
-      "effects": [
-        "Silent failure propagated to caller"
-      ],
-      "severity": "medium",
-      "detection_control": "unit tests"
-    },
-    {
-      "component": "tsn",
-      "function": "Apply",
       "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_linux.go",
       "failure_modes": [
         "Returns unexpected error"
@@ -5042,6 +5081,19 @@
         "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
         "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
       ]
+    },
+    {
+      "component": "tsn",
+      "function": "Apply",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_stub.go",
+      "failure_modes": [
+        "Returns unexpected error"
+      ],
+      "effects": [
+        "Silent failure propagated to caller"
+      ],
+      "severity": "medium",
+      "detection_control": "unit tests"
     },
     {
       "component": "tsn",
@@ -5265,6 +5317,19 @@
     {
       "component": "tsn",
       "function": "VerifyApplied",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_stub.go",
+      "failure_modes": [
+        "Returns unexpected error"
+      ],
+      "effects": [
+        "Silent failure propagated to caller"
+      ],
+      "severity": "medium",
+      "detection_control": "unit tests"
+    },
+    {
+      "component": "tsn",
+      "function": "VerifyApplied",
       "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_linux.go",
       "failure_modes": [
         "Returns unexpected error"
@@ -5286,19 +5351,6 @@
         "CYBER009: uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
         "CYBER009: uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range"
       ]
-    },
-    {
-      "component": "tsn",
-      "function": "VerifyApplied",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio_stub.go",
-      "failure_modes": [
-        "Returns unexpected error"
-      ],
-      "effects": [
-        "Silent failure propagated to caller"
-      ],
-      "severity": "medium",
-      "detection_control": "unit tests"
     },
     {
       "component": "wan",
@@ -5371,7 +5423,7 @@
     {
       "component": "xtypes",
       "function": "All",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/xtypes/xtypes.go",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/xtypes/topic_registry.go",
       "failure_modes": [
         "Incorrect output"
       ],
@@ -5384,7 +5436,7 @@
     {
       "component": "xtypes",
       "function": "All",
-      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/xtypes/topic_registry.go",
+      "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/xtypes/xtypes.go",
       "failure_modes": [
         "Incorrect output"
       ],

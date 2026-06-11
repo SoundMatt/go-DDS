@@ -148,7 +148,7 @@ The table below maps each safety-relevant configuration option to the requiremen
 
 ## 5. Verification summary
 
-All 241 requirements (231 functional + 10 SEOOC AoUs) are covered by at least one `//fusa:req` implementation annotation and one `//fusa:test` test annotation. Run:
+All 244 requirements (234 functional + 10 SEOOC AoUs) are covered by at least one `//fusa:req` implementation annotation and one `//fusa:test` test annotation. Run:
 
 ```bash
 gofusa trace          # traceability matrix — must show zero orphan/untested
