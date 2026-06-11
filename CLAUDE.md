@@ -75,7 +75,8 @@ history expansion on `%`, `!`, and `(`.
 | v0.14.4  | Fix GC latency races; independence policy (no IV&V); Docker golang:1.22→1.25 |
 | v0.14.5  | Docker Node.js 24 opt-in; go-FuSa v0.21.0 |
 | v0.15.0  | go-FuSa v0.25.1; otel/ OpenTelemetry adapter; roadmap ✅ audit |
-| **main** | **LoaningPublisher API; testutil/scenario runner; 241 requirements** |
+| v0.16.0  | LoaningPublisher API; testutil/scenario runner; 241 requirements |
+| **main** | **auto/ transport selection (shmem→RTPS fallback); 244 requirements** |
 
 ## CI matrix
 

@@ -61,7 +61,8 @@ API parity does not.
 | v0.14.4 | — | Fix GC latency test races; independence policy (no IV&V required); cert docs updated ✅ |
 | v0.14.5 | — | Docker: golang:1.22→1.25 builder; Node.js 24 opt-in for docker/* actions ✅ |
 | v0.15.0 | — | go-FuSa v0.25.1; OpenTelemetry adapter (`otel/`); roadmap ✅ audit ✅ |
-| **main** | — | **Loaned samples API (`dds.LoaningPublisher`); scenario test runner (`testutil/scenario`)** |
+| v0.16.0 | — | Loaned samples API (`dds.LoaningPublisher`); scenario test runner (`testutil/scenario`) ✅ |
+| **main** | — | **Automatic transport selection (`auto/` package — shmem → RTPS fallback)** |
 
 ### Released — v0.1 – v0.8
 
@@ -89,7 +90,8 @@ API parity does not.
 - **v0.14.4** — Fix two data races in `gc_latency_test.go` (payload-reuse + close/send); drop IV&V requirement (structural CI independence documented in `SAFETY_PLAN.md §3.1`); close G-61508-02 and G-DO178-09 in `STANDARDS_GAP.md`
 - **v0.14.5** — Docker builder bumped from golang:1.22 to golang:1.25; `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` for docker/* actions
 - **v0.15.0** — go-FuSa v0.25.1; `otel/` OpenTelemetry adapter (`NewTracer(tp)` bridges `dds.Tracer` to any OTel provider); roadmap ✅ audit (all implemented items marked)
-- **main (unreleased)** — `dds.LoaningPublisher` interface with zero-copy loaned-sample API (`mock.NewLoaningPublisher`, `rtps.NewLoaningPublisher`); `testutil/scenario` declarative scenario test runner (Publish, Expect, ExpectNone, Wait, Assert steps); 241 requirements (REQ-LOAN-001–003 added)
+- **v0.16.0** — `dds.LoaningPublisher` interface with zero-copy loaned-sample API (`mock.NewLoaningPublisher`, `rtps.NewLoaningPublisher`); `testutil/scenario` declarative scenario test runner (Publish, Expect, ExpectNone, Wait, Assert steps); 241 requirements
+- **main (unreleased)** — `auto.NewParticipant` automatic transport selection (shmem → RTPS fallback, explicit override via `WithTransport`); 244 requirements (REQ-AUTO-001–003 added)
 
 ---
 
@@ -295,7 +297,7 @@ Support high-performance embedded and edge deployments.
 ### Shared Memory
 
 - Cross-process transport ✅
-- Automatic transport selection _(deferred — planned for v0.16; requires unified participant wrapping shmem+UDP)_
+- Automatic transport selection ✅ (`auto.NewParticipant` — tries shmem, falls back to RTPS/UDP; `WithTransport(TransportShmem|TransportRTPS)` overrides)
 
 ### Zero Copy
 

@@ -1686,6 +1686,27 @@
       "text": "LoaningPublisher shall implement all methods of the Publisher interface (Write, WriteCtx, Close) in addition to Loan and Commit.",
       "standard": "iso26262",
       "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-AUTO-001",
+      "title": "Auto transport selects shmem when available",
+      "text": "auto.NewParticipant with TransportAuto shall return a shmem participant when the shared-memory transport initialises successfully.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-AUTO-002",
+      "title": "Auto transport falls back to RTPS on shmem failure",
+      "text": "auto.NewParticipant with TransportAuto shall fall back to an RTPS participant when shmem initialisation fails.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
+    },
+    {
+      "id": "REQ-AUTO-003",
+      "title": "Explicit transport override",
+      "text": "auto.NewParticipant with TransportShmem shall return only a shmem participant; with TransportRTPS it shall return only an RTPS participant, bypassing automatic selection.",
+      "standard": "iso26262",
+      "level": "ASIL-A"
     }
   ]
 }
