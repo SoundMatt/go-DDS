@@ -16,7 +16,7 @@ The safety evidence package for go-DDS consists of:
 
 | Artefact | File |
 |---|---|
-| Requirements manifest (238 requirements) | `.fusa-reqs.json` |
+| Requirements manifest (244 requirements) | `.fusa-reqs.json` |
 | Traceability matrix | `gofusa trace` output |
 | FMEA | `fmea.json` / `fmea.csv` |
 | Safety case | `safety-case.json` / `safety-case.md` |

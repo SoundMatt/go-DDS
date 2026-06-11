@@ -1,6 +1,6 @@
 # Safety Case: github.com/SoundMatt/go-DDS
 
-Generated: 2026-06-11T15:18:40Z  
+Generated: 2026-06-11T16:10:17Z  
 Standard: generic
 
 ## Top Claim
@@ -12,7 +12,7 @@ argued by demonstrating compliance with the safety development lifecycle.
 
 | ID | Description | Status | Detail |
 |---|---|---|---|
-| Sn1 | Coding standard and static analysis checks | ⚠ absent | run 'gofusa check --output check-report.json' to generate |
+| Sn1 | Coding standard and static analysis checks | ✅ present |  |
 | Sn2 | Requirements traceability matrix | ✅ present | 244 requirements |
 | Sn3 | Test evidence bundle | ✅ present | 832/875 tests passed |
 | Sn4 | Tool qualification report | ✅ present | 44/44 cases passed |
@@ -31,6 +31,4 @@ argued by demonstrating compliance with the safety development lifecycle.
 
 ## Gaps
 
-The following evidence items are absent:
-
-- `check`
+None — all evidence present.

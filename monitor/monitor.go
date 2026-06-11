@@ -125,7 +125,7 @@ func New(p dds.Participant, opts Options) (*Monitor, error) {
 	mux.HandleFunc("/api/tsn", m.handleAPITSN)
 	m.server = &http.Server{Handler: mux}
 
-	go m.server.Serve(ln) //nolint:errcheck
+	go m.server.Serve(ln) //nolint:errcheck // background goroutine; error surfaced via server.Shutdown in Close
 	go m.metricsLoop()
 	return m, nil
 }

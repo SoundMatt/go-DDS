@@ -1,7 +1,7 @@
 flowchart TD
     G1["**G1** github.com/SoundMatt/go-DDS is acceptably safe\nfor use in generic context"]
     S1{{"**S1** Argued over safety lifecycle\nprocess compliance"}}
-    G2["**G2** Coding standard and static analysis checks\n⚠ run 'gofusa check --output check-report.json' to generate"]
+    G2["**G2** Coding standard and static analysis checks\n✅ check-report.json"]
     Sn1(["**Sn1** check-report.json"])
     G3["**G3** Requirements traceability matrix\n✅ 244 requirements"]
     Sn2(["**Sn2** .fusa-reqs.json"])
@@ -26,5 +26,3 @@ flowchart TD
     G5 --> Sn4
     G6 --> Sn5
     G7 --> Sn6
-    style G2 fill:#fee2e2,stroke:#ef4444
-    style Sn1 fill:#fee2e2,stroke:#ef4444
