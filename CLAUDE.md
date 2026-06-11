@@ -80,7 +80,8 @@ history expansion on `%`, `!`, and `(`.
 | v0.18.0  | Quality polish: coverage tests, fusa:req traceability, CONTRIBUTING.md expansion, new examples |
 | v0.19.0  | shmem.NewLoaningPublisher; cdr/xtypes fuzz targets; auto/ coverage 76.9% |
 | v0.20.0  | shmem DiscoveryMetrics/TopicMetrics/Health parity; idl/roundtrip coverage 80% |
-| **main** | **cyclone optional interface parity; bridge/grpc coverage 75.6%→86.7%** |
+| v0.21.0  | cyclone optional interface parity; bridge/grpc coverage 75.6%→86.7% |
+| **main** | **bridge/rest coverage 78.8%→91.2%; cdr/ coverage 91.7%→94.2%** |
 
 ## CI matrix
 
