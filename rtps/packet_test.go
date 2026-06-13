@@ -2232,3 +2232,152 @@ func TestWrite_FragmentedPath_LargePayload(t *testing.T) {
 		t.Fatal("timeout waiting for large payload")
 	}
 }
+
+// ── CDR/locator error-path coverage ──────────────────────────────────────────
+
+func TestNewPLCDRDecoder_NonLEScheme(t *testing.T) {
+	// scheme = 0x0001 (CDR_LE), not 0x0003 (PL_CDR_LE) → returns false
+	b := []byte{0x01, 0x00, 0x00, 0x00}
+	_, ok := newPLCDRDecoder(b)
+	if ok {
+		t.Fatal("expected false for non-PL_CDR_LE scheme")
+	}
+}
+
+func TestPLCDRDecoder_Next_PidPad(t *testing.T) {
+	// pidPad (0x0000) entry followed by pidSentinel (0x0001); next() recurses
+	// past the pad and returns false at the sentinel.
+	b := []byte{
+		0x03, 0x00, 0x00, 0x00, // PL_CDR_LE header
+		0x00, 0x00, 0x00, 0x00, // pidPad, length=0
+		0x01, 0x00, 0x00, 0x00, // pidSentinel
+	}
+	dec, ok := newPLCDRDecoder(b)
+	if !ok {
+		t.Fatal("expected valid decoder")
+	}
+	_, ok = dec.next()
+	if ok {
+		t.Fatal("expected false after sentinel following pad")
+	}
+}
+
+func TestDecodeString_LengthExceedsBuffer(t *testing.T) {
+	// Length field says 100 bytes but buffer only has 4 bytes after the header
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint32(b[0:], 100)
+	_, ok := decodeString(b)
+	if ok {
+		t.Fatal("expected false for string length exceeding buffer")
+	}
+}
+
+func TestDecodeGUID_TooShort(t *testing.T) {
+	_, ok := decodeGUID([]byte{0x01, 0x02, 0x03})
+	if ok {
+		t.Fatal("expected false for buffer shorter than 16 bytes")
+	}
+}
+
+func TestUnmarshalLocator_TooShort(t *testing.T) {
+	_, ok := unmarshalLocator([]byte{0x01, 0x02, 0x03})
+	if ok {
+		t.Fatal("expected false for buffer shorter than 24 bytes")
+	}
+}
+
+func TestParseSubmessages_LengthExceedsBody(t *testing.T) {
+	// Submessage declares length=100 but the body has no bytes following the header.
+	body := []byte{
+		0x09, 0x01, // id=INFO_TS, flags=0x01
+		0x64, 0x00, // length=100 (little-endian)
+		// no following bytes
+	}
+	err := parseSubmessages(body, func(_, _ byte, _ []byte) error { return nil })
+	if err == nil {
+		t.Fatal("expected error for submessage length exceeding body")
+	}
+}
+
+func TestTryRead_ClosedChannel(t *testing.T) {
+	p := testPart(t)
+	sub, err := p.NewSubscriber("tryread/closed", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	_ = sub.Close()
+	r, ok := sub.(*rtpsReader)
+	if !ok {
+		t.Fatal("subscriber is not *rtpsReader")
+	}
+	_, ok = r.TryRead()
+	if ok {
+		t.Error("expected false from TryRead on closed subscriber")
+	}
+}
+
+func TestSendHeartbeatLocked_EmptyHistory(t *testing.T) {
+	p := testPart(t)
+	pub, err := p.NewPublisher("hb/empty", dds.ReliableQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+	w, ok := pub.(*rtpsWriter)
+	if !ok {
+		t.Fatal("publisher is not *rtpsWriter")
+	}
+	w.mu.Lock()
+	w.sendHeartbeatLocked() // history empty → ok=false → early return
+	w.mu.Unlock()
+}
+
+func TestWaitDrain_NilDrainCh_ReturnsNil(t *testing.T) {
+	p := testPart(t)
+	pub, err := p.NewPublisher("drain/nodrainch", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+	w, ok := pub.(*rtpsWriter)
+	if !ok {
+		t.Fatal("publisher is not *rtpsWriter")
+	}
+	// drainCh is nil for a fresh best-effort writer
+	if err := w.waitDrain(context.Background()); err != nil {
+		t.Fatalf("waitDrain with nil drainCh: %v", err)
+	}
+}
+
+func TestPLCDRDecoder_Next_LengthOverflow(t *testing.T) {
+	// A parameter whose declared length exceeds remaining buffer bytes.
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint16(buf[0:], plCDRLE) // PL_CDR_LE header
+	binary.LittleEndian.PutUint16(buf[2:], 0)       // options
+	binary.LittleEndian.PutUint16(buf[4:], 0x0002)  // some valid pid (not pad, not sentinel)
+	binary.LittleEndian.PutUint16(buf[6:], 100)     // length=100 but no data follows
+	dec, ok := newPLCDRDecoder(buf)
+	if !ok {
+		t.Fatal("expected valid decoder")
+	}
+	_, ok = dec.next()
+	if ok {
+		t.Fatal("expected false for parameter length overflow")
+	}
+}
+
+func TestCDRUnwrapPayload_UnknownScheme(t *testing.T) {
+	// scheme = 0x0002 — neither CDR_LE (0x0001) nor PL_CDR_LE (0x0003)
+	b := []byte{0x02, 0x00, 0x00, 0x00, 0x01, 0x02}
+	_, ok := cdrUnwrapPayload(b)
+	if ok {
+		t.Fatal("expected false for unknown CDR scheme")
+	}
+}
+
+func TestParseInfoTS_TooShort(t *testing.T) {
+	_, ok := parseInfoTS([]byte{0x01, 0x02, 0x03})
+	if ok {
+		t.Fatal("expected false for buffer shorter than 8 bytes")
+	}
+}
