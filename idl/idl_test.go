@@ -1183,12 +1183,14 @@ func TestParse_BlockComment(t *testing.T) {
 }
 
 // TestParse_SingleColonSkip covers the single-colon skip path (lexer skips lone ':').
+// A bare ':' between the field name and ';' is not '::' so the lexer skips it.
 func TestParse_SingleColonSkip(t *testing.T) {
-	// A lone colon in a type name context is skipped; the type falls through to
-	// the unknown-character skip and the identifier is read from the next token.
-	_, err := idl.ParseString(`struct Foo { long x; };`)
+	m, err := idl.ParseString(`struct Msg { long x:; };`)
 	if err != nil {
 		t.Fatalf("ParseString: %v", err)
+	}
+	if len(m.Structs) != 1 || len(m.Structs[0].Fields) != 1 {
+		t.Fatalf("expected 1 struct with 1 field, got: %+v", m.Structs)
 	}
 }
 
@@ -1229,5 +1231,87 @@ func TestParseTypeSpec_Error_SequenceBadElemType(t *testing.T) {
 	_, err := idl.ParseString(`struct Msg { sequence<5> data; };`)
 	if err == nil {
 		t.Fatal("expected parse error for sequence with numeric elem type")
+	}
+}
+
+// TestParseModule_DefaultCase_SkipsToSemi covers the parseModule default branch
+// where an unknown keyword ("const") is skipped forward to the next ';'.
+// The "if t2.kind == tokSemi { p.consume() }" path executes when the skip loop
+// finds a semicolon.
+func TestParseModule_DefaultCase_SkipsToSemi(t *testing.T) {
+	src := `const long X = 5; struct Foo { long y; };`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	if len(m.Structs) != 1 || m.Structs[0].Name != "Foo" {
+		t.Fatalf("expected Foo struct, got: %+v", m)
+	}
+}
+
+// TestParseStruct_Error_MissingRBracket covers the p.expect(tokRBracket, "]")
+// error path when an array field is missing its closing bracket.
+func TestParseStruct_Error_MissingRBracket(t *testing.T) {
+	_, err := idl.ParseString(`struct Msg { long x [5 ; };`)
+	if err == nil {
+		t.Fatal("expected parse error for array missing ']'")
+	}
+}
+
+// TestParseEnum_Error_MissingLBrace covers the p.expect(tokLBrace, "{") error
+// path when an enum declaration is missing its opening brace.
+func TestParseEnum_Error_MissingLBrace(t *testing.T) {
+	_, err := idl.ParseString(`enum E x; };`)
+	if err == nil {
+		t.Fatal("expected parse error for enum missing '{'")
+	}
+}
+
+// TestParseEnum_Error_MissingSemi covers the p.expect(tokSemi, ";") error path
+// when an enum declaration is missing its trailing semicolon.
+func TestParseEnum_Error_MissingSemi(t *testing.T) {
+	_, err := idl.ParseString(`enum E { A, B }`)
+	if err == nil {
+		t.Fatal("expected parse error for enum missing ';'")
+	}
+}
+
+// TestParse_BoundedString_MissingRAngle covers the p.expect(tokRAngle, ">") error
+// path in parseTypeSpec when a bounded string is missing its closing '>'.
+func TestParse_BoundedString_MissingRAngle(t *testing.T) {
+	_, err := idl.ParseString(`struct Msg { string<256 x; };`)
+	if err == nil {
+		t.Fatal("expected parse error for string<256 missing '>'")
+	}
+}
+
+// TestParse_Sequence_WithBound covers the optional comma-bound path in
+// parseTypeSpec: sequence<T, N> consumes the bound value N after the comma.
+func TestParse_Sequence_WithBound(t *testing.T) {
+	src := `struct Msg { sequence<long, 16> data; };`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	if len(m.Structs) != 1 || len(m.Structs[0].Fields) != 1 {
+		t.Fatalf("unexpected parse result: %+v", m)
+	}
+}
+
+// TestGenerate_UnknownStructRef_Unqualified covers the final "return nil" in
+// searchStruct: an unqualified name not found in the current module's structs or
+// any sub-module falls through to the last return nil.
+func TestGenerate_UnknownStructRef_Unqualified(t *testing.T) {
+	src := `struct Pixel { Color c; };`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	code, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if !strings.Contains(code, "TODO") {
+		t.Errorf("expected TODO comment for unknown type ref, got:\n%s", code)
 	}
 }

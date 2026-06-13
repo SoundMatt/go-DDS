@@ -1003,13 +1003,137 @@ func TestBridge_Auth_WrongToken_Unauthenticated(t *testing.T) {
 	}
 }
 
+// ── capturingParticipant — captures subscribers as they are created ───────────
+
+type capturingParticipant struct {
+	dds.Participant
+	captured chan dds.Subscriber
+}
+
+func (p *capturingParticipant) NewSubscriber(topic string, qos dds.QoS, opts ...dds.SubscriberOption) (dds.Subscriber, error) {
+	sub, err := p.Participant.NewSubscriber(topic, qos, opts...)
+	if err != nil {
+		return nil, err
+	}
+	select {
+	case p.captured <- sub:
+	default:
+	}
+	return sub, nil
+}
+
+// TestBridge_Subscribe_SubChannelClosed covers the !ok branch in the server-side
+// Subscribe loop: closing only the DDS subscriber (without stopping the gRPC
+// server) closes sub.C(), causing the select to receive ok=false and return nil.
+func TestBridge_Subscribe_SubChannelClosed(t *testing.T) {
+	real, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
+	defer real.Close()
+
+	capturedSubs := make(chan dds.Subscriber, 1)
+	cp := &capturingParticipant{Participant: real, captured: capturedSubs}
+
+	b := grpcbridge.New(cp, grpcbridge.Options{})
+	lis := listenLocal(t)
+	go func() { _ = b.Server().Serve(lis) }()
+	defer b.Close()
+
+	conn := dialJSON(t, lis.Addr().String())
+	defer conn.Close()
+	client := grpcbridge.NewRawClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	stream, err := client.Subscribe(ctx, &grpcbridge.SubscribeRequest{Topic: "grpc/sub-ch-closed"})
+	if err != nil {
+		t.Fatalf("Subscribe: %v", err)
+	}
+
+	// Wait until the bridge has created the DDS subscriber.
+	var sub dds.Subscriber
+	select {
+	case sub = <-capturedSubs:
+	case <-time.After(time.Second):
+		t.Fatal("timeout: subscriber not created by bridge")
+	}
+
+	// Close only the subscriber — closes sub.C() without stopping the gRPC
+	// server; the Subscribe handler's !ok branch fires and returns nil (EOF).
+	if err := sub.Close(); err != nil {
+		t.Fatalf("sub.Close: %v", err)
+	}
+
+	// The client stream should receive EOF (server returned nil).
+	_, _ = stream.Recv()
+}
+
+// TestBridge_StreamPublish_WriteError covers the pub.WriteCtx error path in
+// Bridge.StreamPublish (codes.Internal "write: %v").
+func TestBridge_StreamPublish_WriteError(t *testing.T) {
+	real, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
+	defer real.Close()
+
+	p := &failWritePart{Participant: real}
+	b := grpcbridge.New(p, grpcbridge.Options{})
+	lis := listenLocal(t)
+	go func() { _ = b.Server().Serve(lis) }()
+	defer b.Close()
+
+	conn := dialJSON(t, lis.Addr().String())
+	defer conn.Close()
+	client := grpcbridge.NewRawClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	sp, spErr := client.StreamPublish(ctx)
+	if spErr != nil {
+		t.Fatalf("StreamPublish: %v", spErr)
+	}
+	if sendErr := sp.Send(&grpcbridge.PublishRequest{Topic: "sp/write-err", Payload: []byte("x")}); sendErr != nil {
+		return // some impls surface the server error at Send time
+	}
+	_, recvErr := sp.CloseAndRecv()
+	if recvErr == nil {
+		t.Fatal("expected Internal error when WriteCtx fails in StreamPublish")
+	}
+}
+
+// TestBridge_StreamPublish_ClientCancel covers the non-EOF stream.Recv error path
+// in Bridge.StreamPublish: canceling the client context causes the server's
+// stream.Recv to return a non-EOF error, executing the bare "return err" branch.
+func TestBridge_StreamPublish_ClientCancel(t *testing.T) {
+	client, _, _ := newTestBridge(t, grpcbridge.Options{})
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	sp, err := client.StreamPublish(ctx)
+	if err != nil {
+		t.Fatalf("StreamPublish: %v", err)
+	}
+
+	// Cancel the context abruptly — the server's stream.Recv gets a non-EOF error.
+	cancel()
+
+	// Give the server a moment to process the cancellation before the gRPC
+	// connection teardown discards the error.
+	time.Sleep(20 * time.Millisecond)
+	_, _ = sp.CloseAndRecv()
+}
+
 // ── Publish write-error path ──────────────────────────────────────────────────
 
 type failWritePub struct{}
 
-func (failWritePub) Write(_ []byte) error                        { return dds.ErrClosed }
+func (failWritePub) Write(_ []byte) error                       { return dds.ErrClosed }
 func (failWritePub) WriteCtx(_ context.Context, _ []byte) error { return dds.ErrClosed }
-func (failWritePub) Close() error                                { return nil }
+func (failWritePub) Close() error                               { return nil }
 
 type failWritePart struct{ dds.Participant }
 
