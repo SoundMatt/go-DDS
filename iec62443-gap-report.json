@@ -1,0 +1,102 @@
+{
+  "schemaVersion": "1.9",
+  "kind": "gap-report",
+  "tool": "go-FuSa",
+  "toolVersion": "0.30.0",
+  "language": "go",
+  "generatedAt": "2026-06-13T19:30:18.612143Z",
+  "projectRoot": "go-DDS",
+  "standard": "iec62443",
+  "objectives": [
+    {
+      "id": "IEC62443-CR-1.1",
+      "title": "Security Level declared (.fusa-iec62443.json with target_sl)",
+      "clause": "CR 1.1",
+      "status": "satisfied"
+    },
+    {
+      "id": "IEC62443-CR-2.1",
+      "title": "Check report present (authorization enforcement evidence)",
+      "clause": "CR 2.1",
+      "status": "satisfied"
+    },
+    {
+      "id": "IEC62443-CR-3.4",
+      "title": "Software integrity tracked (sbom.json present)",
+      "clause": "CR 3.4",
+      "status": "satisfied"
+    },
+    {
+      "id": "IEC62443-CR-4.3",
+      "title": "Cryptographic integrity recorded (provenance.json present)",
+      "clause": "CR 4.3",
+      "status": "satisfied"
+    },
+    {
+      "id": "IEC62443-CR-6.1",
+      "title": "Audit log accessible (check-report.json present)",
+      "clause": "CR 6.1",
+      "status": "satisfied"
+    },
+    {
+      "id": "IEC62443-CR-6.2",
+      "title": "Vulnerability management policy (SECURITY.md present)",
+      "clause": "CR 6.2",
+      "status": "gap",
+      "findings": [
+        "SECURITY.md not found — run 'gofusa — create SECURITY.md documenting the vulnerability disclosure policy'"
+      ]
+    },
+    {
+      "id": "IEC62443-CR-1.4",
+      "title": "Software update documentation (provenance.json with builder field)",
+      "clause": "CR 1.4",
+      "status": "gap",
+      "findings": [
+        "provenance.json missing builder field — run 'gofusa release' from CI"
+      ]
+    },
+    {
+      "id": "IEC62443-CR-3.1",
+      "title": "Security hardening evidence (cyber-report.json present)",
+      "clause": "CR 3.1",
+      "status": "gap",
+      "findings": [
+        "cyber-report.json not found — run 'gofusa cyber --output cyber-report.json'"
+      ]
+    },
+    {
+      "id": "IEC62443-CR-6.2.1",
+      "title": "Cyber incident response plan present",
+      "clause": "CR 6.2.1",
+      "status": "gap",
+      "findings": [
+        "INCIDENT-RESPONSE.md not found — run 'gofusa — create INCIDENT-RESPONSE.md or set incident_resp_doc in .fusa-iec62443.json'"
+      ]
+    },
+    {
+      "id": "IEC62443-CR-7.3",
+      "title": "Safety case documented (safety-case.json present)",
+      "clause": "CR 7.3",
+      "status": "satisfied"
+    },
+    {
+      "id": "IEC62443-CR-7.6",
+      "title": "Network segmentation documented (boundary.mermaid present)",
+      "clause": "CR 7.6",
+      "status": "partial"
+    },
+    {
+      "id": "IEC62443-CR-2.6",
+      "title": "Full evidence bundle produced (audit-pack.zip present)",
+      "clause": "CR 2.6",
+      "status": "partial"
+    }
+  ],
+  "summary": {
+    "total": 12,
+    "satisfied": 6,
+    "partial": 2,
+    "gaps": 4
+  }
+}
