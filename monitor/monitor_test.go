@@ -716,3 +716,63 @@ func TestMonitor_Health_NilProvider(t *testing.T) {
 		t.Fatalf("expected 501 for nil hp, got %d", resp.StatusCode)
 	}
 }
+
+// TestMonitor_SSE_ContextCancelled covers the `case <-r.Context().Done(): return`
+// branch in handleSSE. When the client cancels its request context, the SSE
+// goroutine must exit via that branch.
+func TestMonitor_SSE_ContextCancelled(t *testing.T) {
+	p := newMockParticipant(t)
+	defer p.Close()
+	mon, err := monitor.New(p, monitor.Options{Addr: "127.0.0.1:0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mon.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	resp, err := get(ctx, "http://"+mon.Addr()+"/events")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	// Give the SSE handler time to register and block on the select.
+	time.Sleep(30 * time.Millisecond)
+
+	// Cancel the request context — the handler must take the Done path.
+	cancel()
+	time.Sleep(30 * time.Millisecond)
+}
+
+// TestMonitor_SSE_SlowClientDrop covers the `default: // slow client; drop`
+// branch in broadcast. By not consuming the SSE response body, the HTTP write
+// eventually blocks; publishing > 64 messages rapidly then fills the client
+// channel and forces the drop path.
+func TestMonitor_SSE_SlowClientDrop(t *testing.T) {
+	p := newMockParticipant(t)
+	defer p.Close()
+	mon, err := monitor.New(p, monitor.Options{Addr: "127.0.0.1:0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mon.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Connect to SSE but do NOT read the body so HTTP writes back-pressure.
+	resp, err := get(ctx, "http://"+mon.Addr()+"/events")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	// Wait for the handler to register.
+	time.Sleep(30 * time.Millisecond)
+
+	// Rapidly publish 70 samples — more than the ch capacity of 64.
+	for i := 0; i < 70; i++ {
+		mon.Publish(dds.Sample{Topic: "drop/test", Payload: []byte("x")})
+	}
+	time.Sleep(50 * time.Millisecond)
+}
