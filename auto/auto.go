@@ -36,6 +36,13 @@ import (
 	"github.com/SoundMatt/go-DDS/shmem"
 )
 
+// newShmem and newRTPS are package-level vars so test code can inject
+// failing factories to cover error paths without OS-level manipulation.
+var (
+	newShmem = func(d dds.Domain) (dds.Participant, error) { return shmem.New(d) }
+	newRTPS  = func(d dds.Domain, opts ...rtps.Option) (dds.Participant, error) { return rtps.New(d, opts...) }
+)
+
 // Transport identifies which DDS transport to use.
 type Transport int
 
@@ -96,24 +103,24 @@ func NewParticipant(domain dds.Domain, opts ...Option) (dds.Participant, error) 
 
 	switch c.prefer {
 	case TransportShmem:
-		p, err := shmem.New(domain)
+		p, err := newShmem(domain)
 		if err != nil {
 			return nil, fmt.Errorf("auto: shmem: %w", err)
 		}
 		return p, nil
 
 	case TransportRTPS:
-		p, err := rtps.New(domain, c.rtpsOpts...)
+		p, err := newRTPS(domain, c.rtpsOpts...)
 		if err != nil {
 			return nil, fmt.Errorf("auto: rtps: %w", err)
 		}
 		return p, nil
 
 	default: // TransportAuto
-		if p, err := shmem.New(domain); err == nil {
+		if p, err := newShmem(domain); err == nil {
 			return p, nil
 		}
-		p, err := rtps.New(domain, c.rtpsOpts...)
+		p, err := newRTPS(domain, c.rtpsOpts...)
 		if err != nil {
 			return nil, fmt.Errorf("auto: %w", err)
 		}
