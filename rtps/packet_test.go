@@ -2381,3 +2381,205 @@ func TestParseInfoTS_TooShort(t *testing.T) {
 		t.Fatal("expected false for buffer shorter than 8 bytes")
 	}
 }
+
+// ── extractDiscoveryToken ─────────────────────────────────────────────────────
+
+func TestExtractDiscoveryToken_Found(t *testing.T) {
+	// Build a PL_CDR_LE payload that contains pidDiscoveryToken.
+	enc := newPLCDREncoder()
+	enc.addBytes(pidDiscoveryToken, []byte("secret-token"))
+	payload := enc.finish()
+
+	got := extractDiscoveryToken(payload)
+	if string(got) != "secret-token" {
+		t.Fatalf("expected %q, got %q", "secret-token", got)
+	}
+}
+
+func TestExtractDiscoveryToken_NotFound(t *testing.T) {
+	// PL_CDR_LE payload with no pidDiscoveryToken PID.
+	enc := newPLCDREncoder()
+	enc.addUint32(pidProtocolVersion, 0x0203)
+	payload := enc.finish()
+
+	if got := extractDiscoveryToken(payload); got != nil {
+		t.Fatalf("expected nil, got %v", got)
+	}
+}
+
+func TestExtractDiscoveryToken_InvalidPayload(t *testing.T) {
+	// Too short to be a valid PL_CDR_LE header (< 4 bytes).
+	if got := extractDiscoveryToken([]byte{0x00, 0x01}); got != nil {
+		t.Fatalf("expected nil for invalid payload, got %v", got)
+	}
+}
+
+// ── locatorFromUDP IPv6 path ──────────────────────────────────────────────────
+
+func TestLocatorFromUDP_IPv6(t *testing.T) {
+	addr := &net.UDPAddr{IP: net.ParseIP("::1"), Port: 7400}
+	l := locatorFromUDP(addr, 7400)
+	if l.Kind != LocatorKindUDPv6 {
+		t.Fatalf("expected LocatorKindUDPv6, got %d", l.Kind)
+	}
+}
+
+func TestLocatorFromUDPv6_NilIP(t *testing.T) {
+	addr := &net.UDPAddr{IP: nil, Port: 7400}
+	l := locatorFromUDPv6(addr, 7400)
+	if l.Kind != LocatorKindUDPv6 {
+		t.Fatalf("expected LocatorKindUDPv6, got %d", l.Kind)
+	}
+	// When IP is nil, Address should be zero (IPv6zero).
+	var zero [16]byte
+	if l.Address != zero {
+		t.Fatalf("expected zero address for nil IP, got %v", l.Address)
+	}
+}
+
+// makeMinimalSPDP builds an spdpService with a skeleton participant —
+// no network sockets, no goroutines. Safe to use in tests that check
+// storePeer / evictExpired without touching the wire.
+func makeMinimalSPDP() (*participant, *spdpService) {
+	sedpSvc := &sedpService{
+		localWriters:     make(map[EntityId]*endpointInfo),
+		localReaders:     make(map[EntityId]*endpointInfo),
+		remoteWriters:    make(map[GUID]*endpointInfo),
+		remoteReaders:    make(map[GUID]*endpointInfo),
+		remoteReaderLocs: make(map[GUID]Locator),
+		stop:             make(chan struct{}),
+	}
+	part := &participant{
+		writerLocators: make(map[GUID]Locator),
+	}
+	sedpSvc.p = part
+	part.sedp = sedpSvc
+	spdp := newSPDPService(part)
+	part.spdp = spdp
+	return part, spdp
+}
+
+// ── storePeer livelinessCb ────────────────────────────────────────────────────
+
+func TestStorePeer_LivelinessCallback_NewPeer(t *testing.T) {
+	part, spdp := makeMinimalSPDP()
+
+	gained := make(chan struct{}, 1)
+	part.livelinessCb = func(_ dds.GUID, event dds.LivelinessEvent) {
+		if event == dds.LivelinessGained {
+			gained <- struct{}{}
+		}
+	}
+
+	proxy := &participantProxy{
+		guid:          GUID{Prefix: GuidPrefix{0x01, 0x02, 0x03}},
+		leaseDuration: 10 * time.Second,
+	}
+	spdp.storePeer(proxy)
+
+	select {
+	case <-gained:
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("livelinessCb not called for new peer")
+	}
+}
+
+func TestStorePeer_LivelinessCallback_ExistingPeer(t *testing.T) {
+	part, spdp := makeMinimalSPDP()
+
+	var calls int
+	part.livelinessCb = func(_ dds.GUID, _ dds.LivelinessEvent) { calls++ }
+
+	proxy := &participantProxy{
+		guid:          GUID{Prefix: GuidPrefix{0x04, 0x05, 0x06}},
+		leaseDuration: 10 * time.Second,
+	}
+	spdp.storePeer(proxy)
+	spdp.storePeer(proxy) // second call: peer already exists → no callback
+	if calls != 1 {
+		t.Fatalf("expected 1 liveliness callback for new peer, got %d", calls)
+	}
+}
+
+// ── evictExpired livelinessCb ─────────────────────────────────────────────────
+
+func TestEvictExpired_LivelinessCallback(t *testing.T) {
+	part, spdp := makeMinimalSPDP()
+
+	lost := make(chan struct{}, 1)
+	part.livelinessCb = func(_ dds.GUID, event dds.LivelinessEvent) {
+		if event == dds.LivelinessLost {
+			lost <- struct{}{}
+		}
+	}
+
+	// Insert a peer with an already-expired lease.
+	proxy := &participantProxy{
+		guid:          GUID{Prefix: GuidPrefix{0x07, 0x08, 0x09}},
+		leaseDuration: time.Nanosecond,
+		lastSeen:      time.Now().Add(-time.Hour),
+	}
+	spdp.mu.Lock()
+	spdp.peers[proxy.guid.Prefix] = proxy
+	spdp.mu.Unlock()
+
+	spdp.evictExpired()
+
+	select {
+	case <-lost:
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("livelinessCb not called for evicted peer")
+	}
+}
+
+func TestStorePeer_ZeroLeaseDuration(t *testing.T) {
+	// When leaseDuration==0 storePeer sets it to defaultLeaseDuration.
+	_, spdp := makeMinimalSPDP()
+	proxy := &participantProxy{
+		guid: GUID{Prefix: GuidPrefix{0x0a, 0x0b, 0x0c}},
+		// leaseDuration intentionally left at zero
+	}
+	spdp.storePeer(proxy)
+	if proxy.leaseDuration != defaultLeaseDuration {
+		t.Fatalf("expected leaseDuration=%v, got %v", defaultLeaseDuration, proxy.leaseDuration)
+	}
+}
+
+func TestEvictExpired_ZeroLeaseDuration(t *testing.T) {
+	// A peer with leaseDuration==0 should use defaultLeaseDuration for eviction.
+	// Insert a peer that is far past even the default lease.
+	_, spdp := makeMinimalSPDP()
+	proxy := &participantProxy{
+		guid:          GUID{Prefix: GuidPrefix{0x0d, 0x0e, 0x0f}},
+		leaseDuration: 0, // zero → evictExpired uses defaultLeaseDuration
+		lastSeen:      time.Now().Add(-time.Hour),
+	}
+	spdp.mu.Lock()
+	spdp.peers[proxy.guid.Prefix] = proxy
+	spdp.mu.Unlock()
+
+	spdp.evictExpired()
+
+	// Peer should be gone.
+	spdp.mu.RLock()
+	_, ok := spdp.peers[proxy.guid.Prefix]
+	spdp.mu.RUnlock()
+	if ok {
+		t.Fatal("peer with zero leaseDuration should have been evicted")
+	}
+}
+
+func TestAnnounceLoop_WithJitter(t *testing.T) {
+	// Start a participant with a very short SPDP interval and non-zero jitter
+	// so that the jitter branch in announceLoop fires at least once.
+	p, err := newParticipant(dds.Domain(99),
+		WithSPDPInterval(50*time.Millisecond),
+		WithSPDPJitter(10*time.Millisecond),
+	)
+	if err != nil {
+		t.Skipf("newParticipant: %v — socket creation unavailable", err)
+	}
+	// Wait long enough for the ticker to fire once (50ms interval + up to 10ms jitter).
+	time.Sleep(100 * time.Millisecond)
+	_ = p.Close()
+}
