@@ -89,6 +89,7 @@ history expansion on `%`, `!`, and `(`.
 | v0.27.0  | mock/ 96.4%→98.0%; bridge/wan 93.6%→98.4%; testutil/scenario/ 100% |
 | v0.28.0  | shmem/ 93.3%→95.2%; monitor/ 90.5%→91.0% |
 | v0.29.0  | go-FuSa v0.25.1→v0.30.0 upgrade |
+| v0.30.0  | idl/roundtrip 85.3%→96.0%; bridge/grpc 91.1%→92.8%; Docker golang:1.26 + alpine:3.21 |
 | **main** | **next coverage target** |
 
 ## CI matrix

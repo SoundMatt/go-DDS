@@ -1,7 +1,7 @@
 # Multi-stage build for go-DDS quickstart binaries.
 # All three targets (monitor, pub, sub) are built from a single builder stage.
 
-FROM golang:1.25-alpine AS builder
+FROM golang:1.26-alpine AS builder
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -11,7 +11,7 @@ RUN CGO_ENABLED=0 go build -trimpath -o /bin/pub     ./examples/quickstart/pub
 RUN CGO_ENABLED=0 go build -trimpath -o /bin/sub     ./examples/quickstart/sub
 
 # ── monitor image ──────────────────────────────────────────────────────────────
-FROM alpine:3.20 AS monitor
+FROM alpine:3.21 AS monitor
 RUN apk add --no-cache ca-certificates
 COPY --from=builder /bin/monitor /usr/local/bin/monitor
 LABEL org.opencontainers.image.title="go-DDS monitor" \
@@ -22,7 +22,7 @@ ENV MONITOR_ADDR=:8080
 ENTRYPOINT ["monitor"]
 
 # ── publisher image ────────────────────────────────────────────────────────────
-FROM alpine:3.20 AS pub
+FROM alpine:3.21 AS pub
 RUN apk add --no-cache ca-certificates
 COPY --from=builder /bin/pub /usr/local/bin/pub
 LABEL org.opencontainers.image.title="go-DDS publisher" \
@@ -31,7 +31,7 @@ LABEL org.opencontainers.image.title="go-DDS publisher" \
 ENTRYPOINT ["pub"]
 
 # ── subscriber image ───────────────────────────────────────────────────────────
-FROM alpine:3.20 AS sub
+FROM alpine:3.21 AS sub
 RUN apk add --no-cache ca-certificates
 COPY --from=builder /bin/sub /usr/local/bin/sub
 LABEL org.opencontainers.image.title="go-DDS subscriber" \

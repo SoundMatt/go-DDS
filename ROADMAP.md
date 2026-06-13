@@ -75,6 +75,7 @@ API parity does not.
 | v0.27.0 | — | mock/ 96.4%→98.0%; testutil/scenario/ 86.7%→100%; bridge/wan 93.6%→99.2% ✅ |
 | v0.28.0 | — | shmem/ 93.3%→95.2%; monitor/ 90.5%→91.0% ✅ |
 | v0.29.0 | — | go-FuSa v0.25.1→v0.30.0 upgrade ✅ |
+| v0.30.0 | — | idl/roundtrip 85.3%→96.0%; bridge/grpc 91.1%→92.8%; Docker golang:1.26 + alpine:3.21 ✅ |
 | **main** | — | **next coverage target** |
 
 ### Released — v0.1 – v0.8
@@ -113,6 +114,7 @@ API parity does not.
 - **v0.27.0** — `mock/` 96.4%→98.0% (NewLoaningPublisher publisher error + non-mock participant; TryRead closed-subscriber); `testutil/scenario/` 86.7%→100% (publishStep write error via MaxSampleSize; expectStep timeout + subscriber-closed via pre-closed-channel participant wrapper; waitStep/expectNoneStep ctx-cancel-during-wait; expectNoneStep subscriber error); `bridge/wan/` 93.6%→99.2% (Connect multi-topic cleanup; ErrFrameTooLarge/body-read-error/invalid-JSON via server-side tests; sendLoop writeFrame error + subscriber-channel-closed + writeFrame header error via `net.Pipe` internal test)
 - **v0.28.0** — `shmem/` 93.3%→95.2% (deliverSub resetDeadline call; TryRead closed-channel; "#" wildcard match; pattern-longer-than-topic mismatch; NewLoaningPublisher publisher-error path); `monitor/` 90.5%→91.0% (WatchSafety events-channel-closed; handleHealth nil-hp 501 path)
 - **v0.29.0** — go-FuSa v0.25.1→v0.30.0 upgrade; `gofusa check ./...` clean at new version
+- **v0.30.0** — `idl/roundtrip` 85.3%→96.0% (HeaderCodec/TelemetryCodec Unmarshal truncated-field error paths: string, int64, int32, float64 array, float32, bool, sequence length, sequence element); `bridge/grpc` 91.1%→92.8% (Subscribe channel-close !ok branch; Transform error drops-and-continues; StreamPublish empty-topic-in-stream; Publish/Subscribe closed-participant Internal error); Docker golang:1.25→1.26 + alpine:3.20→3.21
 
 ---
 

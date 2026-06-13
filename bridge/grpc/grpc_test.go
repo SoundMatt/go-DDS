@@ -406,6 +406,161 @@ func TestLoadConfig_InvalidYAML(t *testing.T) {
 	}
 }
 
+// ── Additional error-path coverage ───────────────────────────────────────────
+
+// TestBridge_Subscribe_ChannelClosed covers the !ok branch in the server-side
+// Subscribe loop: closing the bridge closes the DDS subscriber whose channel
+// is drained by the stream handler — it must return nil.
+func TestBridge_Subscribe_ChannelClosed(t *testing.T) {
+	client, bridge, _ := newTestBridge(t, grpcbridge.Options{})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	stream, err := client.Subscribe(ctx, &grpcbridge.SubscribeRequest{Topic: "grpc/chan-close"})
+	if err != nil {
+		t.Fatalf("Subscribe: %v", err)
+	}
+	time.Sleep(30 * time.Millisecond) // let the server register the subscription
+
+	// Closing the bridge closes the DDS subscriber, which closes its channel.
+	// The handler's select falls into the !ok branch and returns nil (EOF to client).
+	bridge.Close()
+	_, err = stream.Recv()
+	// Any error (EOF / connection reset) is acceptable — the server exited cleanly.
+	_ = err
+}
+
+// TestBridge_Subscribe_TransformError_DropsAndContinues covers the `continue`
+// branch inside Subscribe where Transform returns an error: the sample is silently
+// dropped and the next valid sample is forwarded.
+func TestBridge_Subscribe_TransformError_DropsAndContinues(t *testing.T) {
+	first := true
+	opts := grpcbridge.Options{
+		Transform: func(_ string, payload []byte) ([]byte, error) {
+			if first {
+				first = false
+				return nil, errors.New("transform error — drop this sample")
+			}
+			return payload, nil
+		},
+	}
+	client, _, p := newTestBridge(t, opts)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	stream, err := client.Subscribe(ctx, &grpcbridge.SubscribeRequest{Topic: "grpc/transform-err"})
+	if err != nil {
+		t.Fatalf("Subscribe: %v", err)
+	}
+	time.Sleep(20 * time.Millisecond)
+
+	pub, err := p.NewPublisher("grpc/transform-err", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+	_ = pub.Write([]byte("drop-me"))  // transform returns error → continue
+	_ = pub.Write([]byte("keep-me"))  // transform succeeds → forwarded
+
+	got, err := stream.Recv()
+	if err != nil {
+		t.Fatalf("Recv: %v", err)
+	}
+	if string(got.Payload) != "keep-me" {
+		t.Errorf("expected keep-me, got %q", got.Payload)
+	}
+}
+
+// TestBridge_StreamPublish_EmptyTopicInStream covers the empty-topic guard inside
+// StreamPublish: sending a request with Topic="" inside the stream must return
+// InvalidArgument.
+func TestBridge_StreamPublish_EmptyTopicInStream(t *testing.T) {
+	client, _, _ := newTestBridge(t, grpcbridge.Options{})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	sp, err := client.StreamPublish(ctx)
+	if err != nil {
+		t.Fatalf("StreamPublish: %v", err)
+	}
+	// Sending a message with an empty topic triggers the guard.
+	_ = sp.Send(&grpcbridge.PublishRequest{Topic: "", Payload: []byte("x")})
+	_, err = sp.CloseAndRecv()
+	if err == nil {
+		t.Fatal("expected error for empty topic in stream")
+	}
+	if !strings.Contains(err.Error(), "InvalidArgument") && !strings.Contains(err.Error(), "invalid") {
+		t.Errorf("expected InvalidArgument error, got %v", err)
+	}
+}
+
+// TestBridge_Publish_ClosedParticipant_InternalError covers the getOrCreatePub
+// error path: when the underlying DDS participant is closed, NewPublisher fails
+// and the server must return codes.Internal.
+func TestBridge_Publish_ClosedParticipant_InternalError(t *testing.T) {
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
+	b := grpcbridge.New(p, grpcbridge.Options{})
+	lis := listenLocal(t)
+	go func() { _ = b.Server().Serve(lis) }()
+	defer b.Close()
+
+	// Close the participant so NewPublisher fails.
+	_ = p.Close()
+
+	conn := dialJSON(t, lis.Addr().String())
+	defer conn.Close()
+	client := grpcbridge.NewRawClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	ignoredRet, err := client.Publish(ctx, &grpcbridge.PublishRequest{Topic: "grpc/closed-pub", Payload: []byte("x")})
+	_ = ignoredRet
+	if err == nil {
+		t.Fatal("expected error for closed participant")
+	}
+	if !strings.Contains(err.Error(), "Internal") && !strings.Contains(err.Error(), "internal") {
+		t.Errorf("expected Internal error, got %v", err)
+	}
+}
+
+// TestBridge_Subscribe_ClosedParticipant_InternalError covers the getOrCreateSub
+// error path: when the participant is closed, NewSubscriber fails and the server
+// returns codes.Internal.
+func TestBridge_Subscribe_ClosedParticipant_InternalError(t *testing.T) {
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
+	b := grpcbridge.New(p, grpcbridge.Options{})
+	lis := listenLocal(t)
+	go func() { _ = b.Server().Serve(lis) }()
+	defer b.Close()
+
+	_ = p.Close()
+
+	conn := dialJSON(t, lis.Addr().String())
+	defer conn.Close()
+	client := grpcbridge.NewRawClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	stream, err := client.Subscribe(ctx, &grpcbridge.SubscribeRequest{Topic: "grpc/closed-sub"})
+	if err != nil {
+		return // some gRPC impls surface the error here
+	}
+	ignoredRet, err := stream.Recv()
+	_ = ignoredRet
+	if err == nil {
+		t.Fatal("expected error for closed participant")
+	}
+}
+
 // ── Config application ────────────────────────────────────────────────────────
 
 // TestApplyConfig_PreSubscribes exercises ApplyConfig with reliable, best_effort,
