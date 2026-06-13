@@ -32,7 +32,7 @@ func newErrRW() *errResponseWriter {
 	return &errResponseWriter{header: make(http.Header)}
 }
 
-func (w *errResponseWriter) Header() http.Header      { return w.header }
+func (w *errResponseWriter) Header() http.Header         { return w.header }
 func (w *errResponseWriter) Write(_ []byte) (int, error) { return 0, errors.New("forced write error") }
 func (w *errResponseWriter) WriteHeader(code int)        { w.code = code }
 
