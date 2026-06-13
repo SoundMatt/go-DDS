@@ -148,6 +148,7 @@ func TestSafetyEventKind_String(t *testing.T) {
 		{safety.SafetyEventStaleSample, "stale_sample"},
 		{safety.SafetyEventHeaderTooShort, "header_too_short"},
 		{safety.SafetyEventSchemaViolation, "schema_violation"},
+		{safety.SafetyEventKind(9999), "unknown"}, // default branch
 	}
 	for _, tc := range cases {
 		if got := tc.k.String(); got != tc.want {
