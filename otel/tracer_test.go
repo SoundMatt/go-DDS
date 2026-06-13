@@ -5,6 +5,9 @@
 
 package otel_test
 
+//fusa:test REQ-OTEL-001
+//fusa:test REQ-OTEL-002
+
 import (
 	"context"
 	"testing"

@@ -7,6 +7,8 @@
 
 package cyclone_test
 
+//fusa:test REQ-CYCLONE-001
+
 import (
 	"testing"
 	"time"

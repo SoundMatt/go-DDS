@@ -5,6 +5,12 @@
 
 package testutil_test
 
+//fusa:test REQ-TESTUTIL-001
+//fusa:test REQ-TESTUTIL-002
+//fusa:test REQ-TESTUTIL-003
+//fusa:test REQ-TESTUTIL-004
+//fusa:test REQ-TESTUTIL-005
+
 import (
 	"fmt"
 	"os"

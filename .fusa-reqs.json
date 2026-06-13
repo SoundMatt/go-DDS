@@ -1951,6 +1951,126 @@
       "standard": "iso26262",
       "level": "ASIL-A",
       "asil": "ASIL-A"
+    },
+    {
+      "id": "REQ-OTEL-001",
+      "title": "OTel tracer span emission",
+      "text": "NewTracer shall wrap an OpenTelemetry TracerProvider as a dds.Tracer; calls to Start shall emit a span via the provider's tracer using the library instrumentation scope.",
+      "standard": "iso26262",
+      "level": "CAL-1",
+      "asil": "CAL-1"
+    },
+    {
+      "id": "REQ-OTEL-002",
+      "title": "OTel span attribute forwarding",
+      "text": "dds.SpanAttribute key-value pairs passed to Start shall be forwarded to the underlying OpenTelemetry span as string attributes.",
+      "standard": "iso26262",
+      "level": "CAL-1",
+      "asil": "CAL-1"
+    },
+    {
+      "id": "REQ-CYCLONE-001",
+      "title": "CycloneDDS stub error",
+      "text": "When built without the cyclone build tag, New and NewWithOptions shall return a descriptive error explaining how to enable the CGo implementation.",
+      "standard": "iso26262",
+      "level": "ASIL-A",
+      "asil": "ASIL-A"
+    },
+    {
+      "id": "REQ-CYCLONE-002",
+      "title": "CycloneDDS participant interface",
+      "text": "When built with -tags cyclone, the CycloneDDS participant shall implement the dds.Participant interface including NewPublisher, NewSubscriber, Close, Domain, and discovery/topic metrics.",
+      "standard": "iso26262",
+      "level": "ASIL-A",
+      "asil": "ASIL-A"
+    },
+    {
+      "id": "REQ-TESTUTIL-001",
+      "title": "NewParticipant cleanup registration",
+      "text": "NewParticipant shall create a mock DDS participant and register t.Cleanup to close it when the test ends.",
+      "standard": "iso26262",
+      "level": "CAL-1",
+      "asil": "CAL-1"
+    },
+    {
+      "id": "REQ-TESTUTIL-002",
+      "title": "AssertSample timeout and match",
+      "text": "AssertSample shall block until a sample arrives matching the expected payload and call t.Fatal on timeout or payload mismatch.",
+      "standard": "iso26262",
+      "level": "CAL-1",
+      "asil": "CAL-1"
+    },
+    {
+      "id": "REQ-TESTUTIL-003",
+      "title": "AssertNoSample silence assertion",
+      "text": "AssertNoSample shall call t.Fatal if any sample arrives on the subscriber within the timeout.",
+      "standard": "iso26262",
+      "level": "CAL-1",
+      "asil": "CAL-1"
+    },
+    {
+      "id": "REQ-TESTUTIL-004",
+      "title": "BurstPublish N writes",
+      "text": "BurstPublish shall write n copies of the payload to the publisher and return the first write error encountered.",
+      "standard": "iso26262",
+      "level": "CAL-1",
+      "asil": "CAL-1"
+    },
+    {
+      "id": "REQ-TESTUTIL-005",
+      "title": "TopicRecorder sample capture",
+      "text": "TopicRecorder shall capture all samples delivered to a subscriber concurrency-safely; WaitFor shall block until the target count is reached or timeout elapses.",
+      "standard": "iso26262",
+      "level": "CAL-1",
+      "asil": "CAL-1"
+    },
+    {
+      "id": "REQ-SCENARIO-001",
+      "title": "Scenario Run sequential execution",
+      "text": "Run shall execute the given Steps in sequence and return the first non-nil error.",
+      "standard": "iso26262",
+      "level": "CAL-1",
+      "asil": "CAL-1"
+    },
+    {
+      "id": "REQ-SCENARIO-002",
+      "title": "Scenario Publish step",
+      "text": "The Publish step shall create a publisher for the given topic and write the payload.",
+      "standard": "iso26262",
+      "level": "CAL-1",
+      "asil": "CAL-1"
+    },
+    {
+      "id": "REQ-SCENARIO-003",
+      "title": "Scenario Expect step",
+      "text": "The Expect step shall subscribe to the given topic and assert a sample satisfying the match predicate arrives within the timeout.",
+      "standard": "iso26262",
+      "level": "CAL-1",
+      "asil": "CAL-1"
+    },
+    {
+      "id": "REQ-SCENARIO-004",
+      "title": "Scenario ExpectNone step",
+      "text": "The ExpectNone step shall assert that no sample arrives on the given topic within the timeout.",
+      "standard": "iso26262",
+      "level": "CAL-1",
+      "asil": "CAL-1"
+    },
+    {
+      "id": "REQ-SCENARIO-005",
+      "title": "Scenario Wait step",
+      "text": "The Wait step shall pause scenario execution for the given duration, respecting context cancellation.",
+      "standard": "iso26262",
+      "level": "CAL-1",
+      "asil": "CAL-1"
+    },
+    {
+      "id": "REQ-SCENARIO-006",
+      "title": "Scenario Assert step",
+      "text": "The Assert step shall call an arbitrary user-supplied function and propagate its error to Run.",
+      "standard": "iso26262",
+      "level": "CAL-1",
+      "asil": "CAL-1"
     }
   ]
 }

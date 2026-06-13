@@ -17,6 +17,8 @@
 //	go build -tags cyclone ./...
 package cyclone
 
+//fusa:req REQ-CYCLONE-001
+
 import (
 	"errors"
 	"time"

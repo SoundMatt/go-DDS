@@ -8,6 +8,12 @@ package scenario_test
 //fusa:test REQ-LOAN-001
 //fusa:test REQ-LOAN-002
 //fusa:test REQ-LOAN-003
+//fusa:test REQ-SCENARIO-001
+//fusa:test REQ-SCENARIO-002
+//fusa:test REQ-SCENARIO-003
+//fusa:test REQ-SCENARIO-004
+//fusa:test REQ-SCENARIO-005
+//fusa:test REQ-SCENARIO-006
 
 import (
 	"context"
