@@ -5,19 +5,40 @@ Local path: `/Users/matt/Documents/Coding/SoundMatt/go-DDS`
 
 ## Project overview
 
-A generic Go DDS (Data Distribution Service) pub/sub library.  
-Pure-Go interface (`dds` package) with swappable backends:
+A certified, multi-industry Go DDS (Data Distribution Service) pub/sub library targeting automotive, aerospace, medical, industrial, robotics, and cloud deployments.  
+Pure-Go interface (`dds` package) with swappable backends and transports:
 
-| Package      | What it is                                        |
+| Package         | What it is                                                    |
 |---|---|
-| `.`          | `dds` — interfaces, QoS, WaitSet, sentinel errors |
-| `mock/`      | In-process broker, zero deps, use for unit tests  |
-| `rtps/`      | Pure-Go RTPS/UDP (no CGo)                         |
-| `cyclone/`   | CycloneDDS CGo (`-tags cyclone`)                  |
-| `security/`  | NullPlugin, HMAC-SHA-256, AES-256-GCM             |
-| `interop/`   | Wire-compat tests vs CycloneDDS (`-tags interop`) |
-| `monitor/`   | Real-time web monitor (SSE, no external deps)     |
-| `tsn/`       | TSN stream model (planned)                        |
+| `.`             | `dds` — interfaces, QoS, WaitSet, sentinel errors             |
+| `mock/`         | In-process broker, zero deps, use for unit tests              |
+| `rtps/`         | Pure-Go RTPS/UDP (no CGo)                                     |
+| `cyclone/`      | CycloneDDS CGo (`-tags cyclone`)                              |
+| `shmem/`        | Shared-memory transport (zero-copy, same-host)                |
+| `auto/`         | Automatic transport selection (shmem → RTPS fallback)         |
+| `security/`     | NullPlugin, HMAC-SHA-256, AES-256-GCM, CertPlugin             |
+| `interop/`      | Wire-compat tests vs CycloneDDS (`-tags interop`)             |
+| `monitor/`      | Real-time web monitor (SSE, no external deps)                 |
+| `tsn/`          | TSN stream model (TAPRIO, SO_TXTIME, AFDX Virtual Links)      |
+| `bridge/`       | Protocol bridges: gRPC, REST, MQTT, WAN, domain, grpc         |
+| `rpc/`          | Request-reply (Requester/Replier) over DDS topics             |
+| `otel/`         | OpenTelemetry tracing adapter                                 |
+| `idl/`          | IDL parser + Go code generator (structs, enums, @key)         |
+| `cdr/`          | CDR/XCDR1 encode/decode                                       |
+| `xtypes/`       | DDS-XTypes dynamic data, TypeRegistry, compatibility check    |
+| `safety/`       | E2E protection, RateMonitor, SafetyEvent, schema validation   |
+| `admin/`        | HTTP admin API                                                |
+| `config/`       | YAML/JSON participant configuration                           |
+| `pool/`         | BytePool for zero-allocation loaned samples                   |
+| `record/`       | Topic recorder and replay service                             |
+| `services/`     | RecorderService, ReplayService, MonitorService                |
+| `testutil/`     | Test harnesses: AssertSample, TopicRecorder, BurstPublish     |
+| `testutil/scenario` | Declarative scenario test runner                          |
+
+**Roadmap transports (planned):** TCP/TLS · DTLS · QUIC · WebSocket  
+**Roadmap integrations (planned):** ROS 2 rmw · Zenoh · OPC UA · SOME/IP · Prometheus  
+**Roadmap platforms (planned):** RTOS/bare-metal · WebAssembly · Android/iOS  
+**Roadmap certifications (planned):** ASIL-D · DO-178C DAL-A · IEC 62304 · IEC 62443 · FACE TS
 
 ## Per-PR checklist
 

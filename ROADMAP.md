@@ -76,6 +76,13 @@ API parity does not.
 | v0.28.0 | — | shmem/ 93.3%→95.2%; monitor/ 90.5%→91.0% ✅ |
 | v0.29.0 | — | go-FuSa v0.25.1→v0.30.0 upgrade ✅ |
 | **main** | — | **next coverage target** |
+| v1.0 | 14 | TCP/TLS + DTLS transport completeness |
+| v1.1 | 15 | Cloud-native runtime (Prometheus, K8s, NAT traversal) |
+| v1.2 | 16 | QUIC + WebSocket transports |
+| v1.3 | 17 | Robotics (ROS 2 rmw, Zenoh federation) |
+| v1.4 | 18 | Aerospace (DDS-FACE, DO-178C DAL-A, ARINC 664) |
+| v1.5 | 19 | Platform (RTOS/bare-metal, WebAssembly) |
+| v1.6 | 20 | Certification uplift (ASIL-D, IEC 62304, IEC 62443) |
 
 ### Released — v0.1 – v0.8
 
@@ -145,6 +152,23 @@ API parity does not.
 
 - MQTT bridge ✅
 - TSN stream model ✅
+- TCP/TLS transport
+- DTLS transport
+- QUIC transport
+- WebSocket transport
+- ROS 2 / rmw compatibility
+- Zenoh federation
+- OPC UA bridge
+- SOME/IP bridge
+- Prometheus metrics endpoint
+- Kubernetes operator
+
+### Platform
+
+- Linux / macOS / Windows ✅
+- RTOS / bare-metal (Zephyr, FreeRTOS, NuttX)
+- WebAssembly (WASIP1, Cloudflare Workers)
+- Android / iOS
 
 ### Quality
 
@@ -152,6 +176,15 @@ API parity does not.
 - Interoperability testing ✅
 - Fuzzing ✅
 - CI/CD ✅
+
+### Certification
+
+- ASIL-B SEOOC ✅
+- ASIL-D (automotive, ISO 26262)
+- DO-178C DAL-A (aerospace)
+- IEC 62304 Class C (medical)
+- IEC 62443 SL-2 (industrial)
+- DDS-FACE TS (aerospace)
 
 ---
 
@@ -624,6 +657,248 @@ A developer can see DDS samples flowing in a browser within two minutes of cloni
 
 ---
 
+## Milestone 14 — Transport Completeness `v1.0`
+
+Goal:
+Make go-DDS reachable across any network boundary — firewalls, NAT, cloud, and secure channels.
+
+### TCP/TLS (RTPS over TCP)
+
+- RTPS framing over TCP (`rtps/transport_tcp.go`) — length-prefixed submessage stream
+- TLS 1.3 wrapping via `crypto/tls` — zero external deps
+- Participant option `WithTCPAddr(addr)` alongside existing UDP
+- Automatic fallback: prefer UDP multicast, fall back to TCP unicast when UDP unreachable
+- Discovery over TCP — SPDP unicast to known peers via TCP
+
+### DTLS (Encrypted UDP)
+
+- DTLS 1.3 transport wrapping existing UDP sockets (`rtps/transport_dtls.go`)
+- Certificate-based peer authentication (reuses `security.CertPlugin` identity)
+- Satisfies OMG DDS Security spec §9.5 "Secure Transport" requirement
+- `WithDTLS(tlsCfg)` participant option; compatible with existing shmem and mock backends
+
+### QoS Enforcement — Active Policy
+
+- **Liveliness**: publishers assert liveness on a heartbeat schedule; subscribers raise `ErrLivelinessLost` when a writer goes silent
+- **Ownership**: `OwnershipStrength` selects the active writer; lower-strength writers are silenced until primary fails
+- **Partition**: logical namespace isolation within a domain — topics only matched when partitions intersect
+- **Time-Based Filter**: `MinSeparation` QoS drops samples arriving faster than the configured rate at the subscriber
+
+Success Criteria:
+go-DDS participants connect through corporate firewalls and across cloud VPCs without VPN or custom infrastructure.
+
+---
+
+## Milestone 15 — Cloud-Native Runtime `v1.1`
+
+Goal:
+First-class Kubernetes and cloud observability — deployable as a standard cloud service with zero custom tooling.
+
+### Prometheus Metrics
+
+- `/metrics` HTTP endpoint on the monitor (Prometheus text format)
+- Gauges: active topics, matched readers/writers, participant count
+- Counters: samples published/received/dropped, bytes in/out, CDR encode/decode errors
+- Histograms: end-to-end latency percentiles (p50/p95/p99), queue depth over time
+- `monitor.WithPrometheus(addr)` option; compatible with existing SSE dashboard
+
+### Kubernetes Operator
+
+- CRD `DDSParticipant` — declarative participant config (domain, QoS profile, transport)
+- Operator discovers participants in annotated pods and injects domain/peer config via env
+- `DDSDomain` CRD: domain-per-namespace isolation with network policy generation
+- Helm chart for operator deployment
+
+### NAT Traversal / Cloud Gateway
+
+- TURN-style relay server (`bridge/relay/`) — participants behind NAT register with relay, relay forwards RTPS frames
+- STUN-based peer discovery for cloud↔edge pairing
+- `WithRelay(relayAddr)` participant option; transparent to application code
+- TLS-secured relay channel; relay never decrypts DDS payload
+
+### Content-Filtered Topics
+
+- `NewFilteredSubscriber(topic, expr, params)` — server-side SQL-like predicate (`x > 42 AND status = 'active'`)
+- Filter evaluated at publisher before transmission — reduces network load
+- Compatible with existing wildcard subscriptions
+
+Success Criteria:
+A go-DDS deployment on Kubernetes is observable via standard Prometheus/Grafana and reachable from any cloud region without a VPN.
+
+---
+
+## Milestone 16 — QUIC + WebSocket Transports `v1.2`
+
+Goal:
+Connect browsers, edge compute, and congestion-sensitive cloud paths natively.
+
+### QUIC Transport
+
+- RTPS over QUIC streams (`rtps/transport_quic.go`) using `quic-go`
+- Reliable streams for SEDP/SPDP discovery; unreliable datagrams for best-effort data
+- 0-RTT reconnection — no head-of-line blocking on multi-stream RTPS sessions
+- Interoperable with FastDDS QUIC extension (draft spec)
+- `WithQUIC(tlsCfg)` participant option
+
+### WebSocket Transport
+
+- RTPS-over-WebSocket (`rtps/transport_ws.go`) — browser and Wasm participants
+- JSON and binary (base64-CDR) framing modes
+- `bridge/ws/` package: HTTP upgrade handler, participant bridge to RTPS domain
+- JavaScript/TypeScript client library (`js/dds-client/`) — TypedPublisher and TypedSubscriber over WebSocket
+
+### WebAssembly Target
+
+- `GOOS=wasip1 GOARCH=wasm` build support for mock and WebSocket transports
+- `examples/wasm-subscriber/` — in-browser DDS subscriber compiled with `tinygo` or standard `go build`
+- Fastly/Cloudflare Workers deployment guide
+
+Success Criteria:
+A browser tab and a cloud function can join a DDS domain alongside embedded devices without a protocol bridge.
+
+---
+
+## Milestone 17 — Robotics Integration `v1.3`
+
+Goal:
+Make go-DDS a first-class participant in ROS 2 and modern robotics middleware ecosystems.
+
+### ROS 2 / rmw Compatibility
+
+- Wire-compatible RTPS discovery with ROS 2 participants (FastDDS / CycloneDDS rmw)
+- ROS 2 topic naming convention (`/namespace/topic_name`) and type hash interop
+- `ros2/` package: `NewROS2Participant` wraps RTPS participant with ROS 2 graph conventions
+- `ddstool ros2-list` — list live ROS 2 nodes/topics visible from go-DDS
+- Tested against ROS 2 Jazzy and Rolling
+
+### Zenoh Federation
+
+- `bridge/zenoh/` — bidirectional DDS↔Zenoh bridge using `go-zenoh`
+- Key expression mapping: DDS topic `sensors/temp` → Zenoh key `dds/sensors/temp`
+- QoS mapping: DDS reliability/durability → Zenoh congestion control/history
+- Router mode: go-DDS acts as Zenoh router for cross-domain/cross-cloud federation
+- `WithZenohFederation(routerAddr)` participant option
+
+### Action Server Pattern
+
+- `dds.ActionServer[Goal, Feedback, Result]` — long-running RPC with streaming feedback
+- Built on three topics: `goal`, `feedback`, `result` with correlation IDs
+- Cancel support via separate `cancel` topic
+- Mirrors ROS 2 action interface for cross-stack compatibility
+
+Success Criteria:
+A go-DDS node participates in a live ROS 2 graph and routes data to cloud via Zenoh without a separate bridge process.
+
+---
+
+## Milestone 18 — Aerospace Integration `v1.4`
+
+Goal:
+Provide the certification evidence and protocol bridges required for safety-critical aerospace deployments.
+
+### DDS-FACE Profile
+
+- `face/` package implementing the FACE (Future Airborne Capability Environment) Transport Services segment
+- FACE UoC (Unit of Conformance) boundary wrapper around `dds.Participant`
+- Portability Layer (PL) type mapping between FACE data model and go-DDS CDR types
+- DDS-FACE conformance test suite
+
+### DO-178C / DAL-A Safety Evidence
+
+- Structural coverage analysis report (MC/DC — modified condition/decision coverage) targeting DAL-A requirements
+- Traceability matrix: high-level requirements → low-level requirements → source code → test cases
+- Software Accomplishment Summary (SAS) template pre-filled for go-DDS core packages
+- Independence analysis: CI-enforced reviewer separation for safety-critical modules
+- Qualified Tool Considerations (QTC) document for go-DDS used as development tool
+
+### ARINC 664 / AFDX Integration
+
+- `tsn/afdx/` package: Virtual Link (VL) descriptor mapping to DDS topic QoS
+- BAG (Bandwidth Allocation Gap) enforcement via existing `tsn.TAPRIOConfig`
+- Jitter budget tracking per VL using `tsn.HealthTracker`
+- `ddstool afdx verify` — validates AFDX VL configuration against loaded topic set
+
+### Redundancy and Fault Tolerance
+
+- Active/standby participant failover (`dds.RedundantParticipant`) with sub-millisecond switchover
+- Dual-channel (redundant path) publishing — writes to both channels; subscribers deduplicate
+- Built on existing `Ownership` QoS (Milestone 14) with aerospace-grade timing constraints
+
+Success Criteria:
+go-DDS can be positioned as evidence-supporting middleware for DO-178C DAL-B/A avionics systems and participates in AFDX Virtual Links.
+
+---
+
+## Milestone 19 — Platform Expansion `v1.5`
+
+Goal:
+Run go-DDS on bare-metal microcontrollers, RTOS environments, and browser/edge compute targets.
+
+### RTOS / Bare-Metal
+
+- `rtos/` package: pluggable OS abstraction (goroutine → task, channel → queue, time → RTOS tick)
+- FreeRTOS port via `tinygo` — mock transport only (no network stack required for in-core pub/sub)
+- Zephyr RTOS port — POSIX sockets + UDP transport on Cortex-M33 and RISC-V targets
+- NuttX port — full RTPS over lwIP UDP
+- Resource budgets: <32 KB flash, <8 KB RAM for minimal mock participant
+- `examples/rtos-sensor/` — FreeRTOS task publishing temperature samples to a desktop subscriber
+
+### WebAssembly (Wasm)
+
+- `GOOS=wasip1` build target for mock + WebSocket transports (no CGo, no RTPS UDP)
+- Cloudflare Workers and Fastly Compute deployment examples
+- `examples/wasm-subscriber/` — browser DDS subscriber (TypeScript wrapper around Go Wasm module)
+
+### Android / iOS
+
+- `gomobile` bindings for `dds.Participant`, `dds.Publisher`, `dds.Subscriber`
+- Swift and Kotlin idiomatic wrappers (`ios/`, `android/`)
+- Background service mode: participant survives app backgrounding within platform constraints
+
+Success Criteria:
+A Cortex-M33 microcontroller and a cloud function share a DDS domain using the same go-DDS library.
+
+---
+
+## Milestone 20 — Certification Uplift `v1.6`
+
+Goal:
+Provide the safety certification evidence required for automotive ASIL-D, medical IEC 62304, industrial IEC 62443, and aerospace FACE profiles.
+
+### ASIL-D Uplift (Automotive)
+
+- Migrate from ASIL-B SEOOC to **ASIL-D** via decomposition: `go-DDS-A` (ASIL-D) + `go-DDS-B` (ASIL-D) dual-channel
+- Fault Detection and Notification (FDN): runtime detection of channel divergence
+- Freedom From Interference (FFI): memory/timing partition evidence between channels
+- Updated HARA, FMEA, and Safety Case for ASIL-D claim
+- ISO 26262-6:2018 §9 software unit testing evidence (MC/DC) for all ASIL-D-classified modules
+
+### IEC 62304 — Medical Device Software
+
+- Software Development Plan (SDP) and Software Maintenance Plan (SMP) conforming to IEC 62304 Class C
+- Risk Management file linking to IEC 62304 §7.1 (risk analysis) — integrated with existing HARA
+- Problem Resolution Record (PRR) process mapped to GitHub Issues workflow
+- `cert/IEC62304/` — traceability matrix, SRS, SDS, and test records
+
+### IEC 62443 — Industrial Cybersecurity
+
+- Security Level 2 (SL-2) target: defense against intentional violation with moderate resources
+- Security Requirements Specification (SRS) per IEC 62443-3-3
+- Threat model update: STRIDE analysis of all external interfaces (RTPS, bridges, admin API)
+- Cryptographic module documentation per IEC 62443-4-2 §CR 4.3
+- `cert/IEC62443/` — security plan, verification report, penetration test checklist
+
+### FACE Certification Package
+
+- `cert/FACE/` — Unit of Conformance (UoC) registration documentation
+- FACE conformance test results for Transport Services segment
+- Portability Analysis Report: data model mapping between FACE and DDS-IDL types
+
+Success Criteria:
+go-DDS ships with certification packages targeting ASIL-D (automotive), IEC 62304 Class C (medical), IEC 62443 SL-2 (industrial), and FACE TS (aerospace) — covering the four largest safety-regulated embedded industries.
+
+---
+
 ## Explicit Non-Goals
 
 ### Data Models
@@ -668,15 +943,17 @@ Not roadmap priorities:
 
 go-DDS aims to differentiate through:
 
-1. Pure Go implementation
-2. Clean developer experience
-3. Built-in testing and validation
-4. Strong observability
-5. Safety-oriented E2E support
-6. TSN-native design
-7. Embedded-to-cloud deployment model
-8. Modern operational tooling
+1. Pure Go implementation — no CGo required for core path
+2. Clean developer experience — IDL codegen, typed pub/sub, scenario testing
+3. Built-in testing and validation — mock transport, fuzz targets, testutil harnesses
+4. Strong observability — OTel, Prometheus, SSE dashboard, distributed tracing
+5. Safety-oriented E2E support — ASIL-B SEOOC today, ASIL-D roadmap
+6. TSN-native design — TAPRIO, SO_TXTIME, AFDX Virtual Links
+7. Embedded-to-cloud deployment model — RTOS → Linux → Kubernetes → cloud
+8. Multi-industry certification — automotive, aerospace, medical, industrial evidence packages
+9. Modern protocol bridges — gRPC, REST, MQTT, WAN, Zenoh, ROS 2, OPC UA, SOME/IP
+10. Transport flexibility — UDP multicast, shmem, TCP/TLS, DTLS, QUIC, WebSocket
 
 The goal is not to become another DDS implementation.
 
-The goal is to become the easiest data distribution platform to develop, test, validate, operate, and deploy.
+The goal is to become the easiest certified data distribution platform to develop, test, validate, operate, and deploy — from microcontroller to cloud — across every safety-regulated industry.
