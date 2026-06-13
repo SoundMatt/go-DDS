@@ -37,6 +37,7 @@ package grpcbridge
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"sync"
 
@@ -130,8 +131,11 @@ func _publishHandler(srv interface{}, ctx context.Context, dec func(interface{})
 	}
 	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/dds.bridge.v1.DDSBridge/Publish"}
 	return interceptor(ctx, in, info, func(ctx context.Context, req interface{}) (interface{}, error) {
-		ack, err := srv.(DDSBridgeServer).Publish(ctx, req.(*PublishRequest)) //nolint:errcheck // error IS returned
-		return ack, err
+		pub, ok := req.(*PublishRequest)
+		if !ok {
+			return nil, fmt.Errorf("bridge/grpc: unexpected request type %T", req)
+		}
+		return srv.(DDSBridgeServer).Publish(ctx, pub) //nolint:errcheck // error IS returned
 	})
 }
 

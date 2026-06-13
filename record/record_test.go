@@ -14,6 +14,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -23,6 +24,23 @@ import (
 	"github.com/SoundMatt/go-DDS/mock"
 	"github.com/SoundMatt/go-DDS/record"
 )
+
+// errWritePublisher always returns an error from Write/WriteCtx.
+type errWritePublisher struct{}
+
+func (p *errWritePublisher) Write(_ []byte) error { return errors.New("forced write error") }
+func (p *errWritePublisher) WriteCtx(_ context.Context, _ []byte) error {
+	return errors.New("forced write error")
+}
+func (p *errWritePublisher) Close() error { return nil }
+
+// writeErrParticipant wraps a real participant but returns errWritePublisher
+// for every NewPublisher call, so Write always fails.
+type writeErrParticipant struct{ dds.Participant }
+
+func (p *writeErrParticipant) NewPublisher(_ string, _ dds.QoS) (dds.Publisher, error) {
+	return &errWritePublisher{}, nil
+}
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -415,6 +433,33 @@ func TestPlayer_Play_WriteError(t *testing.T) {
 	err := pl.Play(ctx)
 	if err == nil {
 		t.Fatal("expected error when participant is closed during play")
+	}
+}
+
+// TestPlayer_Play_PublisherWriteError covers the pub.Write error branch in
+// playFiltered (line "return fmt.Errorf(record: replay write ...)") by using a
+// participant whose publishers always fail on Write.
+func TestPlayer_Play_PublisherWriteError(t *testing.T) {
+	realPart, err := mock.New(0)
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
+	defer realPart.Close()
+
+	stub := &writeErrParticipant{Participant: realPart}
+	topic := uniqueTopic("play/pubwriteerr")
+	now := time.Now()
+	samples := []record.RecordedSample{
+		{Topic: topic, Payload: []byte("x"), RecordedAt: now},
+	}
+	buf := makeJSONL(t, samples)
+	pl := record.NewPlayer(buf, stub)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	playErr := pl.Play(ctx)
+	if playErr == nil {
+		t.Fatal("expected error when underlying publisher.Write always fails")
 	}
 }
 

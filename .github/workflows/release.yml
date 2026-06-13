@@ -40,6 +40,12 @@ jobs:
       - name: Regenerate SBOM, provenance, and artifact manifest
         run: gofusa release
 
+      - name: Regenerate compliance gap reports
+        run: |
+          gofusa iec61508 -output iec61508-gap-report.json -format json
+          gofusa iso26262 -output iso26262-gap-report.json -format json
+          gofusa iec62443 -output iec62443-gap-report.json -format json -sl SL-2
+
       - name: Configure git
         run: |
           git config user.name "github-actions[bot]"
@@ -50,11 +56,14 @@ jobs:
           TAG="${{ github.ref_name }}"
           git add fmea.csv fmea.json \
                   safety-case.json safety-case.md safety-case.mermaid \
-                  sbom.json provenance.json artifact-manifest.json
+                  sbom.json provenance.json artifact-manifest.json \
+                  iec61508-gap-report.json iso26262-gap-report.json iec62443-gap-report.json
           # Only commit if there are actual changes.
           if git diff --cached --quiet; then
             echo "No artifact changes for $TAG — nothing to commit."
           else
-            git commit -m "chore: regenerate safety artifacts for $TAG [skip ci]"
+            git commit -m "chore: regenerate safety artifacts for $TAG [skip ci]
+
+Signed-off-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
             git push origin HEAD:refs/heads/main
           fi
