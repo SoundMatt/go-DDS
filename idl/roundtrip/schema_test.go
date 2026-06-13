@@ -259,7 +259,7 @@ func telemetryBytes(t *testing.T) []byte {
 		Header:      Header{TopicId: "x", TimestampNs: 1, Priority: PriorityLOW},
 		Values:      [4]float64{1, 2, 3, 4},
 		Temperature: 1.0,
-		Valid:        true,
+		Valid:       true,
 		Extras:      []float64{5.0},
 	})
 	if err != nil {

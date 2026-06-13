@@ -461,8 +461,8 @@ func TestBridge_Subscribe_TransformError_DropsAndContinues(t *testing.T) {
 		t.Fatalf("NewPublisher: %v", err)
 	}
 	defer pub.Close()
-	_ = pub.Write([]byte("drop-me"))  // transform returns error → continue
-	_ = pub.Write([]byte("keep-me"))  // transform succeeds → forwarded
+	_ = pub.Write([]byte("drop-me")) // transform returns error → continue
+	_ = pub.Write([]byte("keep-me")) // transform succeeds → forwarded
 
 	got, err := stream.Recv()
 	if err != nil {
