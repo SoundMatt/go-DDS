@@ -1055,10 +1055,10 @@ type mockClientStream struct {
 	recvErr  error
 }
 
-func (m *mockClientStream) Header() (metadata.MD, error) { return nil, nil }
-func (m *mockClientStream) Trailer() metadata.MD         { return nil }
-func (m *mockClientStream) CloseSend() error             { return m.closeErr }
-func (m *mockClientStream) Context() context.Context     { return context.Background() }
+func (m *mockClientStream) Header() (metadata.MD, error)  { return nil, nil }
+func (m *mockClientStream) Trailer() metadata.MD          { return nil }
+func (m *mockClientStream) CloseSend() error              { return m.closeErr }
+func (m *mockClientStream) Context() context.Context      { return context.Background() }
 func (m *mockClientStream) SendMsg(msg interface{}) error { return m.sendErr }
 func (m *mockClientStream) RecvMsg(msg interface{}) error { return m.recvErr }
 

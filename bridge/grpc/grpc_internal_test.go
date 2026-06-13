@@ -142,11 +142,11 @@ type mockSubscribeStream struct {
 	sendErr error
 }
 
-func (m *mockSubscribeStream) Send(_ *Sample) error         { return m.sendErr }
-func (m *mockSubscribeStream) SetHeader(metadata.MD) error  { return nil }
-func (m *mockSubscribeStream) SendHeader(metadata.MD) error { return nil }
-func (m *mockSubscribeStream) SetTrailer(metadata.MD)       {}
-func (m *mockSubscribeStream) Context() context.Context     { return m.ctx }
+func (m *mockSubscribeStream) Send(_ *Sample) error          { return m.sendErr }
+func (m *mockSubscribeStream) SetHeader(metadata.MD) error   { return nil }
+func (m *mockSubscribeStream) SendHeader(metadata.MD) error  { return nil }
+func (m *mockSubscribeStream) SetTrailer(metadata.MD)        {}
+func (m *mockSubscribeStream) Context() context.Context      { return m.ctx }
 func (m *mockSubscribeStream) SendMsg(msg interface{}) error { return nil }
 func (m *mockSubscribeStream) RecvMsg(msg interface{}) error { return nil }
 
@@ -193,19 +193,19 @@ func TestBridgeSubscribe_ClosedChannelOK(t *testing.T) {
 // mockStreamPublishServer implements grpc.ClientStreamingServer[PublishRequest, PublishAck].
 // recvFn is called on each Recv; sendAndCloseFn is called on SendAndClose.
 type mockStreamPublishServer struct {
-	ctx        context.Context
-	recvFn     func() (*PublishRequest, error)
-	closeErr   error
+	ctx      context.Context
+	recvFn   func() (*PublishRequest, error)
+	closeErr error
 }
 
 func (m *mockStreamPublishServer) Recv() (*PublishRequest, error) { return m.recvFn() }
 func (m *mockStreamPublishServer) SendAndClose(ack *PublishAck) error {
 	return m.closeErr
 }
-func (m *mockStreamPublishServer) SetHeader(metadata.MD) error  { return nil }
-func (m *mockStreamPublishServer) SendHeader(metadata.MD) error { return nil }
-func (m *mockStreamPublishServer) SetTrailer(metadata.MD)       {}
-func (m *mockStreamPublishServer) Context() context.Context     { return m.ctx }
+func (m *mockStreamPublishServer) SetHeader(metadata.MD) error   { return nil }
+func (m *mockStreamPublishServer) SendHeader(metadata.MD) error  { return nil }
+func (m *mockStreamPublishServer) SetTrailer(metadata.MD)        {}
+func (m *mockStreamPublishServer) Context() context.Context      { return m.ctx }
 func (m *mockStreamPublishServer) SendMsg(msg interface{}) error { return nil }
 func (m *mockStreamPublishServer) RecvMsg(msg interface{}) error { return nil }
 
@@ -291,8 +291,8 @@ func TestBridgeSubscribe_SendError(t *testing.T) {
 	stream := &mockSubscribeStream{ctx: ctx, sendErr: wantErr}
 
 	// Publish a sample so the bridge's select case fires and calls stream.Send.
-	if err := pub.Write([]byte("trigger")); err != nil {
-		t.Fatalf("Write: %v", err)
+	if werr := pub.Write([]byte("trigger")); werr != nil {
+		t.Fatalf("Write: %v", werr)
 	}
 
 	err = b.Subscribe(&SubscribeRequest{Topic: "internal/send-err"}, stream)
