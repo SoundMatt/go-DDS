@@ -54,9 +54,7 @@ func (c *TAPRIOConfig) Apply() error {
 		return fmt.Errorf("tsn: taprio: bind: %w", bindErr)
 	}
 
-	written, err := unix.Write(fd, msg)
-	_ = written
-	if err != nil {
+	if _, err := unix.Write(fd, msg); err != nil {
 		return fmt.Errorf("tsn: taprio: send: %w", err)
 	}
 

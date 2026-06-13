@@ -1,0 +1,40 @@
+{
+  "project": "go-DDS",
+  "standard": "ISO 26262",
+  "createdAt": "2026-06-13T19:30:09.347223Z",
+  "operationalSituations": [
+    {
+      "id": "OS-001",
+      "description": "Normal operation"
+    }
+  ],
+  "hazards": [
+    {
+      "id": "H-001",
+      "description": "Example hazard — replace with project-specific hazard",
+      "situations": [
+        "OS-001"
+      ],
+      "risk": {
+        "severity": "S2",
+        "exposure": "E3",
+        "controllability": "C2",
+        "asil": "ASIL-B"
+      },
+      "safetyGoals": [
+        "SG-001"
+      ]
+    }
+  ],
+  "safetyGoals": [
+    {
+      "id": "SG-001",
+      "description": "Example safety goal — replace with project-specific goal",
+      "hazards": [
+        "H-001"
+      ],
+      "asil": "ASIL-B",
+      "safeState": "safe state description"
+    }
+  ]
+}

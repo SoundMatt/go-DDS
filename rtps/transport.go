@@ -174,8 +174,7 @@ func (s *udpSocket) readLoop() {
 }
 
 func (s *udpSocket) send(dst *net.UDPAddr, data []byte) error {
-	ignoredRet, err := s.conn.WriteToUDP(data, dst)
-	_ = ignoredRet
+	_, err := s.conn.WriteToUDP(data, dst)
 	return err
 }
 
