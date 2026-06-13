@@ -296,6 +296,67 @@ func TestAdmin_Publish_ClosedParticipant(t *testing.T) {
 	}
 }
 
+// failPublisherPart wraps a Participant and returns a non-ErrClosed error from
+// NewPublisher, covering the 500 branch in handlePublish.
+type failPublisherPart struct{ dds.Participant }
+
+func (f *failPublisherPart) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, error) {
+	return nil, dds.ErrQoSMismatch
+}
+
+// TestAdmin_Publish_NewPublisherError covers the non-ErrClosed error path in
+// handlePublish: when NewPublisher fails with a general error, the handler must
+// return 500 Internal Server Error.
+func TestAdmin_Publish_NewPublisherError(t *testing.T) {
+	realPart := newPart(t)
+	p := &failPublisherPart{Participant: realPart}
+	s := newServer(t, p, admin.Options{})
+
+	payload := base64.StdEncoding.EncodeToString([]byte("data"))
+	body, err := json.Marshal(map[string]string{"topic": "any/topic", "payload": payload})
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	resp := post(t, "http://"+s.Addr()+"/admin/publish", body)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("expected 500 for publisher error, got %d", resp.StatusCode)
+	}
+}
+
+// failWritePub is a Publisher that always fails Write.
+type failWritePub struct{}
+
+func (failWritePub) Write(_ []byte) error                           { return dds.ErrClosed }
+func (failWritePub) WriteCtx(_ context.Context, _ []byte) error    { return dds.ErrClosed }
+func (failWritePub) Close() error                                   { return nil }
+
+// failWritePart wraps a Participant and returns a publisher that fails Write.
+type failWritePart struct{ dds.Participant }
+
+func (f *failWritePart) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, error) {
+	return failWritePub{}, nil
+}
+
+// TestAdmin_Publish_WriteError covers the pub.Write error path in handlePublish:
+// when the publisher fails on Write, the handler must return 500.
+func TestAdmin_Publish_WriteError(t *testing.T) {
+	realPart := newPart(t)
+	p := &failWritePart{Participant: realPart}
+	s := newServer(t, p, admin.Options{})
+
+	payload := base64.StdEncoding.EncodeToString([]byte("data"))
+	body, err := json.Marshal(map[string]string{"topic": "any/topic", "payload": payload})
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	resp := post(t, "http://"+s.Addr()+"/admin/publish", body)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("expected 500 for write error, got %d", resp.StatusCode)
+	}
+}
+
 func TestAdmin_APIKey_Required(t *testing.T) {
 	p := newPart(t)
 	s := newServer(t, p, admin.Options{APIKey: "secret"})
