@@ -1,0 +1,1051 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>mock: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/SoundMatt/go-DDS/mock/loan.go (85.7%)</option>
+				
+				<option value="file1">github.com/SoundMatt/go-DDS/mock/mock.go (97.4%)</option>
+				
+				<option value="file2">github.com/SoundMatt/go-DDS/rpc/rpc.go (87.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">no coverage</span>
+				<span class="cov1">low coverage</span>
+				<span class="cov2">*</span>
+				<span class="cov3">*</span>
+				<span class="cov4">*</span>
+				<span class="cov5">*</span>
+				<span class="cov6">*</span>
+				<span class="cov7">*</span>
+				<span class="cov8">*</span>
+				<span class="cov9">*</span>
+				<span class="cov10">high coverage</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">// Copyright (c) 2026 Matt Jones. All rights reserved.
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+package mock
+
+//fusa:req REQ-LOAN-001
+//fusa:req REQ-LOAN-002
+//fusa:req REQ-LOAN-003
+
+import (
+        "fmt"
+
+        dds "github.com/SoundMatt/go-DDS"
+        "github.com/SoundMatt/go-DDS/pool"
+)
+
+// loaningPublisher wraps a publisher and backs it with a BytePool to provide
+// allocation-free loaned-sample publishing.
+type loaningPublisher struct {
+        *publisher
+        bp *pool.BytePool
+}
+
+// NewLoaningPublisher creates a LoaningPublisher for topic using the given QoS.
+// bufSize is the maximum sample size the pool will pre-allocate; pass 0 for the
+// pool default (4096 bytes).
+func NewLoaningPublisher(p dds.Participant, topic string, qos dds.QoS, bufSize int) (dds.LoaningPublisher, error) <span class="cov10" title="3">{
+        pub, err := p.NewPublisher(topic, qos)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov10" title="3">mpub, ok := pub.(*publisher)
+        if !ok </span><span class="cov0" title="0">{
+                _ = pub.Close()
+                return nil, fmt.Errorf("mock: %w: participant is not a mock participant", dds.ErrLoanBuffer)
+        }</span>
+        <span class="cov10" title="3">return &amp;loaningPublisher{
+                publisher: mpub,
+                bp:        pool.New(bufSize),
+        }, nil</span>
+}
+
+// Loan returns a pre-allocated byte slice of the requested size from the pool.
+func (lp *loaningPublisher) Loan(size int) ([]byte, error) <span class="cov10" title="3">{
+        lp.mu.Lock()
+        if lp.closed </span><span class="cov1" title="1">{
+                lp.mu.Unlock()
+                return nil, fmt.Errorf("mock: %w", dds.ErrClosed)
+        }</span>
+        <span class="cov6" title="2">lp.mu.Unlock()
+        buf := lp.bp.Get()
+        if cap(buf) &lt; size </span><span class="cov1" title="1">{
+                lp.bp.Put(buf)
+                return nil, fmt.Errorf("mock: %w: requested %d, pool cap %d", dds.ErrLoanBuffer, size, cap(buf))
+        }</span>
+        <span class="cov1" title="1">return buf[:size], nil</span>
+}
+
+// Commit publishes the loaned buffer and returns it to the pool.
+func (lp *loaningPublisher) Commit(buf []byte) error <span class="cov1" title="1">{
+        err := lp.Write(buf)
+        lp.bp.Put(buf)
+        return err
+}</span>
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">// Copyright (c) 2026 Matt Jones. All rights reserved.
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+// Package mock provides an in-process, CGo-free implementation of the dds
+// interfaces. All participants within the same process share a global
+// in-memory broker: a Publisher.Write on topic T is delivered synchronously
+// to every Subscriber.C() for topic T.
+//
+// The mock is the default implementation used by unit tests. Switch to the
+// rtps or cyclone package when a real DDS domain (multi-process, multi-host)
+// is required.
+package mock
+
+//fusa:req REQ-RT-001
+//fusa:req REQ-REL-004
+//fusa:req REQ-PART-002
+//fusa:req REQ-PART-004
+//fusa:req REQ-PART-005
+//fusa:req REQ-PART-006
+//fusa:req REQ-PUB-001
+//fusa:req REQ-PUB-002
+//fusa:req REQ-PUB-004
+//fusa:req REQ-PUB-005
+//fusa:req REQ-PUB-006
+//fusa:req REQ-SUB-001
+//fusa:req REQ-SUB-002
+//fusa:req REQ-SUB-003
+//fusa:req REQ-SUB-004
+//fusa:req REQ-QOS-001
+//fusa:req REQ-QOS-002
+//fusa:req REQ-QOS-005
+//fusa:req REQ-QOS-006
+
+import (
+        "context"
+        "fmt"
+        "log/slog"
+        "strings"
+        "sync"
+        "sync/atomic"
+        "time"
+
+        dds "github.com/SoundMatt/go-DDS"
+)
+
+// WithContext returns an Option that closes the participant when ctx is done.
+// This is the idiomatic Go shutdown pattern: pass a context with a cancel
+// function or deadline to tie the participant's lifetime to an outer scope.
+func WithContext(ctx context.Context) Option <span class="cov1" title="2">{
+        return func(p *participant) </span><span class="cov1" title="2">{ p.cancelCtx = ctx }</span>
+}
+
+// mockTopicCounter tracks per-topic publish/deliver/drop statistics in the broker.
+type mockTopicCounter struct {
+        writes   atomic.Uint64
+        delivers atomic.Uint64
+        drops    atomic.Uint64
+        bytesW   atomic.Uint64
+        bytesD   atomic.Uint64
+}
+
+// globalBroker is the process-wide in-memory pub/sub hub.
+var globalBroker = &amp;broker{
+        subs:       make(map[string][]subscription),
+        lastSample: make(map[string]*dds.Sample),
+}
+
+// subscription holds a subscriber channel together with its optional filter
+// and back-pressure policy.
+type subscription struct {
+        ch            chan dds.Sample
+        filter        func(dds.Sample) bool
+        backPressure  dds.BackPressurePolicy
+        resetDeadline func() // nil if no deadline; called on each successful delivery
+}
+
+// broker is the central in-memory routing hub.
+type broker struct {
+        mu         sync.RWMutex
+        subs       map[string][]subscription
+        lastSample map[string]*dds.Sample
+
+        // Participant-level metrics counters (global across all participants sharing this broker).
+        writes       atomic.Uint64
+        delivers     atomic.Uint64
+        drops        atomic.Uint64
+        bytesWritten atomic.Uint64
+        bytesDeliv   atomic.Uint64
+
+        // Per-topic metrics: topic string → *mockTopicCounter (sync.Map, no lock needed).
+        topicMetrics sync.Map
+}
+
+// topicCounterFor returns (creating on first access) the per-topic counter for topic.
+func (b *broker) topicCounterFor(topic string) *mockTopicCounter <span class="cov6" title="639">{
+        if v, ok := b.topicMetrics.Load(topic); ok </span><span class="cov6" title="578">{
+                if tc, ok2 := v.(*mockTopicCounter); ok2 </span><span class="cov6" title="578">{
+                        return tc
+                }</span>
+        }
+        <span class="cov4" title="61">tc := &amp;mockTopicCounter{}
+        actual, loaded := b.topicMetrics.LoadOrStore(topic, tc)
+        _ = loaded
+        if tc2, ok := actual.(*mockTopicCounter); ok </span><span class="cov4" title="61">{
+                return tc2
+        }</span>
+        <span class="cov0" title="0">return tc</span>
+}
+
+const defaultChanDepth = 64
+
+func (b *broker) subscribe(topic string, qos dds.QoS, cfg dds.SubscriberConfig, resetDeadline func()) chan dds.Sample <span class="cov5" title="79">{
+        depth := cfg.ChanDepth(defaultChanDepth)
+        ch := make(chan dds.Sample, depth)
+        sub := subscription{ch: ch, filter: cfg.Filter, backPressure: cfg.BackPressure, resetDeadline: resetDeadline}
+        b.mu.Lock()
+        b.subs[topic] = append(b.subs[topic], sub)
+        var last *dds.Sample
+        if qos.Durability == dds.TransientLocal </span><span class="cov1" title="2">{
+                last = b.lastSample[topic]
+        }</span>
+        <span class="cov5" title="79">b.mu.Unlock()
+        if last != nil </span><span class="cov1" title="1">{
+                if cfg.Filter == nil || cfg.Filter(*last) </span><span class="cov1" title="1">{
+                        select </span>{
+                        case ch &lt;- *last:<span class="cov1" title="1"></span>
+                        default:<span class="cov0" title="0"></span>
+                        }
+                }
+        }
+        <span class="cov5" title="79">return ch</span>
+}
+
+// removeSubscription removes the channel from the broker's subscription list
+// without closing it. Used by Subscriber.Unsubscribe().
+func (b *broker) removeSubscription(topic string, ch chan dds.Sample) <span class="cov5" title="79">{
+        b.mu.Lock()
+        defer b.mu.Unlock()
+        list := b.subs[topic]
+        for i, s := range list </span><span class="cov5" title="80">{
+                if s.ch == ch </span><span class="cov5" title="79">{
+                        b.subs[topic] = append(list[:i], list[i+1:]...)
+                        return
+                }</span>
+        }
+}
+
+func (b *broker) publish(topic string, payload []byte, qos dds.QoS, seqNum uint64, writerGUID dds.GUID) <span class="cov6" title="333">{
+        cp := make([]byte, len(payload))
+        copy(cp, payload)
+        sample := dds.Sample{Topic: topic, Payload: cp, Timestamp: time.Now(), SequenceNumber: seqNum, WriterGUID: writerGUID}
+
+        b.writes.Add(1)
+        b.bytesWritten.Add(uint64(len(payload)))
+        ptc := b.topicCounterFor(topic)
+        ptc.writes.Add(1)
+        ptc.bytesW.Add(uint64(len(payload)))
+
+        b.mu.Lock()
+        if qos.Durability == dds.TransientLocal </span><span class="cov1" title="1">{
+                b.lastSample[topic] = &amp;sample
+        }</span>
+        <span class="cov6" title="333">subs := b.subs[topic]
+        // Also deliver to wildcard subscribers whose pattern matches topic.
+        for t, list := range b.subs </span><span class="cov9" title="17516">{
+                if t != topic &amp;&amp; topicMatches(t, topic) </span><span class="cov2" title="6">{
+                        subs = append(subs, list...)
+                }</span>
+        }
+        <span class="cov6" title="333">b.mu.Unlock()
+
+        for _, sub := range subs </span><span class="cov6" title="307">{
+                if sub.filter != nil &amp;&amp; !sub.filter(sample) </span><span class="cov1" title="1">{
+                        continue</span>
+                }
+                <span class="cov6" title="306">b.deliver(sub, sample, uint64(len(payload)))</span>
+        }
+}
+
+// deliver routes sample to sub according to its back-pressure policy.
+func (b *broker) deliver(sub subscription, sample dds.Sample, byteLen uint64) <span class="cov6" title="306">{
+        tc := b.topicCounterFor(sample.Topic)
+        delivered := false
+        switch sub.backPressure </span>{
+        case dds.DropOldest:<span class="cov1" title="2">
+                select </span>{
+                case sub.ch &lt;- sample:<span class="cov1" title="1">
+                        b.delivers.Add(1)
+                        b.bytesDeliv.Add(byteLen)
+                        tc.delivers.Add(1)
+                        tc.bytesD.Add(byteLen)
+                        delivered = true</span>
+                default:<span class="cov1" title="1">
+                        // Evict oldest, then retry.
+                        select </span>{
+                        case &lt;-sub.ch:<span class="cov1" title="1">
+                                b.drops.Add(1)
+                                tc.drops.Add(1)</span>
+                        default:<span class="cov0" title="0"></span>
+                        }
+                        <span class="cov1" title="1">select </span>{
+                        case sub.ch &lt;- sample:<span class="cov1" title="1">
+                                b.delivers.Add(1)
+                                b.bytesDeliv.Add(byteLen)
+                                tc.delivers.Add(1)
+                                tc.bytesD.Add(byteLen)
+                                delivered = true</span>
+                        default:<span class="cov0" title="0">
+                                b.drops.Add(1)
+                                tc.drops.Add(1)</span>
+                        }
+                }
+        case dds.Block:<span class="cov1" title="2">
+                sub.ch &lt;- sample
+                b.delivers.Add(1)
+                b.bytesDeliv.Add(byteLen)
+                tc.delivers.Add(1)
+                tc.bytesD.Add(byteLen)
+                delivered = true</span>
+        default:<span class="cov6" title="302"> // DropNewest
+                select </span>{
+                case sub.ch &lt;- sample:<span class="cov6" title="270">
+                        b.delivers.Add(1)
+                        b.bytesDeliv.Add(byteLen)
+                        tc.delivers.Add(1)
+                        tc.bytesD.Add(byteLen)
+                        delivered = true</span>
+                default:<span class="cov4" title="32">
+                        b.drops.Add(1)
+                        tc.drops.Add(1)</span>
+                }
+        }
+        <span class="cov6" title="306">if delivered &amp;&amp; sub.resetDeadline != nil </span><span class="cov2" title="4">{
+                sub.resetDeadline()
+        }</span>
+}
+
+// Option configures a mock participant.
+type Option func(*participant)
+
+// WithDeadlineCallback registers fn to be called when a publisher has not
+// written within its QoS.Deadline period.
+func WithDeadlineCallback(fn func(topic string)) Option <span class="cov1" title="2">{
+        return func(p *participant) </span><span class="cov1" title="2">{ p.deadlineCb = fn }</span>
+}
+
+// WithLogger sets the structured logger used by this participant.
+// Log output is zero-cost when l is nil.
+func WithLogger(l *slog.Logger) Option <span class="cov1" title="1">{
+        return func(p *participant) </span><span class="cov1" title="1">{ p.log = l }</span>
+}
+
+// WithLivelinessCallback registers fn to be called when a participant is
+// discovered or lost. In the mock, participants fire LivelinessGained on New
+// and LivelinessLost on Close.
+func WithLivelinessCallback(fn func(dds.GUID, dds.LivelinessEvent)) Option <span class="cov1" title="1">{
+        return func(p *participant) </span><span class="cov1" title="1">{ p.livelinessCb = fn }</span>
+}
+
+// IsolatedBroker creates the participant with its own independent broker that
+// is not shared with any other participant. Use this when testing components
+// that bridge between separate DDS domains (e.g. WAN or domain bridges), where
+// publishing on one participant must not echo to subscribers on another.
+func IsolatedBroker() Option <span class="cov2" title="5">{
+        return func(p *participant) </span><span class="cov2" title="5">{
+                p.broker = &amp;broker{
+                        subs:       make(map[string][]subscription),
+                        lastSample: make(map[string]*dds.Sample),
+                }
+        }</span>
+}
+
+// New creates a mock DDS Participant for the given domain. Domain is accepted
+// for API compatibility but has no effect — all mock participants share the
+// same global broker regardless of domain (unless IsolatedBroker is used).
+func New(domain dds.Domain, opts ...Option) (dds.Participant, error) <span class="cov5" title="105">{
+        p := &amp;participant{broker: globalBroker, domain: domain}
+        for _, o := range opts </span><span class="cov3" title="11">{
+                o(p)
+        }</span>
+        // Assign a random GUID for this participant and fire LivelinessGained.
+        <span class="cov5" title="105">p.guid = newMockGUID()
+        if p.livelinessCb != nil </span><span class="cov1" title="1">{
+                p.livelinessCb(p.guid, dds.LivelinessGained)
+        }</span>
+        <span class="cov5" title="105">p.logf("new mock participant guid=%x domain=%d", p.guid, domain)
+        if p.cancelCtx != nil </span><span class="cov1" title="2">{
+                done := p.cancelCtx.Done()
+                go func(done &lt;-chan struct{}) </span><span class="cov1" title="2">{
+                        &lt;-done
+                        _ = p.Close()
+                }</span>(done)
+        }
+        <span class="cov5" title="105">return p, nil</span>
+}
+
+// participant implements dds.Participant.
+type participant struct {
+        mu           sync.Mutex
+        closed       bool
+        broker       *broker
+        domain       dds.Domain
+        deadlineCb   func(string)
+        log          *slog.Logger
+        livelinessCb func(dds.GUID, dds.LivelinessEvent)
+        guid         dds.GUID
+        cancelCtx    context.Context
+}
+
+func (p *participant) logf(msg string, args ...any) <span class="cov6" title="389">{
+        if p.log != nil </span><span class="cov2" title="3">{
+                p.log.Debug(fmt.Sprintf(msg, args...))
+        }</span>
+}
+
+// Domain implements dds.Participant.
+func (p *participant) Domain() dds.Domain <span class="cov1" title="1">{ return p.domain }</span>
+
+func (p *participant) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, error) <span class="cov5" title="107">{
+        if topic == "" </span><span class="cov1" title="2">{
+                return nil, fmt.Errorf("mock: %w", dds.ErrTopicEmpty)
+        }</span>
+        <span class="cov5" title="105">p.mu.Lock()
+        defer p.mu.Unlock()
+        if p.closed </span><span class="cov2" title="5">{
+                return nil, fmt.Errorf("mock: %w", dds.ErrClosed)
+        }</span>
+        <span class="cov5" title="100">p.logf("new publisher topic=%s reliability=%d", topic, qos.Reliability)
+        pub := &amp;publisher{broker: p.broker, topic: topic, qos: qos, deadlineCb: p.deadlineCb, log: p.log, guid: newMockGUID()}
+        if qos.Deadline &gt; 0 &amp;&amp; p.deadlineCb != nil </span><span class="cov1" title="2">{
+                pub.deadlineTimer = time.AfterFunc(qos.Deadline, func() </span><span class="cov1" title="1">{
+                        p.deadlineCb(topic)
+                }</span>)
+        }
+        <span class="cov5" title="100">return pub, nil</span>
+}
+
+func (p *participant) NewSubscriber(topic string, qos dds.QoS, opts ...dds.SubscriberOption) (dds.Subscriber, error) <span class="cov5" title="82">{
+        if topic == "" </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("mock: %w", dds.ErrTopicEmpty)
+        }</span>
+        <span class="cov5" title="81">p.mu.Lock()
+        defer p.mu.Unlock()
+        if p.closed </span><span class="cov1" title="2">{
+                return nil, fmt.Errorf("mock: %w", dds.ErrClosed)
+        }</span>
+        <span class="cov5" title="79">cfg := dds.ApplySubscriberOpts(opts)
+        p.logf("new subscriber topic=%s depth=%d backpressure=%d", topic, cfg.ChanDepth(defaultChanDepth), cfg.BackPressure)
+        sub := &amp;subscriber{broker: p.broker, topic: topic}
+
+        var resetDeadline func()
+        if qos.Deadline &gt; 0 &amp;&amp; cfg.DeadlineMissedCallback != nil </span><span class="cov1" title="2">{
+                fn := cfg.DeadlineMissedCallback
+                dur := qos.Deadline
+                var tp atomic.Pointer[time.Timer]
+                tp.Store(time.AfterFunc(dur, func() </span><span class="cov1" title="1">{
+                        fn()
+                        tp.Load().Reset(dur)
+                }</span>))
+                <span class="cov1" title="2">sub.deadlineTimer = tp.Load()
+                resetDeadline = func() </span><span class="cov2" title="4">{ tp.Load().Reset(dur) }</span>
+        }
+
+        <span class="cov5" title="79">sub.ch = p.broker.subscribe(topic, qos, cfg, resetDeadline)
+        return sub, nil</span>
+}
+
+func (p *participant) Close() error <span class="cov5" title="106">{
+        p.mu.Lock()
+        defer p.mu.Unlock()
+        if p.closed </span><span class="cov1" title="1">{
+                return nil
+        }</span>
+        <span class="cov5" title="105">p.closed = true
+        if p.livelinessCb != nil </span><span class="cov1" title="1">{
+                p.livelinessCb(p.guid, dds.LivelinessLost)
+        }</span>
+        <span class="cov5" title="105">p.logf("participant closed guid=%x", p.guid)
+        return nil</span>
+}
+
+// CloseWithDrain implements dds.Drainer. In the mock, all writes are
+// synchronous so there are no in-flight ACKs; this is equivalent to Close.
+func (p *participant) CloseWithDrain(_ context.Context) error <span class="cov2" title="3">{
+        return p.Close()
+}</span>
+
+// Metrics implements dds.MetricsProvider.
+func (p *participant) Metrics() dds.Metrics <span class="cov1" title="1">{
+        return dds.Metrics{
+                WriteCount:     p.broker.writes.Load(),
+                DeliverCount:   p.broker.delivers.Load(),
+                DropCount:      p.broker.drops.Load(),
+                BytesWritten:   p.broker.bytesWritten.Load(),
+                BytesDelivered: p.broker.bytesDeliv.Load(),
+        }
+}</span>
+
+// DiscoveryMetrics implements dds.DiscoveryMetricsProvider.
+// The mock has no real network discovery; this always returns zero values.
+func (p *participant) DiscoveryMetrics() dds.DiscoveryMetrics <span class="cov1" title="1">{
+        return dds.DiscoveryMetrics{}
+}</span>
+
+// TopicMetrics implements dds.TopicMetricsProvider.
+func (p *participant) TopicMetrics() []dds.TopicMetrics <span class="cov2" title="4">{
+        var result []dds.TopicMetrics
+        p.broker.topicMetrics.Range(func(k, v any) bool </span><span class="cov5" title="151">{
+                topic, ok := k.(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return true
+                }</span>
+                <span class="cov5" title="151">tc, ok2 := v.(*mockTopicCounter)
+                if !ok2 </span><span class="cov0" title="0">{
+                        return true
+                }</span>
+                <span class="cov5" title="151">result = append(result, dds.TopicMetrics{
+                        Topic:          topic,
+                        WriteCount:     tc.writes.Load(),
+                        DeliverCount:   tc.delivers.Load(),
+                        DropCount:      tc.drops.Load(),
+                        BytesWritten:   tc.bytesW.Load(),
+                        BytesDelivered: tc.bytesD.Load(),
+                })
+                return true</span>
+        })
+        <span class="cov2" title="4">return result</span>
+}
+
+// Health implements dds.HealthProvider.
+func (p *participant) Health() dds.Health <span class="cov1" title="2">{
+        p.mu.Lock()
+        closed := p.closed
+        p.mu.Unlock()
+        if closed </span><span class="cov1" title="1">{
+                return dds.Health{
+                        Status:  dds.HealthDown,
+                        Details: map[string]string{"state": "closed"},
+                }
+        }</span>
+        <span class="cov1" title="1">return dds.Health{Status: dds.HealthOK}</span>
+}
+
+// publisher implements dds.Publisher.
+type publisher struct {
+        broker        *broker
+        topic         string
+        qos           dds.QoS
+        deadlineCb    func(string)
+        log           *slog.Logger
+        deadlineTimer *time.Timer
+        mu            sync.Mutex
+        closed        bool
+        seqNum        atomic.Uint64
+        guid          dds.GUID
+}
+
+func (pub *publisher) Write(payload []byte) error <span class="cov6" title="335">{
+        pub.mu.Lock()
+        defer pub.mu.Unlock()
+        if pub.closed </span><span class="cov1" title="1">{
+                return fmt.Errorf("mock: %w", dds.ErrClosed)
+        }</span>
+        <span class="cov6" title="334">if pub.qos.MaxSampleSize &gt; 0 &amp;&amp; len(payload) &gt; pub.qos.MaxSampleSize </span><span class="cov1" title="1">{
+                return fmt.Errorf("mock: %w: got %d bytes, limit %d",
+                        dds.ErrPayloadTooLarge, len(payload), pub.qos.MaxSampleSize)
+        }</span>
+        <span class="cov6" title="333">if pub.deadlineTimer != nil </span><span class="cov2" title="3">{
+                pub.deadlineTimer.Reset(pub.qos.Deadline)
+        }</span>
+        <span class="cov6" title="333">if pub.log != nil </span><span class="cov1" title="1">{
+                pub.log.Debug("publish", "topic", pub.topic, "bytes", len(payload))
+        }</span>
+        <span class="cov6" title="333">seq := pub.seqNum.Add(1)
+        pub.broker.publish(pub.topic, payload, pub.qos, seq, pub.guid)
+        return nil</span>
+}
+
+// WriteCtx writes payload, returning ctx.Err() immediately if the context is
+// already cancelled. Note: Block back-pressure policy does not honour ctx after
+// the Write call begins.
+func (pub *publisher) WriteCtx(ctx context.Context, payload []byte) error <span class="cov1" title="2">{
+        if err := ctx.Err(); err != nil </span><span class="cov1" title="1">{
+                return err
+        }</span>
+        <span class="cov1" title="1">return pub.Write(payload)</span>
+}
+
+func (pub *publisher) Close() error <span class="cov5" title="96">{
+        pub.mu.Lock()
+        defer pub.mu.Unlock()
+        if pub.deadlineTimer != nil </span><span class="cov1" title="2">{
+                pub.deadlineTimer.Stop()
+                pub.deadlineTimer = nil
+        }</span>
+        <span class="cov5" title="96">pub.closed = true
+        return nil</span>
+}
+
+// subscriber implements dds.Subscriber.
+type subscriber struct {
+        broker        *broker
+        topic         string
+        ch            chan dds.Sample
+        unsubOnce     sync.Once
+        closeOnce     sync.Once
+        deadlineTimer *time.Timer
+}
+
+func (sub *subscriber) C() &lt;-chan dds.Sample <span class="cov6" title="278">{ return sub.ch }</span>
+
+// TryRead attempts a non-blocking read. Returns (zero, false) if empty or closed.
+func (sub *subscriber) TryRead() (dds.Sample, bool) <span class="cov1" title="2">{
+        select </span>{
+        case s, ok := &lt;-sub.ch:<span class="cov1" title="1">
+                if !ok </span><span class="cov0" title="0">{
+                        return dds.Sample{}, false
+                }</span>
+                <span class="cov1" title="1">return s, true</span>
+        default:<span class="cov1" title="1">
+                return dds.Sample{}, false</span>
+        }
+}
+
+// Unsubscribe removes this subscriber from the broker without closing its
+// channel. After Unsubscribe no new samples are delivered, but the channel
+// remains readable for any buffered samples.
+func (sub *subscriber) Unsubscribe() error <span class="cov5" title="88">{
+        sub.unsubOnce.Do(func() </span><span class="cov5" title="79">{
+                if sub.deadlineTimer != nil </span><span class="cov1" title="2">{
+                        sub.deadlineTimer.Stop()
+                }</span>
+                <span class="cov5" title="79">sub.broker.removeSubscription(sub.topic, sub.ch)</span>
+        })
+        <span class="cov5" title="88">return nil</span>
+}
+
+func (sub *subscriber) Close() error <span class="cov5" title="83">{
+        _ = sub.Unsubscribe()
+        sub.closeOnce.Do(func() </span><span class="cov5" title="79">{
+                if sub.deadlineTimer != nil </span><span class="cov1" title="2">{
+                        sub.deadlineTimer.Stop()
+                }</span>
+                <span class="cov5" title="79">close(sub.ch)</span>
+        })
+        <span class="cov5" title="83">return nil</span>
+}
+
+// topicMatches returns true when pattern (which may contain MQTT-style + and #
+// wildcards) matches the concrete topic name.
+// "foo/" and "foo" are distinct topics (two levels vs one level).
+func topicMatches(pattern, topic string) bool <span class="cov9" title="17212">{
+        return matchSlices(strings.Split(pattern, "/"), strings.Split(topic, "/"))
+}</span>
+
+func matchSlices(pSegs, tSegs []string) bool <span class="cov10" title="17997">{
+        if len(pSegs) == 0 </span><span class="cov2" title="3">{
+                return len(tSegs) == 0
+        }</span>
+        <span class="cov9" title="17994">if pSegs[0] == "#" </span><span class="cov2" title="3">{
+                return true
+        }</span>
+        <span class="cov9" title="17991">if len(tSegs) == 0 </span><span class="cov2" title="5">{
+                return false
+        }</span>
+        <span class="cov9" title="17986">if pSegs[0] == "+" || pSegs[0] == tSegs[0] </span><span class="cov7" title="785">{
+                return matchSlices(pSegs[1:], tSegs[1:])
+        }</span>
+        <span class="cov9" title="17201">return false</span>
+}
+
+// newMockGUID returns a pseudo-random 16-byte GUID backed by the current time.
+// Not cryptographically random; sufficient for in-process participant identity.
+func newMockGUID() dds.GUID <span class="cov5" title="205">{
+        var g dds.GUID
+        ns := time.Now().UnixNano()
+        for i := 0; i &lt; 8; i++ </span><span class="cov7" title="1640">{
+                g[i] = byte(ns &gt;&gt; (i * 8))
+        }</span>
+        <span class="cov5" title="205">return g</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">// Copyright (c) 2026 Matt Jones. All rights reserved.
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+// Package rpc implements OMG DDS-RPC style request-reply over a DDS participant.
+// A Requester sends typed requests and receives correlated replies. A Replier
+// receives requests and sends replies. Both use two topics internally:
+// &lt;base&gt;/request and &lt;base&gt;/reply.
+//
+// Wire format: every payload is prefixed with a 16-byte CorrelationID so that
+// the Requester can match replies to outstanding requests without any
+// broker-level correlation support.
+package rpc
+
+//fusa:req REQ-RPC-001
+//fusa:req REQ-RPC-002
+//fusa:req REQ-RPC-003
+//fusa:req REQ-RPC-004
+//fusa:req REQ-RPC-005
+//fusa:req REQ-RPC-006
+
+import (
+        "context"
+        "crypto/rand"
+        "fmt"
+        "sync"
+
+        dds "github.com/SoundMatt/go-DDS"
+)
+
+// ErrNoReply is returned by Requester.Request when the context expires before
+// a correlated reply arrives.
+var ErrNoReply = fmt.Errorf("rpc: no reply received")
+
+// CorrelationID is the 16-byte identifier embedded in every request and reply
+// payload to match replies to outstanding requests.
+type CorrelationID [16]byte
+
+// Request is an inbound RPC request delivered on the Replier.Requests channel.
+type Request[Req any] struct {
+        ID    CorrelationID
+        Value Req
+}
+
+func newCorrID() CorrelationID <span class="cov7" title="19">{
+        var id CorrelationID
+        writeN, writeErr := rand.Read(id[:])
+        _ = writeN
+        _ = writeErr // crypto/rand.Read never returns an error since Go 1.20
+        return id
+}</span>
+
+func encodeRPC(id CorrelationID, payload []byte) []byte <span class="cov8" title="36">{
+        out := make([]byte, 16+len(payload))
+        copy(out[:16], id[:])
+        copy(out[16:], payload)
+        return out
+}</span>
+
+func decodeRPC(data []byte) (CorrelationID, []byte, error) <span class="cov10" title="64">{
+        if len(data) &lt; 16 </span><span class="cov4" title="4">{
+                return CorrelationID{}, nil, fmt.Errorf("rpc: payload too short (%d bytes)", len(data))
+        }</span>
+        <span class="cov9" title="60">var id CorrelationID
+        copy(id[:], data[:16])
+        return id, data[16:], nil</span>
+}
+
+// Requester sends typed RPC requests and waits for correlated replies.
+// Create with NewRequester; call Close when done.
+type Requester[Req, Rep any] struct {
+        pub       dds.Publisher
+        sub       dds.Subscriber
+        reqCodec  dds.Codec[Req]
+        repCodec  dds.Codec[Rep]
+        mu        sync.Mutex
+        pending   map[CorrelationID]chan dds.Sample
+        done      chan struct{}
+        closeOnce sync.Once
+}
+
+// NewRequester creates a Requester on the given participant.
+// It publishes requests on &lt;topic&gt;/request and receives replies on &lt;topic&gt;/reply.
+func NewRequester[Req, Rep any](
+        p dds.Participant,
+        topic string,
+        reqCodec dds.Codec[Req],
+        repCodec dds.Codec[Rep],
+        qos dds.QoS,
+) (*Requester[Req, Rep], error) <span class="cov7" title="16">{
+        pub, err := p.NewPublisher(topic+"/request", qos)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("rpc: requester publisher: %w", err)
+        }</span>
+        <span class="cov7" title="16">sub, err := p.NewSubscriber(topic+"/reply", qos)
+        if err != nil </span><span class="cov0" title="0">{
+                _ = pub.Close()
+                return nil, fmt.Errorf("rpc: requester subscriber: %w", err)
+        }</span>
+        <span class="cov7" title="16">r := &amp;Requester[Req, Rep]{
+                pub:      pub,
+                sub:      sub,
+                reqCodec: reqCodec,
+                repCodec: repCodec,
+                pending:  make(map[CorrelationID]chan dds.Sample),
+                done:     make(chan struct{}),
+        }
+        go r.demux()
+        return r, nil</span>
+}
+
+func (r *Requester[Req, Rep]) demux() <span class="cov7" title="16">{
+        for </span><span class="cov8" title="40">{
+                select </span>{
+                case s, ok := &lt;-r.sub.C():<span class="cov7" title="25">
+                        if !ok </span><span class="cov1" title="1">{
+                                return
+                        }</span>
+                        <span class="cov7" title="24">id, _, err := decodeRPC(s.Payload)
+                        if err != nil </span><span class="cov2" title="2">{
+                                continue</span>
+                        }
+                        <span class="cov7" title="22">r.mu.Lock()
+                        ch, ok2 := r.pending[id]
+                        if ok2 </span><span class="cov7" title="17">{
+                                delete(r.pending, id)
+                        }</span>
+                        <span class="cov7" title="22">r.mu.Unlock()
+                        if ok2 </span><span class="cov7" title="17">{
+                                select </span>{
+                                case ch &lt;- s:<span class="cov7" title="17"></span>
+                                default:<span class="cov0" title="0"></span>
+                                }
+                        }
+                case &lt;-r.done:<span class="cov6" title="15">
+                        return</span>
+                }
+        }
+}
+
+// Request sends req and blocks until a correlated reply arrives or ctx expires.
+func (r *Requester[Req, Rep]) Request(ctx context.Context, req Req) (Rep, error) <span class="cov7" title="19">{
+        var zero Rep
+        encoded, err := r.reqCodec.Marshal(req)
+        if err != nil </span><span class="cov0" title="0">{
+                return zero, fmt.Errorf("rpc: encode request: %w", err)
+        }</span>
+        <span class="cov7" title="19">id := newCorrID()
+        replyCh := make(chan dds.Sample, 1)
+        r.mu.Lock()
+        r.pending[id] = replyCh
+        r.mu.Unlock()
+
+        payload := encodeRPC(id, encoded)
+        if err := r.pub.WriteCtx(ctx, payload); err != nil </span><span class="cov1" title="1">{
+                r.mu.Lock()
+                delete(r.pending, id)
+                r.mu.Unlock()
+                return zero, fmt.Errorf("rpc: send request: %w", err)
+        }</span>
+        <span class="cov7" title="18">select </span>{
+        case s := &lt;-replyCh:<span class="cov7" title="17">
+                _, repPayload, decErr := decodeRPC(s.Payload)
+                if decErr != nil </span><span class="cov0" title="0">{
+                        return zero, fmt.Errorf("rpc: decode reply header: %w", decErr)
+                }</span>
+                <span class="cov7" title="17">v, unmErr := r.repCodec.Unmarshal(repPayload)
+                if unmErr != nil </span><span class="cov0" title="0">{
+                        return zero, fmt.Errorf("rpc: unmarshal reply: %w", unmErr)
+                }</span>
+                <span class="cov7" title="17">return v, nil</span>
+        case &lt;-ctx.Done():<span class="cov1" title="1">
+                r.mu.Lock()
+                delete(r.pending, id)
+                r.mu.Unlock()
+                return zero, fmt.Errorf("%w: %v", ErrNoReply, ctx.Err())</span>
+        case &lt;-r.done:<span class="cov0" title="0">
+                return zero, fmt.Errorf("rpc: %w", dds.ErrClosed)</span>
+        }
+}
+
+// Close shuts down the requester and releases DDS resources.
+func (r *Requester[Req, Rep]) Close() error <span class="cov7" title="17">{
+        r.closeOnce.Do(func() </span><span class="cov7" title="16">{ close(r.done) }</span>)
+        <span class="cov7" title="17">_ = r.pub.Close()
+        _ = r.sub.Close()
+        return nil</span>
+}
+
+// Replier receives typed RPC requests and dispatches correlated replies.
+// Create with NewReplier; call Close when done.
+type Replier[Req, Rep any] struct {
+        pub       dds.Publisher
+        sub       dds.Subscriber
+        reqCodec  dds.Codec[Req]
+        repCodec  dds.Codec[Rep]
+        requests  chan Request[Req]
+        done      chan struct{}
+        closeOnce sync.Once
+}
+
+// NewReplier creates a Replier on the given participant.
+// It listens on &lt;topic&gt;/request and replies on &lt;topic&gt;/reply.
+func NewReplier[Req, Rep any](
+        p dds.Participant,
+        topic string,
+        reqCodec dds.Codec[Req],
+        repCodec dds.Codec[Rep],
+        qos dds.QoS,
+) (*Replier[Req, Rep], error) <span class="cov6" title="15">{
+        sub, err := p.NewSubscriber(topic+"/request", qos)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("rpc: replier subscriber: %w", err)
+        }</span>
+        <span class="cov6" title="15">pub, err := p.NewPublisher(topic+"/reply", qos)
+        if err != nil </span><span class="cov0" title="0">{
+                _ = sub.Close()
+                return nil, fmt.Errorf("rpc: replier publisher: %w", err)
+        }</span>
+        <span class="cov6" title="15">rl := &amp;Replier[Req, Rep]{
+                pub:      pub,
+                sub:      sub,
+                reqCodec: reqCodec,
+                repCodec: repCodec,
+                requests: make(chan Request[Req], 64),
+                done:     make(chan struct{}),
+        }
+        go rl.pump()
+        return rl, nil</span>
+}
+
+func (rl *Replier[Req, Rep]) pump() <span class="cov6" title="15">{
+        defer close(rl.requests)
+        for </span><span class="cov8" title="38">{
+                select </span>{
+                case s, ok := &lt;-rl.sub.C():<span class="cov7" title="23">
+                        if !ok </span><span class="cov0" title="0">{
+                                return
+                        }</span>
+                        <span class="cov7" title="23">id, payload, err := decodeRPC(s.Payload)
+                        if err != nil </span><span class="cov2" title="2">{
+                                continue</span>
+                        }
+                        <span class="cov7" title="21">v, err := rl.reqCodec.Unmarshal(payload)
+                        if err != nil </span><span class="cov2" title="2">{
+                                continue</span>
+                        }
+                        <span class="cov7" title="19">select </span>{
+                        case rl.requests &lt;- Request[Req]{ID: id, Value: v}:<span class="cov7" title="19"></span>
+                        case &lt;-rl.done:<span class="cov0" title="0">
+                                return</span>
+                        }
+                case &lt;-rl.done:<span class="cov6" title="15">
+                        return</span>
+                }
+        }
+}
+
+// Requests returns the channel on which decoded RPC requests are delivered.
+// Iterate with range or a select; close is handled by Close.
+func (rl *Replier[Req, Rep]) Requests() &lt;-chan Request[Req] <span class="cov6" title="13">{ return rl.requests }</span>
+
+// Reply sends a reply correlated to req. ctx controls the write deadline.
+func (rl *Replier[Req, Rep]) Reply(ctx context.Context, req Request[Req], rep Rep) error <span class="cov7" title="17">{
+        encoded, err := rl.repCodec.Marshal(rep)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("rpc: encode reply: %w", err)
+        }</span>
+        <span class="cov7" title="17">if err := rl.pub.WriteCtx(ctx, encodeRPC(req.ID, encoded)); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("rpc: send reply: %w", err)
+        }</span>
+        <span class="cov7" title="17">return nil</span>
+}
+
+// Close stops the pump goroutine and releases DDS resources.
+func (rl *Replier[Req, Rep]) Close() error <span class="cov7" title="16">{
+        rl.closeOnce.Do(func() </span><span class="cov6" title="15">{ close(rl.done) }</span>)
+        <span class="cov7" title="16">_ = rl.sub.Close()
+        _ = rl.pub.Close()
+        return nil</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

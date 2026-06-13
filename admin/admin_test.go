@@ -16,6 +16,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"testing"
@@ -442,5 +443,68 @@ func TestAdmin_ContentType_JSON(t *testing.T) {
 		if !strings.HasPrefix(ct, "application/json") {
 			t.Errorf("%s Content-Type: got %q, want application/json", path, ct)
 		}
+	}
+}
+
+// ── stub types for handlePublish error-path coverage ─────────────────────────
+
+// errPublisher implements dds.Publisher and always fails Write.
+type errPublisher struct{}
+
+func (p *errPublisher) Write(_ []byte) error { return errors.New("forced write failure") }
+func (p *errPublisher) WriteCtx(_ context.Context, _ []byte) error {
+	return errors.New("forced write failure")
+}
+func (p *errPublisher) Close() error { return nil }
+
+// writeErrParticipant wraps a real participant but returns errPublisher for all topics.
+type writeErrParticipant struct{ dds.Participant }
+
+func (p *writeErrParticipant) NewPublisher(_ string, _ dds.QoS) (dds.Publisher, error) {
+	return &errPublisher{}, nil
+}
+
+// newPubErrParticipant always returns a non-ErrClosed error from NewPublisher.
+type newPubErrParticipant struct{ dds.Participant }
+
+func (p *newPubErrParticipant) NewPublisher(_ string, _ dds.QoS) (dds.Publisher, error) {
+	return nil, errors.New("forced publisher creation failure")
+}
+
+// TestAdmin_Publish_WriteError_Returns500 covers the pub.Write error path in
+// handlePublish: a publisher that always fails Write must trigger a 500.
+func TestAdmin_Publish_WriteError_Returns500(t *testing.T) {
+	realPart := newPart(t)
+	stub := &writeErrParticipant{Participant: realPart}
+	s := newServer(t, stub, admin.Options{})
+
+	payload := base64.StdEncoding.EncodeToString([]byte("data"))
+	body, err := json.Marshal(map[string]string{"topic": "admin/write-err", "payload": payload})
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	resp := post(t, "http://"+s.Addr()+"/admin/publish", body)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("expected 500 for write error, got %d", resp.StatusCode)
+	}
+}
+
+// TestAdmin_Publish_NewPublisherError_Returns500 covers the non-ErrClosed error
+// path in handlePublish when NewPublisher fails with a generic error.
+func TestAdmin_Publish_NewPublisherError_Returns500(t *testing.T) {
+	realPart := newPart(t)
+	stub := &newPubErrParticipant{Participant: realPart}
+	s := newServer(t, stub, admin.Options{})
+
+	payload := base64.StdEncoding.EncodeToString([]byte("data"))
+	body, err := json.Marshal(map[string]string{"topic": "admin/newpub-err", "payload": payload})
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	resp := post(t, "http://"+s.Addr()+"/admin/publish", body)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("expected 500 for NewPublisher error, got %d", resp.StatusCode)
 	}
 }

@@ -1,0 +1,260 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>domain: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/SoundMatt/go-DDS/bridge/domain/domain.go (95.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">no coverage</span>
+				<span class="cov1">low coverage</span>
+				<span class="cov2">*</span>
+				<span class="cov3">*</span>
+				<span class="cov4">*</span>
+				<span class="cov5">*</span>
+				<span class="cov6">*</span>
+				<span class="cov7">*</span>
+				<span class="cov8">*</span>
+				<span class="cov9">*</span>
+				<span class="cov10">high coverage</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">// Copyright (c) 2026 Matt Jones. All rights reserved.
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+// Package domain provides a Bridge that forwards DDS samples between two
+// Participant domains (Milestone 10 — Enterprise Services: Routing).
+//
+// A domain bridge connects two isolated DDS domains, allowing topics
+// published in one domain to be delivered in another. This is the canonical
+// approach for cross-domain routing without a centralised broker.
+//
+//        src domain 0               dst domain 1
+//        Publisher → [topic] → Subscriber → Bridge → Publisher → [topic] → Subscriber
+//
+// Each bridged topic is forwarded unidirectionally from src to dst. For
+// bidirectional bridging, create two Bridge instances with swapped src/dst.
+package domain
+
+//fusa:req REQ-RT-001
+//fusa:req REQ-SAFETY-003
+//fusa:req REQ-BRIDGE-001
+//fusa:req REQ-BRIDGE-002
+//fusa:req REQ-SEOOC-008
+//fusa:req REQ-SEOOC-009
+
+import (
+        "fmt"
+        "sync"
+
+        dds "github.com/SoundMatt/go-DDS"
+)
+
+// Bridge forwards DDS samples from one participant (src) to another (dst)
+// for each configured topic. Each topic gets one subscriber on src and one
+// publisher on dst; a dedicated goroutine forwards samples between them.
+//
+// Bridge is safe for concurrent use from multiple goroutines.
+type Bridge struct {
+        src    dds.Participant
+        dst    dds.Participant
+        topics []string
+        qos    dds.QoS
+
+        subs []dds.Subscriber
+        pubs []dds.Publisher
+
+        done chan struct{}
+        once sync.Once
+        wg   sync.WaitGroup
+}
+
+// Options configures a [Bridge].
+type Options struct {
+        // Topics lists the DDS topic names to bridge from src to dst.
+        // An empty Topics list results in a Bridge that forwards nothing.
+        Topics []string
+        // QoS is applied to all bridged subscriber and publisher endpoints.
+        // Zero value uses [dds.DefaultQoS].
+        QoS dds.QoS
+}
+
+// New creates a Bridge that will forward samples on opts.Topics from src to
+// dst. It establishes subscribers on src and publishers on dst immediately
+// so that no samples are lost once [Bridge.Start] is called.
+//
+// Returns an error if any subscriber or publisher cannot be created (e.g.
+// because src or dst is already closed).
+func New(src, dst dds.Participant, opts Options) (*Bridge, error) <span class="cov3" title="8">{
+        b := &amp;Bridge{
+                src:    src,
+                dst:    dst,
+                topics: opts.Topics,
+                qos:    opts.QoS,
+                done:   make(chan struct{}),
+        }
+        for _, topic := range opts.Topics </span><span class="cov3" title="8">{
+                sub, err := src.NewSubscriber(topic, b.qos)
+                if err != nil </span><span class="cov1" title="1">{
+                        b.closeEndpoints()
+                        return nil, fmt.Errorf("domain bridge: NewSubscriber(%q) on src: %w", topic, err)
+                }</span>
+                <span class="cov3" title="7">pub, err := dst.NewPublisher(topic, b.qos)
+                if err != nil </span><span class="cov1" title="1">{
+                        _ = sub.Close()
+                        b.closeEndpoints()
+                        return nil, fmt.Errorf("domain bridge: NewPublisher(%q) on dst: %w", topic, err)
+                }</span>
+                <span class="cov2" title="6">b.subs = append(b.subs, sub)
+                b.pubs = append(b.pubs, pub)</span>
+        }
+        <span class="cov2" title="6">return b, nil</span>
+}
+
+// Start launches one forwarding goroutine per bridged topic. Each goroutine
+// reads samples from the src subscriber and writes them to the dst publisher
+// until Close is called or either participant is closed.
+//
+// Start is idempotent: calling it more than once has no effect.
+func (b *Bridge) Start() <span class="cov2" title="6">{
+        done := b.done
+        for i := range b.subs </span><span class="cov2" title="6">{
+                b.wg.Add(1)
+                go func(sub dds.Subscriber, pub dds.Publisher, done &lt;-chan struct{}) </span><span class="cov2" title="6">{
+                        defer b.wg.Done()
+                        b.forward(sub, pub)
+                }</span>(b.subs[i], b.pubs[i], done)
+        }
+}
+
+// Close stops all forwarding goroutines and closes the bridged subscribers and
+// publishers. It is safe to call Close multiple times.
+func (b *Bridge) Close() error <span class="cov3" title="7">{
+        b.once.Do(func() </span><span class="cov2" title="6">{ close(b.done) }</span>)
+        <span class="cov3" title="7">b.wg.Wait()
+        b.closeEndpoints()
+        return nil</span>
+}
+
+func (b *Bridge) forward(sub dds.Subscriber, pub dds.Publisher) <span class="cov2" title="6">{
+        // recover handles the case where mock's broker panics if a downstream
+        // subscriber's channel was closed while we were mid-delivery.
+        defer func() </span><span class="cov2" title="6">{ _ = recover() }</span>()
+        <span class="cov2" title="6">for </span><span class="cov10" title="5708">{
+                select </span>{
+                case s, ok := &lt;-sub.C():<span class="cov9" title="5702">
+                        if !ok </span><span class="cov0" title="0">{
+                                return
+                        }</span>
+                        <span class="cov9" title="5702">if err := pub.Write(s.Payload); err != nil </span><span class="cov0" title="0">{
+                                return
+                        }</span>
+                case &lt;-b.done:<span class="cov2" title="6">
+                        return</span>
+                }
+        }
+}
+
+func (b *Bridge) closeEndpoints() <span class="cov3" title="9">{
+        for _, sub := range b.subs </span><span class="cov2" title="6">{
+                _ = sub.Close()
+        }</span>
+        <span class="cov3" title="9">for _, pub := range b.pubs </span><span class="cov2" title="6">{
+                _ = pub.Close()
+        }</span>
+        <span class="cov3" title="9">b.subs = nil
+        b.pubs = nil</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

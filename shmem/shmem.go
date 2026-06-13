@@ -84,11 +84,13 @@ type shmTopicCounter struct {
 }
 
 func (b *shmBroker) topicCounter(topic string) *shmTopicCounter {
-	v, _ := b.topicMetrics.LoadOrStore(topic, &shmTopicCounter{})
-	tc, _ := v.(*shmTopicCounter)
-	if tc == nil {
-		tc = &shmTopicCounter{}
+	if v, ok := b.topicMetrics.Load(topic); ok {
+		if tc, ok := v.(*shmTopicCounter); ok && tc != nil {
+			return tc
+		}
 	}
+	tc := &shmTopicCounter{}
+	b.topicMetrics.Store(topic, tc)
 	return tc
 }
 

@@ -1,0 +1,153 @@
+{
+  "schemaVersion": "1.9",
+  "kind": "gap-report",
+  "tool": "go-FuSa",
+  "toolVersion": "0.30.0",
+  "language": "go",
+  "generatedAt": "2026-06-13T19:34:54.813416Z",
+  "projectRoot": "go-DDS",
+  "standard": "ISO 26262 ASIL-B",
+  "objectives": [
+    {
+      "id": "6.1",
+      "title": "Software safety requirements specification exists (.fusa-reqs.json)",
+      "clause": "§6.4.3",
+      "status": "satisfied",
+      "evidence": [
+        ".fusa-reqs.json present"
+      ]
+    },
+    {
+      "id": "6.2",
+      "title": "Software architectural design documented (boundary.mermaid)",
+      "clause": "§6.4.5",
+      "status": "satisfied",
+      "evidence": [
+        "boundary.mermaid present"
+      ]
+    },
+    {
+      "id": "6.3",
+      "title": "Software unit design and implementation (source code with annotations)",
+      "clause": "§6.4.7",
+      "status": "satisfied",
+      "evidence": [
+        ".fusa.json present"
+      ]
+    },
+    {
+      "id": "6.4",
+      "title": "Software unit verification (test evidence + coverage) (.fusa-evidence.json)",
+      "clause": "§6.4.9",
+      "status": "satisfied",
+      "evidence": [
+        ".fusa-evidence.json present"
+      ]
+    },
+    {
+      "id": "6.5",
+      "title": "Software integration and integration testing (provenance.json)",
+      "clause": "§6.4.11",
+      "status": "satisfied",
+      "evidence": [
+        "provenance.json present"
+      ]
+    },
+    {
+      "id": "6.6",
+      "title": "Verification of software safety requirements (.fusa-evidence.json + .fusa-reqs.json)",
+      "clause": "§6.4.12",
+      "status": "satisfied",
+      "evidence": [
+        ".fusa-evidence.json present"
+      ]
+    },
+    {
+      "id": "7.1",
+      "title": "ASIL decomposition documented in .fusa.json",
+      "clause": "§7.3",
+      "status": "satisfied",
+      "evidence": [
+        ".fusa.json present"
+      ]
+    },
+    {
+      "id": "7.2",
+      "title": "Safety goal documentation (.fusa-reqs.json with ASIL annotations)",
+      "clause": "§7.4",
+      "status": "satisfied",
+      "evidence": [
+        ".fusa-reqs.json present"
+      ]
+    },
+    {
+      "id": "7.3",
+      "title": "Hazard and Risk Analysis (HARA) structured data (.fusa-hara.json)",
+      "clause": "§7.4.2",
+      "status": "satisfied",
+      "evidence": [
+        ".fusa-hara.json present"
+      ]
+    },
+    {
+      "id": "7.4",
+      "title": "Functional safety concept (SAFETY_PLAN.md)",
+      "clause": "§7.5",
+      "status": "satisfied",
+      "evidence": [
+        "SAFETY_PLAN.md present"
+      ]
+    },
+    {
+      "id": "9.1",
+      "title": "FMEA analysis performed (fmea.json)",
+      "clause": "§9.4",
+      "status": "satisfied",
+      "evidence": [
+        "fmea.json present"
+      ]
+    },
+    {
+      "id": "10.1",
+      "title": "Software configuration management (sbom.json)",
+      "clause": "§10.4.2",
+      "status": "satisfied",
+      "evidence": [
+        "sbom.json present"
+      ]
+    },
+    {
+      "id": "10.2",
+      "title": "Problem reports tracked (.fusa-problems.json)",
+      "clause": "§10.4.3",
+      "status": "satisfied",
+      "evidence": [
+        ".fusa-problems.json present"
+      ]
+    },
+    {
+      "id": "10.4",
+      "title": "Software Configuration Index (sci.json)",
+      "clause": "§10.4.4",
+      "status": "gap",
+      "findings": [
+        "sci.json not found — run 'gofusa sci'"
+      ]
+    },
+    {
+      "id": "11.2",
+      "title": "Cybersecurity integration (cyber-report.json)",
+      "clause": "§11.4",
+      "status": "gap",
+      "findings": [
+        "cyber-report.json not found — run 'gofusa cyber'"
+      ]
+    }
+  ],
+  "summary": {
+    "total": 15,
+    "satisfied": 13,
+    "partial": 0,
+    "gaps": 2
+  }
+}

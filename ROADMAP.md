@@ -79,6 +79,7 @@ API parity does not.
 | v0.31.0 | — | idl/ 88.4%→92.5%: parser error paths, typedef/struct sub-module resolution, camelCase/toGoName edge cases ✅ |
 | v0.32.0 | — | rtps/ 86.8%→87.3%: CDR/locator/submessage error paths, TryRead closed channel, sendHeartbeatLocked, waitDrain ✅ |
 | v0.33.0 | — | tsn/ 94.4%→100%: TAPRIO Validate overflow + itoa loop body; shmem/ 95.2%→96.2%: readData OS/header/body errors, loop continue ✅ |
+| v0.34.0 | — | admin/ 96.1%→100%: handlePublish write/NewPublisher error paths; record/ 98.5%→100%: emitWindow write error, playFiltered pub.Write error; services/ 98.5%→100%: RecorderService.Start cleanup loop ✅ |
 | **main** | — | **next coverage target** |
 | v1.0 | 14 | TCP/TLS + DTLS transport completeness |
 | v1.1 | 15 | Cloud-native runtime (Prometheus, K8s, NAT traversal) |

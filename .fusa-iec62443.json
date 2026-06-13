@@ -1,0 +1,5 @@
+{
+  "target_sl": "SL-2",
+  "component_type": "embedded-software",
+  "incident_resp_doc": "INCIDENT-RESPONSE.md"
+}

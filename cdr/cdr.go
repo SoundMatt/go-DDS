@@ -221,7 +221,10 @@ func (d *Decoder) ReadUint8() (uint8, error) {
 // ReadInt8 decodes a signed byte.
 func (d *Decoder) ReadInt8() (int8, error) {
 	v, err := d.ReadUint8()
-	return int8(v), err
+	if err != nil {
+		return 0, err
+	}
+	return int8(v), nil
 }
 
 // ReadInt16 decodes a signed 16-bit integer.
@@ -293,13 +296,19 @@ func (d *Decoder) ReadUint64() (uint64, error) {
 // ReadFloat32 decodes a 32-bit IEEE 754 float.
 func (d *Decoder) ReadFloat32() (float32, error) {
 	v, err := d.ReadUint32()
-	return math.Float32frombits(v), err
+	if err != nil {
+		return 0, err
+	}
+	return math.Float32frombits(v), nil
 }
 
 // ReadFloat64 decodes a 64-bit IEEE 754 float.
 func (d *Decoder) ReadFloat64() (float64, error) {
 	v, err := d.ReadUint64()
-	return math.Float64frombits(v), err
+	if err != nil {
+		return 0, err
+	}
+	return math.Float64frombits(v), nil
 }
 
 // ReadString decodes a CDR string (uint32 length + bytes + null terminator).

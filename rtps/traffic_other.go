@@ -23,7 +23,6 @@ func enableTxTime(_ *net.UDPConn) error           { return nil }
 func clockTAINow() (time.Time, error)             { return time.Now(), nil }
 
 func scheduledSend(conn *net.UDPConn, dst *net.UDPAddr, data []byte, _ uint64) error {
-	ignoredRet, err := conn.WriteToUDP(data, dst)
-	_ = ignoredRet
+	_, err := conn.WriteToUDP(data, dst)
 	return err
 }
