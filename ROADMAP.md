@@ -74,6 +74,7 @@ API parity does not.
 | v0.26.0 | — | rpc/ 86.1%→98.1%; cdr/ 99.2%→100%; bridge/rest 95.6%→98.2% ✅ |
 | v0.27.0 | — | mock/ 96.4%→98.0%; testutil/scenario/ 86.7%→100%; bridge/wan 93.6%→99.2% ✅ |
 | v0.28.0 | — | shmem/ 93.3%→95.2%; monitor/ 90.5%→91.0% ✅ |
+| v0.29.0 | — | go-FuSa v0.25.1→v0.30.0 upgrade ✅ |
 | **main** | — | **next coverage target** |
 
 ### Released — v0.1 – v0.8
@@ -111,6 +112,7 @@ API parity does not.
 - **v0.26.0** — `rpc/` 86.1%→98.1% (NewRequester/NewReplier publisher+subscriber error paths; Request encode/unmarshal/done-channel errors; Reply encode/write errors; demux/pump short+invalid payload continue branches); `cdr/` 99.2%→100% (ReadString n==0 defensive branch); `bridge/rest` 95.6%→98.2% (SSE channel-close, write-error-on-message, keepalive write error)
 - **v0.27.0** — `mock/` 96.4%→98.0% (NewLoaningPublisher publisher error + non-mock participant; TryRead closed-subscriber); `testutil/scenario/` 86.7%→100% (publishStep write error via MaxSampleSize; expectStep timeout + subscriber-closed via pre-closed-channel participant wrapper; waitStep/expectNoneStep ctx-cancel-during-wait; expectNoneStep subscriber error); `bridge/wan/` 93.6%→99.2% (Connect multi-topic cleanup; ErrFrameTooLarge/body-read-error/invalid-JSON via server-side tests; sendLoop writeFrame error + subscriber-channel-closed + writeFrame header error via `net.Pipe` internal test)
 - **v0.28.0** — `shmem/` 93.3%→95.2% (deliverSub resetDeadline call; TryRead closed-channel; "#" wildcard match; pattern-longer-than-topic mismatch; NewLoaningPublisher publisher-error path); `monitor/` 90.5%→91.0% (WatchSafety events-channel-closed; handleHealth nil-hp 501 path)
+- **v0.29.0** — go-FuSa v0.25.1→v0.30.0 upgrade; `gofusa check ./...` clean at new version
 
 ---
 

@@ -87,6 +87,8 @@ history expansion on `%`, `!`, and `(`.
 | v0.25.0  | cdr/ 94.2%→99.2%; bridge/rest 91.2%→95.6%; bridge/mqtt 97.5%→100% |
 | v0.26.0  | rpc/ 86.1%→98.1%; cdr/ 99.2%→100%; bridge/rest 95.6%→98.2% |
 | v0.27.0  | mock/ 96.4%→98.0%; bridge/wan 93.6%→98.4%; testutil/scenario/ 100% |
+| v0.28.0  | shmem/ 93.3%→95.2%; monitor/ 90.5%→91.0% |
+| v0.29.0  | go-FuSa v0.25.1→v0.30.0 upgrade |
 | **main** | **next coverage target** |
 
 ## CI matrix
@@ -99,7 +101,7 @@ history expansion on `%`, `!`, and `(`.
 | benchmark-smoke | ubuntu, 1 iter each |
 | fuzz-short     | ubuntu, 10 s per target |
 | lint           | golangci-lint |
-| gofusa         | go-FuSa v0.25.1 safety check (0 errors required) |
+| gofusa         | go-FuSa v0.30.0 safety check (0 errors required) |
 | dco            | DCO sign-off check |
 | test-interop   | Docker probe-and-skip |
 

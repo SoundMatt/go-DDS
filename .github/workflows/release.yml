@@ -29,7 +29,7 @@ jobs:
           go-version: "1.25"
 
       - name: Install go-FuSa
-        run: go install github.com/SoundMatt/go-FuSa/cmd/gofusa@v0.25.1
+        run: go install github.com/SoundMatt/go-FuSa/cmd/gofusa@v0.30.0
 
       - name: Regenerate dFMEA table
         run: gofusa fmea -cyber
