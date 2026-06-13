@@ -77,6 +77,7 @@ API parity does not.
 | v0.29.0 | — | go-FuSa v0.25.1→v0.30.0 upgrade ✅ |
 | v0.30.0 | — | idl/roundtrip 85.3%→96.0%; bridge/grpc 91.1%→92.8%; Docker golang:1.26 + alpine:3.21 ✅ |
 | v0.31.0 | — | idl/ 88.4%→92.5%: parser error paths, typedef/struct sub-module resolution, camelCase/toGoName edge cases ✅ |
+| v0.32.0 | — | rtps/ 86.8%→87.3%: CDR/locator/submessage error paths, TryRead closed channel, sendHeartbeatLocked, waitDrain ✅ |
 | **main** | — | **next coverage target** |
 | v1.0 | 14 | TCP/TLS + DTLS transport completeness |
 | v1.1 | 15 | Cloud-native runtime (Prometheus, K8s, NAT traversal) |
