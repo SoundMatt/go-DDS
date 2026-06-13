@@ -10,6 +10,11 @@ package testutil_test
 //fusa:test REQ-TESTUTIL-003
 //fusa:test REQ-TESTUTIL-004
 //fusa:test REQ-TESTUTIL-005
+//fusa:test REQ-TESTUTIL-006
+//fusa:test REQ-TESTUTIL-007
+//fusa:test REQ-TESTUTIL-008
+//fusa:test REQ-TESTUTIL-009
+//fusa:test REQ-TESTUTIL-010
 
 import (
 	"fmt"

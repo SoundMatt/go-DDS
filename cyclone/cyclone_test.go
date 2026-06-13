@@ -7,7 +7,8 @@
 
 package cyclone_test
 
-//fusa:test REQ-CYCLONE-002
+//fusa:test REQ-CYCLONE-003
+//fusa:test REQ-CYCLONE-004
 
 import (
 	"testing"

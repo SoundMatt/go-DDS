@@ -14,6 +14,8 @@ package scenario_test
 //fusa:test REQ-SCENARIO-004
 //fusa:test REQ-SCENARIO-005
 //fusa:test REQ-SCENARIO-006
+//fusa:test REQ-SCENARIO-007
+//fusa:test REQ-SCENARIO-008
 
 import (
 	"context"

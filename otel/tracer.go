@@ -21,6 +21,7 @@ package otel
 
 //fusa:req REQ-OTEL-001
 //fusa:req REQ-OTEL-002
+//fusa:req REQ-OTEL-003
 
 import (
 	"context"

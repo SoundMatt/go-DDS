@@ -22,6 +22,8 @@ package scenario
 //fusa:req REQ-SCENARIO-004
 //fusa:req REQ-SCENARIO-005
 //fusa:req REQ-SCENARIO-006
+//fusa:req REQ-SCENARIO-007
+//fusa:req REQ-SCENARIO-008
 
 import (
 	"context"

@@ -7,6 +7,7 @@ package otel_test
 
 //fusa:test REQ-OTEL-001
 //fusa:test REQ-OTEL-002
+//fusa:test REQ-OTEL-003
 
 import (
 	"context"

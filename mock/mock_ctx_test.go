@@ -5,6 +5,9 @@
 
 package mock_test
 
+//fusa:test REQ-MOCK-002
+//fusa:test REQ-MOCK-003
+
 import (
 	"context"
 	"errors"

@@ -14,7 +14,8 @@
 // defaults to 64 KiB and is configurable via [Options].
 package cyclone
 
-//fusa:req REQ-CYCLONE-002
+//fusa:req REQ-CYCLONE-003
+//fusa:req REQ-CYCLONE-004
 
 /*
 #cgo CFLAGS: -I/usr/local/include
