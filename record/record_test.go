@@ -418,6 +418,76 @@ func TestPlayer_Play_WriteError(t *testing.T) {
 	}
 }
 
+// ── write-error coverage paths ────────────────────────────────────────────────
+
+// failWritePub is a dds.Publisher stub whose Write always returns an error.
+type failWritePub struct{}
+
+func (failWritePub) Write(_ []byte) error                           { return dds.ErrClosed }
+func (failWritePub) WriteCtx(_ context.Context, _ []byte) error    { return dds.ErrClosed }
+func (failWritePub) Close() error                                   { return nil }
+
+// failWritePart is a dds.Participant wrapper that returns failWritePub from NewPublisher.
+type failWritePart struct{ dds.Participant }
+
+func (f *failWritePart) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, error) {
+	return failWritePub{}, nil
+}
+
+// TestFaultPublisher_EmitWindow_WriteError covers the emitWindow write-error
+// path: when the underlying publisher fails, emitWindow returns the error.
+// This is triggered via Close on a FaultPublisher with ReorderWindow > 1 and
+// buffered samples.
+func TestFaultPublisher_EmitWindow_WriteError(t *testing.T) {
+	fp := record.NewFaultPublisher(failWritePub{}, record.FaultOptions{
+		ReorderWindow: 4,
+	}, 42)
+	// Write enough samples to fill the window (window size - 1 = 3 to buffer, 4th triggers flush).
+	// Actually, we just need samples in the buffer; Close calls emitWindow on the remaining window.
+	for i := 0; i < 3; i++ {
+		_ = fp.Write([]byte{byte(i)}) // these are buffered, not emitted yet
+	}
+	// Close flushes the window via emitWindow; failWritePub.Write returns ErrClosed.
+	// emitWindow returns that error, which Close ignores (it calls _ = f.emitWindow(window)).
+	// Actually Close does `_ = f.emitWindow(window)` so the error is discarded.
+	_ = fp.Close()
+	// The real emitWindow error path is only reachable when Write is called
+	// and the window is full (triggering emitWindow during Write, not Close).
+	// Let's trigger emitWindow during Write by filling then overflowing the window.
+	fp2 := record.NewFaultPublisher(failWritePub{}, record.FaultOptions{
+		ReorderWindow: 2,
+	}, 42)
+	_ = fp2.Write([]byte("fill"))  // buffered
+	err := fp2.Write([]byte("overflow"))  // window full → emitWindow → fails → returns err
+	if err == nil {
+		t.Fatal("expected write error when emitWindow fails, got nil")
+	}
+	_ = fp2.Close()
+}
+
+// TestPlayer_PlayFiltered_WriteError covers the pub.Write error path in playFiltered.
+func TestPlayer_PlayFiltered_WriteError(t *testing.T) {
+	// Build a minimal JSONL recording.
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	_ = enc.Encode(record.RecordedSample{
+		Topic:      "replay/topic",
+		Payload:    []byte("data"),
+		RecordedAt: time.Now(),
+	})
+
+	realPart := newPart(t)
+	wp := &failWritePart{Participant: realPart}
+	pl := record.NewPlayer(&buf, wp)
+	err := pl.Play(context.Background())
+	if err == nil {
+		t.Fatal("expected error when publisher Write fails during replay")
+	}
+	if !strings.Contains(err.Error(), "replay write") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
 // ── RecordedSample JSON round-trip ────────────────────────────────────────────
 
 func TestRecordedSample_JSONRoundTrip(t *testing.T) {
