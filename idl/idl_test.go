@@ -862,3 +862,206 @@ func min(a, b int) int {
 	}
 	return b
 }
+
+// ── Parser error paths ────────────────────────────────────────────────────────
+
+func TestParseString_Error_StructMissingName(t *testing.T) {
+	_, err := idl.ParseString(`struct { long x; };`)
+	if err == nil {
+		t.Fatal("expected error: struct missing name")
+	}
+}
+
+func TestParseString_Error_StructMissingOpenBrace(t *testing.T) {
+	_, err := idl.ParseString(`struct Foo long x; };`)
+	if err == nil {
+		t.Fatal("expected error: struct missing {")
+	}
+}
+
+func TestParseString_Error_StructArrayNonNumericSize(t *testing.T) {
+	_, err := idl.ParseString(`struct Foo { long bar[abc]; };`)
+	if err == nil {
+		t.Fatal("expected error: array non-numeric size")
+	}
+}
+
+func TestParseString_Error_StructFieldMissingSemi(t *testing.T) {
+	_, err := idl.ParseString(`struct Foo { long bar };`)
+	if err == nil {
+		t.Fatal("expected error: field missing ;")
+	}
+}
+
+func TestParseString_Error_StructMissingClosingBrace(t *testing.T) {
+	_, err := idl.ParseString(`struct Foo { long bar;`)
+	if err == nil {
+		t.Fatal("expected error: struct missing }")
+	}
+}
+
+func TestParseString_Error_StructMissingTrailingSemi(t *testing.T) {
+	_, err := idl.ParseString(`struct Foo { long bar; }`)
+	if err == nil {
+		t.Fatal("expected error: struct missing trailing ;")
+	}
+}
+
+func TestParseString_Error_TypedefBadType(t *testing.T) {
+	_, err := idl.ParseString(`typedef ; Alias;`)
+	if err == nil {
+		t.Fatal("expected error: typedef bad type")
+	}
+}
+
+func TestParseString_Error_TypedefMissingName(t *testing.T) {
+	_, err := idl.ParseString(`typedef long ;`)
+	if err == nil {
+		t.Fatal("expected error: typedef missing name")
+	}
+}
+
+func TestParseString_Error_TypedefMissingSemi(t *testing.T) {
+	_, err := idl.ParseString(`typedef long Alias`)
+	if err == nil {
+		t.Fatal("expected error: typedef missing ;")
+	}
+}
+
+func TestParseString_Error_TypeSpecNonIdent(t *testing.T) {
+	_, err := idl.ParseString(`struct Foo { 123 field; };`)
+	if err == nil {
+		t.Fatal("expected error: non-ident type token")
+	}
+}
+
+func TestParseString_Error_UnsignedUnknownType(t *testing.T) {
+	_, err := idl.ParseString(`struct Foo { unsigned foo bar; };`)
+	if err == nil {
+		t.Fatal("expected error: unknown unsigned type")
+	}
+}
+
+func TestParseString_Error_SequenceMissingAngle(t *testing.T) {
+	_, err := idl.ParseString(`struct Foo { sequence long bar; };`)
+	if err == nil {
+		t.Fatal("expected error: sequence missing <")
+	}
+}
+
+func TestParseString_Error_SequenceMissingCloseAngle(t *testing.T) {
+	_, err := idl.ParseString(`struct Foo { sequence<long bar; };`)
+	if err == nil {
+		t.Fatal("expected error: sequence missing >")
+	}
+}
+
+func TestParseString_Error_ModuleMissingName(t *testing.T) {
+	_, err := idl.ParseString(`module { struct Foo { long x; }; };`)
+	if err == nil {
+		t.Fatal("expected error: module missing name")
+	}
+}
+
+func TestParseString_Error_ModuleMissingOpenBrace(t *testing.T) {
+	_, err := idl.ParseString(`module Foo struct Bar { long x; }; };`)
+	if err == nil {
+		t.Fatal("expected error: module missing {")
+	}
+}
+
+func TestParseString_Error_ModuleMissingClosingBrace(t *testing.T) {
+	_, err := idl.ParseString(`module Foo { struct Bar { long x; };`)
+	if err == nil {
+		t.Fatal("expected error: module missing }")
+	}
+}
+
+func TestParseString_Error_EnumMissingName(t *testing.T) {
+	_, err := idl.ParseString(`enum { A, B };`)
+	if err == nil {
+		t.Fatal("expected error: enum missing name")
+	}
+}
+
+// ── Generator edge cases ──────────────────────────────────────────────────────
+
+// TestGenerate_TypedefInSubModule covers the searchTypedef submodule traversal
+// path: a typedef defined inside a module is resolved when referenced by a struct
+// field using the bare (unqualified) name.
+func TestGenerate_TypedefInSubModule(t *testing.T) {
+	src := `
+module Geometry {
+    typedef double Meters;
+    struct Point { Meters x; Meters y; };
+};
+`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	out, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if strings.Contains(out, "TODO") {
+		t.Errorf("typedef in sub-module not resolved; got TODO in output:\n%s", out)
+	}
+}
+
+// TestGenerate_StructInSubModule_BareNameRef covers the searchStruct submodule
+// traversal: a struct defined inside a named module is found by bare name when
+// referenced by a top-level struct field.
+func TestGenerate_StructInSubModule_BareNameRef(t *testing.T) {
+	src := `
+module Shapes {
+    struct Circle { double radius; };
+};
+struct Drawing { Circle outline; };
+`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	out, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if strings.Contains(out, "TODO") {
+		t.Errorf("struct in sub-module not found by bare name; got TODO in output:\n%s", out)
+	}
+}
+
+// TestGenerate_CamelCaseField covers the camelToSnake uppercase-insertion branch:
+// a camelCase IDL field name produces a snake_case JSON tag.
+func TestGenerate_CamelCaseField(t *testing.T) {
+	src := `struct Sensor { double speedValue; boolean isValid; };`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	out, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if !strings.Contains(out, `json:"is_valid"`) {
+		t.Errorf("expected json:\"is_valid\" tag in output:\n%s", out)
+	}
+}
+
+// TestGenerate_DoubleUnderscoreField covers the toGoName empty-part skip: a field
+// name with consecutive underscores produces an empty segment that is skipped.
+func TestGenerate_DoubleUnderscoreField(t *testing.T) {
+	src := `struct Msg { long foo__bar; };`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	out, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if !strings.Contains(out, "FooBar") {
+		t.Errorf("expected FooBar field (double underscore collapse) in output:\n%s", out)
+	}
+}

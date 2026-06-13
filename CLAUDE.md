@@ -111,6 +111,7 @@ history expansion on `%`, `!`, and `(`.
 | v0.28.0  | shmem/ 93.3%→95.2%; monitor/ 90.5%→91.0% |
 | v0.29.0  | go-FuSa v0.25.1→v0.30.0 upgrade |
 | v0.30.0  | idl/roundtrip 85.3%→96.0%; bridge/grpc 91.1%→92.8%; Docker golang:1.26 + alpine:3.21 |
+| v0.31.0  | idl/ 88.4%→92.5%: parser error paths, typedef/struct sub-module resolution, camelCase/toGoName edge cases |
 | **main** | **next coverage target** |
 
 ## CI matrix
