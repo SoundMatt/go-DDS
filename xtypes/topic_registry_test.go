@@ -183,3 +183,18 @@ func FuzzTopicTypeRegistry_RegisterLookup(f *testing.F) {
 		}
 	})
 }
+
+// TestRegisterTopicCodec_InterfaceType covers the `if rt == nil` branch in
+// RegisterTopicCodec. When T is an interface type (any), reflect.TypeOf of the
+// zero value is nil, so the fallback name "interface{}" is used.
+func TestRegisterTopicCodec_InterfaceType(t *testing.T) {
+	r := xtypes.NewTopicTypeRegistry()
+	xtypes.RegisterTopicCodec[any](r, "sensors/any", rawCodec[any]{})
+	name, ok := r.LookupTopicType("sensors/any")
+	if !ok {
+		t.Fatal("topic not found after RegisterTopicCodec[any]")
+	}
+	if name != "interface{}" {
+		t.Errorf("expected name \"interface{}\", got %q", name)
+	}
+}

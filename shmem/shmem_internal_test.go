@@ -297,6 +297,21 @@ func TestReadData_EmptyFile(t *testing.T) {
 	}
 }
 
+// TestLoop_ReadTimeout_Continue covers the conn.Read error (timeout) continue
+// path in loop (shmem.go:340-342). When no socket notification arrives before
+// the 100ms read deadline, Read returns an error and the loop continues.
+func TestLoop_ReadTimeout_Continue(t *testing.T) {
+	topic := "internal/loop-timeout"
+	listener, err := newShmListener(topic, nil, 4)
+	if err != nil {
+		t.Skipf("newShmListener: %v", err)
+	}
+	// Wait longer than the 100ms read deadline so the loop's Read times out at
+	// least once, entering the `if err != nil { continue }` branch.
+	time.Sleep(150 * time.Millisecond)
+	listener.close()
+}
+
 // TestLoop_ReadDataError_Continue covers the readData-error continue path in
 // loop: send a socket notification without creating a data file so readData
 // returns an error and the loop continues rather than delivering a sample.
@@ -329,6 +344,112 @@ func TestLoop_ReadDataError_Continue(t *testing.T) {
 		t.Error("expected no sample when data file is missing")
 	default:
 	}
+}
+
+// TestDeliverSub_DropOldest_FullChannel covers the outer default branch in the
+// DropOldest case of deliverSub: channel is full, oldest item is drained, and
+// the new sample is re-sent successfully.
+func TestDeliverSub_DropOldest_FullChannel(t *testing.T) {
+	b := &shmBroker{}
+	ch := make(chan dds.Sample, 1)
+	sub := shmSub{ch: ch, backPressure: dds.DropOldest}
+
+	// Fill the channel with one item.
+	ch <- dds.Sample{Payload: []byte("old")}
+
+	// deliverSub with DropOldest on a full channel: drains "old" and inserts "new".
+	b.deliverSub(sub, dds.Sample{Payload: []byte("new")}, &shmTopicCounter{})
+
+	select {
+	case s := <-ch:
+		if string(s.Payload) != "new" {
+			t.Errorf("DropOldest: expected new sample, got %q", s.Payload)
+		}
+	default:
+		t.Error("DropOldest: channel empty after delivery")
+	}
+	if b.drops.Load() != 1 {
+		t.Errorf("DropOldest: expected 1 drop (drained old), got %d", b.drops.Load())
+	}
+}
+
+// TestLoop_DropOnFull covers the `default: // drop on full` branch in the
+// listener loop's final select (shmem.go:353-355). We start a listener with
+// depth 1 and publish two samples in quick succession — the second sample
+// finds the channel full and is silently dropped.
+func TestLoop_DropOnFull(t *testing.T) {
+	topic := "internal/loop-drop-full"
+	listener, err := newShmListener(topic, nil, 1) // depth 1
+	if err != nil {
+		t.Skipf("newShmListener: %v", err)
+	}
+	defer listener.close()
+	time.Sleep(10 * time.Millisecond)
+
+	// Publish first sample — loop forwards it to listener.ch (now full).
+	shmPublish(topic, []byte("first"))
+	time.Sleep(40 * time.Millisecond) // let loop process it
+
+	// Publish second sample — listener.ch is full, loop takes default: drop.
+	shmPublish(topic, []byte("second"))
+	time.Sleep(40 * time.Millisecond)
+
+	// Only the first sample must be in the channel.
+	select {
+	case s := <-listener.ch:
+		if string(s.Payload) != "first" {
+			t.Errorf("expected first sample, got %q", s.Payload)
+		}
+	default:
+		t.Error("expected first sample in channel")
+	}
+}
+
+// TestNewShmListener_ListenError covers the net.ListenUnixgram error return in
+// newShmListener (shmem.go:314-315). By placing a non-empty directory at the
+// socket path, os.Remove fails silently and ListenUnixgram can't bind there.
+func TestNewShmListener_ListenError(t *testing.T) {
+	topic := "internal/listen-err"
+	sockPath := shmSocketPath(topic)
+	// Ensure parent dir exists.
+	if err := os.MkdirAll(filepath.Dir(sockPath), 0o700); err != nil {
+		t.Fatalf("MkdirAll parent: %v", err)
+	}
+	// Create a non-empty directory at sockPath so os.Remove fails (non-empty)
+	// and net.ListenUnixgram also fails because a directory is in the way.
+	if err := os.MkdirAll(sockPath, 0o700); err != nil {
+		t.Fatalf("mkdir at sockPath: %v", err)
+	}
+	blockFile := filepath.Join(sockPath, "block")
+	if err := os.WriteFile(blockFile, []byte("x"), 0o600); err != nil {
+		t.Fatalf("write block file: %v", err)
+	}
+	defer os.RemoveAll(sockPath)
+
+	_, err := newShmListener(topic, nil, 4)
+	if err == nil {
+		t.Error("expected error when socket path is a directory")
+	}
+}
+
+// TestShmPublish_CreateError covers the os.Create error return in shmPublish:
+// placing a directory at the data.bin path makes os.Create fail and return
+// without panicking or writing anything.
+func TestShmPublish_CreateError(t *testing.T) {
+	topic := "internal/shmPublish-create-err"
+	dataPath := shmDataPath(topic)
+	dir := filepath.Dir(dataPath)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	// Place a directory where data.bin would be so os.Create fails.
+	if err := os.MkdirAll(dataPath, 0o700); err != nil {
+		t.Fatalf("making dir at dataPath: %v", err)
+	}
+	defer os.RemoveAll(dataPath)
+
+	// Must not panic.
+	shmPublish(topic, []byte("payload"))
 }
 
 // TestReadData_TruncatedBody verifies that readData returns an error when the
