@@ -51,9 +51,7 @@ func persistLoad(dir, topic string) ([]byte, error) {
 		return nil, fmt.Errorf("persist: payload %d bytes exceeds 64 MiB cap", length)
 	}
 	buf := make([]byte, length)
-	ignoredVal, err := f.Read(buf)
-	_ = ignoredVal
-	if err != nil {
+	if _, err := f.Read(buf); err != nil {
 		return nil, err
 	}
 	return buf, nil

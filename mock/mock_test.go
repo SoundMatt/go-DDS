@@ -21,6 +21,11 @@ package mock_test
 //fusa:test REQ-QOS-002
 //fusa:test REQ-QOS-005
 //fusa:test REQ-QOS-006
+//fusa:test REQ-MOCK-001
+//fusa:test REQ-MOCK-002
+//fusa:test REQ-MOCK-003
+//fusa:test REQ-MOCK-004
+//fusa:test REQ-MOCK-005
 
 import (
 	"context"

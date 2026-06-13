@@ -8,6 +8,17 @@
 // import this package.
 package testutil
 
+//fusa:req REQ-TESTUTIL-001
+//fusa:req REQ-TESTUTIL-002
+//fusa:req REQ-TESTUTIL-003
+//fusa:req REQ-TESTUTIL-004
+//fusa:req REQ-TESTUTIL-005
+//fusa:req REQ-TESTUTIL-006
+//fusa:req REQ-TESTUTIL-007
+//fusa:req REQ-TESTUTIL-008
+//fusa:req REQ-TESTUTIL-009
+//fusa:req REQ-TESTUTIL-010
+
 import (
 	"fmt"
 	"sync"
