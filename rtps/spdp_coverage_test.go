@@ -70,6 +70,88 @@ func TestLocatorFromUDP_NilIP(t *testing.T) {
 	}
 }
 
+// ── sendHeartbeatLocked non-empty history ────────────────────────────────────
+
+// TestSendHeartbeatLocked_NonEmptyHistory covers lines 4-7 in
+// sendHeartbeatLocked: history is non-empty so firstLast returns ok=true; the
+// heartbeat is built and the matched-reader loop is entered (but has 0
+// iterations because no reader is registered on the topic).
+func TestSendHeartbeatLocked_NonEmptyHistory(t *testing.T) {
+	p := spdpCovPart(t)
+	pub, err := p.NewPublisher("hb/nonempty", dds.ReliableQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	w, ok := pub.(*rtpsWriter)
+	if !ok {
+		t.Fatal("publisher is not *rtpsWriter")
+	}
+
+	// Write so history is non-empty.
+	if werr := pub.Write([]byte("hb")); werr != nil {
+		t.Fatalf("Write: %v", werr)
+	}
+
+	w.mu.Lock()
+	w.sendHeartbeatLocked() // history non-empty → builds hb, iterates readers (0)
+	w.mu.Unlock()
+}
+
+// ── acceptsSource ────────────────────────────────────────────────────────────
+
+// TestAcceptsSource_ExternalGUID covers the r.sources lookup path in
+// acceptsSource: a non-local GUID that IS in the allow-list returns true;
+// a GUID not in the allow-list returns false.
+func TestAcceptsSource_ExternalGUID(t *testing.T) {
+	p := spdpCovPart(t)
+
+	sub, err := p.NewSubscriber("cov/accepts", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	r := sub.(*rtpsReader)
+
+	// Create an external (different prefix) GUID.
+	extGUID := GUID{
+		Prefix: GuidPrefix{0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+			0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C},
+		Entity: EntityId{0x00, 0x00, 0x02, 0x07},
+	}
+
+	// Without an explicit allow-list the reader accepts all local GUIDs.
+	// Add the external GUID to the allow-list.
+	r.addSourceGUID(extGUID)
+
+	// extGUID is now in sources → should be accepted.
+	if !r.acceptsSource(extGUID) {
+		t.Error("extGUID in sources: expected acceptsSource to return true")
+	}
+
+	// A different external GUID (not in sources) should be rejected.
+	otherGUID := GUID{
+		Prefix: GuidPrefix{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+			0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
+		Entity: EntityId{0x00, 0x00, 0x01, 0x07},
+	}
+	if r.acceptsSource(otherGUID) {
+		t.Error("unknown external GUID: expected acceptsSource to return false")
+	}
+
+	// When sources is non-empty, a GUID with the local participant prefix should
+	// always be accepted (line 1421: g.Prefix == r.p.guidPrefix returns true).
+	localGUID := GUID{
+		Prefix: r.p.guidPrefix,
+		Entity: EntityId{0x00, 0x00, 0x05, 0x07},
+	}
+	if !r.acceptsSource(localGUID) {
+		t.Error("local-prefix GUID with non-empty sources: expected acceptsSource to return true")
+	}
+}
+
 // ── storePeer livelinessCb ───────────────────────────────────────────────────
 
 func TestStorePeer_LivelinessGained(t *testing.T) {

@@ -2382,6 +2382,31 @@ func TestParseInfoTS_TooShort(t *testing.T) {
 	}
 }
 
+// TestDecodeString_TooShortForLength covers the len(b) < 4 guard in decodeString.
+func TestDecodeString_TooShortForLength(t *testing.T) {
+	_, ok := decodeString([]byte{0x01, 0x02}) // 2 bytes — can't read 4-byte length prefix
+	if ok {
+		t.Fatal("expected false for buffer shorter than 4 bytes")
+	}
+}
+
+// TestDecodeString_NoNullTerminator covers the string without null terminator path.
+func TestDecodeString_NoNullTerminator(t *testing.T) {
+	// A CDR string where the last byte is not 0x00; the null-strip branch is skipped.
+	b := make([]byte, 4+3)
+	binary.LittleEndian.PutUint32(b[0:], 3) // length = 3
+	b[4] = 'a'
+	b[5] = 'b'
+	b[6] = 'c' // no null terminator
+	s, ok := decodeString(b)
+	if !ok {
+		t.Fatal("expected true for valid non-null-terminated string")
+	}
+	if s != "abc" {
+		t.Errorf("got %q, want abc", s)
+	}
+}
+
 // ── extractDiscoveryToken ─────────────────────────────────────────────────────
 
 func TestExtractDiscoveryToken_Found(t *testing.T) {
