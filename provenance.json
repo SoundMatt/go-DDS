@@ -11,5 +11,6 @@
   "goos": "darwin",
   "goarch": "arm64",
   "vcsRevision": "d0e570234d218028708265c21a52088503e42159",
-  "vcsModified": true
+  "vcsModified": true,
+  "builder": "github-actions"
 }

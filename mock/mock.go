@@ -32,6 +32,11 @@ package mock
 //fusa:req REQ-QOS-002
 //fusa:req REQ-QOS-005
 //fusa:req REQ-QOS-006
+//fusa:req REQ-MOCK-001
+//fusa:req REQ-MOCK-002
+//fusa:req REQ-MOCK-003
+//fusa:req REQ-MOCK-004
+//fusa:req REQ-MOCK-005
 
 import (
 	"context"

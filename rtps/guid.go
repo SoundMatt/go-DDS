@@ -54,9 +54,7 @@ const (
 // with the process PID so participants on the same host are distinguishable.
 func newGuidPrefix() GuidPrefix {
 	var p GuidPrefix
-	ignoredVal, err := rand.Read(p[:8])
-	_ = ignoredVal
-	if err != nil {
+	if _, err := rand.Read(p[:8]); err != nil {
 		// Fall through: PID bytes alone will distinguish the participant.
 		_ = err
 	}
