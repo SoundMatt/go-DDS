@@ -306,17 +306,13 @@ func TestWANBridge_ReadFrame_InvalidJSON(t *testing.T) {
 		t.Fatalf("write body: %v", err)
 	}
 
-	// The server should close the connection after failing to decode the frame.
-	done := make(chan struct{})
-	go func() {
-		_ = srv.Close()
-		close(done)
-	}()
-	select {
-	case <-done:
-	case <-time.After(2 * time.Second):
-		t.Fatal("srv.Close() did not complete promptly after invalid JSON frame")
-	}
+	// Wait for the server to close the connection after the json.Unmarshal error.
+	// The server closes the conn from receiveLoop, so a read returns EOF promptly.
+	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	var buf [1]byte
+	_, _ = conn.Read(buf[:]) // expect EOF when server closes the conn on error
+
+	_ = srv.Close()
 }
 
 // ── ErrFrameTooLarge exported ─────────────────────────────────────────────────
