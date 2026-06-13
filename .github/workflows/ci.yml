@@ -290,12 +290,14 @@ jobs:
           import json, sys
           try:
               d = json.load(open('/tmp/trace.json'))
-              untested = [r for r in d.get('requirements', []) if not r.get('tested')]
-              untraced = [r for r in d.get('requirements', []) if not r.get('traced')]
-              if untested:
-                  print(f"::warning::Untested requirements: {len(untested)}")
-              if untraced:
-                  print(f"::error::Untraced requirements: {len(untraced)}")
+              cov = d.get('coverage', {})
+              total   = cov.get('totalRequirements', 0)
+              traced  = cov.get('tracedRequirements', 0)
+              tested  = cov.get('testedRequirements', 0)
+              if total > 0 and tested < total:
+                  print(f"::warning::Untested requirements: {total - tested}")
+              if total > 0 and traced < total:
+                  print(f"::error::Untraced requirements: {total - traced}")
                   sys.exit(1)
           except Exception:
               pass  # gofusa trace JSON may not be available; gofusa check covers this
