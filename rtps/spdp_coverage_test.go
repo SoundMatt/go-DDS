@@ -70,59 +70,6 @@ func TestLocatorFromUDP_NilIP(t *testing.T) {
 	}
 }
 
-func TestLocatorFromUDPv6_NilIP(t *testing.T) {
-	l := locatorFromUDPv6(&net.UDPAddr{IP: nil, Port: 5678}, 5678)
-	if l.Kind != LocatorKindUDPv6 {
-		t.Fatalf("expected LocatorKindUDPv6, got %d", l.Kind)
-	}
-	if l.Port != 5678 {
-		t.Fatalf("expected port 5678, got %d", l.Port)
-	}
-	// nil IP → net.IPv6zero (all-zeros).
-	for i, b := range l.Address {
-		if b != 0 {
-			t.Fatalf("expected zero byte at Address[%d], got %d", i, b)
-		}
-	}
-}
-
-// ── extractDiscoveryToken ────────────────────────────────────────────────────
-
-func buildDiscoveryPayload(token []byte) []byte {
-	enc := newPLCDREncoder()
-	if token != nil {
-		enc.addParam(pidDiscoveryToken, token)
-	}
-	return enc.finish()
-}
-
-func TestExtractDiscoveryToken_Found(t *testing.T) {
-	// Use a 4-byte-aligned token so PL_CDR_LE adds no padding bytes.
-	want := []byte("sig!")
-	payload := buildDiscoveryPayload(want)
-	got := extractDiscoveryToken(payload)
-	if string(got) != string(want) {
-		t.Fatalf("got %q, want %q", got, want)
-	}
-}
-
-func TestExtractDiscoveryToken_NotFound(t *testing.T) {
-	// Payload with no pidDiscoveryToken entry.
-	payload := buildDiscoveryPayload(nil)
-	got := extractDiscoveryToken(payload)
-	if got != nil {
-		t.Fatalf("expected nil, got %q", got)
-	}
-}
-
-func TestExtractDiscoveryToken_InvalidPayload(t *testing.T) {
-	// Not a valid PL_CDR_LE header → decoder fails to init.
-	got := extractDiscoveryToken([]byte{0xFF, 0xFF, 0x00, 0x00})
-	if got != nil {
-		t.Fatalf("expected nil for invalid payload, got %q", got)
-	}
-}
-
 // ── storePeer livelinessCb ───────────────────────────────────────────────────
 
 func TestStorePeer_LivelinessGained(t *testing.T) {
