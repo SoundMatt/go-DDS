@@ -248,12 +248,12 @@ jobs:
           args: --timeout=5m
 
   # ── go-FuSa safety checks ─────────────────────────────────────────────────
-  # Pinned to v0.25.1; exits 1 on any ERROR-level finding.
+  # Pinned to v0.30.0; exits 1 on any ERROR-level finding.
   # Warnings are reported but do not fail the job (no --strict).
   # To upgrade: install the new version locally, run 'gofusa check ./...',
   # fix all findings, then bump the @version pin below.
   gofusa:
-    name: go-FuSa safety check (v0.25.1)
+    name: go-FuSa safety check (v0.30.0)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -261,6 +261,6 @@ jobs:
         with:
           go-version: "1.25"
       - name: Install go-FuSa
-        run: go install github.com/SoundMatt/go-FuSa/cmd/gofusa@v0.25.1
+        run: go install github.com/SoundMatt/go-FuSa/cmd/gofusa@v0.30.0
       - name: gofusa check
         run: gofusa check ./...
