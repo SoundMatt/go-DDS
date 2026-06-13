@@ -28,6 +28,7 @@ import (
 	"github.com/SoundMatt/go-DDS/mock"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 )
 
 // listenLocal opens a random TCP listener using ListenConfig for noctx compliance.
@@ -1042,4 +1043,161 @@ func FuzzBridge_Publish(f *testing.F) {
 		defer cancel()
 		_, _ = client.Publish(ctx, &grpcbridge.PublishRequest{Topic: topic, Payload: payload})
 	})
+}
+
+// ── Client-side error paths via mock ClientConnInterface ──────────────────────
+
+// mockClientStream is a grpc.ClientStream whose error fields control which
+// methods fail. All other methods are no-ops returning nil.
+type mockClientStream struct {
+	sendErr  error
+	closeErr error
+	recvErr  error
+}
+
+func (m *mockClientStream) Header() (metadata.MD, error)  { return nil, nil }
+func (m *mockClientStream) Trailer() metadata.MD          { return nil }
+func (m *mockClientStream) CloseSend() error              { return m.closeErr }
+func (m *mockClientStream) Context() context.Context      { return context.Background() }
+func (m *mockClientStream) SendMsg(msg interface{}) error { return m.sendErr }
+func (m *mockClientStream) RecvMsg(msg interface{}) error { return m.recvErr }
+
+// mockClientConn implements grpc.ClientConnInterface, returning a pre-set
+// stream (or error) from NewStream.
+type mockClientConn struct {
+	stream    grpc.ClientStream
+	streamErr error
+}
+
+func (m *mockClientConn) Invoke(_ context.Context, _ string, _, _ interface{}, _ ...grpc.CallOption) error {
+	return nil
+}
+func (m *mockClientConn) NewStream(_ context.Context, _ *grpc.StreamDesc, _ string, _ ...grpc.CallOption) (grpc.ClientStream, error) {
+	return m.stream, m.streamErr
+}
+
+// TestClient_Subscribe_NewStreamError covers the NewStream error path in
+// ddsClient.Subscribe (line 209-211).
+func TestClient_Subscribe_NewStreamError(t *testing.T) {
+	wantErr := errors.New("stream unavailable")
+	cli := grpcbridge.NewRawClient(&mockClientConn{streamErr: wantErr})
+	_, err := cli.Subscribe(context.Background(), &grpcbridge.SubscribeRequest{Topic: "x"})
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("expected %v, got %v", wantErr, err)
+	}
+}
+
+// TestClient_Subscribe_SendMsgError covers the stream.SendMsg error path in
+// ddsClient.Subscribe (line 213-215).
+func TestClient_Subscribe_SendMsgError(t *testing.T) {
+	wantErr := errors.New("send failed")
+	cli := grpcbridge.NewRawClient(&mockClientConn{
+		stream: &mockClientStream{sendErr: wantErr},
+	})
+	_, err := cli.Subscribe(context.Background(), &grpcbridge.SubscribeRequest{Topic: "x"})
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("expected %v, got %v", wantErr, err)
+	}
+}
+
+// TestClient_Subscribe_CloseSendError covers the stream.CloseSend error path in
+// ddsClient.Subscribe (line 216-218).
+func TestClient_Subscribe_CloseSendError(t *testing.T) {
+	wantErr := errors.New("close failed")
+	cli := grpcbridge.NewRawClient(&mockClientConn{
+		stream: &mockClientStream{closeErr: wantErr},
+	})
+	_, err := cli.Subscribe(context.Background(), &grpcbridge.SubscribeRequest{Topic: "x"})
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("expected %v, got %v", wantErr, err)
+	}
+}
+
+// TestClient_StreamPublish_NewStreamError covers the NewStream error path in
+// ddsClient.StreamPublish (line 241-243).
+func TestClient_StreamPublish_NewStreamError(t *testing.T) {
+	wantErr := errors.New("stream unavailable")
+	cli := grpcbridge.NewRawClient(&mockClientConn{streamErr: wantErr})
+	_, err := cli.StreamPublish(context.Background())
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("expected %v, got %v", wantErr, err)
+	}
+}
+
+// TestClient_CloseAndRecv_CloseSendError covers the CloseSend error path in
+// streamPublishClientStream.CloseAndRecv (line 254-256).
+func TestClient_CloseAndRecv_CloseSendError(t *testing.T) {
+	wantErr := errors.New("close failed")
+	cli := grpcbridge.NewRawClient(&mockClientConn{
+		stream: &mockClientStream{closeErr: wantErr},
+	})
+	sp, err := cli.StreamPublish(context.Background())
+	if err != nil {
+		t.Fatalf("StreamPublish: %v", err)
+	}
+	_, err = sp.CloseAndRecv()
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("expected %v, got %v", wantErr, err)
+	}
+}
+
+// TestBridge_Subscribe_ChannelClosed_ViaParticipant covers the !ok branch in
+// Bridge.Subscribe where the DDS subscriber's channel closes (line 364-366).
+// The participant is closed directly (not via bridge.Close) so the gRPC stream
+// context remains live, letting the server detect the closed channel first.
+func TestBridge_Subscribe_ChannelClosed_ViaParticipant(t *testing.T) {
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
+	b := grpcbridge.New(p, grpcbridge.Options{})
+	lis := listenLocal(t)
+	go func() { _ = b.Server().Serve(lis) }()
+	defer b.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	conn := dialJSON(t, lis.Addr().String())
+	defer conn.Close()
+	client := grpcbridge.NewRawClient(conn)
+
+	stream, err := client.Subscribe(ctx, &grpcbridge.SubscribeRequest{Topic: "grpc/p-close"})
+	if err != nil {
+		t.Fatalf("Subscribe: %v", err)
+	}
+	time.Sleep(30 * time.Millisecond) // let server register the subscription
+
+	// Close only the participant; bridge is still up so stream ctx remains live.
+	// The server's sub.C() closes → !ok path → return nil (EOF to client).
+	p.Close()
+
+	_, recvErr := stream.Recv()
+	_ = recvErr // any result (EOF or non-nil error) means the server exited
+}
+
+// TestBridge_StreamPublish_ContextCancel_NonEOFError covers the non-EOF recv
+// error return in Bridge.StreamPublish (line 418). Cancelling the streaming
+// client's context causes stream.Recv on the server to return a cancelled-
+// context status error (not io.EOF), hitting the `return err` branch.
+func TestBridge_StreamPublish_ContextCancel_NonEOFError(t *testing.T) {
+	client, _, _ := newTestBridge(t, grpcbridge.Options{})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	sp, err := client.StreamPublish(ctx)
+	if err != nil {
+		cancel()
+		t.Fatalf("StreamPublish: %v", err)
+	}
+
+	// Send a valid request so the server enters the Recv loop.
+	if sendErr := sp.Send(&grpcbridge.PublishRequest{Topic: "sp/ctx-cancel", Payload: []byte("x")}); sendErr != nil {
+		cancel()
+		t.Skipf("Send: %v", sendErr)
+	}
+	time.Sleep(20 * time.Millisecond) // let server process the first message
+
+	// Cancel the context; the server's stream.Recv gets codes.Canceled (not EOF).
+	cancel()
+	time.Sleep(50 * time.Millisecond) // let the server detect the cancellation
 }

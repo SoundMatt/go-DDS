@@ -1065,3 +1065,343 @@ func TestGenerate_DoubleUnderscoreField(t *testing.T) {
 		t.Errorf("expected FooBar field (double underscore collapse) in output:\n%s", out)
 	}
 }
+
+// ── Generate with unsigned long long and octet ────────────────────────────────
+
+// TestGenerate_ULongLong_CodecPaths exercises KindULongLong in goType,
+// encodeExpr, and decodeExpr — all three generators previously uncovered
+// because TestParseString_UnsignedLongLong only parsed, never generated.
+func TestGenerate_ULongLong_CodecPaths(t *testing.T) {
+	src := `struct Counter { unsigned long long count; };`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	out, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if !strings.Contains(out, "uint64") {
+		t.Errorf("expected uint64 field type in output:\n%s", out)
+	}
+	if !strings.Contains(out, "WriteUint64") {
+		t.Errorf("expected WriteUint64 in codec output:\n%s", out)
+	}
+	if !strings.Contains(out, "ReadUint64") {
+		t.Errorf("expected ReadUint64 in codec output:\n%s", out)
+	}
+}
+
+// TestGenerate_Octet_CodecPaths exercises KindOctet in encodeExpr and
+// decodeExpr — previously uncovered because TestParseString_OctetField only
+// parsed, never generated.
+func TestGenerate_Octet_CodecPaths(t *testing.T) {
+	src := `struct Raw { octet byte_val; };`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	out, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if !strings.Contains(out, "uint8") {
+		t.Errorf("expected uint8 field type in output:\n%s", out)
+	}
+	if !strings.Contains(out, "WriteUint8") {
+		t.Errorf("expected WriteUint8 in codec output:\n%s", out)
+	}
+	if !strings.Contains(out, "ReadUint8") {
+		t.Errorf("expected ReadUint8 in codec output:\n%s", out)
+	}
+}
+
+// ── Parser edge-case paths ────────────────────────────────────────────────────
+
+// TestParseString_MultiLineBlockComment covers the newline-inside-block-comment
+// path (l.line++ at parser.go:94) in skipWhitespaceAndComments.
+func TestParseString_MultiLineBlockComment(t *testing.T) {
+	src := `/* this is a
+multi-line block comment */
+struct Foo { long x; };`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	if len(m.Structs) != 1 || m.Structs[0].Name != "Foo" {
+		t.Fatalf("expected struct Foo, got %+v", m)
+	}
+}
+
+// TestParseString_SingleColonSkipped covers the single-colon skip path in the
+// lexer (parser.go:144-145): a bare ':' that is NOT '::' is silently skipped.
+func TestParseString_SingleColonSkipped(t *testing.T) {
+	// A single colon embedded in a field declaration should be skipped by the lexer.
+	// The parser still sees "long x ;" and produces a valid struct.
+	src := `struct Foo { long : x; };`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	if len(m.Structs) != 1 || len(m.Structs[0].Fields) != 1 {
+		t.Fatalf("expected 1 struct with 1 field, got %+v", m)
+	}
+}
+
+// TestParseString_UnknownKeywordWithSemicolon covers the semicolon-consume path
+// in parseModule's default branch (parser.go:274-276). An unknown keyword like
+// "interface" followed by an identifier and a semicolon should be silently skipped.
+func TestParseString_UnknownKeywordWithSemicolon(t *testing.T) {
+	src := `interface IFoo;
+struct Foo { long x; };`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	if len(m.Structs) != 1 || m.Structs[0].Name != "Foo" {
+		t.Fatalf("expected struct Foo, got %+v", m)
+	}
+}
+
+// TestParseString_AnnotationWithBraceArgs covers the annotation-with-brace-args
+// path in parseStruct (parser.go:332-338). When an @annotation is followed by
+// a '{...}' block the lexer sees tokLBrace/tokRBrace and the parser skips the
+// block content.
+func TestParseString_AnnotationWithBraceArgs(t *testing.T) {
+	src := `struct Foo { @id{5} long x; };`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	if len(m.Structs) != 1 || len(m.Structs[0].Fields) != 1 {
+		t.Fatalf("expected 1 struct with 1 field, got %+v", m)
+	}
+}
+
+// TestParseString_BoundedSequence covers the optional-bound path in
+// parseTypeSpec for sequence<T, N> (parser.go:485-488). The bound value N
+// is parsed and discarded.
+func TestParseString_BoundedSequence(t *testing.T) {
+	src := `struct Msg { sequence<long, 64> values; };`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	if len(m.Structs) != 1 || len(m.Structs[0].Fields) != 1 {
+		t.Fatalf("expected 1 struct with 1 field, got %+v", m)
+	}
+	if m.Structs[0].Fields[0].Type.Kind != idl.KindSequence {
+		t.Errorf("expected KindSequence, got %v", m.Structs[0].Fields[0].Type.Kind)
+	}
+}
+
+// TestParseString_Error_UnsignedNonIdent covers the error path in parseTypeSpec
+// where 'unsigned' is followed by a non-identifier token (parser.go:461-462).
+func TestParseString_Error_UnsignedNonIdent(t *testing.T) {
+	src := `struct Foo { unsigned ; };`
+	_, err := idl.ParseString(src)
+	if err == nil {
+		t.Fatal("expected parse error for 'unsigned ;'")
+	}
+}
+
+// TestParseString_Error_UnsignedUnknownIdent covers the unknown-type path in
+// parseTypeSpec after 'unsigned' (parser.go:473-474): 'unsigned float' is
+// not a valid IDL type combination.
+func TestParseString_Error_UnsignedUnknownIdent(t *testing.T) {
+	src := `struct Foo { unsigned float x; };`
+	_, err := idl.ParseString(src)
+	if err == nil {
+		t.Fatal("expected parse error for 'unsigned float'")
+	}
+}
+
+// TestGenerate_QualifiedStructNotFound covers the return nil path in
+// searchStruct (gen.go:418) when a qualified struct name references a
+// sub-module that does not exist. This also covers the bare-name path: when a
+// struct field references a simple (non-qualified) type name that is not defined
+// anywhere in the module.
+func TestGenerate_QualifiedStructNotFound(t *testing.T) {
+	src := `struct Wrapper { NonExistent::Payload data; };`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	// Generate should produce a TODO comment for the unknown struct reference.
+	out, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if !strings.Contains(out, "TODO") {
+		t.Errorf("expected TODO for unknown qualified struct, got:\n%s", out)
+	}
+}
+
+// TestGenerate_BareUnknownStructRef covers the final return nil in searchStruct
+// (gen.go:418) when a bare (non-qualified) struct RefName is not found.
+func TestGenerate_BareUnknownStructRef(t *testing.T) {
+	src := `struct Container { BareUnknown value; };`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	out, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if !strings.Contains(out, "TODO") {
+		t.Errorf("expected TODO for unknown bare struct ref, got:\n%s", out)
+	}
+}
+
+// ── Programmatically constructed Module to cover defensive code paths ─────────
+
+// TestGenerate_ArrayNilElemType covers the KindArray-with-nil-ElemType path in
+// goType (gen.go:224-226), encodeExpr (gen.go:275-277), and decodeExpr
+// (gen.go:348-350). These are defensive branches never reachable from the IDL
+// parser but must not panic.
+func TestGenerate_ArrayNilElemType(t *testing.T) {
+	m := &idl.Module{
+		Structs: []idl.Struct{{
+			Name: "NilArr",
+			Fields: []idl.Field{{
+				Name: "data",
+				Type: idl.TypeSpec{Kind: idl.KindArray, ElemType: nil, ArraySize: 4},
+			}},
+		}},
+	}
+	out, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	_ = out // output may contain TODO or []byte — the key is no panic
+}
+
+// TestGenerate_UnknownTypeKind covers the default case in goType (gen.go:230-231),
+// encodeExpr (gen.go:303-304), and decodeExpr (gen.go:378-379) — all
+// produce placeholder strings for unknown TypeKinds.
+func TestGenerate_UnknownTypeKind(t *testing.T) {
+	m := &idl.Module{
+		Structs: []idl.Struct{{
+			Name: "Weird",
+			Fields: []idl.Field{{
+				Name: "x",
+				Type: idl.TypeSpec{Kind: idl.TypeKind(9999)},
+			}},
+		}},
+	}
+	out, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if !strings.Contains(out, "interface{}") {
+		t.Errorf("expected interface{} for unknown TypeKind, got:\n%s", out)
+	}
+}
+
+// TestGenerate_DirectKindEnum covers the KindEnum case in encodeExpr
+// (gen.go:301-302) and decodeExpr (gen.go:375-377) when a TypeSpec is
+// constructed directly with Kind: KindEnum (not through the parser, which
+// would use KindStruct with a RefName).
+func TestGenerate_DirectKindEnum(t *testing.T) {
+	m := &idl.Module{
+		Structs: []idl.Struct{{
+			Name: "Msg",
+			Fields: []idl.Field{{
+				Name: "status",
+				Type: idl.TypeSpec{Kind: idl.KindEnum, RefName: "Status"},
+			}},
+		}},
+	}
+	out, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	// KindEnum in encodeExpr → e.WriteInt32(int32(...))
+	if !strings.Contains(out, "WriteInt32") {
+		t.Errorf("expected WriteInt32 for KindEnum encode, got:\n%s", out)
+	}
+}
+
+// ── Additional parser error paths ─────────────────────────────────────────────
+
+// TestParseString_Error_StructMissingFieldName covers the error return in
+// parseStruct when a type spec is followed by something that is not an identifier
+// (parser.go:346-348). The ';' following 'long' is not a valid field name.
+func TestParseString_Error_StructMissingFieldName(t *testing.T) {
+	src := `struct Foo { long ; };`
+	_, err := idl.ParseString(src)
+	if err == nil {
+		t.Fatal("expected parse error for struct field without name")
+	}
+}
+
+// TestParseString_Error_ArrayMissingCloseBracket covers the error return
+// when an array declaration is missing the closing ']' (parser.go:356-358).
+func TestParseString_Error_ArrayMissingCloseBracket(t *testing.T) {
+	src := `struct Foo { long x[5; };`
+	_, err := idl.ParseString(src)
+	if err == nil {
+		t.Fatal("expected parse error for array missing ']'")
+	}
+}
+
+// TestParseString_Error_ArraySizeOverflow covers the Atoi error path in
+// parseStruct (parser.go:360-362) when the array size exceeds the int range.
+func TestParseString_Error_ArraySizeOverflow(t *testing.T) {
+	src := `struct Foo { long x[99999999999999999999]; };`
+	_, err := idl.ParseString(src)
+	if err == nil {
+		t.Fatal("expected parse error for oversized array size")
+	}
+}
+
+// TestParseString_Error_EnumMissingOpenBrace covers the error path in
+// parseEnum when the '{' is missing (parser.go:385-387).
+func TestParseString_Error_EnumMissingOpenBrace(t *testing.T) {
+	src := `enum Color RED, GREEN, BLUE };`
+	_, err := idl.ParseString(src)
+	if err == nil {
+		t.Fatal("expected parse error for enum missing '{'")
+	}
+}
+
+// TestParseString_Error_EnumMissingTrailingSemi covers the error path in
+// parseEnum when the trailing ';' is missing (parser.go:405-407).
+func TestParseString_Error_EnumMissingTrailingSemi(t *testing.T) {
+	src := `enum Color { RED, GREEN }`
+	_, err := idl.ParseString(src)
+	if err == nil {
+		t.Fatal("expected parse error for enum missing trailing ';'")
+	}
+}
+
+// TestParseString_Error_BoundedStringMissingCloseAngle covers the error path
+// in parseTypeSpec for string<N> without the closing '>' (parser.go:445-447).
+func TestParseString_Error_BoundedStringMissingCloseAngle(t *testing.T) {
+	src := `struct Foo { string<5 x; };`
+	_, err := idl.ParseString(src)
+	if err == nil {
+		t.Fatal("expected parse error for bounded string missing '>'")
+	}
+}
+
+// TestParseString_Error_SequenceBadElemType covers the error path in
+// parseTypeSpec when the sequence element type fails to parse (parser.go:481-483).
+func TestParseString_Error_SequenceBadElemType(t *testing.T) {
+	src := `struct Foo { sequence<;> x; };`
+	_, err := idl.ParseString(src)
+	if err == nil {
+		t.Fatal("expected parse error for sequence with non-identifier element type")
+	}
+}
+
+// TestParseString_Error_QualifiedNameNonIdentAfterDoubleColon covers the error
+// path in parseTypeSpec when '::' is followed by a non-identifier (parser.go:500-502).
+func TestParseString_Error_QualifiedNameNonIdentAfterDoubleColon(t *testing.T) {
+	src := `struct Foo { A::5 x; };`
+	_, err := idl.ParseString(src)
+	if err == nil {
+		t.Fatal("expected parse error for '::' followed by non-identifier")
+	}
+}
