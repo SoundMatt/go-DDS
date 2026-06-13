@@ -122,6 +122,50 @@ func TestWaitSet_AllChannelsClosed(t *testing.T) {
 	}
 }
 
+// TestWaitSet_PartialClose_ContinuesWaiting covers the `continue` branch in
+// WaitSet.Wait: when one of several subscriber channels closes, the WaitSet
+// removes it and keeps waiting on the remaining open channels.
+func TestWaitSet_PartialClose_ContinuesWaiting(t *testing.T) {
+	p := newMockParticipant(t)
+
+	sub1, err := p.NewSubscriber("ws/partial1", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber sub1: %v", err)
+	}
+	sub2, err := p.NewSubscriber("ws/partial2", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber sub2: %v", err)
+	}
+
+	// Close sub1 so it fires as !ok immediately; sub2 stays open.
+	sub1.Close()
+
+	ws := dds.NewWaitSet(sub1, sub2)
+
+	pub2, err := p.NewPublisher("ws/partial2", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub2.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	// Send to sub2 after a short delay.
+	go func() {
+		time.Sleep(20 * time.Millisecond)
+		_ = pub2.Write([]byte("hello"))
+	}()
+
+	_, got, err := ws.Wait(ctx)
+	if err != nil {
+		t.Fatalf("Wait returned error: %v", err)
+	}
+	if got != sub2 {
+		t.Errorf("expected sample from sub2 after sub1 closed")
+	}
+}
+
 // TestWaitSet_AllChannelsClosed_ContextCancelled verifies that a cancelled
 // context takes priority over ErrClosed when both occur simultaneously.
 func TestWaitSet_AllChannelsClosed_ContextCancelled(t *testing.T) {

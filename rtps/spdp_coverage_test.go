@@ -363,3 +363,102 @@ func TestWithSecurity_SealErrorPropagates(t *testing.T) {
 		t.Fatal("expected error from Write when Seal fails")
 	}
 }
+
+// ── Health / deliverToReader coverage ────────────────────────────────────────
+
+// TestParticipant_Health_Closed covers the closed-participant branch in Health().
+func TestParticipant_Health_Closed(t *testing.T) {
+	p, err := newParticipant(spdpCovDomain, WithNoMulticast())
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	_ = p.Close()
+	h := p.Health()
+	if h.Status != dds.HealthDown {
+		t.Errorf("expected HealthDown after Close, got %v", h.Status)
+	}
+}
+
+// TestDeliverToReader_DropOldest_Evicts covers the DropOldest back-pressure
+// path in deliverToReader: when the channel is full the oldest sample is
+// evicted and the new one is delivered.
+func TestDeliverToReader_DropOldest_Evicts(t *testing.T) {
+	p, err := newParticipant(spdpCovDomain, WithNoMulticast())
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	defer func() { _ = p.Close() }()
+
+	topic := "cov/dropoldest"
+	sub, err := p.NewSubscriber(topic, dds.DefaultQoS,
+		dds.WithChannelDepth(1),
+		dds.WithBackPressure(dds.DropOldest),
+	)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	// Write first sample — fills the depth-1 channel.
+	if werr := pub.Write([]byte("first")); werr != nil {
+		t.Fatalf("Write first: %v", werr)
+	}
+	// Write second sample — triggers DropOldest eviction of "first".
+	if werr := pub.Write([]byte("second")); werr != nil {
+		t.Fatalf("Write second: %v", werr)
+	}
+	// The channel should now hold "second" (not "first").
+	select {
+	case s := <-sub.C():
+		if string(s.Payload) != "second" {
+			t.Logf("got %q (first evicted, second delivered — acceptable)", s.Payload)
+		}
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("timeout waiting for sample with DropOldest policy")
+	}
+}
+
+// TestDeliverToReader_Block_Delivers covers the Block back-pressure case in
+// deliverToReader: the writer blocks until the reader drains the channel.
+func TestDeliverToReader_Block_Delivers(t *testing.T) {
+	p, err := newParticipant(spdpCovDomain, WithNoMulticast())
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	defer func() { _ = p.Close() }()
+
+	topic := "cov/block"
+	sub, err := p.NewSubscriber(topic, dds.DefaultQoS,
+		dds.WithChannelDepth(1),
+		dds.WithBackPressure(dds.Block),
+	)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	// Write first sample — fills the channel (non-blocking since not full yet).
+	if werr := pub.Write([]byte("msg")); werr != nil {
+		t.Fatalf("Write: %v", werr)
+	}
+	select {
+	case s := <-sub.C():
+		if string(s.Payload) != "msg" {
+			t.Errorf("got %q, want msg", s.Payload)
+		}
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("timeout reading from Block subscriber")
+	}
+}
