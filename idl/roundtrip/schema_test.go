@@ -347,3 +347,34 @@ func TestTelemetryCodec_Unmarshal_TruncatedSequenceElem(t *testing.T) {
 		t.Fatal("expected error for truncated sequence element")
 	}
 }
+
+// TestTelemetryCodec_Unmarshal_TruncatedTopicId triggers the ReadString error
+// for Header.TopicId: valid CDR header but string length prefix is truncated.
+func TestTelemetryCodec_Unmarshal_TruncatedTopicId(t *testing.T) {
+	data := telemetryBytes(t)
+	_, err := TelemetryCodec{}.Unmarshal(data[:5]) // CDR header ok, string length truncated
+	if err == nil {
+		t.Fatal("expected error for truncated TopicId string")
+	}
+}
+
+// TestTelemetryCodec_Unmarshal_TruncatedTimestamp triggers the ReadInt64 error
+// for Header.TimestampNs. The string "x" occupies CDR bytes 4–11; int64 aligns
+// to offset 16. Cutting at 13 bytes leaves the alignment gap incomplete.
+func TestTelemetryCodec_Unmarshal_TruncatedTimestamp(t *testing.T) {
+	data := telemetryBytes(t)
+	_, err := TelemetryCodec{}.Unmarshal(data[:13]) // string ok, int64 truncated
+	if err == nil {
+		t.Fatal("expected error for truncated TimestampNs field")
+	}
+}
+
+// TestTelemetryCodec_Unmarshal_TruncatedPriority triggers the ReadInt32 error
+// for Header.Priority. int64 occupies bytes 16–23; int32 needs bytes 24–27.
+func TestTelemetryCodec_Unmarshal_TruncatedPriority(t *testing.T) {
+	data := telemetryBytes(t)
+	_, err := TelemetryCodec{}.Unmarshal(data[:25]) // TimestampNs ok, Priority truncated
+	if err == nil {
+		t.Fatal("expected error for truncated Priority field")
+	}
+}
