@@ -2306,7 +2306,11 @@ func TestTryRead_ClosedChannel(t *testing.T) {
 		t.Fatalf("NewSubscriber: %v", err)
 	}
 	_ = sub.Close()
-	_, ok := sub.(*rtpsReader).TryRead()
+	r, ok := sub.(*rtpsReader)
+	if !ok {
+		t.Fatal("subscriber is not *rtpsReader")
+	}
+	_, ok = r.TryRead()
 	if ok {
 		t.Error("expected false from TryRead on closed subscriber")
 	}
@@ -2319,7 +2323,10 @@ func TestSendHeartbeatLocked_EmptyHistory(t *testing.T) {
 		t.Fatalf("NewPublisher: %v", err)
 	}
 	defer pub.Close()
-	w := pub.(*rtpsWriter)
+	w, ok := pub.(*rtpsWriter)
+	if !ok {
+		t.Fatal("publisher is not *rtpsWriter")
+	}
 	w.mu.Lock()
 	w.sendHeartbeatLocked() // history empty → ok=false → early return
 	w.mu.Unlock()
@@ -2332,7 +2339,10 @@ func TestWaitDrain_NilDrainCh_ReturnsNil(t *testing.T) {
 		t.Fatalf("NewPublisher: %v", err)
 	}
 	defer pub.Close()
-	w := pub.(*rtpsWriter)
+	w, ok := pub.(*rtpsWriter)
+	if !ok {
+		t.Fatal("publisher is not *rtpsWriter")
+	}
 	// drainCh is nil for a fresh best-effort writer
 	if err := w.waitDrain(context.Background()); err != nil {
 		t.Fatalf("waitDrain with nil drainCh: %v", err)
@@ -2343,9 +2353,9 @@ func TestPLCDRDecoder_Next_LengthOverflow(t *testing.T) {
 	// A parameter whose declared length exceeds remaining buffer bytes.
 	buf := make([]byte, 8)
 	binary.LittleEndian.PutUint16(buf[0:], plCDRLE) // PL_CDR_LE header
-	binary.LittleEndian.PutUint16(buf[2:], 0)        // options
-	binary.LittleEndian.PutUint16(buf[4:], 0x0002)   // some valid pid (not pad, not sentinel)
-	binary.LittleEndian.PutUint16(buf[6:], 100)       // length=100 but no data follows
+	binary.LittleEndian.PutUint16(buf[2:], 0)       // options
+	binary.LittleEndian.PutUint16(buf[4:], 0x0002)  // some valid pid (not pad, not sentinel)
+	binary.LittleEndian.PutUint16(buf[6:], 100)     // length=100 but no data follows
 	dec, ok := newPLCDRDecoder(buf)
 	if !ok {
 		t.Fatal("expected valid decoder")
