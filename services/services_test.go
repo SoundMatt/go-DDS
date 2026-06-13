@@ -13,9 +13,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -25,6 +27,21 @@ import (
 	"github.com/SoundMatt/go-DDS/record"
 	"github.com/SoundMatt/go-DDS/services"
 )
+
+// failAfterNParticipant wraps a real participant and fails NewSubscriber after
+// the first N successes, covering the cleanup-loop branch in RecorderService.Start.
+type failAfterNParticipant struct {
+	dds.Participant
+	n    int64
+	done atomic.Int64
+}
+
+func (p *failAfterNParticipant) NewSubscriber(topic string, qos dds.QoS, opts ...dds.SubscriberOption) (dds.Subscriber, error) {
+	if p.done.Add(1) > p.n {
+		return nil, errors.New("forced subscriber failure")
+	}
+	return p.Participant.NewSubscriber(topic, qos, opts...)
+}
 
 func newPart(t *testing.T) dds.Participant {
 	t.Helper()
@@ -469,4 +486,27 @@ func TestReplayService_Loop_NonSeekable(t *testing.T) {
 		t.Fatal("timeout: non-seekable loop should exit after one pass")
 	}
 	svc.Stop()
+}
+
+// TestRecorderService_Start_PartialSubscriberFailure covers the cleanup loop in
+// RecorderService.Start: the first NewSubscriber succeeds, the second fails, so
+// the already-created subscriber is closed before returning the error.
+func TestRecorderService_Start_PartialSubscriberFailure(t *testing.T) {
+	realPart, err := mock.New(0)
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
+	defer realPart.Close()
+
+	// Allow exactly 1 successful NewSubscriber, then fail.
+	stub := &failAfterNParticipant{Participant: realPart, n: 1}
+
+	var buf bytes.Buffer
+	svc := services.NewRecorderService(stub, services.RecorderOptions{
+		Topics: []string{uniqueTopic("svc/partial-a"), uniqueTopic("svc/partial-b")},
+		Output: &buf,
+	})
+	if startErr := svc.Start(); startErr == nil {
+		t.Fatal("expected error when second NewSubscriber fails")
+	}
 }

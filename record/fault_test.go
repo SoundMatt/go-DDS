@@ -465,3 +465,29 @@ func TestFaultPublisher_WriteCtx_CancelledDuringDelay(t *testing.T) {
 		t.Errorf("WriteCtx did not honour context cancellation: elapsed %v >= delay %v", elapsed, delay)
 	}
 }
+
+// TestFaultPublisher_EmitWindow_WriteError covers the return-err branch inside
+// emitWindow: fill the reorder window with a closed underlying publisher so
+// that emitWindow's first pub.Write call fails and the error propagates.
+func TestFaultPublisher_EmitWindow_WriteError(t *testing.T) {
+	p := newPart(t)
+	topic := uniqueTopic("fault/emitwindow-err")
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+
+	const window = 2
+	fp := record.NewFaultPublisher(pub, record.FaultOptions{ReorderWindow: window}, 1)
+	// Close the underlying publisher so emitWindow's Write returns an error.
+	_ = pub.Close()
+
+	// First write: buffered (window not full yet).
+	_ = fp.Write([]byte("a"))
+	// Second write: window full → emitWindow called → pub.Write fails.
+	writeErr := fp.Write([]byte("b"))
+	if writeErr == nil {
+		t.Fatal("expected error from emitWindow when underlying publisher is closed")
+	}
+	_ = fp.Close()
+}
