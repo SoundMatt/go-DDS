@@ -292,8 +292,8 @@ func TestWaitDrain_CtxCancel(t *testing.T) {
 
 	// Write without a local subscriber; seqLo advances, drainCh is set, no
 	// ACKNACK arrives → ackedLo < seqLo.
-	if err := pub.Write([]byte("x")); err != nil {
-		t.Fatalf("Write: %v", err)
+	if werr := pub.Write([]byte("x")); werr != nil {
+		t.Fatalf("Write: %v", werr)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
