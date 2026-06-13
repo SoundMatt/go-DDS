@@ -20,7 +20,7 @@ import (
 
 // NewParticipant creates a mock DDS participant on domain and registers
 // t.Cleanup to close it when the test ends.
-func NewParticipant(t *testing.T, domain dds.Domain) dds.Participant {
+func NewParticipant(t testing.TB, domain dds.Domain) dds.Participant {
 	t.Helper()
 	p, err := mock.New(domain)
 	if err != nil {
@@ -33,7 +33,7 @@ func NewParticipant(t *testing.T, domain dds.Domain) dds.Participant {
 // AssertSample blocks until a sample arrives on sub and asserts that its
 // payload equals want. The test is fatal if no sample arrives within timeout
 // or if the payload does not match.
-func AssertSample(t *testing.T, sub dds.Subscriber, want []byte, timeout time.Duration) {
+func AssertSample(t testing.TB, sub dds.Subscriber, want []byte, timeout time.Duration) {
 	t.Helper()
 	select {
 	case got := <-sub.C():
@@ -46,7 +46,7 @@ func AssertSample(t *testing.T, sub dds.Subscriber, want []byte, timeout time.Du
 }
 
 // AssertNoSample asserts that no sample arrives on sub within timeout.
-func AssertNoSample(t *testing.T, sub dds.Subscriber, timeout time.Duration) {
+func AssertNoSample(t testing.TB, sub dds.Subscriber, timeout time.Duration) {
 	t.Helper()
 	select {
 	case got := <-sub.C():

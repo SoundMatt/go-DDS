@@ -238,8 +238,8 @@ type Tracer interface {
 // noopSpan implements Span with zero allocations.
 type noopSpan struct{}
 
-func (noopSpan) SetAttribute(_, _ string) {}
-func (noopSpan) End()                     {}
+func (noopSpan) SetAttribute(_, _ string) { return }
+func (noopSpan) End()                     { return }
 
 // noopTracerImpl is the default Tracer used when no tracer is configured.
 type noopTracerImpl struct{}

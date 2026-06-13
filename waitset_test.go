@@ -741,3 +741,57 @@ func TestTypedSample_MetadataForwarded(t *testing.T) {
 		t.Fatal("timeout")
 	}
 }
+
+// ── GobCodec error paths ──────────────────────────────────────────────────────
+
+// ungobable holds a channel field that gob cannot encode.
+type ungobable struct {
+	Ch chan int
+}
+
+// TestGobCodec_MarshalError covers the error return in GobCodec.Marshal
+// (dds.go:754) when the value contains a type that gob cannot encode.
+func TestGobCodec_MarshalError(t *testing.T) {
+	codec := dds.GobCodec[ungobable]{}
+	_, err := codec.Marshal(ungobable{Ch: make(chan int)})
+	if err == nil {
+		t.Error("expected gob marshal error for type with channel field")
+	}
+}
+
+// ── TypedSubscriber pump inner-done path ─────────────────────────────────────
+
+// TestTypedSubscriber_pump_DoneWhileSending covers the inner `case <-ts.done:
+// return` in pump (dds.go:711-712). It fills the typed output channel to
+// capacity so the pump blocks on the 65th send, then closes the subscriber,
+// which signals done and unblocks the goroutine via the inner select.
+func TestTypedSubscriber_pump_DoneWhileSending(t *testing.T) {
+	p := newMockParticipant(t)
+	rawSub, err := p.NewSubscriber("typed/pump-done", dds.DefaultQoS,
+		dds.WithChannelDepth(200))
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	rawPub, err := p.NewPublisher("typed/pump-done", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer rawPub.Close()
+
+	ts := dds.NewTypedSubscriber[speedSample](rawSub, dds.JSONCodec[speedSample]{})
+
+	// Publish 65 valid samples: 64 fill ts.ch (depth 64), the 65th blocks the
+	// pump in the inner select waiting for ts.ch to drain or ts.done to close.
+	for i := 0; i < 65; i++ {
+		_ = rawPub.Write([]byte(`{"kmh":1}`))
+	}
+
+	// Give the pump goroutine time to process 64 samples into ts.ch and block
+	// on the 65th send.
+	time.Sleep(50 * time.Millisecond)
+
+	// ts.Close() closes ts.done, waking the inner select with `case <-ts.done`.
+	if err := ts.Close(); err != nil {
+		t.Fatalf("ts.Close: %v", err)
+	}
+}
