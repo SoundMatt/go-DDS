@@ -12,6 +12,7 @@ package shmem
 import (
 	"context"
 	"encoding/binary"
+	"net"
 	"os"
 	"path/filepath"
 	"testing"
@@ -260,6 +261,73 @@ func TestDeliverSub_ResetDeadline(t *testing.T) {
 	b.deliverSub(sub, sample, &shmTopicCounter{})
 	if !reset {
 		t.Error("resetDeadline was not called after successful delivery")
+	}
+}
+
+// TestReadData_FileNotFound verifies that readData returns an error when the
+// data file for the topic does not exist (covers the os.Open error path).
+func TestReadData_FileNotFound(t *testing.T) {
+	l := &shmListener{topic: "internal/readdata-notfound"}
+	_, err := l.readData()
+	if err == nil {
+		t.Error("expected error for non-existent data file")
+	}
+}
+
+// TestReadData_EmptyFile verifies that readData returns an error when the
+// data file exists but has no content (covers the io.ReadFull lenBuf error).
+func TestReadData_EmptyFile(t *testing.T) {
+	topic := "internal/readdata-empty"
+	dir := shmTopicDir(topic)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	path := filepath.Join(dir, "data.bin")
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	_ = f.Close()
+	defer func() { _ = os.Remove(path) }()
+
+	l := &shmListener{topic: topic}
+	_, err = l.readData()
+	if err == nil {
+		t.Error("expected error for empty data file (no length header)")
+	}
+}
+
+// TestLoop_ReadDataError_Continue covers the readData-error continue path in
+// loop: send a socket notification without creating a data file so readData
+// returns an error and the loop continues rather than delivering a sample.
+func TestLoop_ReadDataError_Continue(t *testing.T) {
+	topic := "internal/loop-readdata-err"
+	// Remove any stale data file so readData fails.
+	_ = os.Remove(shmDataPath(topic))
+
+	listener, err := newShmListener(topic, nil, 4)
+	if err != nil {
+		t.Skipf("newShmListener: %v (socket setup may be unavailable)", err)
+	}
+	defer listener.close()
+	time.Sleep(10 * time.Millisecond)
+
+	// Signal the socket without writing a data file.
+	conn, dialErr := net.Dial("unixgram", shmSocketPath(topic))
+	if dialErr != nil {
+		t.Skipf("dial socket: %v", dialErr)
+	}
+	_, _ = conn.Write([]byte{0})
+	_ = conn.Close()
+
+	// Give the loop goroutine time to process the signal and hit the readData error.
+	time.Sleep(50 * time.Millisecond)
+
+	// Nothing must appear in listener.ch because readData failed.
+	select {
+	case <-listener.ch:
+		t.Error("expected no sample when data file is missing")
+	default:
 	}
 }
 

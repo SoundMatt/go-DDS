@@ -11,6 +11,7 @@ package tsn_test
 
 import (
 	"errors"
+	"math"
 	"testing"
 	"time"
 
@@ -122,6 +123,37 @@ func TestTAPRIOConfig_VerifyApplied_NonLinux(t *testing.T) {
 	// On Linux without a taprio qdisc: any error is acceptable.
 	if !errors.Is(err, tsn.ErrNotSupported) {
 		t.Logf("VerifyApplied error (non-ErrNotSupported, likely Linux without taprio qdisc): %v", err)
+	}
+}
+
+// TestTAPRIOConfig_Validate_IntervalExceedsUint32 covers the
+// maxEntryIntervalNS overflow branch in Validate and the itoa loop body
+// (entry index 1 → itoa(1) takes the n>0 loop path).
+func TestTAPRIOConfig_Validate_IntervalExceedsUint32(t *testing.T) {
+	cfg := &tsn.TAPRIOConfig{
+		Interface: "eth0",
+		Entries: []tsn.TAPRIOEntry{
+			{GateMask: 0xFF, Interval: time.Millisecond},                  // valid first entry
+			{GateMask: 0x0F, Interval: time.Duration(math.MaxUint32 + 1)}, // entry[1] too large
+		},
+	}
+	if err := cfg.Validate(); err == nil {
+		t.Error("expected error for interval exceeding uint32 ns limit")
+	}
+}
+
+// TestTAPRIOConfig_Validate_ZeroIntervalAtSecondEntry covers itoa(1) in the
+// zero-interval error message when the bad entry is at index 1.
+func TestTAPRIOConfig_Validate_ZeroIntervalAtSecondEntry(t *testing.T) {
+	cfg := &tsn.TAPRIOConfig{
+		Interface: "eth0",
+		Entries: []tsn.TAPRIOEntry{
+			{GateMask: 0xFF, Interval: time.Millisecond}, // valid
+			{GateMask: 0x0F, Interval: 0},                // zero — hits itoa(1)
+		},
+	}
+	if err := cfg.Validate(); err == nil {
+		t.Error("expected error for zero interval at entry[1]")
 	}
 }
 
