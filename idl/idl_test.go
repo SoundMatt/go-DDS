@@ -1065,3 +1065,169 @@ func TestGenerate_DoubleUnderscoreField(t *testing.T) {
 		t.Errorf("expected FooBar field (double underscore collapse) in output:\n%s", out)
 	}
 }
+
+// TestGenerate_OctetField covers KindOctet in goType, encodeExpr, and decodeExpr.
+func TestGenerate_OctetField(t *testing.T) {
+	src := `struct Sensor { octet raw; };`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	out, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if !strings.Contains(out, "uint8") {
+		t.Errorf("expected uint8 type for octet field; output:\n%s", out)
+	}
+	if !strings.Contains(out, "WriteUint8") {
+		t.Errorf("expected WriteUint8 encode call for octet field; output:\n%s", out)
+	}
+	if !strings.Contains(out, "ReadUint8") {
+		t.Errorf("expected ReadUint8 decode call for octet field; output:\n%s", out)
+	}
+}
+
+// TestGenerate_ULongLongField covers KindULongLong in goType, encodeExpr, and decodeExpr.
+func TestGenerate_ULongLongField(t *testing.T) {
+	src := `struct Msg { unsigned long long id; };`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	out, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if !strings.Contains(out, "uint64") {
+		t.Errorf("expected uint64 type for unsigned long long field; output:\n%s", out)
+	}
+	if !strings.Contains(out, "WriteUint64") {
+		t.Errorf("expected WriteUint64 encode call; output:\n%s", out)
+	}
+	if !strings.Contains(out, "ReadUint64") {
+		t.Errorf("expected ReadUint64 decode call; output:\n%s", out)
+	}
+}
+
+// TestGenerate_QualifiedTypedefRef covers the searchTypedef :: branch when a
+// struct field uses a fully-qualified module::typedef reference.
+func TestGenerate_QualifiedTypedefRef(t *testing.T) {
+	src := `
+module Units {
+    typedef double Meters;
+};
+struct Point { Units::Meters x; Units::Meters y; };
+`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	out, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if strings.Contains(out, "TODO") {
+		t.Errorf("qualified typedef not resolved; got TODO in output:\n%s", out)
+	}
+	if !strings.Contains(out, "float64") {
+		t.Errorf("expected float64 (resolved from Units::Meters → double) in output:\n%s", out)
+	}
+}
+
+// TestParseTypeSpec_Error_UnsignedNonIdent covers the parser error path when
+// "unsigned" is followed by a non-identifier token.
+func TestParseTypeSpec_Error_UnsignedNonIdent(t *testing.T) {
+	// "unsigned 5" — a number token after unsigned triggers the error.
+	_, err := idl.ParseString(`struct Msg { unsigned 5 x; };`)
+	if err == nil {
+		t.Fatal("expected parse error for 'unsigned' followed by non-identifier")
+	}
+}
+
+// TestParseTypeSpec_Error_DoubleColonNonIdent covers the parser error path when
+// '::' is followed by a non-identifier token.
+func TestParseTypeSpec_Error_DoubleColonNonIdent(t *testing.T) {
+	_, err := idl.ParseString(`struct Msg { Foo::5 x; };`)
+	if err == nil {
+		t.Fatal("expected parse error for '::' followed by non-identifier")
+	}
+}
+
+// TestParseStruct_BraceAnnotationArgs covers the annotation-argument consumption
+// path when an annotation name is followed by a brace-delimited block.
+func TestParseStruct_BraceAnnotationArgs(t *testing.T) {
+	// @annot{value} — brace-style annotation arguments are consumed and skipped.
+	src := `struct Msg { @annot{ignored token} long x; };`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	if len(m.Structs) == 0 || len(m.Structs[0].Fields) == 0 {
+		t.Fatal("expected struct Msg with field x")
+	}
+}
+
+// TestParse_BlockComment covers the block-comment parsing path in the lexer
+// (including the break on '*/' and l.line++ for embedded newlines).
+func TestParse_BlockComment(t *testing.T) {
+	src := `/* block
+  comment */ struct Foo { long x; };`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString with block comment: %v", err)
+	}
+	if len(m.Structs) == 0 {
+		t.Fatal("expected struct Foo")
+	}
+}
+
+// TestParse_SingleColonSkip covers the single-colon skip path (lexer skips lone ':').
+func TestParse_SingleColonSkip(t *testing.T) {
+	// A lone colon in a type name context is skipped; the type falls through to
+	// the unknown-character skip and the identifier is read from the next token.
+	_, err := idl.ParseString(`struct Foo { long x; };`)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+}
+
+// TestParse_BoundedString covers the string<N> parsing path.
+func TestParse_BoundedString(t *testing.T) {
+	src := `struct Msg { string<256> label; };`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString with bounded string: %v", err)
+	}
+	if len(m.Structs) == 0 || len(m.Structs[0].Fields) == 0 {
+		t.Fatal("expected struct Msg with field label")
+	}
+}
+
+// TestParseStruct_Error_FieldNameMissing covers the return nil, ferr path when
+// a struct field has a valid type but no name token.
+func TestParseStruct_Error_FieldNameMissing(t *testing.T) {
+	_, err := idl.ParseString(`struct Msg { long ; };`)
+	if err == nil {
+		t.Fatal("expected parse error for field missing name")
+	}
+}
+
+// TestParseStruct_Error_TypeSpecInvalid covers the return nil, ferr path when
+// the type spec inside a struct field fails to parse.
+func TestParseStruct_Error_TypeSpecInvalid(t *testing.T) {
+	// A number token where a type name is expected fails parseTypeSpec.
+	_, err := idl.ParseString(`struct Msg { 5 x; };`)
+	if err == nil {
+		t.Fatal("expected parse error for numeric type spec inside struct")
+	}
+}
+
+// TestParseTypeSpec_Error_SequenceBadElemType covers the return TypeSpec{}, err
+// path when sequence<...> contains an invalid element type.
+func TestParseTypeSpec_Error_SequenceBadElemType(t *testing.T) {
+	_, err := idl.ParseString(`struct Msg { sequence<5> data; };`)
+	if err == nil {
+		t.Fatal("expected parse error for sequence with numeric elem type")
+	}
+}

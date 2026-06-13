@@ -1003,6 +1003,54 @@ func TestBridge_Auth_WrongToken_Unauthenticated(t *testing.T) {
 	}
 }
 
+// ── Publish write-error path ──────────────────────────────────────────────────
+
+type failWritePub struct{}
+
+func (failWritePub) Write(_ []byte) error                        { return dds.ErrClosed }
+func (failWritePub) WriteCtx(_ context.Context, _ []byte) error { return dds.ErrClosed }
+func (failWritePub) Close() error                                { return nil }
+
+type failWritePart struct{ dds.Participant }
+
+func (f *failWritePart) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, error) {
+	return failWritePub{}, nil
+}
+
+// TestBridge_Publish_WriteError covers the pub.WriteCtx error path in Bridge.Publish
+// (codes.Internal "write: %v").
+func TestBridge_Publish_WriteError(t *testing.T) {
+	real, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
+	defer real.Close()
+
+	p := &failWritePart{Participant: real}
+	b := grpcbridge.New(p, grpcbridge.Options{})
+	lis := listenLocal(t)
+	go func() { _ = b.Server().Serve(lis) }()
+	defer b.Close()
+
+	conn := dialJSON(t, lis.Addr().String())
+	defer conn.Close()
+	client := grpcbridge.NewRawClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	ignoredRet, pubErr := client.Publish(ctx, &grpcbridge.PublishRequest{
+		Topic:   "grpc/write-err",
+		Payload: []byte("x"),
+	})
+	_ = ignoredRet
+	if pubErr == nil {
+		t.Fatal("expected error when publisher Write fails")
+	}
+	if !strings.Contains(pubErr.Error(), "Internal") && !strings.Contains(pubErr.Error(), "internal") {
+		t.Errorf("expected Internal error, got %v", pubErr)
+	}
+}
+
 // ── Fuzz ──────────────────────────────────────────────────────────────────────
 
 func FuzzBridge_Publish(f *testing.F) {
