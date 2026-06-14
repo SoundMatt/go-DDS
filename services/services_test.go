@@ -57,6 +57,38 @@ func uniqueTopic(prefix string) string {
 	return fmt.Sprintf("%s/%d", prefix, time.Now().UnixNano())
 }
 
+// failOnSecondSubPart wraps a participant and returns an error on the second
+// NewSubscriber call. This exercises the cleanup loop in RecorderService.Start
+// when a later subscriber creation fails after earlier ones succeeded.
+type failOnSecondSubPart struct {
+	dds.Participant
+	calls int
+}
+
+func (f *failOnSecondSubPart) NewSubscriber(topic string, qos dds.QoS, opts ...dds.SubscriberOption) (dds.Subscriber, error) {
+	f.calls++
+	if f.calls >= 2 {
+		return nil, dds.ErrClosed
+	}
+	return f.Participant.NewSubscriber(topic, qos, opts...)
+}
+
+// TestRecorderService_Start_CleanupOnError covers the _ = existing.Close()
+// cleanup loop in Start when NewSubscriber fails on a subsequent topic.
+func TestRecorderService_Start_CleanupOnError(t *testing.T) {
+	realPart := newPart(t)
+	p := &failOnSecondSubPart{Participant: realPart}
+	var buf bytes.Buffer
+	svc := services.NewRecorderService(p, services.RecorderOptions{
+		Topics: []string{uniqueTopic("svc/cleanup/a"), uniqueTopic("svc/cleanup/b")},
+		Output: &buf,
+	})
+	err := svc.Start()
+	if err == nil {
+		t.Fatal("expected error when second subscriber creation fails")
+	}
+}
+
 // ── RecorderService ───────────────────────────────────────────────────────────
 
 func TestRecorderService_StartStop(t *testing.T) {

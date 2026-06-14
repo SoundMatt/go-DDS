@@ -122,6 +122,50 @@ func TestWaitSet_AllChannelsClosed(t *testing.T) {
 	}
 }
 
+// TestWaitSet_PartialClose_ContinuesWaiting covers the `continue` branch in
+// WaitSet.Wait: when one of several subscriber channels closes, the WaitSet
+// removes it and keeps waiting on the remaining open channels.
+func TestWaitSet_PartialClose_ContinuesWaiting(t *testing.T) {
+	p := newMockParticipant(t)
+
+	sub1, err := p.NewSubscriber("ws/partial1", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber sub1: %v", err)
+	}
+	sub2, err := p.NewSubscriber("ws/partial2", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber sub2: %v", err)
+	}
+
+	// Close sub1 so it fires as !ok immediately; sub2 stays open.
+	sub1.Close()
+
+	ws := dds.NewWaitSet(sub1, sub2)
+
+	pub2, err := p.NewPublisher("ws/partial2", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub2.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	// Send to sub2 after a short delay.
+	go func() {
+		time.Sleep(20 * time.Millisecond)
+		_ = pub2.Write([]byte("hello"))
+	}()
+
+	_, got, err := ws.Wait(ctx)
+	if err != nil {
+		t.Fatalf("Wait returned error: %v", err)
+	}
+	if got != sub2 {
+		t.Errorf("expected sample from sub2 after sub1 closed")
+	}
+}
+
 // TestWaitSet_AllChannelsClosed_ContextCancelled verifies that a cancelled
 // context takes priority over ErrClosed when both occur simultaneously.
 func TestWaitSet_AllChannelsClosed_ContextCancelled(t *testing.T) {
@@ -739,5 +783,59 @@ func TestTypedSample_MetadataForwarded(t *testing.T) {
 		}
 	case <-time.After(time.Second):
 		t.Fatal("timeout")
+	}
+}
+
+// ── GobCodec error paths ──────────────────────────────────────────────────────
+
+// ungobable holds a channel field that gob cannot encode.
+type ungobable struct {
+	Ch chan int
+}
+
+// TestGobCodec_MarshalError covers the error return in GobCodec.Marshal
+// (dds.go:754) when the value contains a type that gob cannot encode.
+func TestGobCodec_MarshalError(t *testing.T) {
+	codec := dds.GobCodec[ungobable]{}
+	_, err := codec.Marshal(ungobable{Ch: make(chan int)})
+	if err == nil {
+		t.Error("expected gob marshal error for type with channel field")
+	}
+}
+
+// ── TypedSubscriber pump inner-done path ─────────────────────────────────────
+
+// TestTypedSubscriber_pump_DoneWhileSending covers the inner `case <-ts.done:
+// return` in pump (dds.go:711-712). It fills the typed output channel to
+// capacity so the pump blocks on the 65th send, then closes the subscriber,
+// which signals done and unblocks the goroutine via the inner select.
+func TestTypedSubscriber_pump_DoneWhileSending(t *testing.T) {
+	p := newMockParticipant(t)
+	rawSub, err := p.NewSubscriber("typed/pump-done", dds.DefaultQoS,
+		dds.WithChannelDepth(200))
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	rawPub, err := p.NewPublisher("typed/pump-done", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer rawPub.Close()
+
+	ts := dds.NewTypedSubscriber[speedSample](rawSub, dds.JSONCodec[speedSample]{})
+
+	// Publish 65 valid samples: 64 fill ts.ch (depth 64), the 65th blocks the
+	// pump in the inner select waiting for ts.ch to drain or ts.done to close.
+	for i := 0; i < 65; i++ {
+		_ = rawPub.Write([]byte(`{"kmh":1}`))
+	}
+
+	// Give the pump goroutine time to process 64 samples into ts.ch and block
+	// on the 65th send.
+	time.Sleep(50 * time.Millisecond)
+
+	// ts.Close() closes ts.done, waking the inner select with `case <-ts.done`.
+	if err := ts.Close(); err != nil {
+		t.Fatalf("ts.Close: %v", err)
 	}
 }

@@ -20,12 +20,14 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	dds "github.com/SoundMatt/go-DDS"
+	"github.com/SoundMatt/go-DDS/mock"
 	"github.com/SoundMatt/go-DDS/testutil"
 )
 
@@ -536,5 +538,127 @@ func TestTopicRecorder_WaitFor_ReturnsFalseOnTimeout(t *testing.T) {
 
 	if rec.WaitFor(1, 30*time.Millisecond) {
 		t.Fatal("WaitFor should return false when no samples arrive within timeout")
+	}
+}
+
+// ── mockTB — coverage for t.Fatalf paths in AssertSample / AssertNoSample ─────
+//
+// The public API accepts testing.TB, so we can supply a lightweight stub that
+// captures Fatalf calls and calls runtime.Goexit() (the same mechanism that
+// *testing.T.Fatalf uses internally) so the callee returns normally.
+
+type mockTB struct {
+	testing.TB
+	failed bool
+	msg    string
+}
+
+func (m *mockTB) Helper()          {}
+func (m *mockTB) Cleanup(f func()) { f() }
+func (m *mockTB) Fatalf(format string, args ...any) {
+	m.failed = true
+	m.msg = fmt.Sprintf(format, args...)
+	runtime.Goexit()
+}
+
+// TestAssertSample_Timeout_Coverage covers the timeout t.Fatalf path in
+// AssertSample (testutil.go:44) via a mockTB running in a goroutine.
+func TestAssertSample_Timeout_Coverage(t *testing.T) {
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
+	defer p.Close()
+
+	sub, err := p.NewSubscriber(fmt.Sprintf("util/cov/timeout/%d", time.Now().UnixNano()), dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	tb := &mockTB{}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		testutil.AssertSample(tb, sub, []byte("x"), 10*time.Millisecond)
+	}()
+	<-done
+
+	if !tb.failed || !strings.Contains(tb.msg, "timeout") {
+		t.Fatalf("expected timeout Fatalf; got failed=%v msg=%q", tb.failed, tb.msg)
+	}
+}
+
+// TestAssertSample_Mismatch_Coverage covers the payload-mismatch t.Fatalf path
+// in AssertSample (testutil.go:41) via a mockTB.
+func TestAssertSample_Mismatch_Coverage(t *testing.T) {
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
+	defer p.Close()
+
+	topic := fmt.Sprintf("util/cov/mismatch/%d", time.Now().UnixNano())
+	sub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	_ = pub.Write([]byte("actual"))
+
+	tb := &mockTB{}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		testutil.AssertSample(tb, sub, []byte("expected"), time.Second)
+	}()
+	<-done
+
+	if !tb.failed || !strings.Contains(tb.msg, "payload mismatch") {
+		t.Fatalf("expected mismatch Fatalf; got failed=%v msg=%q", tb.failed, tb.msg)
+	}
+}
+
+// TestAssertNoSample_UnexpectedSample_Coverage covers the unexpected-sample
+// t.Fatalf path in AssertNoSample (testutil.go:53) via a mockTB.
+func TestAssertNoSample_UnexpectedSample_Coverage(t *testing.T) {
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
+	defer p.Close()
+
+	topic := fmt.Sprintf("util/cov/nosample/%d", time.Now().UnixNano())
+	sub, err := p.NewSubscriber(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	_ = pub.Write([]byte("unexpected"))
+
+	tb := &mockTB{}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		testutil.AssertNoSample(tb, sub, time.Second)
+	}()
+	<-done
+
+	if !tb.failed || !strings.Contains(tb.msg, "unexpected sample") {
+		t.Fatalf("expected unexpected-sample Fatalf; got failed=%v msg=%q", tb.failed, tb.msg)
 	}
 }

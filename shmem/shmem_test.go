@@ -702,6 +702,51 @@ func TestDeadline_Shmem(t *testing.T) {
 	}
 }
 
+// TestDeadline_ResetOnSample covers the resetDeadline lambda body in
+// NewSubscriber (shmem.go:597). When a sample is delivered to a subscriber that
+// has deadline QoS + a callback, deliverSub calls resetDeadline() which resets
+// the AfterFunc timer.
+func TestDeadline_ResetOnSample(t *testing.T) {
+	p, err := shmem.New(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+
+	fired := make(chan struct{}, 1)
+	qos := dds.DefaultQoS
+	qos.Deadline = 200 * time.Millisecond
+
+	sub, err := p.NewSubscriber("shmem/deadline/reset", qos,
+		dds.WithDeadlineMissed(func() {
+			select {
+			case fired <- struct{}{}:
+			default:
+			}
+		}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+
+	pub, err := p.NewPublisher("shmem/deadline/reset", dds.DefaultQoS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pub.Close()
+
+	// Publish a sample — deliverSub calls resetDeadline(), covering the lambda body.
+	if err := pub.Write([]byte("ping")); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-sub.C():
+	case <-time.After(time.Second):
+		t.Fatal("sample not received")
+	}
+}
+
 // ── LoaningPublisher ──────────────────────────────────────────────────────────
 
 func TestShmem_LoaningPublisher_roundtrip(t *testing.T) {

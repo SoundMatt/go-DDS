@@ -162,6 +162,39 @@ func TestCertPlugin_Open_TooShort(t *testing.T) {
 	}
 }
 
+// TestCertPlugin_Open_SigLenTooLarge covers the `sigLen >= 0 but payload too
+// short for sig+certLen` branch in Open. The last 4 bytes claim sigLen=1000
+// but the payload is only 12 bytes.
+func TestCertPlugin_Open_SigLenTooLarge(t *testing.T) {
+	p := newCertPlugin(t)
+	// 12 bytes total; last 4 bytes = BigEndian(1000).
+	data := make([]byte, 12)
+	binary.BigEndian.PutUint32(data[8:], 1000)
+	if _, err := p.Open(data); err == nil {
+		t.Error("expected error when sigLen exceeds payload length")
+	}
+}
+
+// TestCertPlugin_Open_BadCertDER covers the x509.ParseCertificate error branch
+// in Open. We craft a well-formed length structure whose certDER region holds
+// garbage bytes that cannot be parsed as a certificate.
+func TestCertPlugin_Open_BadCertDER(t *testing.T) {
+	p := newCertPlugin(t)
+	// Layout: [plaintext(2)][garbage_certDER(2)][certLen(4)=2][fake_sig(2)][sigLen(4)=2]
+	//   → 14 bytes total
+	data := make([]byte, 14)
+	copy(data[:2], "hi") // plaintext
+	data[2] = 0xFF
+	data[3] = 0xFF                           // garbage certDER
+	binary.BigEndian.PutUint32(data[4:8], 2) // certLen = 2
+	data[8] = 0x00
+	data[9] = 0x00                             // fake sig
+	binary.BigEndian.PutUint32(data[10:14], 2) // sigLen = 2
+	if _, err := p.Open(data); err == nil {
+		t.Error("expected error for malformed certDER in payload")
+	}
+}
+
 func TestCertPlugin_New_BadCertPEM(t *testing.T) {
 	ignoredRet, err := security.NewCertPlugin([]byte("not-pem"), []byte("x"), []byte("y"))
 	_ = ignoredRet

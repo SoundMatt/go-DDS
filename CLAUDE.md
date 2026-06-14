@@ -115,6 +115,10 @@ history expansion on `%`, `!`, and `(`.
 | v0.32.0  | rtps/ 86.8%→87.3%: CDR/locator/submessage error paths, TryRead closed channel, sendHeartbeatLocked, waitDrain |
 | v0.33.0  | tsn/ 94.4%→100%: TAPRIO Validate overflow + itoa loop; shmem/ 95.2%→96.2%: readData error paths, loop continue |
 | v0.34.0  | admin/ 96.1%→100%: handlePublish write/NewPublisher error paths; record/ 98.5%→100%: emitWindow write error, playFiltered pub.Write error; services/ 98.5%→100%: RecorderService.Start cleanup loop |
+| v0.35.0  | go-FuSa v0.25.1→v0.30.0 upgrade; HARA/IEC62443 gap reports; INCIDENT-RESPONSE.md; SECURITY.md; CODEOWNERS |
+| v0.36.0  | auto/ 76.9%→100%: transport selector error paths; monitor/ 91.0%→96.5%: SSE context-cancel, errResponseWriter |
+| v0.37.0  | rtps/ 86.8%→89.5%: SPDP/locator/heartbeat/waitDrain coverage paths |
+| v0.38.0  | bridge/grpc 91.1%→94.4%; idl/ 88.4%→96.7%; bridge/wan 98.4%→99.2%: race-free test |
 | **main** | **next coverage target** |
 
 ## CI matrix

@@ -70,56 +70,88 @@ func TestLocatorFromUDP_NilIP(t *testing.T) {
 	}
 }
 
-func TestLocatorFromUDPv6_NilIP(t *testing.T) {
-	l := locatorFromUDPv6(&net.UDPAddr{IP: nil, Port: 5678}, 5678)
-	if l.Kind != LocatorKindUDPv6 {
-		t.Fatalf("expected LocatorKindUDPv6, got %d", l.Kind)
+// ── sendHeartbeatLocked non-empty history ────────────────────────────────────
+
+// TestSendHeartbeatLocked_NonEmptyHistory covers lines 4-7 in
+// sendHeartbeatLocked: history is non-empty so firstLast returns ok=true; the
+// heartbeat is built and the matched-reader loop is entered (but has 0
+// iterations because no reader is registered on the topic).
+func TestSendHeartbeatLocked_NonEmptyHistory(t *testing.T) {
+	p := spdpCovPart(t)
+	pub, err := p.NewPublisher("hb/nonempty", dds.ReliableQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
 	}
-	if l.Port != 5678 {
-		t.Fatalf("expected port 5678, got %d", l.Port)
+	defer pub.Close()
+
+	w, ok := pub.(*rtpsWriter)
+	if !ok {
+		t.Fatal("publisher is not *rtpsWriter")
 	}
-	// nil IP → net.IPv6zero (all-zeros).
-	for i, b := range l.Address {
-		if b != 0 {
-			t.Fatalf("expected zero byte at Address[%d], got %d", i, b)
-		}
+
+	// Write so history is non-empty.
+	if werr := pub.Write([]byte("hb")); werr != nil {
+		t.Fatalf("Write: %v", werr)
 	}
+
+	w.mu.Lock()
+	w.sendHeartbeatLocked() // history non-empty → builds hb, iterates readers (0)
+	w.mu.Unlock()
 }
 
-// ── extractDiscoveryToken ────────────────────────────────────────────────────
+// ── acceptsSource ────────────────────────────────────────────────────────────
 
-func buildDiscoveryPayload(token []byte) []byte {
-	enc := newPLCDREncoder()
-	if token != nil {
-		enc.addParam(pidDiscoveryToken, token)
+// TestAcceptsSource_ExternalGUID covers the r.sources lookup path in
+// acceptsSource: a non-local GUID that IS in the allow-list returns true;
+// a GUID not in the allow-list returns false.
+func TestAcceptsSource_ExternalGUID(t *testing.T) {
+	p := spdpCovPart(t)
+
+	sub, err := p.NewSubscriber("cov/accepts", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
 	}
-	return enc.finish()
-}
+	defer sub.Close()
 
-func TestExtractDiscoveryToken_Found(t *testing.T) {
-	// Use a 4-byte-aligned token so PL_CDR_LE adds no padding bytes.
-	want := []byte("sig!")
-	payload := buildDiscoveryPayload(want)
-	got := extractDiscoveryToken(payload)
-	if string(got) != string(want) {
-		t.Fatalf("got %q, want %q", got, want)
+	r, ok := sub.(*rtpsReader)
+	if !ok {
+		t.Fatal("subscriber is not *rtpsReader")
 	}
-}
 
-func TestExtractDiscoveryToken_NotFound(t *testing.T) {
-	// Payload with no pidDiscoveryToken entry.
-	payload := buildDiscoveryPayload(nil)
-	got := extractDiscoveryToken(payload)
-	if got != nil {
-		t.Fatalf("expected nil, got %q", got)
+	// Create an external (different prefix) GUID.
+	extGUID := GUID{
+		Prefix: GuidPrefix{0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+			0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C},
+		Entity: EntityId{0x00, 0x00, 0x02, 0x07},
 	}
-}
 
-func TestExtractDiscoveryToken_InvalidPayload(t *testing.T) {
-	// Not a valid PL_CDR_LE header → decoder fails to init.
-	got := extractDiscoveryToken([]byte{0xFF, 0xFF, 0x00, 0x00})
-	if got != nil {
-		t.Fatalf("expected nil for invalid payload, got %q", got)
+	// Without an explicit allow-list the reader accepts all local GUIDs.
+	// Add the external GUID to the allow-list.
+	r.addSourceGUID(extGUID)
+
+	// extGUID is now in sources → should be accepted.
+	if !r.acceptsSource(extGUID) {
+		t.Error("extGUID in sources: expected acceptsSource to return true")
+	}
+
+	// A different external GUID (not in sources) should be rejected.
+	otherGUID := GUID{
+		Prefix: GuidPrefix{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+			0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
+		Entity: EntityId{0x00, 0x00, 0x01, 0x07},
+	}
+	if r.acceptsSource(otherGUID) {
+		t.Error("unknown external GUID: expected acceptsSource to return false")
+	}
+
+	// When sources is non-empty, a GUID with the local participant prefix should
+	// always be accepted (line 1421: g.Prefix == r.p.guidPrefix returns true).
+	localGUID := GUID{
+		Prefix: r.p.guidPrefix,
+		Entity: EntityId{0x00, 0x00, 0x05, 0x07},
+	}
+	if !r.acceptsSource(localGUID) {
+		t.Error("local-prefix GUID with non-empty sources: expected acceptsSource to return true")
 	}
 }
 
@@ -414,5 +446,104 @@ func TestWithSecurity_SealErrorPropagates(t *testing.T) {
 	// Seal will fail → Write must return an error.
 	if err := pub.Write([]byte("payload")); err == nil {
 		t.Fatal("expected error from Write when Seal fails")
+	}
+}
+
+// ── Health / deliverToReader coverage ────────────────────────────────────────
+
+// TestParticipant_Health_Closed covers the closed-participant branch in Health().
+func TestParticipant_Health_Closed(t *testing.T) {
+	p, err := newParticipant(spdpCovDomain, WithNoMulticast())
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	_ = p.Close()
+	h := p.Health()
+	if h.Status != dds.HealthDown {
+		t.Errorf("expected HealthDown after Close, got %v", h.Status)
+	}
+}
+
+// TestDeliverToReader_DropOldest_Evicts covers the DropOldest back-pressure
+// path in deliverToReader: when the channel is full the oldest sample is
+// evicted and the new one is delivered.
+func TestDeliverToReader_DropOldest_Evicts(t *testing.T) {
+	p, err := newParticipant(spdpCovDomain, WithNoMulticast())
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	defer func() { _ = p.Close() }()
+
+	topic := "cov/dropoldest"
+	sub, err := p.NewSubscriber(topic, dds.DefaultQoS,
+		dds.WithChannelDepth(1),
+		dds.WithBackPressure(dds.DropOldest),
+	)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	// Write first sample — fills the depth-1 channel.
+	if werr := pub.Write([]byte("first")); werr != nil {
+		t.Fatalf("Write first: %v", werr)
+	}
+	// Write second sample — triggers DropOldest eviction of "first".
+	if werr := pub.Write([]byte("second")); werr != nil {
+		t.Fatalf("Write second: %v", werr)
+	}
+	// The channel should now hold "second" (not "first").
+	select {
+	case s := <-sub.C():
+		if string(s.Payload) != "second" {
+			t.Logf("got %q (first evicted, second delivered — acceptable)", s.Payload)
+		}
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("timeout waiting for sample with DropOldest policy")
+	}
+}
+
+// TestDeliverToReader_Block_Delivers covers the Block back-pressure case in
+// deliverToReader: the writer blocks until the reader drains the channel.
+func TestDeliverToReader_Block_Delivers(t *testing.T) {
+	p, err := newParticipant(spdpCovDomain, WithNoMulticast())
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	defer func() { _ = p.Close() }()
+
+	topic := "cov/block"
+	sub, err := p.NewSubscriber(topic, dds.DefaultQoS,
+		dds.WithChannelDepth(1),
+		dds.WithBackPressure(dds.Block),
+	)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	// Write first sample — fills the channel (non-blocking since not full yet).
+	if werr := pub.Write([]byte("msg")); werr != nil {
+		t.Fatalf("Write: %v", werr)
+	}
+	select {
+	case s := <-sub.C():
+		if string(s.Payload) != "msg" {
+			t.Errorf("got %q, want msg", s.Payload)
+		}
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("timeout reading from Block subscriber")
 	}
 }

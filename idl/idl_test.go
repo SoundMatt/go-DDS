@@ -1216,6 +1216,31 @@ func TestParseString_Error_UnsignedUnknownIdent(t *testing.T) {
 	}
 }
 
+// TestGenerate_QualifiedTypedefRef covers the searchTypedef '::' qualified-name
+// path: a struct field uses a fully-qualified module::typedef reference.
+func TestGenerate_QualifiedTypedefRef(t *testing.T) {
+	src := `
+module Units {
+    typedef double Meters;
+};
+struct Point { Units::Meters x; Units::Meters y; };
+`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	out, err := idl.Generate(m)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if strings.Contains(out, "TODO") {
+		t.Errorf("qualified typedef not resolved; got TODO in output:\n%s", out)
+	}
+	if !strings.Contains(out, "float64") {
+		t.Errorf("expected float64 (resolved from Units::Meters → double) in output:\n%s", out)
+	}
+}
+
 // TestGenerate_QualifiedStructNotFound covers the return nil path in
 // searchStruct (gen.go:418) when a qualified struct name references a
 // sub-module that does not exist. This also covers the bare-name path: when a
@@ -1320,6 +1345,40 @@ func TestGenerate_DirectKindEnum(t *testing.T) {
 	// KindEnum in encodeExpr → e.WriteInt32(int32(...))
 	if !strings.Contains(out, "WriteInt32") {
 		t.Errorf("expected WriteInt32 for KindEnum encode, got:\n%s", out)
+	}
+}
+
+// TestParseStruct_Error_TypeSpecInvalid covers the return nil, ferr path when
+// the type spec inside a struct field fails to parse (a number where a type
+// name is expected).
+func TestParseStruct_Error_TypeSpecInvalid(t *testing.T) {
+	_, err := idl.ParseString(`struct Msg { 5 x; };`)
+	if err == nil {
+		t.Fatal("expected parse error for numeric type spec inside struct")
+	}
+}
+
+// TestParse_BoundedString covers the string<N> parsing success path.
+func TestParse_BoundedString(t *testing.T) {
+	src := `struct Msg { string<256> label; };`
+	m, err := idl.ParseString(src)
+	if err != nil {
+		t.Fatalf("ParseString with bounded string: %v", err)
+	}
+	if len(m.Structs) == 0 || len(m.Structs[0].Fields) == 0 {
+		t.Fatal("expected struct Msg with field label")
+	}
+}
+
+// TestParse_SingleColonSkip covers the lexer single-colon skip path when a
+// bare ':' appears after the field name (before the ';').
+func TestParse_SingleColonSkip(t *testing.T) {
+	m, err := idl.ParseString(`struct Msg { long x:; };`)
+	if err != nil {
+		t.Fatalf("ParseString: %v", err)
+	}
+	if len(m.Structs) != 1 || len(m.Structs[0].Fields) != 1 {
+		t.Fatalf("expected 1 struct with 1 field, got: %+v", m.Structs)
 	}
 }
 

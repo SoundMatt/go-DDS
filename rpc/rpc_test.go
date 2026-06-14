@@ -491,3 +491,78 @@ func TestReplier_Pump_InvalidJSON(t *testing.T) {
 	_ = pub.Write(payload) // valid header + bad JSON → Unmarshal error → continue
 	time.Sleep(20 * time.Millisecond)
 }
+
+// TestRequester_Demux_OrphanReply covers the !ok2 branch in demux (rpc.go:130)
+// where a reply arrives with a valid RPC header but with a correlation ID that
+// doesn't match any pending request (the request has already timed out and
+// the ID was deleted from the pending map).
+func TestRequester_Demux_OrphanReply(t *testing.T) {
+	p := newPart(t)
+	req, err := rpc.NewRequester[addReq, addRep](p, "rpc/orphan-reply",
+		dds.JSONCodec[addReq]{}, dds.JSONCodec[addRep]{}, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewRequester: %v", err)
+	}
+	defer req.Close()
+
+	pub, err := p.NewPublisher("rpc/orphan-reply/reply", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	// Publish a valid-format RPC reply with a correlation ID that has never
+	// been registered in r.pending — demux will find ok2=false and skip
+	// the pending-map lookup and channel send.
+	var orphanID rpc.CorrelationID
+	orphanID[0] = 0xde
+	orphanID[1] = 0xad
+	replyPayload := make([]byte, 16+len(`{"sum":0}`))
+	copy(replyPayload[:16], orphanID[:])
+	copy(replyPayload[16:], `{"sum":0}`)
+
+	_ = pub.Write(replyPayload)
+	time.Sleep(20 * time.Millisecond)
+}
+
+// TestReplier_Pump_DoneWhileSending covers the inner `case <-rl.done: return`
+// in pump (rpc.go:251-252). It fills the rl.requests channel to capacity
+// (depth 1 via a custom replier setup is not possible via public API, so we
+// fill the default-depth channel by injecting valid requests faster than they
+// are drained), then closes the replier so the inner done case fires.
+//
+// We use a participant with IsolatedBroker() so that our test publisher reaches
+// the replier's subscriber on the same participant.
+func TestReplier_Pump_DoneWhileSending(t *testing.T) {
+	p := newPart(t)
+	replier, err := rpc.NewReplier[addReq, addRep](p, "rpc/pump-done",
+		dds.JSONCodec[addReq]{}, dds.JSONCodec[addRep]{}, dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewReplier: %v", err)
+	}
+
+	pub, err := p.NewPublisher("rpc/pump-done/request", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	// Craft a valid RPC request payload.
+	var id rpc.CorrelationID
+	reqPayload := make([]byte, 16+len(`{"a":1,"b":2}`))
+	copy(reqPayload[:16], id[:])
+	copy(reqPayload[16:], `{"a":1,"b":2}`)
+
+	// Publish enough requests to fill the requests channel (depth 64) without
+	// draining it. The pump blocks on the 65th send and sees rl.done when we
+	// close the replier.
+	for i := 0; i < 65; i++ {
+		_ = pub.Write(reqPayload)
+	}
+	time.Sleep(30 * time.Millisecond)
+
+	// Close the replier — rl.done fires, waking the inner select.
+	if err := replier.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+}
