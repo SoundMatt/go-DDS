@@ -113,7 +113,10 @@ func TestAcceptsSource_ExternalGUID(t *testing.T) {
 	}
 	defer sub.Close()
 
-	r := sub.(*rtpsReader)
+	r, ok := sub.(*rtpsReader)
+	if !ok {
+		t.Fatal("subscriber is not *rtpsReader")
+	}
 
 	// Create an external (different prefix) GUID.
 	extGUID := GUID{
