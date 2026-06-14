@@ -268,7 +268,7 @@ func FuzzConcurrentPubSub(f *testing.F) {
 		}
 		n := int(nPubs)
 
-		p, err := mock.New(dds.Domain(0))
+		p, err := mock.New(dds.Domain(0), mock.IsolatedBroker())
 		if err != nil {
 			return // unreachable: mock.New never fails
 		}
@@ -315,7 +315,7 @@ func FuzzDropOnFullChannel(f *testing.F) {
 	f.Add([]byte("aaaaaaaaa"), []byte("bbbbbbbbb"))
 
 	f.Fuzz(func(t *testing.T, fillPayload, overflowPayload []byte) {
-		p, err := mock.New(dds.Domain(0))
+		p, err := mock.New(dds.Domain(0), mock.IsolatedBroker())
 		if err != nil {
 			return // unreachable: mock.New never fails
 		}
