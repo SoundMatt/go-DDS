@@ -424,7 +424,7 @@ func TestNewShmListener_ListenError(t *testing.T) {
 	if err := os.WriteFile(blockFile, []byte("x"), 0o600); err != nil {
 		t.Fatalf("write block file: %v", err)
 	}
-	defer os.RemoveAll(sockPath)
+	t.Cleanup(func() { _ = os.RemoveAll(sockPath) })
 
 	_, err := newShmListener(topic, nil, 4)
 	if err == nil {
@@ -446,7 +446,7 @@ func TestShmPublish_CreateError(t *testing.T) {
 	if err := os.MkdirAll(dataPath, 0o700); err != nil {
 		t.Fatalf("making dir at dataPath: %v", err)
 	}
-	defer os.RemoveAll(dataPath)
+	t.Cleanup(func() { _ = os.RemoveAll(dataPath) })
 
 	// Must not panic.
 	shmPublish(topic, []byte("payload"))

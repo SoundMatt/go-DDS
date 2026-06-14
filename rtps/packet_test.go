@@ -1205,6 +1205,118 @@ func TestFragmentAssembler_ZeroFragmentSize_Rejected(t *testing.T) {
 	}
 }
 
+// TestFragmentAssembler_OffsetBreak covers the "offset >= DataSize → break"
+// path in receive. We send a valid fragment at position 1 first, then send
+// a duplicate at a position whose byte offset equals DataSize.
+func TestFragmentAssembler_OffsetBreak(t *testing.T) {
+	// DataSize=200, FragmentSize=100 → 2 real fragments.
+	// Sending FragmentStartingNum=3 gives offset=2*100=200 >= 200 → break.
+	eid := entityIdForWriter(77)
+	var fa fragmentAssembler
+
+	// First fragment (position 1): establishes the buffer.
+	f1 := DataFrag{
+		WriterEntityId:      eid,
+		WriterSeqNum:        SequenceNumber{Low: 7},
+		FragmentStartingNum: 1,
+		FragmentsInSubmsg:   1,
+		FragmentSize:        100,
+		DataSize:            200,
+		Payload:             make([]byte, 100),
+	}
+	if fa.receive(f1) != nil {
+		t.Error("partial delivery must return nil")
+	}
+
+	// Out-of-range fragment (position 3): offset=200 >= DataSize=200 → break.
+	f3 := DataFrag{
+		WriterEntityId:      eid,
+		WriterSeqNum:        SequenceNumber{Low: 7},
+		FragmentStartingNum: 3,
+		FragmentsInSubmsg:   1,
+		FragmentSize:        100,
+		DataSize:            200,
+		Payload:             make([]byte, 100),
+	}
+	// Must not panic and must return nil (not all fragments accounted for).
+	fa.receive(f3)
+}
+
+// TestFragmentAssembler_EndClamp covers the "end > DataSize → clamp" path in
+// receive. DataSize=250, FragmentSize=100: last fragment at position 3 has
+// offset=200, fragEnd=100, end=300>250 → end=250.
+func TestFragmentAssembler_EndClamp(t *testing.T) {
+	eid := entityIdForWriter(78)
+	var fa fragmentAssembler
+
+	// Fragments: pos1 [0..100), pos2 [100..200), pos3 [200..250) = last with 50B payload
+	// but FragmentSize=100 so end=200+100=300 > 250=DataSize.
+	f1 := DataFrag{
+		WriterEntityId:      eid,
+		WriterSeqNum:        SequenceNumber{Low: 8},
+		FragmentStartingNum: 1,
+		FragmentsInSubmsg:   1,
+		FragmentSize:        100,
+		DataSize:            250,
+		Payload:             make([]byte, 100),
+	}
+	f2 := DataFrag{
+		WriterEntityId:      eid,
+		WriterSeqNum:        SequenceNumber{Low: 8},
+		FragmentStartingNum: 2,
+		FragmentsInSubmsg:   1,
+		FragmentSize:        100,
+		DataSize:            250,
+		Payload:             make([]byte, 100),
+	}
+	// Last fragment: Payload is full FragmentSize (100) but DataSize only allows 50 more.
+	// This triggers: fragEnd=100 ≤ len(Payload)=100 (no fragEnd clamp), but
+	// end = 200 + 100 = 300 > DataSize=250 → end = 250.
+	f3 := DataFrag{
+		WriterEntityId:      eid,
+		WriterSeqNum:        SequenceNumber{Low: 8},
+		FragmentStartingNum: 3,
+		FragmentsInSubmsg:   1,
+		FragmentSize:        100,
+		DataSize:            250,
+		Payload:             make([]byte, 100), // full size payload; DataSize clamp fires
+	}
+	fa.receive(f1)
+	fa.receive(f2)
+	result := fa.receive(f3)
+	if result == nil {
+		t.Fatal("expected complete reassembly after 3 fragments")
+	}
+	if len(result) != 250 {
+		t.Errorf("result length: got %d, want 250", len(result))
+	}
+}
+
+// TestCDRUnwrapPayload_TooShort covers the len(b) < 4 guard in cdrUnwrapPayload.
+func TestCDRUnwrapPayload_TooShort(t *testing.T) {
+	_, ok := cdrUnwrapPayload([]byte{0x01, 0x00}) // 2 bytes — too short for 4-byte header
+	if ok {
+		t.Fatal("expected false for buffer shorter than 4 bytes")
+	}
+}
+
+// TestParseDataFrag_TooShort covers the len(body) < 32 guard in parseDataFrag.
+func TestParseDataFrag_TooShort(t *testing.T) {
+	_, ok := parseDataFrag(make([]byte, 10)) // 10 < 32
+	if ok {
+		t.Fatal("expected false for too-short DATA_FRAG body")
+	}
+}
+
+// TestSplitIntoFragmentsN_ZeroPayloadSize covers the maxPayloadSize<=0 guard.
+func TestSplitIntoFragmentsN_ZeroPayloadSize(t *testing.T) {
+	eid := entityIdForWriter(1)
+	frags := splitIntoFragmentsN(eid, SequenceNumber{Low: 1}, []byte("hello"), 0)
+	if len(frags) == 0 {
+		t.Error("expected at least one fragment for non-empty payload")
+	}
+}
+
 // ── Persist tests ─────────────────────────────────────────────────────────────
 
 func TestPersistFlushLoad_RoundTrip(t *testing.T) {

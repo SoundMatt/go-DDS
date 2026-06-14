@@ -1,6 +1,6 @@
 # GC Latency Profile — go-DDS
 
-**Generated:** 2026-06-13T23:07:14Z
+**Generated:** 2026-06-14T00:37:35Z
 **Platform:** darwin/arm64, 10 CPUs
 **Go runtime:** go1.26.3
 **Test duration:** 30s
@@ -28,18 +28,18 @@ GC allocation pressure simulates a realistic embedded Linux ECU workload.
 
 | Metric | Value |
 |---|---|
-| GC cycles during test | 501 |
-| STW pause P50 | 47.709µs |
-| STW pause P99 | 93.834µs |
-| STW pause P99.9 | 96.376µs |
-| **STW pause MAX (worst case)** | **96.376µs** |
+| GC cycles during test | 502 |
+| STW pause P50 | 58.875µs |
+| STW pause P99 | 142.583µs |
+| STW pause P99.9 | 166.833µs |
+| **STW pause MAX (worst case)** | **166.833µs** |
 
 ### Budget comparison
 
 | Sensor cadence | Half-period budget | Max STW pause | Result |
 |---|---|---|---|
-| Camera (30 Hz) | 16.666666ms | 96.376µs | PASS |
-| LiDAR/RADAR (10 Hz) | 50ms | 96.376µs | PASS |
+| Camera (30 Hz) | 16.666666ms | 166.833µs | PASS |
+| LiDAR/RADAR (10 Hz) | 50ms | 166.833µs | PASS |
 
 ---
 
@@ -49,16 +49,16 @@ GC allocation pressure simulates a realistic embedded Linux ECU workload.
 |---|---|
 | Messages expected | 1500 |
 | Messages delivered | 1497 (99.8%) |
-| E2E latency P50 | 39µs |
-| E2E latency P99 | 106µs |
-| **E2E latency MAX (worst case)** | **316µs** |
+| E2E latency P50 | 49µs |
+| E2E latency P99 | 259µs |
+| **E2E latency MAX (worst case)** | **372µs** |
 
 ### Budget comparison
 
 | Sensor cadence | Half-period budget | Max E2E latency | Result |
 |---|---|---|---|
-| Camera (30 Hz) | 16.666666ms | 316µs | PASS |
-| LiDAR/RADAR (10 Hz) | 50ms | 316µs | PASS |
+| Camera (30 Hz) | 16.666666ms | 372µs | PASS |
+| LiDAR/RADAR (10 Hz) | 50ms | 372µs | PASS |
 
 ---
 
@@ -80,8 +80,8 @@ budget of the fastest sensor (camera, 30 Hz, budget 16.666666ms).
 sustained GC pressure of 64 MiB/s — a conservative upper bound for a
 typical ADAS ECU (Nvidia Orin / Renesas R-Car H3) at full sensor load.
 
-**E-GC-001** (Evidence): Measured STW pause MAX = 96.376µs; measured E2E
-latency MAX = 316µs (see §2-3 above). Both are within the 16.666666ms budget.
+**E-GC-001** (Evidence): Measured STW pause MAX = 166.833µs; measured E2E
+latency MAX = 372µs (see §2-3 above). Both are within the 16.666666ms budget.
 
 **A-GC-001** (Assumption): The deployment platform has >= 10 CPUs,
 enabling the Go runtime's concurrent GC to operate without monopolising

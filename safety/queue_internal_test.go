@@ -19,7 +19,7 @@ import (
 // stubPub is a minimal dds.Publisher stub for internal queue tests.
 type stubPub struct{}
 
-func (stubPub) Write(_ []byte) error                      { return nil }
+func (stubPub) Write(_ []byte) error                       { return nil }
 func (stubPub) WriteCtx(_ context.Context, _ []byte) error { return nil }
 func (stubPub) Close() error                               { return nil }
 

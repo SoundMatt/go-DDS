@@ -328,9 +328,9 @@ func TestAdmin_Publish_NewPublisherError(t *testing.T) {
 // failWritePub is a Publisher that always fails Write.
 type failWritePub struct{}
 
-func (failWritePub) Write(_ []byte) error                           { return dds.ErrClosed }
-func (failWritePub) WriteCtx(_ context.Context, _ []byte) error    { return dds.ErrClosed }
-func (failWritePub) Close() error                                   { return nil }
+func (failWritePub) Write(_ []byte) error                       { return dds.ErrClosed }
+func (failWritePub) WriteCtx(_ context.Context, _ []byte) error { return dds.ErrClosed }
+func (failWritePub) Close() error                               { return nil }
 
 // failWritePart wraps a Participant and returns a publisher that fails Write.
 type failWritePart struct{ dds.Participant }

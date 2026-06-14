@@ -553,7 +553,7 @@ type mockTB struct {
 	msg    string
 }
 
-func (m *mockTB) Helper() {}
+func (m *mockTB) Helper()          {}
 func (m *mockTB) Cleanup(f func()) { f() }
 func (m *mockTB) Fatalf(format string, args ...any) {
 	m.failed = true

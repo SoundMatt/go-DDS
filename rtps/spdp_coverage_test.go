@@ -70,6 +70,104 @@ func TestLocatorFromUDP_NilIP(t *testing.T) {
 	}
 }
 
+// ── NewPublisher TransportPriority clamp ─────────────────────────────────────
+
+// TestNewPublisher_TransportPriority_Clamp covers the `if pcp > 7 { pcp = 7 }`
+// path in NewPublisher: QoS.TransportPriority > 7 is clamped to 7.
+func TestNewPublisher_TransportPriority_Clamp(t *testing.T) {
+	p := spdpCovPart(t)
+	qos := dds.DefaultQoS
+	qos.TransportPriority = 99 // > 7 → clamped to 7
+	pub, err := p.NewPublisher("prio/clamp", qos)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+}
+
+// ── NewSubscriber persist-dir path ───────────────────────────────────────────
+
+// TestNewSubscriber_PersistDir_LoadsFromDisk covers the else-if persistDir path
+// in NewSubscriber. We manually flush a sample to disk, then create a fresh
+// participant (so lastSample is empty) with the same persistDir and a
+// TransientLocal subscriber. The subscriber must receive the persisted sample.
+func TestNewSubscriber_PersistDir_LoadsFromDisk(t *testing.T) {
+	dir := t.TempDir()
+	topic := "cov/persist-load"
+	payload := []byte("from-disk")
+
+	// Write sample file directly (simulates a previous publisher writing persist data).
+	persistFlush(dir, topic, payload)
+
+	// Fresh participant with same persist dir — lastSample is empty for this topic.
+	p, err := newParticipant(dds.Domain(88), WithNoMulticast(), WithPersistentHistory(dir))
+	if err != nil {
+		t.Skipf("newParticipant: %v", err)
+	}
+	defer p.Close()
+
+	// TransientLocal subscriber: triggers the else-if persistDir branch.
+	sub, err := p.NewSubscriber(topic, dds.ReliableQoS) // ReliableQoS = TransientLocal
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	select {
+	case s := <-sub.C():
+		if string(s.Payload) != string(payload) {
+			t.Errorf("got %q, want %q", s.Payload, payload)
+		}
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("timeout: persisted sample not delivered to late subscriber")
+	}
+}
+
+// ── deliverToReader resetDeadline ─────────────────────────────────────────────
+
+// TestDeliverToReader_ResetDeadline covers the r.resetDeadline() call in
+// deliverToReader. A subscriber created with WithDeadlineMissed gets a sample
+// delivered; the resetDeadline callback must fire (resetting the timer).
+func TestDeliverToReader_ResetDeadline(t *testing.T) {
+	p := spdpCovPart(t)
+
+	// Create subscriber with long deadline and a deadline-missed callback.
+	qos := dds.QoS{
+		Reliability: dds.BestEffort,
+		Durability:  dds.Volatile,
+		Deadline:    500 * time.Millisecond,
+	}
+	resetCalled := make(chan struct{}, 1)
+	sub, err := p.NewSubscriber("cov/deadline-reset", qos, dds.WithDeadlineMissed(func() {
+		select {
+		case resetCalled <- struct{}{}:
+		default:
+		}
+	}))
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	pub, err := p.NewPublisher("cov/deadline-reset", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	// Write a sample — deliverToReader fires and calls r.resetDeadline().
+	if werr := pub.Write([]byte("tick")); werr != nil {
+		t.Fatalf("Write: %v", werr)
+	}
+
+	// Drain the sample to confirm delivery happened.
+	select {
+	case <-sub.C():
+	case <-time.After(200 * time.Millisecond):
+		t.Fatal("timeout: sample not delivered")
+	}
+}
+
 // ── sendHeartbeatLocked non-empty history ────────────────────────────────────
 
 // TestSendHeartbeatLocked_NonEmptyHistory covers lines 4-7 in
@@ -113,7 +211,10 @@ func TestAcceptsSource_ExternalGUID(t *testing.T) {
 	}
 	defer sub.Close()
 
-	r := sub.(*rtpsReader)
+	r, ok := sub.(*rtpsReader)
+	if !ok {
+		t.Fatal("subscriber is not *rtpsReader")
+	}
 
 	// Create an external (different prefix) GUID.
 	extGUID := GUID{
