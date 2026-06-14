@@ -183,11 +183,13 @@ func TestCertPlugin_Open_BadCertDER(t *testing.T) {
 	// Layout: [plaintext(2)][garbage_certDER(2)][certLen(4)=2][fake_sig(2)][sigLen(4)=2]
 	//   → 14 bytes total
 	data := make([]byte, 14)
-	copy(data[:2], "hi")                          // plaintext
-	data[2] = 0xFF; data[3] = 0xFF                // garbage certDER
-	binary.BigEndian.PutUint32(data[4:8], 2)      // certLen = 2
-	data[8] = 0x00; data[9] = 0x00                // fake sig
-	binary.BigEndian.PutUint32(data[10:14], 2)    // sigLen = 2
+	copy(data[:2], "hi") // plaintext
+	data[2] = 0xFF
+	data[3] = 0xFF                           // garbage certDER
+	binary.BigEndian.PutUint32(data[4:8], 2) // certLen = 2
+	data[8] = 0x00
+	data[9] = 0x00                             // fake sig
+	binary.BigEndian.PutUint32(data[10:14], 2) // sigLen = 2
 	if _, err := p.Open(data); err == nil {
 		t.Error("expected error for malformed certDER in payload")
 	}

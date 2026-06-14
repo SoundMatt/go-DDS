@@ -32,7 +32,7 @@ func newInternalPart(t *testing.T) dds.Participant {
 // bytesCodec is a minimal Codec[[]byte] for internal tests.
 type bytesCodec struct{}
 
-func (bytesCodec) Marshal(v []byte) ([]byte, error)   { return v, nil }
+func (bytesCodec) Marshal(v []byte) ([]byte, error)      { return v, nil }
 func (bytesCodec) Unmarshal(data []byte) ([]byte, error) { return data, nil }
 
 // TestReplier_Pump_SubClosed covers the !ok branch in pump (rpc.go:238-240)
