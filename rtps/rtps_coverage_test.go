@@ -139,6 +139,18 @@ func TestRTPS_LoaningPublisher_wrong_participant(t *testing.T) {
 	}
 }
 
+// TestRTPS_LoaningPublisher_NewPublisher_error covers the return nil, err path
+// in NewLoaningPublisher when the underlying NewPublisher call fails.
+// We use a closed RTPS participant which returns ErrClosed from NewPublisher.
+func TestRTPS_LoaningPublisher_NewPublisher_error(t *testing.T) {
+	p := newNoMcastParticipant(t)
+	_ = p.Close()
+	_, err := rtps.NewLoaningPublisher(p, "loan/closed-p", dds.DefaultQoS, 256)
+	if err == nil {
+		t.Fatal("expected error from closed participant, got nil")
+	}
+}
+
 func TestRTPS_LoaningPublisher_write_and_close(t *testing.T) {
 	p := newNoMcastParticipant(t)
 
@@ -402,5 +414,115 @@ func TestRTPS_ReliableWriter_heartbeat_path(t *testing.T) {
 		default:
 			return
 		}
+	}
+}
+
+// TestRTPS_Write_LargePayload_Fragmented covers the fragment-building branch in
+// rtpsWriter.Write (participant.go) when payload exceeds maxFragmentPayload.
+// Payloads > 1196 bytes trigger splitIntoFragmentsN and marshalDataFrag paths.
+func TestRTPS_Write_LargePayload_Fragmented(t *testing.T) {
+	p := newNoMcastParticipant(t)
+
+	sub, err := p.NewSubscriber("frag/large", dds.DefaultQoS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+
+	pub, err := p.NewPublisher("frag/large", dds.DefaultQoS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pub.Close()
+
+	// 2000 bytes exceeds the 1200-byte maxFragmentPayload threshold.
+	big := make([]byte, 2000)
+	for i := range big {
+		big[i] = byte(i)
+	}
+	if err := pub.Write(big); err != nil {
+		t.Fatalf("Write large payload: %v", err)
+	}
+
+	select {
+	case s := <-sub.C():
+		if len(s.Payload) != len(big) {
+			t.Errorf("got %d bytes, want %d", len(s.Payload), len(big))
+		}
+	case <-time.After(500 * time.Millisecond):
+		t.Error("timeout waiting for large fragmented payload")
+	}
+}
+
+// TestRTPS_TopicMetrics_DoubleWrite covers the topicCounterFor fast path where
+// a counter already exists for the topic (sync.Map Load returns true on second call).
+func TestRTPS_TopicMetrics_DoubleWrite(t *testing.T) {
+	p := newNoMcastParticipant(t)
+
+	mp, ok := p.(dds.TopicMetricsProvider)
+	if !ok {
+		t.Skip("participant does not implement TopicMetricsProvider")
+	}
+
+	sub, err := p.NewSubscriber("metrics/double", dds.DefaultQoS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+
+	pub, err := p.NewPublisher("metrics/double", dds.DefaultQoS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pub.Close()
+
+	// First write creates the topic counter.
+	if err := pub.Write([]byte("first")); err != nil {
+		t.Fatal(err)
+	}
+	// Second write hits the topicCounterFor fast path (existing counter).
+	if err := pub.Write([]byte("second")); err != nil {
+		t.Fatal(err)
+	}
+
+	metrics := mp.TopicMetrics()
+	for _, tm := range metrics {
+		if tm.Topic == "metrics/double" && tm.WriteCount >= 2 {
+			return
+		}
+	}
+	t.Error("expected WriteCount >= 2 for metrics/double")
+}
+
+// TestRTPS_DispatchToReaders_TopicMismatch covers the topic-filter continue
+// branch in dispatchToReaders when a reader's topic does not match the
+// publisher's topic and has no wildcard overlap.
+func TestRTPS_DispatchToReaders_TopicMismatch(t *testing.T) {
+	p := newNoMcastParticipant(t)
+
+	// Subscriber on a different topic — will not match publisher writes.
+	sub, err := p.NewSubscriber("dispatch/reader", dds.DefaultQoS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+
+	pub, err := p.NewPublisher("dispatch/writer", dds.DefaultQoS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pub.Close()
+
+	// Writing to "dispatch/writer" dispatches through all readers; the reader
+	// on "dispatch/reader" triggers the topic-mismatch continue branch.
+	if err := pub.Write([]byte("mismatch")); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+
+	// Confirm the mismatched reader received nothing.
+	select {
+	case s := <-sub.C():
+		t.Errorf("unexpected sample on mismatched topic: %v", s)
+	case <-time.After(50 * time.Millisecond):
 	}
 }
