@@ -139,6 +139,7 @@ history expansion on `%`, `!`, and `(`.
 | benchmark-smoke | ubuntu, 1 iter each |
 | fuzz-short     | ubuntu, 10 s per target |
 | lint           | golangci-lint |
+| static-analysis | deadcode + gocyclo (informational, non-blocking) |
 | gofusa         | go-FuSa v0.30.0 safety check (0 errors required) |
 | dco            | DCO sign-off check |
 | test-interop   | Docker probe-and-skip |

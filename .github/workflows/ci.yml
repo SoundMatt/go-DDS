@@ -250,6 +250,29 @@ jobs:
           version: v2.12.2
           args: --timeout=5m
 
+  # ── Static analysis (informational) ───────────────────────────────────────
+  # The BLOCKING static-analysis gate is already provided by other jobs:
+  #   • go vet ./...        — the `test` job
+  #   • golangci-lint run   — the `lint` job (govet, staticcheck, unused,
+  #                           errcheck, ineffassign, …)
+  #   • go test -race ./... — the `test` job
+  # The checks below add extra signal but are intentionally NON-blocking:
+  # `deadcode` reports every exported symbol consumed only by downstream users
+  # as "unreachable" (this is a library, so that is hundreds of false
+  # positives), and `gocyclo` is a complexity advisory, not a hard limit.
+  static-analysis:
+    name: Static analysis (informational)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.25"
+      - name: deadcode (informational)
+        run: go run golang.org/x/tools/cmd/deadcode@v0.30.0 ./... || true
+      - name: gocyclo complexity hotspots (informational)
+        run: go run github.com/fzipp/gocyclo/cmd/gocyclo@v0.6.0 -over 15 -top 20 ./... || true
+
   # ── go-FuSa safety checks ─────────────────────────────────────────────────
   # Pinned to v0.30.0; exits 1 on any ERROR-level finding.
   # Warnings are reported but do not fail the job (no --strict).
