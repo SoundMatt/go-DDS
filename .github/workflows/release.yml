@@ -68,5 +68,11 @@ jobs:
             git commit \
               -m "chore: regenerate safety artifacts for $TAG [skip ci]" \
               -m "Signed-off-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
-            git push origin HEAD:refs/heads/main
+            # main is a protected branch; the default GITHUB_TOKEN cannot push to
+            # it directly. Treat a protected-branch rejection as a warning rather
+            # than a hard failure so the release workflow stays green. The
+            # artifact-in-VCS strategy under branch protection is tracked in #72.
+            if ! git push origin HEAD:refs/heads/main; then
+              echo "::warning::Could not push regenerated artifacts to protected main; update them via PR (see issue #72 for the artifact-in-VCS strategy decision)."
+            fi
           fi
