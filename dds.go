@@ -37,7 +37,9 @@ import (
 )
 
 // SpecVersion is the RELAY spec version this package conforms to (§17 req 12).
-const SpecVersion = "0.3"
+// It tracks the linked RELAY module's constant so the two never drift; bumping
+// the RELAY dependency advances this automatically.
+const SpecVersion = relay.SpecVersion
 
 // ── Sentinel errors ───────────────────────────────────────────────────────────
 //
