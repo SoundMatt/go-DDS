@@ -37,7 +37,7 @@ import (
 )
 
 // SpecVersion is the RELAY spec version this package conforms to (§17 req 12).
-const SpecVersion = "0.2"
+const SpecVersion = "0.3"
 
 // ── Sentinel errors ───────────────────────────────────────────────────────────
 //
@@ -58,6 +58,11 @@ var ErrTimeout = fmt.Errorf("dds: timeout: %w", relay.ErrTimeout)
 // ErrPayloadTooLarge is returned when Write is called with a payload that
 // exceeds the MaxSampleSize set in the publisher's QoS.
 var ErrPayloadTooLarge = fmt.Errorf("dds: payload exceeds QoS MaxSampleSize: %w", relay.ErrPayloadTooLarge)
+
+// ErrDomainOutOfRange is returned when a Domain value is outside 0–232
+// inclusive (spec §15.2 dds.Domain). It wraps ErrNotConnected so callers that
+// already test for a participant start-up failure continue to match.
+var ErrDomainOutOfRange = fmt.Errorf("dds: domain out of range [0,232]: %w", ErrNotConnected)
 
 // ErrTopicEmpty is returned when an empty topic string is passed.
 var ErrTopicEmpty = errors.New("dds: topic name must not be empty")
@@ -90,6 +95,16 @@ var ErrLoanBuffer = errors.New("dds: loan buffer unavailable or invalid")
 // Participants on the same domain and network segment discover each other
 // automatically without a broker.
 type Domain int
+
+// ValidateDomain returns ErrDomainOutOfRange if d is outside 0–232 inclusive,
+// matching the RELAY dds.Domain canonical range (spec §15.2). It is the single
+// source of truth for domain validation across all transports.
+func ValidateDomain(d Domain) error {
+	if d < 0 || d > 232 {
+		return ErrDomainOutOfRange
+	}
+	return nil
+}
 
 // ── QoS ──────────────────────────────────────────────────────────────────────
 
@@ -849,6 +864,7 @@ func Adapt(p Participant) relay.Node {
 type ddsNode struct {
 	p    Participant
 	pubs sync.Map // map[string]Publisher — cached by topic
+	subs sync.Map // map[Subscriber]struct{} — live subscriptions
 	once sync.Once
 	done chan struct{}
 }
@@ -882,6 +898,11 @@ func (n *ddsNode) Send(ctx context.Context, msg relay.Message) error {
 	return pub.WriteCtx(ctx, msg.Payload)
 }
 
+// Subscribe creates a DDS subscription routed by the topic carried in the
+// relay.WithTopic option (spec §14.1). It returns ErrNotConnected when no topic
+// is supplied, since a DDS subscription cannot exist without a topic. Inbound
+// samples are forwarded as relay.Message via Sample.ToMessage(). The channel is
+// closed when the node closes or the underlying subscription ends (spec §6.3).
 func (n *ddsNode) Subscribe(opts ...relay.SubscriberOption) (<-chan relay.Message, error) {
 	select {
 	case <-n.done:
@@ -891,12 +912,70 @@ func (n *ddsNode) Subscribe(opts ...relay.SubscriberOption) (<-chan relay.Messag
 	default:
 	}
 	cfg := relay.ApplySubscriberOpts(opts)
+	if cfg.TopicName == "" {
+		return nil, ErrNotConnected
+	}
+	sub, err := n.p.NewSubscriber(cfg.TopicName, DefaultQoS)
+	if err != nil {
+		return nil, err
+	}
+	n.subs.Store(sub, struct{}{})
+
 	ch := make(chan relay.Message, cfg.ChanDepth(64))
 	go func() {
 		defer close(ch)
-		<-n.done
+		defer func() {
+			n.subs.Delete(sub)
+			_ = sub.Close()
+		}()
+		for {
+			select {
+			case <-n.done:
+				return
+			case s, ok := <-sub.C():
+				if !ok {
+					return
+				}
+				if !n.deliver(ch, s.ToMessage(), cfg.BackPressure) {
+					return
+				}
+			}
+		}
 	}()
 	return ch, nil
+}
+
+// deliver forwards msg to ch honoring the back-pressure policy (spec §9). It
+// returns false only when the node is closing, signalling the reader to stop.
+func (n *ddsNode) deliver(ch chan relay.Message, msg relay.Message, policy relay.BackPressurePolicy) bool {
+	if policy == relay.Block {
+		select {
+		case ch <- msg:
+			return true
+		case <-n.done:
+			return false
+		}
+	}
+	// DropNewest (default) and DropOldest are non-blocking on a full channel.
+	select {
+	case ch <- msg:
+		return true
+	case <-n.done:
+		return false
+	default:
+	}
+	if policy == relay.DropOldest {
+		select {
+		case <-ch: // discard the oldest buffered message
+		default:
+		}
+		select {
+		case ch <- msg:
+		default:
+		}
+	}
+	// DropNewest: the arriving message is dropped.
+	return true
 }
 
 func (n *ddsNode) Close() error {
@@ -905,6 +984,12 @@ func (n *ddsNode) Close() error {
 		n.pubs.Range(func(_, v any) bool {
 			if p, ok := v.(Publisher); ok {
 				_ = p.Close()
+			}
+			return true
+		})
+		n.subs.Range(func(k, _ any) bool {
+			if s, ok := k.(Subscriber); ok {
+				_ = s.Close()
 			}
 			return true
 		})

@@ -349,8 +349,8 @@ func New(domain dds.Domain, opts ...Option) (dds.Participant, error) {
 }
 
 func newParticipant(domain dds.Domain, opts ...Option) (*participant, error) {
-	if domain < 0 || domain > 232 {
-		return nil, fmt.Errorf("rtps: %w: domain %d out of range [0,232]", dds.ErrNotConnected, domain)
+	if err := dds.ValidateDomain(domain); err != nil {
+		return nil, fmt.Errorf("rtps: domain %d: %w", domain, err)
 	}
 	d := int(domain)
 	guidPrefix := newGuidPrefix()

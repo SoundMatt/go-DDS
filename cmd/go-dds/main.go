@@ -35,7 +35,7 @@ import (
 )
 
 // toolVersion may be overridden at build time via -ldflags "-X main.toolVersion=x.y.z".
-var toolVersion = "0.41.0"
+var toolVersion = "0.42.0"
 
 const (
 	toolName    = "go-dds"
@@ -124,22 +124,25 @@ func runVersion(args []string) int {
 	}
 
 	if *format == "json" {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		_ = enc.Encode(map[string]any{
-			"tool":         toolName,
-			"protocol":     protocolStr,
-			"protocol_int": protocolInt,
-			"version":      toolVersion,
-			"spec_version": dds.SpecVersion,
-			"language":     "go",
-			"runtime":      runtime.Version(),
-		})
+		encodeJSON(versionDoc())
 		return 0
 	}
 
 	fmt.Printf("%s %s (DDS, RELAY spec %s, %s)\n", toolName, toolVersion, dds.SpecVersion, runtime.Version())
 	return 0
+}
+
+// versionDoc builds the §12.1 cli-version document.
+func versionDoc() map[string]any {
+	return map[string]any{
+		"tool":         toolName,
+		"protocol":     protocolStr,
+		"protocol_int": protocolInt,
+		"version":      toolVersion,
+		"spec_version": dds.SpecVersion,
+		"language":     "go",
+		"runtime":      runtime.Version(),
+	}
 }
 
 // ── capabilities ──────────────────────────────────────────────────────────────
@@ -150,22 +153,26 @@ func runCapabilities(args []string) int {
 		return 1
 	}
 
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	_ = enc.Encode(map[string]any{
+	encodeJSON(capabilitiesDoc())
+	return 0
+}
+
+// capabilitiesDoc builds the §12.2 cli-capabilities document. The field set and
+// naming follow spec/schemas/cli-capabilities.json: no protocol/protocol_int
+// keys, "features" is required, and "interfaces" lists relay interfaces.
+func capabilitiesDoc() map[string]any {
+	return map[string]any{
 		"kind":                "capabilities",
 		"tool":                toolName,
-		"protocol":            protocolStr,
-		"protocol_int":        protocolInt,
 		"version":             toolVersion,
 		"spec_version":        dds.SpecVersion,
 		"commands":            []string{"version", "capabilities", "status", "pub", "sub", "discover", "idl"},
 		"transports":          []string{"rtps", "shmem", "mock"},
-		"interfaces":          []string{"Participant", "Publisher", "Subscriber"},
+		"features":            []string{"reliable", "transient-local", "fragmentation", "security", "loaning", "shmem-zerocopy"},
+		"interfaces":          []string{"Node"},
 		"optional_interfaces": []string{"HealthProvider", "MetricsProvider", "Drainer", "LoaningPublisher"},
 		"adapt":               true,
-	})
-	return 0
+	}
 }
 
 // ── status ────────────────────────────────────────────────────────────────────
@@ -187,17 +194,7 @@ func runStatus(args []string) int {
 	}
 
 	if *format == "json" {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		_ = enc.Encode(map[string]any{
-			"protocol":  protocolStr,
-			"tool":      toolName,
-			"version":   toolVersion,
-			"healthy":   healthy,
-			"connected": false,
-			"endpoint":  "",
-			"details":   map[string]any{},
-		})
+		encodeJSON(statusDoc(healthy))
 		return 0
 	}
 
@@ -208,6 +205,26 @@ func runStatus(args []string) int {
 	fmt.Printf("tool:      %s\nversion:   %s\nprotocol:  %s\nstatus:    %s\nconnected: false\n",
 		toolName, toolVersion, protocolStr, status)
 	return 0
+}
+
+// statusDoc builds the §12.3 cli-status document.
+func statusDoc(healthy bool) map[string]any {
+	return map[string]any{
+		"protocol":  protocolStr,
+		"tool":      toolName,
+		"version":   toolVersion,
+		"healthy":   healthy,
+		"connected": false,
+		"endpoint":  "",
+		"details":   map[string]any{},
+	}
+}
+
+// encodeJSON writes v as indented JSON to stdout.
+func encodeJSON(v any) {
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	_ = enc.Encode(v)
 }
 
 // ── pub ───────────────────────────────────────────────────────────────────────

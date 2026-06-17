@@ -402,8 +402,8 @@ type participant struct {
 // same-process delivery). Cross-process delivery uses a memory-mapped file and
 // a Unix domain socket for signalling.
 func New(domain dds.Domain) (dds.Participant, error) {
-	if domain < 0 || domain > 232 {
-		return nil, fmt.Errorf("shmem: %w: domain %d out of range [0,232]", dds.ErrNotConnected, domain)
+	if err := dds.ValidateDomain(domain); err != nil {
+		return nil, fmt.Errorf("shmem: domain %d: %w", domain, err)
 	}
 	return &participant{
 		domain: domain,
