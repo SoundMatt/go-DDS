@@ -25,9 +25,12 @@ import (
 	"github.com/SoundMatt/go-DDS/mock"
 )
 
-func TestSpecVersion_IsV03(t *testing.T) {
-	if dds.SpecVersion != "0.3" {
-		t.Errorf("SpecVersion = %q, want %q", dds.SpecVersion, "0.3")
+func TestSpecVersion_TracksRelay(t *testing.T) {
+	if dds.SpecVersion != relay.SpecVersion {
+		t.Errorf("SpecVersion = %q, want it to track relay.SpecVersion %q", dds.SpecVersion, relay.SpecVersion)
+	}
+	if dds.SpecVersion != "1.0" {
+		t.Errorf("SpecVersion = %q, want %q (RELAY v1.0 stable)", dds.SpecVersion, "1.0")
 	}
 }
 

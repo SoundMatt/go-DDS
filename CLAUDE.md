@@ -124,6 +124,7 @@ history expansion on `%`, `!`, and `(`.
 | v0.41.0  | RELAY spec v0.2 conformance: error sentinel wrapping, Health.Details→string, Unsubscribe() no return, Adapt()/ddsNode, cmd/go-dds binary |
 | v0.41.1  | track RELAY v0.2.0 (SpecVersion fix); RELAY promoted to direct dep |
 | v0.42.0  | RELAY spec v0.3: WithTopic Subscribe routing, SpecVersion=0.3, ValidateDomain/ErrDomainOutOfRange, golden-vector round-trip + §12 schema-conformance tests, cli-capabilities schema fix |
+| v0.43.0  | RELAY spec v1.0 (stable): dep v0.8.0→v1.0.0; SpecVersion tracks relay.SpecVersion (now "1.0"); no normative changes from v0.3 |
 | **main** | **next coverage target** |
 
 ## CI matrix
