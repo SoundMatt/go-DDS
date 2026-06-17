@@ -1,5 +1,7 @@
 github.com/SoundMatt/RELAY v0.2.0 h1:2spaVjHmJMOq9rNowc9dl6PHKTM0x77im1XnrTHSB/E=
 github.com/SoundMatt/RELAY v0.2.0/go.mod h1:8HXkxErdk4pHaM1de9eopm2S8o1aE7tKYkCBBsHxxcg=
+github.com/SoundMatt/RELAY v0.8.0 h1:wIvyvMeLvHtNXuxrs0R+HET+F74yO+FWbMD8UhocezQ=
+github.com/SoundMatt/RELAY v0.8.0/go.mod h1:8HXkxErdk4pHaM1de9eopm2S8o1aE7tKYkCBBsHxxcg=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
 github.com/cespare/xxhash/v2 v2.3.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=

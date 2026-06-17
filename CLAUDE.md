@@ -122,6 +122,8 @@ history expansion on `%`, `!`, and `(`.
 | v0.39.0  | bridge/grpc 94.4%→98.9%; dds/ 93.6%→98.2%; rtps/ 89.5%→92.1%; fuzz isolation fix |
 | v0.40.0  | rtps/ 92.1%→92.5%: fragment path, topic-mismatch dispatch, double-write counter; fuzz isolation; lint fixes |
 | v0.41.0  | RELAY spec v0.2 conformance: error sentinel wrapping, Health.Details→string, Unsubscribe() no return, Adapt()/ddsNode, cmd/go-dds binary |
+| v0.41.1  | track RELAY v0.2.0 (SpecVersion fix); RELAY promoted to direct dep |
+| v0.42.0  | RELAY spec v0.3: WithTopic Subscribe routing, SpecVersion=0.3, ValidateDomain/ErrDomainOutOfRange, golden-vector round-trip + §12 schema-conformance tests, cli-capabilities schema fix |
 | **main** | **next coverage target** |
 
 ## CI matrix
