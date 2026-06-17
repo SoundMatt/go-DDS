@@ -72,6 +72,11 @@ var ErrTopicEmpty = errors.New("dds: topic name must not be empty")
 // ErrQoSMismatch is returned when a publisher and subscriber have incompatible QoS policies.
 var ErrQoSMismatch = errors.New("dds: QoS incompatibility between publisher and subscriber")
 
+// ErrAccessDenied is returned when a topic ACL forbids creating a publisher or
+// subscriber for the requested topic. It is only ever returned when an access
+// controller has been configured on the participant.
+var ErrAccessDenied = errors.New("dds: access denied by topic ACL")
+
 // ErrDeadlineMissed is returned when a subscriber receives no sample within its
 // QoS.Deadline period. Wraps relay.ErrTimeout per spec §5.3.
 var ErrDeadlineMissed = fmt.Errorf("dds: deadline missed — no sample within QoS.Deadline period: %w", relay.ErrTimeout)

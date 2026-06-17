@@ -128,6 +128,7 @@ history expansion on `%`, `!`, and `(`.
 | v0.43.1  | P0 docs/build: README security examples corrected + Example tests, Go version reconciled to 1.25, examples build in CI |
 | v0.44.0  | P0 #63 Reliable QoS: recvTracker sliding-window rewrite (contiguous watermark, re-NACK) — fixes data loss on gaps >31 and lost retransmits; cmd/go-dds version bump |
 | v0.45.0  | P2 #74 64-bit sequence numbers: sendHistory bounded ring (O(1), no map-growth bug, no 2^32 aliasing); recvTracker + writer counter widened to uint64; #70 static-analysis CI job; release.yml parse fix |
+| v0.46.0  | P0 #64 / P1 #68 enforced, composable security: WithAccessControl (topic ACL → ErrAccessDenied at endpoint creation) + WithAntiReplay (drop replayed inbound samples), composing with WithSecurity encryption; opt-in, no behavior change when unset; release.yml gap-report fix |
 | **main** | **next coverage target** |
 
 ## CI matrix

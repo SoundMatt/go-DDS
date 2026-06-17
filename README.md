@@ -147,21 +147,28 @@ discPlugin := security.NewHMACDiscoveryPlugin([]byte("shared-discovery-key"))
 p, _ = rtps.New(dds.Domain(0), rtps.WithDiscoverySecurity(discPlugin))
 ```
 
-`AccessPolicy` (topic ACL) and `ReplayGuard` (anti-replay) are composable
-application-level helpers — call them from your own publish/subscribe logic:
+`AccessPolicy` (topic ACL) and `ReplayGuard` (anti-replay) are **enforced in the
+data path** when configured, and compose with the encryption plugin above. Both
+are opt-in: with neither set, all topics are permitted and no samples are dropped.
 
 ```go
 // AccessPolicy: per-topic read/write ACL with path.Match patterns.
+// NewPublisher fails with dds.ErrAccessDenied on a topic that fails CanWrite;
+// NewSubscriber fails on a topic that fails CanRead.
 policy := security.NewAccessPolicy(
     security.Rule{Pattern: "vehicle/speed", Allow: security.PermWrite},
     security.Rule{Pattern: "vehicle/*", Allow: security.PermRead},
 )
-if policy.CanWrite("vehicle/speed") { /* publish */ }
-if policy.CanRead("vehicle/status") { /* subscribe */ }
 
-// ReplayGuard: reject duplicate or replayed samples within a time window.
+// ReplayGuard: inbound samples whose sequence number repeats within the window
+// are dropped before delivery.
 guard := security.NewReplayGuard(5 * time.Second)
-if err := guard.Check(seq, ts); err == nil { /* sample is fresh */ }
+
+p, _ := rtps.New(dds.Domain(0),
+    rtps.WithSecurity(certPlugin),     // encryption + authentication
+    rtps.WithAccessControl(policy),    // topic ACL, enforced at endpoint creation
+    rtps.WithAntiReplay(guard),        // anti-replay, enforced on the receive path
+)
 ```
 
 ## Context API

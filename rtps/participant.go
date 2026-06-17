@@ -133,6 +133,35 @@ func WithSecurity(plugin SecurityPlugin) Option {
 	return func(p *participant) { p.security = plugin }
 }
 
+// AccessController authorises endpoint creation per topic. security.AccessPolicy
+// satisfies it. When configured via [WithAccessControl], NewPublisher is rejected
+// for topics that fail CanWrite and NewSubscriber for topics that fail CanRead.
+type AccessController interface {
+	CanRead(topic string) bool
+	CanWrite(topic string) bool
+}
+
+// ReplayChecker rejects replayed samples. security.ReplayGuard satisfies it.
+// When configured via [WithAntiReplay], every inbound DATA sample is checked and
+// dropped (not delivered) if Check reports it as a replay.
+type ReplayChecker interface {
+	Check(seq uint64, ts time.Time) error
+}
+
+// WithAccessControl enforces a topic ACL on this participant. Enforcement is
+// opt-in: with no controller configured, all topics are permitted. It composes
+// with WithSecurity (encryption) and WithAntiReplay.
+func WithAccessControl(ac AccessController) Option {
+	return func(p *participant) { p.accessControl = ac }
+}
+
+// WithAntiReplay enables anti-replay protection on inbound samples. Enforcement
+// is opt-in: with no checker configured, no samples are dropped. It composes
+// with WithSecurity (encryption) and WithAccessControl.
+func WithAntiReplay(rc ReplayChecker) Option {
+	return func(p *participant) { p.antiReplay = rc }
+}
+
 // WithContext returns an Option that closes the participant when ctx is done.
 // This is the idiomatic Go shutdown pattern: pass a context with a cancel
 // function or deadline to tie the participant's lifetime to an outer scope.
@@ -287,6 +316,10 @@ type participant struct {
 
 	// Optional security plugin (nil = no security).
 	security SecurityPlugin
+	// Optional topic ACL (nil = all topics permitted).
+	accessControl AccessController
+	// Optional anti-replay checker (nil = no replay filtering).
+	antiReplay ReplayChecker
 	// Optional discovery security plugin (nil = unauthenticated discovery).
 	discoveryPlugin DiscoveryPlugin
 
@@ -454,6 +487,9 @@ func (p *participant) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, er
 	if p.closed {
 		return nil, fmt.Errorf("rtps: %w", dds.ErrClosed)
 	}
+	if p.accessControl != nil && !p.accessControl.CanWrite(topic) {
+		return nil, fmt.Errorf("rtps: publish %q: %w", topic, dds.ErrAccessDenied)
+	}
 	n := atomic.AddUint32(&p.entityCounter, 1)
 	eid := entityIdForWriter(n)
 	w := &rtpsWriter{
@@ -502,6 +538,9 @@ func (p *participant) NewSubscriber(topic string, qos dds.QoS, opts ...dds.Subsc
 	defer p.mu.Unlock()
 	if p.closed {
 		return nil, fmt.Errorf("rtps: %w", dds.ErrClosed)
+	}
+	if p.accessControl != nil && !p.accessControl.CanRead(topic) {
+		return nil, fmt.Errorf("rtps: subscribe %q: %w", topic, dds.ErrAccessDenied)
 	}
 	cfg := dds.ApplySubscriberOpts(opts)
 	depth := cfg.ChanDepth(64)
@@ -762,6 +801,11 @@ func (p *participant) handleDataPacket(data []byte, from *net.UDPAddr) {
 					return nil // drop; tampered or wrong key
 				}
 				rawPayload = opened
+			}
+			if p.antiReplay != nil {
+				if err := p.antiReplay.Check(snToU64(ds.SeqNum), pendingTS); err != nil {
+					return nil // drop; replayed or duplicate sequence number
+				}
 			}
 			sourceGUID := GUID{Prefix: hdr.GuidPrefix, Entity: ds.WriterEntityId}
 			p.notifyReliableReaders(sourceGUID, ds.SeqNum, from)
