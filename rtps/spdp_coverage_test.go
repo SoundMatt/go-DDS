@@ -456,7 +456,7 @@ func TestWaitDrain_DrainChannelCloses(t *testing.T) {
 	// Simulate receiving an ACKNACK that covers all sequence numbers.
 	go func() {
 		time.Sleep(5 * time.Millisecond)
-		w.advanceAcked(w.seqLo + 1) // ackBase = seqLo+1 → confirmed = seqLo → drainCh closes
+		w.advanceAcked(w.seq + 1) // ackBase = seq+1 → confirmed = seq → drainCh closes
 	}()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)

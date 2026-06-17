@@ -455,8 +455,10 @@ func TestSendHistory_FirstLast(t *testing.T) {
 	if ok {
 		t.Error("empty history should return ok=false")
 	}
-	h.store(3, []byte("a"))
+	// Writers store strictly increasing sequence numbers; the ring tracks the
+	// retained [first,last] window over them.
 	h.store(1, []byte("b"))
+	h.store(3, []byte("a"))
 	h.store(5, []byte("c"))
 	first, last, ok := h.firstLast()
 	if !ok {
@@ -482,7 +484,7 @@ func TestSendHistory_PayloadIsolation(t *testing.T) {
 
 func TestRecvTracker_Sequential(t *testing.T) {
 	rt := &recvTracker{}
-	for _, sn := range []uint32{1, 2, 3, 4, 5} {
+	for _, sn := range []uint64{1, 2, 3, 4, 5} {
 		if !rt.record(sn) {
 			t.Errorf("sn=%d: expected fresh", sn)
 		}
@@ -539,7 +541,7 @@ func TestRecvTracker_LargeGapRecovered(t *testing.T) {
 		if !needAck {
 			break
 		}
-		for n := uint32(0); n < 32; n++ {
+		for n := uint64(0); n < 32; n++ {
 			if bitmap&(1<<n) != 0 {
 				rt.record(base + n) // retransmit fills the gap
 			}
@@ -582,7 +584,7 @@ func TestRecvTracker_RandomLossRecovers(t *testing.T) {
 		rt.initExpected(1)
 
 		// First pass: deliver each SN with ~40% loss.
-		for sn := uint32(1); sn <= n; sn++ {
+		for sn := uint64(1); sn <= n; sn++ {
 			if rng.Float64() > 0.4 {
 				rt.record(sn)
 			}
@@ -593,7 +595,7 @@ func TestRecvTracker_RandomLossRecovers(t *testing.T) {
 			if !needAck {
 				break
 			}
-			for k := uint32(0); k < 32; k++ {
+			for k := uint64(0); k < 32; k++ {
 				if bitmap&(1<<k) != 0 && rng.Float64() > 0.3 {
 					rt.record(base + k)
 				}

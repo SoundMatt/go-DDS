@@ -801,16 +801,17 @@ func (p *participant) notifyReliableReaders(writerGUID GUID, seqNum SequenceNumb
 			continue
 		}
 		tracker := r.trackerFor(writerGUID)
-		tracker.record(seqNum.Low)
+		sn := snToU64(seqNum)
+		tracker.record(sn)
 		// The writer's history reaches at least this SN, so NACK any gap below it.
-		base, bitmap, needAck := tracker.missing(seqNum.Low)
+		base, bitmap, needAck := tracker.missing(sn)
 		if !needAck || writerAddr == nil {
 			continue
 		}
 		an := AckNack{
 			ReaderEntityId: r.eid,
 			WriterEntityId: writerGUID.Entity,
-			Base:           SequenceNumber{Low: base},
+			Base:           u64ToSN(base),
 			Bitmap:         bitmap,
 			Count:          tracker.nextAckCount(),
 		}
@@ -835,18 +836,18 @@ func (p *participant) handleHeartbeat(writerGUID GUID, hb Heartbeat, from *net.U
 		tracker := r.trackerFor(writerGUID)
 		// On first contact, anchor the cumulative-ACK base at the writer's
 		// FirstSN so the reader can request the writer's whole live history.
-		tracker.initExpected(hb.FirstSN.Low)
+		tracker.initExpected(snToU64(hb.FirstSN))
 		// Re-NACK every SN still missing up to the writer's LastSN. Because the
 		// watermark never skips a gap, a lost retransmit is requested again on
 		// each periodic HEARTBEAT until it arrives.
-		base, bitmap, needAck := tracker.missing(hb.LastSN.Low)
+		base, bitmap, needAck := tracker.missing(snToU64(hb.LastSN))
 		if !needAck || from == nil {
 			continue
 		}
 		an := AckNack{
 			ReaderEntityId: r.eid,
 			WriterEntityId: writerGUID.Entity,
-			Base:           SequenceNumber{Low: base},
+			Base:           u64ToSN(base),
 			Bitmap:         bitmap,
 			Count:          tracker.nextAckCount(),
 		}
@@ -865,17 +866,18 @@ func (p *participant) handleAckNack(an AckNack, from *net.UDPAddr) {
 		return
 	}
 	// Advance the drain watermark: ackBase is the first SN not yet confirmed.
-	w.advanceAcked(an.Base.Low)
+	ackBase := snToU64(an.Base)
+	w.advanceAcked(ackBase)
 
 	histFirst, _, histOK := w.history.firstLast()
 
 	// Retransmit samples that are still in history.
-	for bit := uint32(0); bit < 32; bit++ {
-		if an.Bitmap&(1<<bit) == 0 {
+	for bit := uint64(0); bit < 32; bit++ {
+		if an.Bitmap&(1<<uint(bit)) == 0 {
 			continue
 		}
-		seqLo := an.Base.Low + bit
-		msg := w.history.get(seqLo)
+		seq := ackBase + bit
+		msg := w.history.get(seq)
 		if msg == nil {
 			continue
 		}
@@ -889,17 +891,17 @@ func (p *participant) handleAckNack(an AckNack, from *net.UDPAddr) {
 	// Send a GAP for the leading portion of the NACK range that has been
 	// evicted from history. This allows the reader to advance its expected-SN
 	// pointer instead of stalling waiting for samples we can never provide.
-	if histOK && an.Base.Low < histFirst {
+	if histOK && ackBase < histFirst {
 		gapEnd := histFirst - 1
 		// Cap to the 32-bit NACK bitmap range so we don't over-declare.
-		if maxBit := an.Base.Low + 31; gapEnd > maxBit {
+		if maxBit := ackBase + 31; gapEnd > maxBit {
 			gapEnd = maxBit
 		}
 		g := Gap{
 			ReaderEntityId: an.ReaderEntityId,
 			WriterEntityId: an.WriterEntityId,
-			GapStart:       SequenceNumber{Low: an.Base.Low},
-			GapEnd:         SequenceNumber{Low: gapEnd},
+			GapStart:       u64ToSN(ackBase),
+			GapEnd:         u64ToSN(gapEnd),
 		}
 		gapMsg := wrapInRTPSMessage(p.guidPrefix, marshalGAP(g))
 		// Send directly to the requesting reader if we know its address.
@@ -1099,9 +1101,8 @@ type rtpsWriter struct {
 	qos           dds.QoS
 	mu            sync.Mutex
 	closed        bool
-	seqHi         int32
-	seqLo         uint32
-	ackedLo       uint32 // highest sequence number fully acknowledged by all readers
+	seq           uint64 // next sequence number to assign (full 64-bit)
+	acked         uint64 // highest sequence number fully acknowledged by all readers
 	reliable      bool
 	history       *sendHistory  // non-nil when reliable == true
 	hbDone        chan struct{} // closed to stop the heartbeat goroutine
@@ -1152,8 +1153,8 @@ func (w *rtpsWriter) Write(payload []byte) error {
 	topicTC := w.p.topicCounterFor(w.topic)
 	topicTC.writes.Add(1)
 	topicTC.bytesW.Add(uint64(len(payload)))
-	w.seqLo++
-	seqNum := SequenceNumber{High: w.seqHi, Low: w.seqLo}
+	w.seq++
+	seqNum := u64ToSN(w.seq)
 	now := time.Now()
 
 	// Apply security before wrapping in CDR/RTPS.
@@ -1190,7 +1191,7 @@ func (w *rtpsWriter) Write(payload []byte) error {
 		// Store the full RTPS message (first fragment packet, or single DATA)
 		// for heartbeat / retransmit. For fragmented payloads this stores only
 		// the first fragment; a future enhancement can store per-fragment msgs.
-		w.history.store(w.seqLo, msgs[0])
+		w.history.store(w.seq, msgs[0])
 	}
 
 	// Deliver locally (same process). Copy so caller mutations don't affect
@@ -1202,7 +1203,7 @@ func (w *rtpsWriter) Write(payload []byte) error {
 	sample := dds.Sample{Topic: w.topic, Payload: localCopy, Timestamp: now}
 	w.p.lastSample.Store(w.topic, &sample)
 	persistFlush(w.p.persistDir, w.topic, localCopy)
-	w.p.dispatchToReaders(GUID{Prefix: w.p.guidPrefix, Entity: w.eid}, w.topic, localCopy, now, uint64(w.seqLo))
+	w.p.dispatchToReaders(GUID{Prefix: w.p.guidPrefix, Entity: w.eid}, w.topic, localCopy, now, w.seq)
 
 	// Deliver to remote peers.
 	locs := w.p.matchedReaderLocators(w.topic)
@@ -1261,8 +1262,8 @@ func (w *rtpsWriter) sendHeartbeatLocked() {
 	hb := Heartbeat{
 		ReaderEntityId: EntityIdUnknown,
 		WriterEntityId: w.eid,
-		FirstSN:        SequenceNumber{Low: first},
-		LastSN:         SequenceNumber{Low: last},
+		FirstSN:        u64ToSN(first),
+		LastSN:         u64ToSN(last),
 		Count:          w.history.hbCount.Add(1),
 	}
 	msg := wrapInRTPSMessage(w.p.guidPrefix, marshalHeartbeat(hb))
@@ -1278,7 +1279,7 @@ func (w *rtpsWriter) sendHeartbeatLocked() {
 // acknowledged (ackedLo >= seqLo) or ctx is cancelled.
 func (w *rtpsWriter) waitDrain(ctx context.Context) error {
 	w.mu.Lock()
-	if w.drainCh == nil || w.ackedLo >= w.seqLo {
+	if w.drainCh == nil || w.acked >= w.seq {
 		w.mu.Unlock()
 		return nil
 	}
@@ -1294,17 +1295,17 @@ func (w *rtpsWriter) waitDrain(ctx context.Context) error {
 
 // advanceAcked records that the remote reader has acknowledged up to (but not
 // including) ackBase. When ackBase > seqLo, the drain channel is closed.
-func (w *rtpsWriter) advanceAcked(ackBase uint32) {
+func (w *rtpsWriter) advanceAcked(ackBase uint64) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if ackBase == 0 {
 		return
 	}
 	confirmed := ackBase - 1
-	if confirmed > w.ackedLo {
-		w.ackedLo = confirmed
+	if confirmed > w.acked {
+		w.acked = confirmed
 	}
-	if w.drainCh != nil && w.ackedLo >= w.seqLo {
+	if w.drainCh != nil && w.acked >= w.seq {
 		select {
 		case <-w.drainCh: // already closed
 		default:
