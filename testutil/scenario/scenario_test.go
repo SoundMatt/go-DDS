@@ -232,7 +232,7 @@ type closedChannelSub struct{ ch chan dds.Sample }
 
 func (s *closedChannelSub) C() <-chan dds.Sample        { return s.ch }
 func (s *closedChannelSub) TryRead() (dds.Sample, bool) { return dds.Sample{}, false }
-func (s *closedChannelSub) Unsubscribe() error          { return nil }
+func (s *closedChannelSub) Unsubscribe()                {}
 func (s *closedChannelSub) Close() error                { return nil }
 
 // preClosedParticipant wraps a Participant but returns a pre-closed subscriber

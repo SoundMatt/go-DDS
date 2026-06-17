@@ -1060,9 +1060,7 @@ func TestSubscriberUnsubscribe_StopsDelivery(t *testing.T) {
 	}
 
 	// Unsubscribe: channel stays open but no more samples arrive.
-	if err := sub.Unsubscribe(); err != nil {
-		t.Fatalf("Unsubscribe: %v", err)
-	}
+	sub.Unsubscribe()
 	_ = pub.Write([]byte("after"))
 	select {
 	case s, ok := <-sub.C():
@@ -1105,9 +1103,7 @@ func TestSubscriberUnsubscribe_Idempotent(t *testing.T) {
 	defer func() { _ = sub.Close() }()
 
 	for i := 0; i < 3; i++ {
-		if err := sub.Unsubscribe(); err != nil {
-			t.Errorf("Unsubscribe[%d]: %v", i, err)
-		}
+		sub.Unsubscribe()
 	}
 }
 
@@ -1117,7 +1113,7 @@ func TestSubscriberClose_AfterUnsubscribe(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewSubscriber: %v", err)
 	}
-	_ = sub.Unsubscribe()
+	sub.Unsubscribe()
 	_ = sub.Close() // must not panic or double-close
 	_ = sub.Close() // idempotent
 }

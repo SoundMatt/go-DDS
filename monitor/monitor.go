@@ -279,8 +279,8 @@ func (m *Monitor) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	}
 	h := m.hp.Health()
 	type healthResp struct {
-		Status  string            `json:"status"`
-		Details map[string]string `json:"details,omitempty"`
+		Status  string `json:"status"`
+		Details string `json:"details,omitempty"`
 	}
 	b, err := json.Marshal(healthResp{Status: h.Status.String(), Details: h.Details})
 	if err != nil {
@@ -327,8 +327,8 @@ func (m *Monitor) handleAPITopics(w http.ResponseWriter, _ *http.Request) {
 func (m *Monitor) handleAPIDiagnostics(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	type diagHealth struct {
-		Status  string            `json:"status"`
-		Details map[string]string `json:"details,omitempty"`
+		Status  string `json:"status"`
+		Details string `json:"details,omitempty"`
 	}
 	type diagResp struct {
 		Metrics   *dds.Metrics          `json:"metrics,omitempty"`

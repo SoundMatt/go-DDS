@@ -121,6 +121,7 @@ history expansion on `%`, `!`, and `(`.
 | v0.38.0  | bridge/grpc 91.1%→94.4%; idl/ 88.4%→96.7%; bridge/wan 98.4%→99.2%: race-free test |
 | v0.39.0  | bridge/grpc 94.4%→98.9%; dds/ 93.6%→98.2%; rtps/ 89.5%→92.1%; fuzz isolation fix |
 | v0.40.0  | rtps/ 92.1%→92.5%: fragment path, topic-mismatch dispatch, double-write counter; fuzz isolation; lint fixes |
+| v0.41.0  | RELAY spec v0.2 conformance: error sentinel wrapping, Health.Details→string, Unsubscribe() no return, Adapt()/ddsNode, cmd/go-dds binary |
 | **main** | **next coverage target** |
 
 ## CI matrix

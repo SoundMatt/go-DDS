@@ -330,14 +330,14 @@ func TestHealth_Details_ContainWritersReaders(t *testing.T) {
 		t.Fatal("rtps participant must implement HealthProvider")
 	}
 	h := hp.Health()
-	if h.Details == nil {
-		t.Fatal("Health.Details must not be nil for an open participant")
+	if h.Details == "" {
+		t.Fatal("Health.Details must not be empty for an open participant")
 	}
-	if _, ok2 := h.Details["writers"]; !ok2 {
-		t.Error("Health.Details must contain 'writers' key")
+	if !strings.Contains(h.Details, "writers") {
+		t.Error("Health.Details must mention 'writers'")
 	}
-	if _, ok2 := h.Details["readers"]; !ok2 {
-		t.Error("Health.Details must contain 'readers' key")
+	if !strings.Contains(h.Details, "readers") {
+		t.Error("Health.Details must mention 'readers'")
 	}
 }
 
