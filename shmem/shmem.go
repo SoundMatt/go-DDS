@@ -402,6 +402,9 @@ type participant struct {
 // same-process delivery). Cross-process delivery uses a memory-mapped file and
 // a Unix domain socket for signalling.
 func New(domain dds.Domain) (dds.Participant, error) {
+	if domain < 0 || domain > 232 {
+		return nil, fmt.Errorf("shmem: %w: domain %d out of range [0,232]", dds.ErrNotConnected, domain)
+	}
 	return &participant{
 		domain: domain,
 		broker: brokerFor(domain),
@@ -526,10 +529,7 @@ func (p *participant) Health() dds.Health {
 	closed := p.closed
 	p.mu.Unlock()
 	if closed {
-		return dds.Health{
-			Status:  dds.HealthDown,
-			Details: map[string]string{"state": "closed"},
-		}
+		return dds.Health{Status: dds.HealthDown, Details: `{"state":"closed"}`}
 	}
 	return dds.Health{Status: dds.HealthOK}
 }
@@ -652,18 +652,17 @@ func (sub *shmSubscriber) pump() {
 
 // Unsubscribe removes this subscriber from the broker without closing its
 // channel. After Unsubscribe no new samples are delivered to the channel.
-func (sub *shmSubscriber) Unsubscribe() error {
+func (sub *shmSubscriber) Unsubscribe() {
 	sub.unsubOnce.Do(func() {
 		if sub.deadlineTimer != nil {
 			sub.deadlineTimer.Stop()
 		}
 		sub.broker.removeSubscription(sub.topic, sub.inProc)
 	})
-	return nil
 }
 
 func (sub *shmSubscriber) Close() error {
-	_ = sub.Unsubscribe()
+	sub.Unsubscribe()
 	sub.closeOnce.Do(func() {
 		if sub.deadlineTimer != nil {
 			sub.deadlineTimer.Stop()

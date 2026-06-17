@@ -475,9 +475,7 @@ func TestSubscriberUnsubscribe_Shmem(t *testing.T) {
 		t.Fatal("timeout before unsubscribe")
 	}
 
-	if err := sub.Unsubscribe(); err != nil {
-		t.Fatalf("Unsubscribe: %v", err)
-	}
+	sub.Unsubscribe()
 
 	_ = pub.Write([]byte("after"))
 	select {
@@ -489,9 +487,7 @@ func TestSubscriberUnsubscribe_Shmem(t *testing.T) {
 	}
 
 	// Idempotent unsubscribe.
-	if err := sub.Unsubscribe(); err != nil {
-		t.Errorf("Unsubscribe[2]: %v", err)
-	}
+	sub.Unsubscribe()
 	_ = sub.Close()
 	_ = sub.Close() // idempotent close
 }

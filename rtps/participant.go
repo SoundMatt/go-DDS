@@ -349,6 +349,9 @@ func New(domain dds.Domain, opts ...Option) (dds.Participant, error) {
 }
 
 func newParticipant(domain dds.Domain, opts ...Option) (*participant, error) {
+	if domain < 0 || domain > 232 {
+		return nil, fmt.Errorf("rtps: %w: domain %d out of range [0,232]", dds.ErrNotConnected, domain)
+	}
 	d := int(domain)
 	guidPrefix := newGuidPrefix()
 
@@ -614,17 +617,11 @@ func (p *participant) Health() dds.Health {
 	p.mu.Unlock()
 
 	if closed {
-		return dds.Health{
-			Status:  dds.HealthDown,
-			Details: map[string]string{"state": "closed"},
-		}
+		return dds.Health{Status: dds.HealthDown, Details: `{"state":"closed"}`}
 	}
 	return dds.Health{
-		Status: dds.HealthOK,
-		Details: map[string]string{
-			"writers": fmt.Sprintf("%d", writers),
-			"readers": fmt.Sprintf("%d", readers),
-		},
+		Status:  dds.HealthOK,
+		Details: fmt.Sprintf(`{"writers":%d,"readers":%d}`, writers, readers),
 	}
 }
 
@@ -1443,7 +1440,7 @@ func (r *rtpsReader) TryRead() (dds.Sample, bool) {
 // Unsubscribe removes this reader from the participant's endpoint registry so
 // no new samples are dispatched. The channel remains open; call Close to also
 // close the channel and release all reader resources.
-func (r *rtpsReader) Unsubscribe() error {
+func (r *rtpsReader) Unsubscribe() {
 	r.unsubOnce.Do(func() {
 		if r.deadlineTimer != nil {
 			r.deadlineTimer.Stop()
@@ -1452,11 +1449,10 @@ func (r *rtpsReader) Unsubscribe() error {
 		delete(r.p.readers, r.eid)
 		r.p.mu.Unlock()
 	})
-	return nil
 }
 
 func (r *rtpsReader) Close() error {
-	_ = r.Unsubscribe()
+	r.Unsubscribe()
 	r.closeOnce.Do(func() {
 		if r.deadlineTimer != nil {
 			r.deadlineTimer.Stop()

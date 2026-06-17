@@ -11,6 +11,7 @@ package cyclone_test
 //fusa:test REQ-CYCLONE-004
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -190,7 +191,7 @@ func TestCyclone_Health_Closed(t *testing.T) {
 	if h.Status != dds.HealthDown {
 		t.Errorf("expected HealthDown after Close, got %v", h.Status)
 	}
-	if h.Details["state"] != "closed" {
-		t.Errorf("expected details[state]=closed, got %v", h.Details)
+	if !strings.Contains(h.Details, "closed") {
+		t.Errorf("expected details to contain 'closed', got %q", h.Details)
 	}
 }

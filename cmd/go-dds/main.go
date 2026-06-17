@@ -3,29 +3,44 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Command ddstool is a command-line interface for DDS publish/subscribe
-// operations, participant diagnostics, and IDL code generation.
+// Command go-dds is the RELAY-conformant CLI for the go-DDS library.
+// It supports publish/subscribe operations, participant diagnostics,
+// IDL code generation, and RELAY protocol introspection.
 //
 // Usage:
 //
-//	ddstool pub      -topic <name> [-payload <str>] [-count N] [-domain N] [-mock]
-//	ddstool sub      -topic <name> [-count N] [-timeout D] [-domain N] [-mock]
-//	ddstool discover [-wait D] [-domain N] [-mock]
-//	ddstool idl      [-out <file>] <input.idl>
-//	ddstool help
+//	go-dds version    [--format text|json]
+//	go-dds capabilities
+//	go-dds status     [--format text|json] [-domain N] [-mock]
+//	go-dds pub        -topic <name> [-payload <str>] [-count N] [-domain N] [-mock]
+//	go-dds sub        -topic <name> [-count N] [-timeout D] [-domain N] [-mock]
+//	go-dds discover   [-wait D] [-domain N] [-mock]
+//	go-dds idl        [-out <file>] <input.idl>
+//	go-dds help
 package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
+	"runtime"
 	"time"
 
 	dds "github.com/SoundMatt/go-DDS"
 	"github.com/SoundMatt/go-DDS/idl"
 	"github.com/SoundMatt/go-DDS/mock"
-	"github.com/SoundMatt/go-DDS/rtps"
+	rtps "github.com/SoundMatt/go-DDS/rtps"
+)
+
+// toolVersion may be overridden at build time via -ldflags "-X main.toolVersion=x.y.z".
+var toolVersion = "0.41.0"
+
+const (
+	toolName    = "go-dds"
+	protocolStr = "DDS"
+	protocolInt = 2
 )
 
 func main() {
@@ -34,6 +49,12 @@ func main() {
 		os.Exit(1)
 	}
 	switch os.Args[1] {
+	case "version":
+		os.Exit(runVersion(os.Args[2:]))
+	case "capabilities":
+		os.Exit(runCapabilities(os.Args[2:]))
+	case "status":
+		os.Exit(runStatus(os.Args[2:]))
 	case "pub":
 		os.Exit(runPub(os.Args[2:]))
 	case "sub":
@@ -45,34 +66,37 @@ func main() {
 	case "help", "-h", "--help":
 		printUsage()
 	default:
-		fmt.Fprintf(os.Stderr, "ddstool: unknown subcommand %q\n", os.Args[1])
+		fmt.Fprintf(os.Stderr, "go-dds: unknown subcommand %q\n", os.Args[1])
 		printUsage()
 		os.Exit(1)
 	}
 }
 
 func printUsage() {
-	fmt.Fprint(os.Stderr, `ddstool — DDS command-line tool
+	fmt.Fprint(os.Stderr, `go-dds — DDS command-line tool (RELAY-conformant)
 
 USAGE
-  ddstool <subcommand> [flags]
+  go-dds <subcommand> [flags]
 
 SUBCOMMANDS
-  pub       Publish a message to a DDS topic
-  sub       Subscribe to a DDS topic and print samples
-  discover  Print discovery and health diagnostics
-  idl       Compile an IDL file to Go source code
-  help      Show this message
+  version       Print version information
+  capabilities  Print supported commands, transports, and interfaces (JSON)
+  status        Print self-assessed health status
+  pub           Publish a message to a DDS topic
+  sub           Subscribe to a DDS topic and print samples
+  discover      Print discovery and health diagnostics
+  idl           Compile an IDL file to Go source code
+  help          Show this message
 
-GLOBAL FLAGS (pub/sub/discover)
+GLOBAL FLAGS (pub/sub/discover/status)
   -domain int   DDS domain ID (default 0)
   -mock         Use in-process mock transport (default: RTPS/UDP)
 
-Run 'ddstool <subcommand> -h' for per-subcommand flags.
+Run 'go-dds <subcommand> -h' for per-subcommand flags.
 `)
 }
 
-// commonFlags holds flags shared by all subcommands.
+// commonFlags holds flags shared by subcommands that connect to a DDS domain.
 type commonFlags struct {
 	domain  int
 	useMock bool
@@ -88,6 +112,102 @@ func (c *commonFlags) newParticipant() (dds.Participant, error) {
 		return mock.New(dds.Domain(c.domain))
 	}
 	return rtps.New(dds.Domain(c.domain))
+}
+
+// ── version ───────────────────────────────────────────────────────────────────
+
+func runVersion(args []string) int {
+	fs := flag.NewFlagSet("version", flag.ContinueOnError)
+	format := fs.String("format", "text", "output format: text or json")
+	if err := fs.Parse(args); err != nil {
+		return 1
+	}
+
+	if *format == "json" {
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		_ = enc.Encode(map[string]any{
+			"tool":         toolName,
+			"protocol":     protocolStr,
+			"protocol_int": protocolInt,
+			"version":      toolVersion,
+			"spec_version": dds.SpecVersion,
+			"language":     "go",
+			"runtime":      runtime.Version(),
+		})
+		return 0
+	}
+
+	fmt.Printf("%s %s (DDS, RELAY spec %s, %s)\n", toolName, toolVersion, dds.SpecVersion, runtime.Version())
+	return 0
+}
+
+// ── capabilities ──────────────────────────────────────────────────────────────
+
+func runCapabilities(args []string) int {
+	fs := flag.NewFlagSet("capabilities", flag.ContinueOnError)
+	if err := fs.Parse(args); err != nil {
+		return 1
+	}
+
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	_ = enc.Encode(map[string]any{
+		"kind":                "capabilities",
+		"tool":                toolName,
+		"protocol":            protocolStr,
+		"protocol_int":        protocolInt,
+		"version":             toolVersion,
+		"spec_version":        dds.SpecVersion,
+		"commands":            []string{"version", "capabilities", "status", "pub", "sub", "discover", "idl"},
+		"transports":          []string{"rtps", "shmem", "mock"},
+		"interfaces":          []string{"Participant", "Publisher", "Subscriber"},
+		"optional_interfaces": []string{"HealthProvider", "MetricsProvider", "Drainer", "LoaningPublisher"},
+		"adapt":               true,
+	})
+	return 0
+}
+
+// ── status ────────────────────────────────────────────────────────────────────
+
+func runStatus(args []string) int {
+	fs := flag.NewFlagSet("status", flag.ContinueOnError)
+	var common commonFlags
+	common.register(fs)
+	format := fs.String("format", "text", "output format: text or json")
+	if err := fs.Parse(args); err != nil {
+		return 1
+	}
+
+	// Use mock to verify the library is healthy without requiring a live network.
+	healthy := false
+	if p, err := mock.New(dds.Domain(common.domain)); err == nil {
+		healthy = true
+		_ = p.Close()
+	}
+
+	if *format == "json" {
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		_ = enc.Encode(map[string]any{
+			"protocol":  protocolStr,
+			"tool":      toolName,
+			"version":   toolVersion,
+			"healthy":   healthy,
+			"connected": false,
+			"endpoint":  "",
+			"details":   map[string]any{},
+		})
+		return 0
+	}
+
+	status := "healthy"
+	if !healthy {
+		status = "unhealthy"
+	}
+	fmt.Printf("tool:      %s\nversion:   %s\nprotocol:  %s\nstatus:    %s\nconnected: false\n",
+		toolName, toolVersion, protocolStr, status)
+	return 0
 }
 
 // ── pub ───────────────────────────────────────────────────────────────────────
@@ -210,7 +330,7 @@ func runIDL(args []string) int {
 		return 1
 	}
 	if fs.NArg() != 1 {
-		fmt.Fprintln(os.Stderr, "idl: usage: ddstool idl [-out <file>] [-package <name>] <input.idl>")
+		fmt.Fprintln(os.Stderr, "idl: usage: go-dds idl [-out <file>] [-package <name>] <input.idl>")
 		return 1
 	}
 	input := fs.Arg(0)

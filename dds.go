@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -31,29 +32,46 @@ import (
 	"sync"
 	"time"
 
+	relay "github.com/SoundMatt/RELAY"
 	"google.golang.org/protobuf/proto"
 )
 
+// SpecVersion is the RELAY spec version this package conforms to (§17 req 12).
+const SpecVersion = "0.2"
+
 // ── Sentinel errors ───────────────────────────────────────────────────────────
+//
+// Mandatory sentinels wrap the relay package equivalents so errors.Is works
+// across both the dds-specific and relay-level error hierarchy (spec §5.1–§5.2).
 
 // ErrClosed is returned when an operation is attempted on a closed entity.
-var ErrClosed = errors.New("dds: entity is closed")
+var ErrClosed = fmt.Errorf("dds: entity is closed: %w", relay.ErrClosed)
+
+// ErrNotConnected is returned before a Participant has joined its domain or
+// when socket allocation fails at startup.
+var ErrNotConnected = fmt.Errorf("dds: not connected: %w", relay.ErrNotConnected)
+
+// ErrTimeout is returned when an operation does not complete within the
+// permitted time (e.g. WriteCtx with an expired context).
+var ErrTimeout = fmt.Errorf("dds: timeout: %w", relay.ErrTimeout)
+
+// ErrPayloadTooLarge is returned when Write is called with a payload that
+// exceeds the MaxSampleSize set in the publisher's QoS.
+var ErrPayloadTooLarge = fmt.Errorf("dds: payload exceeds QoS MaxSampleSize: %w", relay.ErrPayloadTooLarge)
 
 // ErrTopicEmpty is returned when an empty topic string is passed.
 var ErrTopicEmpty = errors.New("dds: topic name must not be empty")
 
-// ErrPayloadTooLarge is returned when Write is called with a payload that
-// exceeds the MaxSampleSize set in the publisher's QoS.
-var ErrPayloadTooLarge = errors.New("dds: payload exceeds QoS MaxSampleSize")
-
 // ErrQoSMismatch is returned when a publisher and subscriber have incompatible QoS policies.
 var ErrQoSMismatch = errors.New("dds: QoS incompatibility between publisher and subscriber")
 
-// ErrDeadlineMissed is returned when a subscriber receives no sample within its QoS.Deadline period.
-var ErrDeadlineMissed = errors.New("dds: deadline missed — no sample within QoS.Deadline period")
+// ErrDeadlineMissed is returned when a subscriber receives no sample within its
+// QoS.Deadline period. Wraps relay.ErrTimeout per spec §5.3.
+var ErrDeadlineMissed = fmt.Errorf("dds: deadline missed — no sample within QoS.Deadline period: %w", relay.ErrTimeout)
 
-// ErrSampleRejected is returned when a sample is rejected because resource limits are exceeded.
-var ErrSampleRejected = errors.New("dds: sample rejected — resource limits exceeded")
+// ErrSampleRejected is returned when a sample is rejected because resource
+// limits are exceeded. Wraps relay.ErrPayloadTooLarge per spec §5.3.
+var ErrSampleRejected = fmt.Errorf("dds: sample rejected — resource limits exceeded: %w", relay.ErrPayloadTooLarge)
 
 // ErrResourceLimits is returned when a resource limit is exceeded.
 var ErrResourceLimits = errors.New("dds: resource limit exceeded")
@@ -110,30 +128,30 @@ const (
 // QoS bundles the policies that govern a single publisher or subscriber
 // endpoint.
 type QoS struct {
-	Reliability  ReliabilityKind
-	Durability   DurabilityKind
-	HistoryDepth int           // 0 means implementation default (typically 1)
-	Deadline     time.Duration // 0 = disabled; publisher fires DeadlineCallback if no Write within this period
+	Reliability  ReliabilityKind `json:"reliability"`
+	Durability   DurabilityKind  `json:"durability"`
+	HistoryDepth int             `json:"history_depth"` // 0 means implementation default (typically 1)
+	Deadline     time.Duration   `json:"deadline"`      // 0 = disabled
 
 	// TSN v0.5 extensions — only used when a TSN-capable transport is active.
 
 	// TransportPriority sets the network-level priority (maps to VLAN PCP /
 	// SO_PRIORITY on Linux). 0 = normal, 1–7 = elevated; 7 is highest.
-	TransportPriority int
+	TransportPriority int `json:"transport_priority"`
 	// LatencyBudget is the acceptable end-to-end delivery latency for this
 	// endpoint. 0 = unspecified. Informational in v0.5; future releases may
 	// enforce it via qdisc admission control.
-	LatencyBudget time.Duration
+	LatencyBudget time.Duration `json:"latency_budget"`
 	// Lifespan is the sample time-to-live measured from the write timestamp.
 	// Samples older than Lifespan are dropped before delivery. 0 = infinite.
-	Lifespan time.Duration
+	Lifespan time.Duration `json:"lifespan"`
 	// PublishPeriod is the periodic publish rate for TSN streams. 0 = aperiodic.
 	// The application is responsible for calling Write at this rate; the value
 	// is used by TSN stream reservation and scheduling.
-	PublishPeriod time.Duration
+	PublishPeriod time.Duration `json:"publish_period"`
 	// MaxSampleSize is the maximum Write payload size in bytes. Write returns
 	// ErrPayloadTooLarge if the payload exceeds this limit. 0 = unlimited.
-	MaxSampleSize int
+	MaxSampleSize int `json:"max_sample_size"`
 }
 
 // DefaultQoS is BestEffort + Volatile with implementation-default history.
@@ -161,11 +179,39 @@ var ReliableQoS = QoS{
 // Timestamp is the source time of the write; zero means no timestamp was set
 // (INFO_TS was not present in the RTPS message, or the mock transport was used).
 type Sample struct {
-	Topic          string
-	Payload        []byte
-	Timestamp      time.Time
-	SequenceNumber uint64 // monotonically increasing per writer; 0 = not set
-	WriterGUID     GUID   // identity of the publishing endpoint; zero = not set
+	Topic          string    `json:"topic"`
+	Payload        []byte    `json:"payload"`
+	Timestamp      time.Time `json:"timestamp"`
+	SequenceNumber uint64    `json:"seq"`         // monotonically increasing per writer; 0 = not set
+	WriterGUID     GUID      `json:"writer_guid"` // identity of the publishing endpoint; zero = not set
+}
+
+// ToMessage converts this Sample to a relay.Message envelope (spec §15.7.2).
+func (s Sample) ToMessage() relay.Message {
+	return relay.Message{
+		Protocol:  relay.DDS,
+		ID:        s.Topic,
+		Payload:   s.Payload,
+		Timestamp: s.Timestamp,
+		Seq:       s.SequenceNumber,
+		Meta:      map[string]string{"dds.writer_guid": hex.EncodeToString(s.WriterGUID[:])},
+	}
+}
+
+// FromMessage converts a relay.Message envelope back to a Sample (spec §15.7.2).
+func FromMessage(m relay.Message) (Sample, error) {
+	s := Sample{
+		Topic:          m.ID,
+		Payload:        m.Payload,
+		Timestamp:      m.Timestamp,
+		SequenceNumber: m.Seq,
+	}
+	if g, ok := m.Meta["dds.writer_guid"]; ok {
+		if b, err := hex.DecodeString(g); err == nil && len(b) == 16 {
+			copy(s.WriterGUID[:], b)
+		}
+	}
+	return s, nil
 }
 
 // ── BackPressurePolicy ────────────────────────────────────────────────────────
@@ -322,11 +368,12 @@ func (c SubscriberConfig) ChanDepth(defaultDepth int) int {
 
 // Metrics holds cumulative statistics for a participant.
 type Metrics struct {
-	WriteCount     uint64
-	DeliverCount   uint64
-	DropCount      uint64
-	BytesWritten   uint64
-	BytesDelivered uint64
+	WriteCount     uint64 `json:"write_count"`
+	DeliverCount   uint64 `json:"deliver_count"`
+	DropCount      uint64 `json:"drop_count"`
+	BytesWritten   uint64 `json:"bytes_written"`
+	BytesDelivered uint64 `json:"bytes_delivered"`
+	ErrorCount     uint64 `json:"error_count"`
 }
 
 // MetricsProvider is implemented by participants that expose runtime statistics.
@@ -407,9 +454,10 @@ func (h HealthStatus) String() string {
 // Health is a point-in-time health snapshot for a participant.
 type Health struct {
 	// Status is the overall health classification.
-	Status HealthStatus
-	// Details carries optional per-subsystem messages (may be nil).
-	Details map[string]string
+	Status HealthStatus `json:"status"`
+	// Details carries an optional human-readable or JSON-encoded string
+	// describing per-subsystem state. Empty string means no details.
+	Details string `json:"details,omitempty"`
 }
 
 // HealthProvider is implemented by participants that expose health reporting.
@@ -520,7 +568,8 @@ type Subscriber interface {
 	// Unsubscribe removes this subscriber from the topic without closing its
 	// channel. After Unsubscribe the channel remains open but no new samples
 	// are delivered. Call Close to stop delivery AND close the channel.
-	Unsubscribe() error
+	// Idempotent; second call is a no-op (spec §6.4).
+	Unsubscribe()
 	Close() error
 }
 
@@ -783,4 +832,82 @@ func (ProtoCodec[T]) Unmarshal(data []byte) (T, error) {
 		return zero, fmt.Errorf("dds: ProtoCodec[%T]: type assertion failed", zero)
 	}
 	return msg, proto.Unmarshal(data, msg)
+}
+
+// ── relay.Node adapter ────────────────────────────────────────────────────────
+
+// Adapt wraps p as a relay.Node (spec §10.3). Send publishes to the topic
+// named by msg.ID, caching publishers by topic for efficiency. Subscribe
+// returns a channel that closes when the node closes; DDS subscriptions are
+// topic-specific — use Participant.NewSubscriber for per-topic receive paths.
+//
+//nolint:ireturn
+func Adapt(p Participant) relay.Node {
+	return &ddsNode{p: p, done: make(chan struct{})}
+}
+
+type ddsNode struct {
+	p    Participant
+	pubs sync.Map // map[string]Publisher — cached by topic
+	once sync.Once
+	done chan struct{}
+}
+
+func (n *ddsNode) Protocol() relay.Protocol { return relay.DDS }
+
+func (n *ddsNode) Send(ctx context.Context, msg relay.Message) error {
+	select {
+	case <-n.done:
+		return ErrClosed
+	default:
+	}
+	if msg.ID == "" {
+		return ErrTopicEmpty
+	}
+	if v, ok := n.pubs.Load(msg.ID); ok {
+		if p, ok2 := v.(Publisher); ok2 {
+			return p.WriteCtx(ctx, msg.Payload)
+		}
+	}
+	pub, err := n.p.NewPublisher(msg.ID, DefaultQoS)
+	if err != nil {
+		return err
+	}
+	if actual, loaded := n.pubs.LoadOrStore(msg.ID, pub); loaded {
+		_ = pub.Close()
+		if p, ok2 := actual.(Publisher); ok2 {
+			return p.WriteCtx(ctx, msg.Payload)
+		}
+	}
+	return pub.WriteCtx(ctx, msg.Payload)
+}
+
+func (n *ddsNode) Subscribe(opts ...relay.SubscriberOption) (<-chan relay.Message, error) {
+	select {
+	case <-n.done:
+		ch := make(chan relay.Message)
+		close(ch)
+		return ch, ErrClosed
+	default:
+	}
+	cfg := relay.ApplySubscriberOpts(opts)
+	ch := make(chan relay.Message, cfg.ChanDepth(64))
+	go func() {
+		defer close(ch)
+		<-n.done
+	}()
+	return ch, nil
+}
+
+func (n *ddsNode) Close() error {
+	n.once.Do(func() {
+		close(n.done)
+		n.pubs.Range(func(_, v any) bool {
+			if p, ok := v.(Publisher); ok {
+				_ = p.Close()
+			}
+			return true
+		})
+	})
+	return n.p.Close()
 }

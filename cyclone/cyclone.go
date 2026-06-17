@@ -247,10 +247,7 @@ func (p *participant) Health() dds.Health {
 	closed := p.closed
 	p.mu.Unlock()
 	if closed {
-		return dds.Health{
-			Status:  dds.HealthDown,
-			Details: map[string]string{"state": "closed"},
-		}
+		return dds.Health{Status: dds.HealthDown, Details: `{"state":"closed"}`}
 	}
 	return dds.Health{Status: dds.HealthOK}
 }
@@ -351,16 +348,15 @@ func (s *subscriber) TryRead() (dds.Sample, bool) {
 
 // Unsubscribe stops the poll loop and deletes the CycloneDDS reader entity
 // without closing the channel. No new samples are delivered after this call.
-func (s *subscriber) Unsubscribe() error {
+func (s *subscriber) Unsubscribe() {
 	s.unsubOnce.Do(func() {
 		close(s.stop)
 		C.dds_delete(C.dds_entity_t(s.rid))
 	})
-	return nil
 }
 
 func (s *subscriber) Close() error {
-	_ = s.Unsubscribe()
+	s.Unsubscribe()
 	s.closeOnce.Do(func() { close(s.ch) })
 	return nil
 }

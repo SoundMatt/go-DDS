@@ -816,9 +816,7 @@ func TestRTPS_SubscriberUnsubscribe(t *testing.T) {
 		t.Fatal("timeout before unsubscribe")
 	}
 
-	if err := sub.Unsubscribe(); err != nil {
-		t.Fatalf("Unsubscribe: %v", err)
-	}
+	sub.Unsubscribe()
 
 	// Channel must remain open after Unsubscribe.
 	select {
@@ -830,9 +828,7 @@ func TestRTPS_SubscriberUnsubscribe(t *testing.T) {
 	}
 
 	// Idempotent.
-	if err := sub.Unsubscribe(); err != nil {
-		t.Errorf("Unsubscribe[2]: %v", err)
-	}
+	sub.Unsubscribe()
 	_ = sub.Close()
 	_ = sub.Close()
 }

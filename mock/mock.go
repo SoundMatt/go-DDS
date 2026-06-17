@@ -440,10 +440,7 @@ func (p *participant) Health() dds.Health {
 	closed := p.closed
 	p.mu.Unlock()
 	if closed {
-		return dds.Health{
-			Status:  dds.HealthDown,
-			Details: map[string]string{"state": "closed"},
-		}
+		return dds.Health{Status: dds.HealthDown, Details: `{"state":"closed"}`}
 	}
 	return dds.Health{Status: dds.HealthOK}
 }
@@ -532,18 +529,17 @@ func (sub *subscriber) TryRead() (dds.Sample, bool) {
 // Unsubscribe removes this subscriber from the broker without closing its
 // channel. After Unsubscribe no new samples are delivered, but the channel
 // remains readable for any buffered samples.
-func (sub *subscriber) Unsubscribe() error {
+func (sub *subscriber) Unsubscribe() {
 	sub.unsubOnce.Do(func() {
 		if sub.deadlineTimer != nil {
 			sub.deadlineTimer.Stop()
 		}
 		sub.broker.removeSubscription(sub.topic, sub.ch)
 	})
-	return nil
 }
 
 func (sub *subscriber) Close() error {
-	_ = sub.Unsubscribe()
+	sub.Unsubscribe()
 	sub.closeOnce.Do(func() {
 		if sub.deadlineTimer != nil {
 			sub.deadlineTimer.Stop()
