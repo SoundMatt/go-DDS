@@ -35,7 +35,7 @@ import (
 )
 
 // toolVersion may be overridden at build time via -ldflags "-X main.toolVersion=x.y.z".
-var toolVersion = "0.42.0"
+var toolVersion = "0.44.0"
 
 const (
 	toolName    = "go-dds"
