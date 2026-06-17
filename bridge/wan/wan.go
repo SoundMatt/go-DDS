@@ -21,6 +21,8 @@ package wan
 //fusa:req REQ-BRIDGE-014
 
 import (
+	"crypto/subtle"
+	"crypto/tls"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
@@ -34,9 +36,17 @@ import (
 
 const maxFrameBytes uint32 = 16 * 1024 * 1024 // 16 MiB hard limit per frame
 
+// maxTokenBytes caps the auth handshake frame so a malicious peer cannot force
+// a large allocation before authenticating.
+const maxTokenBytes uint32 = 4096
+
 // ErrFrameTooLarge is returned by a server when an incoming frame exceeds
 // the 16 MiB limit.
 var ErrFrameTooLarge = errors.New("wan: frame too large")
+
+// ErrUnauthorized is returned (server side) when a client's auth token does not
+// match the configured token.
+var ErrUnauthorized = errors.New("wan: unauthorized: token mismatch")
 
 // wireFrame is the per-frame JSON payload. json.Marshal encodes []byte as base64.
 type wireFrame struct {
@@ -59,6 +69,17 @@ type Options struct {
 	Topics []string
 	// QoS is applied to all bridged DDS endpoints. Zero value uses dds.DefaultQoS.
 	QoS dds.QoS
+	// TLS, when non-nil, encrypts the bridge connection. A server ([Serve]) uses
+	// it as its server config (must carry a certificate); a client ([Connect])
+	// uses it to dial (set RootCAs / ServerName, or use mTLS via Certificates).
+	// Nil leaves the connection as plain TCP (backward-compatible).
+	TLS *tls.Config
+	// Token, when non-empty, enables shared-secret authentication. The client
+	// sends it as the first frame on connect; the server rejects any client
+	// whose token does not match (constant-time compare). Empty disables auth.
+	// For real deployments use Token together with TLS so the token is not sent
+	// in clear text.
+	Token string
 }
 
 // Bridge is a WAN bridge (server or client side).
@@ -86,6 +107,9 @@ func Serve(p dds.Participant, addr string, opts Options) (*Bridge, error) {
 	if err != nil {
 		return nil, err
 	}
+	if opts.TLS != nil {
+		ln = tls.NewListener(ln, opts.TLS)
+	}
 	b := &Bridge{p: p, opts: opts, ln: ln, conns: make(map[net.Conn]struct{}), done: make(chan struct{})}
 	b.wg.Add(1)
 	go b.acceptLoop()
@@ -111,12 +135,29 @@ func Connect(p dds.Participant, addr string, opts Options) (*Bridge, error) {
 		scs = append(scs, subChan{sub: sub, ch: sub.C(), topic: topic})
 	}
 
-	conn, err := net.Dial("tcp", addr)
+	var conn net.Conn
+	var err error
+	if opts.TLS != nil {
+		conn, err = tls.Dial("tcp", addr, opts.TLS)
+	} else {
+		conn, err = net.Dial("tcp", addr)
+	}
 	if err != nil {
 		for _, sc := range scs {
 			_ = sc.sub.Close()
 		}
 		return nil, err
+	}
+
+	// Authenticate before streaming any samples.
+	if opts.Token != "" {
+		if werr := writeAuth(conn, opts.Token); werr != nil {
+			_ = conn.Close()
+			for _, sc := range scs {
+				_ = sc.sub.Close()
+			}
+			return nil, fmt.Errorf("wan bridge: auth: %w", werr)
+		}
 	}
 
 	b := &Bridge{p: p, opts: opts, conns: make(map[net.Conn]struct{}), done: make(chan struct{})}
@@ -187,6 +228,17 @@ func (b *Bridge) receiveLoop(conn net.Conn) {
 	defer b.wg.Done()
 	defer b.removeConn(conn)
 	defer func() { _ = conn.Close() }()
+
+	// Authenticate the client before accepting any frames.
+	if b.opts.Token != "" {
+		token, err := readAuth(conn)
+		if err != nil {
+			return
+		}
+		if subtle.ConstantTimeCompare([]byte(token), []byte(b.opts.Token)) != 1 {
+			return // unauthorized; drop the connection
+		}
+	}
 
 	pubs := make(map[string]dds.Publisher)
 	defer func() {
@@ -273,6 +325,36 @@ func writeFrame(w io.Writer, f *wireFrame) error {
 	writeN, writeErr := w.Write(data)
 	_ = writeN
 	return writeErr
+}
+
+// writeAuth sends a length-prefixed auth token as the first frame on a new
+// client connection.
+func writeAuth(w io.Writer, token string) error {
+	data := []byte(token)
+	var hdr [4]byte
+	binary.BigEndian.PutUint32(hdr[:], uint32(len(data)))
+	if _, err := w.Write(hdr[:]); err != nil {
+		return err
+	}
+	_, err := w.Write(data)
+	return err
+}
+
+// readAuth reads the length-prefixed auth token a client sends first.
+func readAuth(r io.Reader) (string, error) {
+	var hdr [4]byte
+	if _, err := io.ReadFull(r, hdr[:]); err != nil {
+		return "", err
+	}
+	size := binary.BigEndian.Uint32(hdr[:])
+	if size > maxTokenBytes {
+		return "", fmt.Errorf("%w: token frame %d bytes", ErrFrameTooLarge, size)
+	}
+	buf := make([]byte, size)
+	if _, err := io.ReadFull(r, buf); err != nil {
+		return "", err
+	}
+	return string(buf), nil
 }
 
 func readFrame(r io.Reader) (*wireFrame, error) {

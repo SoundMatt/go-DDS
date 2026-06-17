@@ -22,7 +22,7 @@ The API is a stable Go interface. Implementations are swappable without changing
 | `tsn` | TSN stream model, TAPRIO scheduling, stream health tracking. | Nothing |
 | `bridge/domain` | Domain bridge — forward samples between two Participant domains in-process. | Nothing |
 | `bridge/mqtt` | Bidirectional DDS ↔ MQTT bridge with QoS and topic mapping. | Nothing |
-| `bridge/wan` | WAN bridge — forward DDS samples between domains over TCP (length-framed JSON, 16 MiB cap). | Nothing |
+| `bridge/wan` | WAN bridge — forward DDS samples between domains over TCP (length-framed JSON, 16 MiB cap); optional TLS + shared-token auth. | Nothing |
 | `admin` | HTTP admin API — `/admin/health`, `/admin/topics`, `/admin/discovery`, `/admin/publish`; bearer-token auth. | Nothing |
 | `services` | Managed service lifecycle — RecorderService, ReplayService (loop + seek), MonitorService. | Nothing |
 | `record` | Topic recording to JSONL, deterministic replay (real-time or scaled), fault injection. | Nothing |
