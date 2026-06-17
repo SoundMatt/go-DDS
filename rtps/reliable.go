@@ -33,59 +33,94 @@ const (
 	maxHistoryDepth = 256 // samples retained per writer for retransmission
 )
 
+// snToU64 packs an RTPS SequenceNumber (High:Low) into a single uint64 so
+// reliability bookkeeping never aliases after the low 32 bits wrap (spec §8.3.5).
+func snToU64(sn SequenceNumber) uint64 {
+	return uint64(uint32(sn.High))<<32 | uint64(sn.Low)
+}
+
+// u64ToSN splits a uint64 sequence number back into the wire High:Low form.
+func u64ToSN(v uint64) SequenceNumber {
+	return SequenceNumber{High: int32(v >> 32), Low: uint32(v)}
+}
+
 // ── Sender-side reliability ───────────────────────────────────────────────────
 
-// sendHistory keeps the last maxHistoryDepth RTPS wire messages keyed by
-// sequence-number Low (we only use the Low 32 bits; sufficient for our
-// history depth).
+// sendHistory keeps the last maxHistoryDepth RTPS wire messages for
+// retransmission, keyed by full 64-bit sequence number. Because a writer emits
+// strictly increasing, contiguous sequence numbers, the store is a fixed-size
+// ring indexed by seq%depth: O(1), provably bounded (never larger than depth),
+// and free of the 2^32 aliasing the previous low-32-bit map suffered.
 type sendHistory struct {
 	mu      sync.Mutex
-	msgs    map[uint32][]byte // seqLo → full RTPS message bytes
+	depth   uint64
+	msg     [][]byte // ring of message copies, len depth
+	sn      []uint64 // sn[i] is the sequence number msg[i] holds
+	filled  []bool   // whether slot i is occupied
+	highest uint64   // highest sequence number stored
+	lowest  uint64   // lowest sequence number still retained
+	any     bool
 	hbCount atomic.Int32
 }
 
 func newSendHistory() *sendHistory {
-	return &sendHistory{msgs: make(map[uint32][]byte)}
+	d := uint64(maxHistoryDepth)
+	return &sendHistory{
+		depth:  d,
+		msg:    make([][]byte, d),
+		sn:     make([]uint64, d),
+		filled: make([]bool, d),
+	}
 }
 
-// store saves a copy of the full RTPS message for possible retransmission.
-func (h *sendHistory) store(seqLo uint32, msg []byte) {
+// store saves a copy of the full RTPS message for possible retransmission,
+// evicting whatever sequence number previously occupied the ring slot.
+func (h *sendHistory) store(seq uint64, msg []byte) {
 	cp := make([]byte, len(msg))
 	copy(cp, msg)
 	h.mu.Lock()
-	h.msgs[seqLo] = cp
-	// Evict oldest entries beyond depth.
-	if len(h.msgs) > maxHistoryDepth {
-		oldest := seqLo - uint32(maxHistoryDepth)
-		delete(h.msgs, oldest)
+	i := seq % h.depth
+	h.msg[i] = cp
+	h.sn[i] = seq
+	h.filled[i] = true
+	if !h.any {
+		h.lowest, h.highest, h.any = seq, seq, true
+	}
+	if seq > h.highest {
+		h.highest = seq
+	}
+	// The retained window is the last `depth` sequence numbers.
+	if h.highest >= h.depth {
+		if lb := h.highest - h.depth + 1; lb > h.lowest {
+			h.lowest = lb
+		}
 	}
 	h.mu.Unlock()
 }
 
-// get returns the stored message for seqLo, or nil if evicted.
-func (h *sendHistory) get(seqLo uint32) []byte {
+// get returns the stored message for seq, or nil if it was never stored or has
+// been evicted from the retained window.
+func (h *sendHistory) get(seq uint64) []byte {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	return h.msgs[seqLo]
+	if !h.any || seq < h.lowest || seq > h.highest {
+		return nil
+	}
+	i := seq % h.depth
+	if !h.filled[i] || h.sn[i] != seq {
+		return nil
+	}
+	return h.msg[i]
 }
 
-// firstLast returns the lowest and highest stored sequence number lows.
-func (h *sendHistory) firstLast() (first, last uint32, ok bool) {
+// firstLast returns the lowest and highest retained sequence numbers.
+func (h *sendHistory) firstLast() (first, last uint64, ok bool) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if len(h.msgs) == 0 {
+	if !h.any {
 		return 0, 0, false
 	}
-	first = ^uint32(0)
-	for k := range h.msgs {
-		if k < first {
-			first = k
-		}
-		if k > last {
-			last = k
-		}
-	}
-	return first, last, true
+	return h.lowest, h.highest, true
 }
 
 // ── Receiver-side reliability ─────────────────────────────────────────────────
@@ -107,8 +142,8 @@ const maxReorderAhead = 8192
 // watermark advances (fixing the gaps-greater-than-31 data loss).
 type recvTracker struct {
 	mu       sync.Mutex
-	expected uint32          // lowest seqLo not yet received (cumulative-ACK base)
-	ahead    map[uint32]bool // received SNs > expected (out-of-order/gap fillers)
+	expected uint64          // lowest SN not yet received (cumulative-ACK base)
+	ahead    map[uint64]bool // received SNs > expected (out-of-order/gap fillers)
 	initDone bool
 	ackCount atomic.Int32
 }
@@ -116,7 +151,7 @@ type recvTracker struct {
 // initExpected sets the cumulative-ACK base on first contact with a writer
 // (typically from a HEARTBEAT's FirstSN) so the reader can request the writer's
 // whole history. It is a no-op once the tracker has seen any sample.
-func (rt *recvTracker) initExpected(firstSN uint32) {
+func (rt *recvTracker) initExpected(firstSN uint64) {
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
 	if !rt.initDone {
@@ -125,24 +160,24 @@ func (rt *recvTracker) initExpected(firstSN uint32) {
 	}
 }
 
-// record marks seqLo as received and advances the contiguous watermark over any
-// buffered successors. It returns fresh=false when seqLo was already delivered
+// record marks seq as received and advances the contiguous watermark over any
+// buffered successors. It returns fresh=false when seq was already delivered
 // (below the watermark) or already buffered, so callers can suppress duplicate
 // delivery.
-func (rt *recvTracker) record(seqLo uint32) (fresh bool) {
+func (rt *recvTracker) record(seq uint64) (fresh bool) {
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
 	if !rt.initDone {
-		rt.expected = seqLo
+		rt.expected = seq
 		rt.initDone = true
 	}
-	if seqLo < rt.expected {
+	if seq < rt.expected {
 		return false // already delivered
 	}
 	if rt.ahead == nil {
-		rt.ahead = make(map[uint32]bool)
+		rt.ahead = make(map[uint64]bool)
 	}
-	if seqLo == rt.expected {
+	if seq == rt.expected {
 		rt.expected++
 		for rt.ahead[rt.expected] {
 			delete(rt.ahead, rt.expected)
@@ -150,12 +185,12 @@ func (rt *recvTracker) record(seqLo uint32) (fresh bool) {
 		}
 		return true
 	}
-	// seqLo > expected: buffer it (bounded) unless already seen.
-	if rt.ahead[seqLo] {
+	// seq > expected: buffer it (bounded) unless already seen.
+	if rt.ahead[seq] {
 		return false
 	}
-	if seqLo-rt.expected <= maxReorderAhead {
-		rt.ahead[seqLo] = true
+	if seq-rt.expected <= maxReorderAhead {
+		rt.ahead[seq] = true
 	}
 	return true
 }
@@ -164,7 +199,7 @@ func (rt *recvTracker) record(seqLo uint32) (fresh bool) {
 // the reader is still missing in [expected, lastSN], capped at one 32-bit
 // window. base is the cumulative-ACK watermark; bit N set means base+N is
 // missing. needAck is true when at least one SN in the window is missing.
-func (rt *recvTracker) missing(lastSN uint32) (base, bitmap uint32, needAck bool) {
+func (rt *recvTracker) missing(lastSN uint64) (base uint64, bitmap uint32, needAck bool) {
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
 	if !rt.initDone {
@@ -181,7 +216,7 @@ func (rt *recvTracker) missing(lastSN uint32) (base, bitmap uint32, needAck bool
 	for sn := base; sn <= end; sn++ {
 		// expected is never present in ahead, so this also flags base itself.
 		if !rt.ahead[sn] {
-			bitmap |= 1 << (sn - base)
+			bitmap |= 1 << uint(sn-base)
 			needAck = true
 		}
 	}

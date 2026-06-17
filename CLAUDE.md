@@ -127,6 +127,7 @@ history expansion on `%`, `!`, and `(`.
 | v0.43.0  | RELAY spec v1.0 (stable): dep v0.8.0→v1.0.0; SpecVersion tracks relay.SpecVersion (now "1.0"); no normative changes from v0.3 |
 | v0.43.1  | P0 docs/build: README security examples corrected + Example tests, Go version reconciled to 1.25, examples build in CI |
 | v0.44.0  | P0 #63 Reliable QoS: recvTracker sliding-window rewrite (contiguous watermark, re-NACK) — fixes data loss on gaps >31 and lost retransmits; cmd/go-dds version bump |
+| v0.45.0  | P2 #74 64-bit sequence numbers: sendHistory bounded ring (O(1), no map-growth bug, no 2^32 aliasing); recvTracker + writer counter widened to uint64; #70 static-analysis CI job; release.yml parse fix |
 | **main** | **next coverage target** |
 
 ## CI matrix
