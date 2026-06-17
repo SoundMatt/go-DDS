@@ -129,6 +129,7 @@ history expansion on `%`, `!`, and `(`.
 | v0.44.0  | P0 #63 Reliable QoS: recvTracker sliding-window rewrite (contiguous watermark, re-NACK) — fixes data loss on gaps >31 and lost retransmits; cmd/go-dds version bump |
 | v0.45.0  | P2 #74 64-bit sequence numbers: sendHistory bounded ring (O(1), no map-growth bug, no 2^32 aliasing); recvTracker + writer counter widened to uint64; #70 static-analysis CI job; release.yml parse fix |
 | v0.46.0  | P0 #64 / P1 #68 enforced, composable security: WithAccessControl (topic ACL → ErrAccessDenied at endpoint creation) + WithAntiReplay (drop replayed inbound samples), composing with WithSecurity encryption; opt-in, no behavior change when unset; release.yml gap-report fix |
+| v0.47.0  | P1 #69 WAN bridge security: optional TLS (tls.NewListener/tls.Dial) + shared-token auth (constant-time, 4 KiB cap), both opt-in/backward-compatible |
 | **main** | **next coverage target** |
 
 ## CI matrix
