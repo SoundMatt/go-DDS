@@ -90,46 +90,102 @@ func (h *sendHistory) firstLast() (first, last uint32, ok bool) {
 
 // ── Receiver-side reliability ─────────────────────────────────────────────────
 
-// recvTracker tracks the highest contiguous sequence number received from a
-// single remote writer and produces ACKNACK bitmaps for any gaps.
+// maxReorderAhead bounds how far ahead of the cumulative-ack watermark a
+// received sequence number is buffered. Samples further ahead are not retained
+// in the out-of-order set (they are re-requested via HEARTBEAT/ACKNACK once the
+// watermark advances), keeping memory bounded against a misbehaving writer.
+const maxReorderAhead = 8192
+
+// recvTracker tracks reliable-delivery state for a single remote writer.
+//
+// It maintains a sliding window: expected is the lowest sequence number not yet
+// received (the cumulative-ACK base — everything below it has arrived), and
+// ahead holds out-of-order SNs at or above expected that have been received.
+// expected advances only over a contiguous run, so a missing SN is re-NACKed on
+// every HEARTBEAT until it actually arrives (fixing one-shot NACK), and gaps
+// larger than one 32-bit ACKNACK window are recovered window-by-window as the
+// watermark advances (fixing the gaps-greater-than-31 data loss).
 type recvTracker struct {
 	mu       sync.Mutex
-	expected uint32 // next expected seqLo
+	expected uint32          // lowest seqLo not yet received (cumulative-ACK base)
+	ahead    map[uint32]bool // received SNs > expected (out-of-order/gap fillers)
+	initDone bool
 	ackCount atomic.Int32
 }
 
-// receive records seqLo and returns (bitmap, needAck):
-// - bitmap: bit N set means Base+N is missing (up to 32 bits ahead of Base)
-// - needAck: true when the bitmap is non-zero (there are gaps to request)
-func (rt *recvTracker) receive(seqLo uint32) (base uint32, bitmap uint32, needAck bool) {
+// initExpected sets the cumulative-ACK base on first contact with a writer
+// (typically from a HEARTBEAT's FirstSN) so the reader can request the writer's
+// whole history. It is a no-op once the tracker has seen any sample.
+func (rt *recvTracker) initExpected(firstSN uint32) {
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
-	if rt.expected == 0 {
-		// First sample — initialise expected to seqLo+1.
-		rt.expected = seqLo + 1
-		return 0, 0, false
+	if !rt.initDone {
+		rt.expected = firstSN
+		rt.initDone = true
+	}
+}
+
+// record marks seqLo as received and advances the contiguous watermark over any
+// buffered successors. It returns fresh=false when seqLo was already delivered
+// (below the watermark) or already buffered, so callers can suppress duplicate
+// delivery.
+func (rt *recvTracker) record(seqLo uint32) (fresh bool) {
+	rt.mu.Lock()
+	defer rt.mu.Unlock()
+	if !rt.initDone {
+		rt.expected = seqLo
+		rt.initDone = true
+	}
+	if seqLo < rt.expected {
+		return false // already delivered
+	}
+	if rt.ahead == nil {
+		rt.ahead = make(map[uint32]bool)
 	}
 	if seqLo == rt.expected {
 		rt.expected++
+		for rt.ahead[rt.expected] {
+			delete(rt.ahead, rt.expected)
+			rt.expected++
+		}
+		return true
+	}
+	// seqLo > expected: buffer it (bounded) unless already seen.
+	if rt.ahead[seqLo] {
+		return false
+	}
+	if seqLo-rt.expected <= maxReorderAhead {
+		rt.ahead[seqLo] = true
+	}
+	return true
+}
+
+// missing returns the ACKNACK base and bitmap describing the sequence numbers
+// the reader is still missing in [expected, lastSN], capped at one 32-bit
+// window. base is the cumulative-ACK watermark; bit N set means base+N is
+// missing. needAck is true when at least one SN in the window is missing.
+func (rt *recvTracker) missing(lastSN uint32) (base, bitmap uint32, needAck bool) {
+	rt.mu.Lock()
+	defer rt.mu.Unlock()
+	if !rt.initDone {
 		return 0, 0, false
 	}
-	if seqLo > rt.expected {
-		// Gap detected. Build bitmap: each set bit requests a missing seqLo.
-		base = rt.expected
-		end := seqLo
-		if end > base+31 {
-			end = base + 31
-		}
-		for sn := base; sn < end; sn++ {
-			bitmap |= 1 << (sn - base)
-		}
-		// Advance expected past what we just received (we may still be missing
-		// the range [expected..seqLo-1], but we report them in the bitmap).
-		rt.expected = seqLo + 1
-		return base, bitmap, true
+	base = rt.expected
+	if lastSN < base {
+		return base, 0, false // fully caught up with the writer
 	}
-	// Duplicate or out-of-order (seqLo < expected) — ignore.
-	return 0, 0, false
+	end := lastSN
+	if end > base+31 {
+		end = base + 31
+	}
+	for sn := base; sn <= end; sn++ {
+		// expected is never present in ahead, so this also flags base itself.
+		if !rt.ahead[sn] {
+			bitmap |= 1 << (sn - base)
+			needAck = true
+		}
+	}
+	return base, bitmap, needAck
 }
 
 // nextAckCount returns a monotonically increasing count for ACKNACK.

@@ -34,6 +34,7 @@ package rtps
 
 import (
 	"bytes"
+	"math/rand"
 	"net"
 	"testing"
 )
@@ -482,40 +483,125 @@ func TestSendHistory_PayloadIsolation(t *testing.T) {
 func TestRecvTracker_Sequential(t *testing.T) {
 	rt := &recvTracker{}
 	for _, sn := range []uint32{1, 2, 3, 4, 5} {
-		ret1, ret2, needAck := rt.receive(sn)
-		_ = ret1
-		_ = ret2
-		if needAck {
-			t.Errorf("sn=%d: unexpected ACKNACK", sn)
+		if !rt.record(sn) {
+			t.Errorf("sn=%d: expected fresh", sn)
 		}
+	}
+	if _, _, needAck := rt.missing(5); needAck {
+		t.Error("no gap expected after contiguous delivery")
 	}
 }
 
 func TestRecvTracker_Gap(t *testing.T) {
 	rt := &recvTracker{}
-	rt.receive(1)                          // expected becomes 2
-	base, bitmap, needAck := rt.receive(4) // gap: 2 and 3 missing
+	rt.record(1) // expected becomes 2
+	rt.record(4) // gap: 2 and 3 missing, 4 buffered
+	base, bitmap, needAck := rt.missing(4)
 	if !needAck {
 		t.Fatal("expected needAck for gap")
 	}
 	if base != 2 {
 		t.Errorf("base: got %d, want 2", base)
 	}
-	// bits 0 and 1 set (sn 2 and 3 missing)
-	if bitmap&0b11 != 0b11 {
-		t.Errorf("bitmap: got 0b%b, want low 2 bits set", bitmap)
+	// bits 0 and 1 set (sn 2 and 3 missing); bit 2 (sn 4) clear — already buffered.
+	if bitmap != 0b011 {
+		t.Errorf("bitmap: got 0b%b, want 0b011", bitmap)
 	}
 }
 
 func TestRecvTracker_Duplicate(t *testing.T) {
 	rt := &recvTracker{}
-	rt.receive(1)
-	rt.receive(2)
-	ret1, ret2, needAck := rt.receive(1) // duplicate
-	_ = ret1
-	_ = ret2
-	if needAck {
-		t.Error("duplicate sample should not trigger ACKNACK")
+	rt.record(1)
+	rt.record(2)
+	if rt.record(1) {
+		t.Error("duplicate below watermark must report fresh=false")
+	}
+	rt.record(5) // buffer ahead
+	if rt.record(5) {
+		t.Error("duplicate ahead-of-line must report fresh=false")
+	}
+}
+
+// TestRecvTracker_LargeGapRecovered reproduces issue #63: a burst loss far
+// wider than one 32-bit ACKNACK window must be fully recovered window-by-window
+// as the cumulative-ACK watermark advances.
+func TestRecvTracker_LargeGapRecovered(t *testing.T) {
+	rt := &recvTracker{}
+	rt.record(1) // expected = 2
+	// Writer is at SN 101; samples 2..101 (100 contiguous) are lost, then the
+	// writer's latest (102) arrives out of order.
+	const writerLast = 102
+	rt.record(writerLast)
+
+	// Drive recovery: each round NACKs a window, then those SNs are retransmitted.
+	for round := 0; round < 200; round++ {
+		base, bitmap, needAck := rt.missing(writerLast)
+		if !needAck {
+			break
+		}
+		for n := uint32(0); n < 32; n++ {
+			if bitmap&(1<<n) != 0 {
+				rt.record(base + n) // retransmit fills the gap
+			}
+		}
+	}
+	if _, _, needAck := rt.missing(writerLast); needAck {
+		t.Fatal("gap >31 was not fully recovered")
+	}
+}
+
+// TestRecvTracker_LostRetransmitReNacked reproduces the second half of #63: if a
+// retransmit is itself lost, the missing SN must be re-NACKed, not dropped.
+func TestRecvTracker_LostRetransmitReNacked(t *testing.T) {
+	rt := &recvTracker{}
+	rt.record(1) // expected = 2
+	rt.record(3) // 2 missing, 3 buffered
+
+	if _, _, needAck := rt.missing(3); !needAck {
+		t.Fatal("expected NACK for missing SN 2")
+	}
+	// Retransmit of 2 is lost — simulate by NOT recording it. The next HEARTBEAT
+	// must still report 2 as missing.
+	if _, bm, needAck := rt.missing(3); !needAck || bm&0b1 == 0 {
+		t.Fatal("lost retransmit must be re-NACKed, not forgotten")
+	}
+	// Now the retransmit finally arrives.
+	rt.record(2)
+	if _, _, needAck := rt.missing(3); needAck {
+		t.Fatal("delivery should be complete once SN 2 arrives")
+	}
+}
+
+// TestRecvTracker_RandomLossRecovers fuzzes over random loss patterns: after a
+// first lossy pass and a second retransmit pass, every SN must be delivered.
+func TestRecvTracker_RandomLossRecovers(t *testing.T) {
+	const n = 500
+	for seed := int64(0); seed < 50; seed++ {
+		rng := rand.New(rand.NewSource(seed))
+		rt := &recvTracker{}
+		rt.initExpected(1)
+
+		// First pass: deliver each SN with ~40% loss.
+		for sn := uint32(1); sn <= n; sn++ {
+			if rng.Float64() > 0.4 {
+				rt.record(sn)
+			}
+		}
+		// Recovery passes: NACK + retransmit (also lossy) until complete.
+		for round := 0; round < 1000; round++ {
+			base, bitmap, needAck := rt.missing(n)
+			if !needAck {
+				break
+			}
+			for k := uint32(0); k < 32; k++ {
+				if bitmap&(1<<k) != 0 && rng.Float64() > 0.3 {
+					rt.record(base + k)
+				}
+			}
+		}
+		if _, _, needAck := rt.missing(n); needAck {
+			t.Fatalf("seed %d: not all samples recovered", seed)
+		}
 	}
 }
 

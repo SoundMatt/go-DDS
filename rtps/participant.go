@@ -801,7 +801,9 @@ func (p *participant) notifyReliableReaders(writerGUID GUID, seqNum SequenceNumb
 			continue
 		}
 		tracker := r.trackerFor(writerGUID)
-		base, bitmap, needAck := tracker.receive(seqNum.Low)
+		tracker.record(seqNum.Low)
+		// The writer's history reaches at least this SN, so NACK any gap below it.
+		base, bitmap, needAck := tracker.missing(seqNum.Low)
 		if !needAck || writerAddr == nil {
 			continue
 		}
@@ -831,28 +833,20 @@ func (p *participant) handleHeartbeat(writerGUID GUID, hb Heartbeat, from *net.U
 			continue
 		}
 		tracker := r.trackerFor(writerGUID)
-		// If expected < firstSN the reader has never received anything from this
-		// writer; ACKNACK base = firstSN with bitmap=0 to confirm empty state.
-		if tracker.expected == 0 {
-			tracker.mu.Lock()
-			tracker.expected = hb.FirstSN.Low
-			tracker.mu.Unlock()
-		}
-		base, bitmap, needAck := tracker.receive(hb.LastSN.Low)
-		// Even if there's no gap at LastSN, check whether expected < lastSN
-		// (i.e. we're behind) and send a cumulative ACKNACK.
-		_ = base
-		_ = bitmap
-		if !needAck {
-			continue
-		}
-		if from == nil {
+		// On first contact, anchor the cumulative-ACK base at the writer's
+		// FirstSN so the reader can request the writer's whole live history.
+		tracker.initExpected(hb.FirstSN.Low)
+		// Re-NACK every SN still missing up to the writer's LastSN. Because the
+		// watermark never skips a gap, a lost retransmit is requested again on
+		// each periodic HEARTBEAT until it arrives.
+		base, bitmap, needAck := tracker.missing(hb.LastSN.Low)
+		if !needAck || from == nil {
 			continue
 		}
 		an := AckNack{
 			ReaderEntityId: r.eid,
 			WriterEntityId: writerGUID.Entity,
-			Base:           SequenceNumber{Low: tracker.expected},
+			Base:           SequenceNumber{Low: base},
 			Bitmap:         bitmap,
 			Count:          tracker.nextAckCount(),
 		}
