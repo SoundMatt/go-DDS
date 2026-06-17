@@ -135,25 +135,33 @@ All peers on a topic must use the same plugin and key.
 **Enterprise security** (v0.9): X.509/ECDSA certificate authentication, topic ACL, and anti-replay protection:
 
 ```go
-// CertPlugin: mutual authentication via X.509/ECDSA certificates
-certPlugin, _ := security.NewCertPlugin(caCertPEM, myCertPEM, myKeyPEM)
+// CertPlugin: mutual authentication + payload encryption via X.509/ECDSA.
+// Implements the rtps.SecurityPlugin (Seal/Open) interface, so it wires into
+// the data path with WithSecurity. Argument order: cert, key, CA.
+certPlugin, _ := security.NewCertPlugin(myCertPEM, myKeyPEM, caPEM)
 p, _ := rtps.New(dds.Domain(0), rtps.WithSecurity(certPlugin))
-
-// AccessPolicy: per-topic publish/subscribe ACL
-policy := security.NewAccessPolicy([]security.TopicRule{
-    {Topic: "vehicle/speed",  CanPublish: true,  CanSubscribe: false},
-    {Topic: "vehicle/status", CanPublish: false, CanSubscribe: true},
-})
-p, _ = rtps.New(dds.Domain(0), rtps.WithSecurity(policy))
-
-// ReplayGuard: drop duplicate or replayed samples (sequence + timestamp window)
-guard := security.NewReplayGuard(security.ReplayGuardOptions{WindowSize: 1000})
-p, _ = rtps.New(dds.Domain(0), rtps.WithSecurity(guard))
 
 // Secure Discovery: HMAC-SHA-256 authentication of SPDP announcements.
 // Peers without the same key are silently ignored at the discovery layer.
 discPlugin := security.NewHMACDiscoveryPlugin([]byte("shared-discovery-key"))
 p, _ = rtps.New(dds.Domain(0), rtps.WithDiscoverySecurity(discPlugin))
+```
+
+`AccessPolicy` (topic ACL) and `ReplayGuard` (anti-replay) are composable
+application-level helpers — call them from your own publish/subscribe logic:
+
+```go
+// AccessPolicy: per-topic read/write ACL with path.Match patterns.
+policy := security.NewAccessPolicy(
+    security.Rule{Pattern: "vehicle/speed", Allow: security.PermWrite},
+    security.Rule{Pattern: "vehicle/*", Allow: security.PermRead},
+)
+if policy.CanWrite("vehicle/speed") { /* publish */ }
+if policy.CanRead("vehicle/status") { /* subscribe */ }
+
+// ReplayGuard: reject duplicate or replayed samples within a time window.
+guard := security.NewReplayGuard(5 * time.Second)
+if err := guard.Check(seq, ts); err == nil { /* sample is fresh */ }
 ```
 
 ## Context API
@@ -521,7 +529,7 @@ go test -tags cyclone ./cyclone/...
 
 | Job | Platforms | Notes |
 |---|---|---|
-| `test-mock` | ubuntu, macOS, Windows × Go 1.22/1.23 | race detector, full coverage |
+| `test-mock` | ubuntu, macOS, Windows × Go 1.25/1.26 | race detector, full coverage |
 | `test-rtps` | ubuntu | `-short` |
 | `test-cyclone` | ubuntu-22.04 | skips cleanly if `libcyclonedds-dev` absent |
 | `benchmark-smoke` | ubuntu | 1 iteration each, catches panics/deadlocks |
@@ -641,7 +649,7 @@ See [ROADMAP.md](ROADMAP.md) for per-milestone goals, sub-items, and success cri
 - [x] `HMACDiscoveryPlugin.Rekey(newKey)` — atomic key rotation; RWMutex-safe; old tags are immediately invalidated for both SPDP and SEDP
 - [x] Docker bridge networking — `DDS_PEERS` + `WithNoMulticast` across all quickstart binaries; `docker/docker-compose.yml` updated to bridge network (works on macOS/Windows Docker Desktop); `docker/docker-compose.host.yml` overlay for Linux host networking
 - [x] `docker/compose.interop.yml` — CycloneDDS peer containers on the same bridge network for cross-implementation wire-compat testing
-- [x] `.devcontainer/devcontainer.json` — Go 1.22 dev container with golangci-lint, Docker-in-Docker, and VS Code Go extension; works in GitHub Codespaces
+- [x] `.devcontainer/devcontainer.json` — Go 1.25 dev container with golangci-lint, Docker-in-Docker, and VS Code Go extension; works in GitHub Codespaces
 - [x] `.github/workflows/docker-publish.yml` — multi-arch (`linux/amd64`, `linux/arm64`) GHCR publish on push to main and version tags
 
 **Released — v0.12 — Examples, Safety Completeness, IDL/CDR Compiler, TAPRIO**
