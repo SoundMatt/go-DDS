@@ -41,10 +41,13 @@ jobs:
         run: gofusa release
 
       - name: Regenerate compliance gap reports
+        # These commands always write their report file but exit non-zero when
+        # gaps exist (expected — they are reports, not gates). `|| true` keeps
+        # the regenerate step from aborting under `bash -e`.
         run: |
-          gofusa iec61508 -output iec61508-gap-report.json -format json
-          gofusa iso26262 -output iso26262-gap-report.json -format json
-          gofusa iec62443 -output iec62443-gap-report.json -format json -sl SL-2
+          gofusa iec61508 -output iec61508-gap-report.json -format json || true
+          gofusa iso26262 -output iso26262-gap-report.json -format json || true
+          gofusa iec62443 -output iec62443-gap-report.json -format json -sl SL-2 || true
 
       - name: Configure git
         run: |
