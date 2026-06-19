@@ -21,6 +21,8 @@ package rtps
 //fusa:req REQ-REL-007
 //fusa:req REQ-REL-008
 //fusa:req REQ-REL-009
+//fusa:req REQ-LLR-001
+//fusa:req REQ-LLR-002
 
 import (
 	"sync"

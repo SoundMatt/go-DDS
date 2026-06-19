@@ -4,7 +4,7 @@
   "tool": "go-FuSa",
   "toolVersion": "0.30.0",
   "language": "go",
-  "generatedAt": "2026-06-13T19:30:18.612143Z",
+  "generatedAt": "2026-06-19T16:21:34.553425Z",
   "projectRoot": "go-DDS",
   "standard": "iec62443",
   "objectives": [
@@ -42,37 +42,25 @@
       "id": "IEC62443-CR-6.2",
       "title": "Vulnerability management policy (SECURITY.md present)",
       "clause": "CR 6.2",
-      "status": "gap",
-      "findings": [
-        "SECURITY.md not found — run 'gofusa — create SECURITY.md documenting the vulnerability disclosure policy'"
-      ]
+      "status": "satisfied"
     },
     {
       "id": "IEC62443-CR-1.4",
       "title": "Software update documentation (provenance.json with builder field)",
       "clause": "CR 1.4",
-      "status": "gap",
-      "findings": [
-        "provenance.json missing builder field — run 'gofusa release' from CI"
-      ]
+      "status": "satisfied"
     },
     {
       "id": "IEC62443-CR-3.1",
       "title": "Security hardening evidence (cyber-report.json present)",
       "clause": "CR 3.1",
-      "status": "gap",
-      "findings": [
-        "cyber-report.json not found — run 'gofusa cyber --output cyber-report.json'"
-      ]
+      "status": "satisfied"
     },
     {
       "id": "IEC62443-CR-6.2.1",
       "title": "Cyber incident response plan present",
       "clause": "CR 6.2.1",
-      "status": "gap",
-      "findings": [
-        "INCIDENT-RESPONSE.md not found — run 'gofusa — create INCIDENT-RESPONSE.md or set incident_resp_doc in .fusa-iec62443.json'"
-      ]
+      "status": "satisfied"
     },
     {
       "id": "IEC62443-CR-7.3",
@@ -95,8 +83,8 @@
   ],
   "summary": {
     "total": 12,
-    "satisfied": 6,
+    "satisfied": 10,
     "partial": 2,
-    "gaps": 4
+    "gaps": 0
   }
 }

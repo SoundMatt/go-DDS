@@ -4,7 +4,7 @@
   "tool": "go-FuSa",
   "toolVersion": "0.30.0",
   "language": "go",
-  "generatedAt": "2026-06-13T19:34:54.813416Z",
+  "generatedAt": "2026-06-19T16:21:34.536269Z",
   "projectRoot": "go-DDS",
   "standard": "ISO 26262 ASIL-B",
   "objectives": [
@@ -129,25 +129,25 @@
       "id": "10.4",
       "title": "Software Configuration Index (sci.json)",
       "clause": "§10.4.4",
-      "status": "gap",
-      "findings": [
-        "sci.json not found — run 'gofusa sci'"
+      "status": "satisfied",
+      "evidence": [
+        "sci.json present"
       ]
     },
     {
       "id": "11.2",
       "title": "Cybersecurity integration (cyber-report.json)",
       "clause": "§11.4",
-      "status": "gap",
-      "findings": [
-        "cyber-report.json not found — run 'gofusa cyber'"
+      "status": "satisfied",
+      "evidence": [
+        "cyber-report.json present"
       ]
     }
   ],
   "summary": {
     "total": 15,
-    "satisfied": 13,
+    "satisfied": 15,
     "partial": 0,
-    "gaps": 2
+    "gaps": 0
   }
 }

@@ -4,7 +4,7 @@
   "tool": "go-FuSa",
   "toolVersion": "0.30.0",
   "language": "go",
-  "generatedAt": "2026-06-13T19:34:51.555604Z",
+  "generatedAt": "2026-06-19T16:21:34.544367Z",
   "projectRoot": "go-DDS",
   "standard": "IEC 61508 SIL-2",
   "objectives": [
@@ -84,9 +84,9 @@
       "id": "3.3",
       "title": "Statement coverage (coverage-report.json)",
       "clause": "§7.4.8",
-      "status": "gap",
-      "findings": [
-        "coverage-report.json not found — run 'gofusa coverage'"
+      "status": "satisfied",
+      "evidence": [
+        "coverage-report.json present"
       ]
     },
     {
@@ -129,18 +129,18 @@
       "id": "5.4",
       "title": "Software Configuration Index (sci.json)",
       "clause": "§7.7",
-      "status": "gap",
-      "findings": [
-        "sci.json not found — run 'gofusa sci'"
+      "status": "satisfied",
+      "evidence": [
+        "sci.json present"
       ]
     },
     {
       "id": "6.1",
       "title": "Software verification plan (SVP.md)",
       "clause": "§7.2",
-      "status": "gap",
-      "findings": [
-        "SVP.md not found — run 'gofusa template --type svp'"
+      "status": "satisfied",
+      "evidence": [
+        "SVP.md present"
       ]
     },
     {
@@ -165,9 +165,9 @@
       "id": "8.1",
       "title": "Cybersecurity considerations (cyber-report.json)",
       "clause": "§8.1",
-      "status": "gap",
-      "findings": [
-        "cyber-report.json not found — run 'gofusa cyber'"
+      "status": "satisfied",
+      "evidence": [
+        "cyber-report.json present"
       ]
     },
     {
@@ -182,8 +182,8 @@
   ],
   "summary": {
     "total": 19,
-    "satisfied": 15,
+    "satisfied": 19,
     "partial": 0,
-    "gaps": 4
+    "gaps": 0
   }
 }

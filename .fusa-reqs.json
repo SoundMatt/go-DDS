@@ -354,7 +354,7 @@
     },
     {
       "id": "REQ-QOS-005",
-      "title": "Overflow policy \u2014 DropOldest",
+      "title": "Overflow policy — DropOldest",
       "text": "When a subscriber queue is full and QoS DropOldest policy is active, the oldest queued sample shall be evicted to make room for the incoming sample.",
       "standard": "iso26262",
       "level": "ASIL-B",
@@ -362,7 +362,7 @@
     },
     {
       "id": "REQ-QOS-006",
-      "title": "Overflow policy \u2014 DropNewest",
+      "title": "Overflow policy — DropNewest",
       "text": "When a subscriber queue is full and QoS DropNewest policy is active, the incoming sample shall be silently discarded. The existing queue contents shall not be modified.",
       "standard": "iso26262",
       "level": "ASIL-B",
@@ -370,7 +370,7 @@
     },
     {
       "id": "REQ-QOS-007",
-      "title": "Overflow policy \u2014 Block",
+      "title": "Overflow policy — Block",
       "text": "When a subscriber queue is full and QoS Block policy is active, the publisher shall block until queue capacity is available.",
       "standard": "iso26262",
       "level": "ASIL-B",
@@ -835,7 +835,7 @@
     {
       "id": "REQ-SAFETY-005",
       "title": "E2E CRC algorithm",
-      "text": "The E2E CRC shall use the CRC-16/CCITT-FALSE algorithm (polynomial 0x1021, initial value 0xFFFF, no reflection). The CRC slot (bytes 16\u201317) shall be treated as zero during CRC computation.",
+      "text": "The E2E CRC shall use the CRC-16/CCITT-FALSE algorithm (polynomial 0x1021, initial value 0xFFFF, no reflection). The CRC slot (bytes 16–17) shall be treated as zero during CRC computation.",
       "standard": "iso26262",
       "level": "ASIL-B",
       "asil": "ASIL-B"
@@ -1091,7 +1091,7 @@
     {
       "id": "REQ-RT-001",
       "title": "Goroutine lifecycle management",
-      "text": "Every goroutine started by a public API (participant, recorder, bridge) shall receive a termination signal \u2014 either a done <-chan struct{} or context.Context \u2014 as an explicit parameter at launch. The goroutine shall exit within a finite time after the signal is fired.",
+      "text": "Every goroutine started by a public API (participant, recorder, bridge) shall receive a termination signal — either a done <-chan struct{} or context.Context — as an explicit parameter at launch. The goroutine shall exit within a finite time after the signal is fired.",
       "standard": "iec61508",
       "level": "SIL-2",
       "asil": "SIL-2"
@@ -1379,7 +1379,7 @@
     {
       "id": "REQ-CONF-001",
       "title": "Config domain range",
-      "text": "ParticipantConfig Domain shall be validated in the range 0\u2013232 inclusive. Out-of-range values shall cause Validate() to return an error.",
+      "text": "ParticipantConfig Domain shall be validated in the range 0–232 inclusive. Out-of-range values shall cause Validate() to return an error.",
       "standard": "iso26262",
       "level": "ASIL-A",
       "asil": "ASIL-A"
@@ -1443,7 +1443,7 @@
     {
       "id": "REQ-TSN-002",
       "title": "TSN PCP and DSCP range validation",
-      "text": "TSN stream PCP shall be validated in range 0\u20137. DSCP shall be validated in range 0\u201363. Out-of-range values shall cause LoadConfig to return an error.",
+      "text": "TSN stream PCP shall be validated in range 0–7. DSCP shall be validated in range 0–63. Out-of-range values shall cause LoadConfig to return an error.",
       "standard": "iso26262",
       "level": "ASIL-A",
       "asil": "ASIL-A"
@@ -1523,7 +1523,7 @@
     {
       "id": "REQ-TREG-002",
       "title": "TopicTypeRegistry sorted snapshot",
-      "text": "TopicTypeRegistry.All() shall return a snapshot of all topic\u2192type pairs sorted lexicographically by topic name.",
+      "text": "TopicTypeRegistry.All() shall return a snapshot of all topic→type pairs sorted lexicographically by topic name.",
       "standard": "iso26262",
       "level": "ASIL-A",
       "asil": "ASIL-A"
@@ -2190,6 +2190,54 @@
       "text": "The Assert step shall call the user-supplied function and propagate its error to Run.",
       "standard": "iso26262",
       "level": "ASIL-A",
+      "asil": "ASIL-A"
+    },
+    {
+      "id": "REQ-LLR-001",
+      "title": "recvTracker cumulative-ACK watermark",
+      "text": "Derived from REQ-REL-001. The reliable reader's recvTracker shall maintain a single contiguous acknowledgement watermark (the lowest unreceived 64-bit sequence number) that is advanced only across a gap-free run, and shall buffer out-of-order sequence numbers in a side set without advancing the watermark, so that ACKNACK never cumulatively acknowledges an unreceived sample.",
+      "standard": "iso26262",
+      "level": "LLR",
+      "asil": "ASIL-A"
+    },
+    {
+      "id": "REQ-LLR-002",
+      "title": "sendHistory bounded ring buffer",
+      "text": "Derived from REQ-REL-005. The reliable writer's sendHistory shall store retransmittable samples in a fixed-capacity ring indexed by sequence-number modulo depth, giving O(1) insert and lookup with a bounded memory footprint, and shall key entries on the full 64-bit sequence number so that no aliasing occurs across the 2^32 boundary.",
+      "standard": "iso26262",
+      "level": "LLR",
+      "asil": "ASIL-A"
+    },
+    {
+      "id": "REQ-LLR-003",
+      "title": "DATA_FRAG reassembly keying",
+      "text": "Derived from REQ-FRAG-001. The fragment reassembler shall accumulate DATA_FRAG submessages into a buffer keyed by (writer GUID, first sequence number) and shall deliver the reassembled sample only when every fragment in the range has been received, discarding partial buffers that never complete.",
+      "standard": "iso26262",
+      "level": "LLR",
+      "asil": "ASIL-B"
+    },
+    {
+      "id": "REQ-LLR-004",
+      "title": "Anti-replay inbound drop",
+      "text": "Derived from REQ-SEC-003 and REQ-SEC-011. When an anti-replay checker is configured, the RTPS receive path shall, after security Open succeeds, drop any inbound sample whose sequence/timestamp falls outside the configured freshness window, before the sample is delivered to any reader.",
+      "standard": "iso26262",
+      "level": "LLR",
+      "asil": "ASIL-A"
+    },
+    {
+      "id": "REQ-LLR-005",
+      "title": "Topic ACL enforcement at endpoint creation",
+      "text": "Derived from REQ-SEC-013. When an access controller is configured, NewPublisher shall reject a topic for which CanWrite returns false and NewSubscriber shall reject a topic for which CanRead returns false, in both cases returning an error that wraps ErrAccessDenied, so that a denied endpoint is never created.",
+      "standard": "iso26262",
+      "level": "LLR",
+      "asil": "ASIL-A"
+    },
+    {
+      "id": "REQ-LLR-006",
+      "title": "Sample-to-Message canonical mapping",
+      "text": "Derived from REQ-PART-006. Sample.ToMessage shall map the DDS sample to the canonical relay.Message (RELAY spec §15.7) using protocol DDS, topic as ID, the unmodified payload and sequence number, and the writer GUID encoded as a lowercase hex string under the dds.writer_guid meta key, so that conversion is byte-identical to the RELAY reference.",
+      "standard": "iso26262",
+      "level": "LLR",
       "asil": "ASIL-A"
     }
   ]
