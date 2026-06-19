@@ -12,6 +12,7 @@
 //	go-dds version    [--format text|json]
 //	go-dds capabilities
 //	go-dds status     [--format text|json] [-domain N] [-mock]
+//	go-dds convert    --protocol DDS [--format json]   (dds.Sample JSON on stdin)
 //	go-dds pub        -topic <name> [-payload <str>] [-count N] [-domain N] [-mock]
 //	go-dds sub        -topic <name> [-count N] [-timeout D] [-domain N] [-mock]
 //	go-dds discover   [-wait D] [-domain N] [-mock]
@@ -22,12 +23,16 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
+	relay "github.com/SoundMatt/RELAY"
 	dds "github.com/SoundMatt/go-DDS"
 	"github.com/SoundMatt/go-DDS/idl"
 	"github.com/SoundMatt/go-DDS/mock"
@@ -35,7 +40,7 @@ import (
 )
 
 // toolVersion may be overridden at build time via -ldflags "-X main.toolVersion=x.y.z".
-var toolVersion = "0.44.0"
+var toolVersion = "0.48.0"
 
 const (
 	toolName    = "go-dds"
@@ -44,36 +49,46 @@ const (
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		printUsage()
-		os.Exit(1)
+	os.Exit(run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
+}
+
+// run is the testable entry point. It dispatches subcommands and returns the
+// process exit code. All I/O is threaded through the provided streams so the
+// CLI can be exercised in unit tests without touching os.Stdin/Stdout/Stderr.
+func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+	if len(args) < 1 {
+		printUsage(stderr)
+		return 1
 	}
-	switch os.Args[1] {
+	switch args[0] {
 	case "version":
-		os.Exit(runVersion(os.Args[2:]))
+		return runVersion(args[1:], stdout)
 	case "capabilities":
-		os.Exit(runCapabilities(os.Args[2:]))
+		return runCapabilities(args[1:], stdout)
 	case "status":
-		os.Exit(runStatus(os.Args[2:]))
+		return runStatus(args[1:], stdout)
+	case "convert":
+		return runConvert(args[1:], stdin, stdout, stderr)
 	case "pub":
-		os.Exit(runPub(os.Args[2:]))
+		return runPub(args[1:], stdout, stderr)
 	case "sub":
-		os.Exit(runSub(os.Args[2:]))
+		return runSub(args[1:], stdout, stderr)
 	case "discover":
-		os.Exit(runDiscover(os.Args[2:]))
+		return runDiscover(args[1:], stdout, stderr)
 	case "idl":
-		os.Exit(runIDL(os.Args[2:]))
+		return runIDL(args[1:], stdout, stderr)
 	case "help", "-h", "--help":
-		printUsage()
+		printUsage(stderr)
+		return 0
 	default:
-		fmt.Fprintf(os.Stderr, "go-dds: unknown subcommand %q\n", os.Args[1])
-		printUsage()
-		os.Exit(1)
+		fmt.Fprintf(stderr, "go-dds: unknown subcommand %q\n", args[0])
+		printUsage(stderr)
+		return 1
 	}
 }
 
-func printUsage() {
-	fmt.Fprint(os.Stderr, `go-dds — DDS command-line tool (RELAY-conformant)
+func printUsage(w io.Writer) {
+	fmt.Fprint(w, `go-dds — DDS command-line tool (RELAY-conformant)
 
 USAGE
   go-dds <subcommand> [flags]
@@ -82,6 +97,7 @@ SUBCOMMANDS
   version       Print version information
   capabilities  Print supported commands, transports, and interfaces (JSON)
   status        Print self-assessed health status
+  convert       Convert a canonical dds.Sample (stdin JSON) to a relay.Message
   pub           Publish a message to a DDS topic
   sub           Subscribe to a DDS topic and print samples
   discover      Print discovery and health diagnostics
@@ -114,21 +130,28 @@ func (c *commonFlags) newParticipant() (dds.Participant, error) {
 	return rtps.New(dds.Domain(c.domain))
 }
 
+// newFlagSet returns a FlagSet whose usage/errors are written to stderr.
+func newFlagSet(name string, stderr io.Writer) *flag.FlagSet {
+	fs := flag.NewFlagSet(name, flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	return fs
+}
+
 // ── version ───────────────────────────────────────────────────────────────────
 
-func runVersion(args []string) int {
-	fs := flag.NewFlagSet("version", flag.ContinueOnError)
+func runVersion(args []string, stdout io.Writer) int {
+	fs := newFlagSet("version", stdout)
 	format := fs.String("format", "text", "output format: text or json")
 	if err := fs.Parse(args); err != nil {
 		return 1
 	}
 
 	if *format == "json" {
-		encodeJSON(versionDoc())
+		encodeJSON(stdout, versionDoc())
 		return 0
 	}
 
-	fmt.Printf("%s %s (DDS, RELAY spec %s, %s)\n", toolName, toolVersion, dds.SpecVersion, runtime.Version())
+	fmt.Fprintf(stdout, "%s %s (DDS, RELAY spec %s, %s)\n", toolName, toolVersion, dds.SpecVersion, runtime.Version())
 	return 0
 }
 
@@ -147,13 +170,13 @@ func versionDoc() map[string]any {
 
 // ── capabilities ──────────────────────────────────────────────────────────────
 
-func runCapabilities(args []string) int {
-	fs := flag.NewFlagSet("capabilities", flag.ContinueOnError)
+func runCapabilities(args []string, stdout io.Writer) int {
+	fs := newFlagSet("capabilities", stdout)
 	if err := fs.Parse(args); err != nil {
 		return 1
 	}
 
-	encodeJSON(capabilitiesDoc())
+	encodeJSON(stdout, capabilitiesDoc())
 	return 0
 }
 
@@ -166,7 +189,7 @@ func capabilitiesDoc() map[string]any {
 		"tool":                toolName,
 		"version":             toolVersion,
 		"spec_version":        dds.SpecVersion,
-		"commands":            []string{"version", "capabilities", "status", "pub", "sub", "discover", "idl"},
+		"commands":            []string{"version", "capabilities", "status", "convert", "pub", "sub", "discover", "idl"},
 		"transports":          []string{"rtps", "shmem", "mock"},
 		"features":            []string{"reliable", "transient-local", "fragmentation", "security", "loaning", "shmem-zerocopy"},
 		"interfaces":          []string{"Node"},
@@ -177,8 +200,8 @@ func capabilitiesDoc() map[string]any {
 
 // ── status ────────────────────────────────────────────────────────────────────
 
-func runStatus(args []string) int {
-	fs := flag.NewFlagSet("status", flag.ContinueOnError)
+func runStatus(args []string, stdout io.Writer) int {
+	fs := newFlagSet("status", stdout)
 	var common commonFlags
 	common.register(fs)
 	format := fs.String("format", "text", "output format: text or json")
@@ -194,7 +217,7 @@ func runStatus(args []string) int {
 	}
 
 	if *format == "json" {
-		encodeJSON(statusDoc(healthy))
+		encodeJSON(stdout, statusDoc(healthy))
 		return 0
 	}
 
@@ -202,7 +225,7 @@ func runStatus(args []string) int {
 	if !healthy {
 		status = "unhealthy"
 	}
-	fmt.Printf("tool:      %s\nversion:   %s\nprotocol:  %s\nstatus:    %s\nconnected: false\n",
+	fmt.Fprintf(stdout, "tool:      %s\nversion:   %s\nprotocol:  %s\nstatus:    %s\nconnected: false\n",
 		toolName, toolVersion, protocolStr, status)
 	return 0
 }
@@ -220,17 +243,85 @@ func statusDoc(healthy bool) map[string]any {
 	}
 }
 
-// encodeJSON writes v as indented JSON to stdout.
-func encodeJSON(v any) {
-	enc := json.NewEncoder(os.Stdout)
+// encodeJSON writes v as indented JSON to w.
+func encodeJSON(w io.Writer, v any) {
+	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	_ = enc.Encode(v)
 }
 
+// ── convert (RELAY §11.2 interop driver) ────────────────────────────────────────
+
+// runConvert implements `go-dds convert --protocol DDS [--format json]`, the
+// RELAY §11.2 black-box interop driver. It reads one canonical dds.Sample value
+// as JSON on stdin (schema: RELAY spec/schemas/dds-sample.json), runs it through
+// this implementation's own Sample.ToMessage() — the same code path used at
+// runtime — and writes the resulting relay.Message as JSON on stdout. The
+// timestamp is zeroed so results are comparable across implementations.
+//
+// Exit codes (spec §11.2): 0 converted, 1 invalid input, 2 invalid args.
+func runConvert(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+	fs := newFlagSet("convert", stderr)
+	protocol := fs.String("protocol", "", "protocol of the canonical value (DDS)")
+	format := fs.String("format", "json", "output format: json")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if *protocol == "" {
+		fmt.Fprintln(stderr, "convert: --protocol is required")
+		return 2
+	}
+	if strings.ToUpper(*protocol) != protocolStr {
+		fmt.Fprintf(stderr, "convert: unsupported protocol %q (this driver only converts DDS)\n", *protocol)
+		return 2
+	}
+	if *format != "json" {
+		fmt.Fprintf(stderr, "convert: unsupported format %q (only json)\n", *format)
+		return 2
+	}
+
+	value, err := io.ReadAll(stdin)
+	if err != nil {
+		fmt.Fprintf(stderr, "convert: read stdin: %v\n", err)
+		return 1
+	}
+
+	var s dds.Sample
+	if err := json.Unmarshal(value, &s); err != nil {
+		// Invalid input: emit the RELAY §5 sentinel error name to stderr.
+		fmt.Fprintln(stderr, relayErrorName(err))
+		return 1
+	}
+
+	msg := s.ToMessage()
+	msg.Timestamp = time.Time{} // normalise for cross-implementation comparison
+
+	out, err := json.MarshalIndent(msg, "", "    ")
+	if err != nil {
+		fmt.Fprintf(stderr, "convert: %v\n", err)
+		return 1
+	}
+	fmt.Fprintln(stdout, string(out))
+	return 0
+}
+
+// relayErrorName maps a conversion error to the closest RELAY §5 sentinel error
+// name. dds.Sample has no further validator beyond JSON decoding, so any decode
+// failure is reported as the generic invalid-message sentinel; the payload-size
+// sentinel is mapped through in case a future ToMessage path surfaces it.
+func relayErrorName(err error) string {
+	switch {
+	case errors.Is(err, relay.ErrPayloadTooLarge):
+		return "ErrPayloadTooLarge"
+	default:
+		return "ErrInvalidMessage"
+	}
+}
+
 // ── pub ───────────────────────────────────────────────────────────────────────
 
-func runPub(args []string) int {
-	fs := flag.NewFlagSet("pub", flag.ContinueOnError)
+func runPub(args []string, stdout, stderr io.Writer) int {
+	fs := newFlagSet("pub", stderr)
 	var common commonFlags
 	common.register(fs)
 	topic := fs.String("topic", "", "DDS topic name (required)")
@@ -241,21 +332,20 @@ func runPub(args []string) int {
 		return 1
 	}
 	if *topic == "" {
-		fmt.Fprintln(os.Stderr, "pub: -topic is required")
-		fs.Usage()
+		fmt.Fprintln(stderr, "pub: -topic is required")
 		return 1
 	}
 
 	p, err := common.newParticipant()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "pub: participant: %v\n", err)
+		fmt.Fprintf(stderr, "pub: participant: %v\n", err)
 		return 1
 	}
 	defer func() { _ = p.Close() }()
 
 	pub, err := p.NewPublisher(*topic, dds.DefaultQoS)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "pub: publisher: %v\n", err)
+		fmt.Fprintf(stderr, "pub: publisher: %v\n", err)
 		return 1
 	}
 	defer func() { _ = pub.Close() }()
@@ -263,13 +353,13 @@ func runPub(args []string) int {
 	data := []byte(*payload)
 	for i := 0; *count == 0 || i < *count; i++ {
 		if err := pub.Write(data); err != nil {
-			fmt.Fprintf(os.Stderr, "pub: write: %v\n", err)
+			fmt.Fprintf(stderr, "pub: write: %v\n", err)
 			return 1
 		}
 		if *count > 0 {
-			fmt.Printf("[%d/%d] topic=%s payload=%q\n", i+1, *count, *topic, *payload)
+			fmt.Fprintf(stdout, "[%d/%d] topic=%s payload=%q\n", i+1, *count, *topic, *payload)
 		} else {
-			fmt.Printf("[%d] topic=%s payload=%q\n", i+1, *topic, *payload)
+			fmt.Fprintf(stdout, "[%d] topic=%s payload=%q\n", i+1, *topic, *payload)
 		}
 		if *interval > 0 && (*count == 0 || i < *count-1) {
 			time.Sleep(*interval)
@@ -280,8 +370,8 @@ func runPub(args []string) int {
 
 // ── sub ───────────────────────────────────────────────────────────────────────
 
-func runSub(args []string) int {
-	fs := flag.NewFlagSet("sub", flag.ContinueOnError)
+func runSub(args []string, stdout, stderr io.Writer) int {
+	fs := newFlagSet("sub", stderr)
 	var common commonFlags
 	common.register(fs)
 	topic := fs.String("topic", "", "DDS topic name (required)")
@@ -291,26 +381,25 @@ func runSub(args []string) int {
 		return 1
 	}
 	if *topic == "" {
-		fmt.Fprintln(os.Stderr, "sub: -topic is required")
-		fs.Usage()
+		fmt.Fprintln(stderr, "sub: -topic is required")
 		return 1
 	}
 
 	p, err := common.newParticipant()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "sub: participant: %v\n", err)
+		fmt.Fprintf(stderr, "sub: participant: %v\n", err)
 		return 1
 	}
 	defer func() { _ = p.Close() }()
 
 	sub, err := p.NewSubscriber(*topic, dds.DefaultQoS)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "sub: subscriber: %v\n", err)
+		fmt.Fprintf(stderr, "sub: subscriber: %v\n", err)
 		return 1
 	}
 	defer func() { _ = sub.Close() }()
 
-	fmt.Printf("subscribed: topic=%s domain=%d\n", *topic, common.domain)
+	fmt.Fprintf(stdout, "subscribed: topic=%s domain=%d\n", *topic, common.domain)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -325,10 +414,10 @@ func runSub(args []string) int {
 				return 0
 			}
 			received++
-			fmt.Printf("[%d] topic=%s time=%s payload=%s\n",
+			fmt.Fprintf(stdout, "[%d] topic=%s time=%s payload=%s\n",
 				received, s.Topic, s.Timestamp.Format(time.RFC3339Nano), s.Payload)
 		case <-time.After(*timeout):
-			fmt.Fprintf(os.Stderr, "sub: idle timeout after %v (received %d samples)\n",
+			fmt.Fprintf(stderr, "sub: idle timeout after %v (received %d samples)\n",
 				*timeout, received)
 			return 0
 		case <-ctx.Done():
@@ -339,22 +428,22 @@ func runSub(args []string) int {
 
 // ── idl ───────────────────────────────────────────────────────────────────────
 
-func runIDL(args []string) int {
-	fs := flag.NewFlagSet("idl", flag.ContinueOnError)
+func runIDL(args []string, stdout, stderr io.Writer) int {
+	fs := newFlagSet("idl", stderr)
 	out := fs.String("out", "", "output file path (default: print to stdout)")
 	pkg := fs.String("package", "", "override package name in generated output")
 	if err := fs.Parse(args); err != nil {
 		return 1
 	}
 	if fs.NArg() != 1 {
-		fmt.Fprintln(os.Stderr, "idl: usage: go-dds idl [-out <file>] [-package <name>] <input.idl>")
+		fmt.Fprintln(stderr, "idl: usage: go-dds idl [-out <file>] [-package <name>] <input.idl>")
 		return 1
 	}
 	input := fs.Arg(0)
 
 	m, err := idl.ParseFile(input)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "idl: parse %s: %v\n", input, err)
+		fmt.Fprintf(stderr, "idl: parse %s: %v\n", input, err)
 		return 1
 	}
 	if *pkg != "" {
@@ -362,26 +451,26 @@ func runIDL(args []string) int {
 	}
 	src, err := idl.Generate(m)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "idl: generate: %v\n", err)
+		fmt.Fprintf(stderr, "idl: generate: %v\n", err)
 		return 1
 	}
 
 	if *out == "" {
-		fmt.Print(src)
+		fmt.Fprint(stdout, src)
 		return 0
 	}
 	if err := os.WriteFile(*out, []byte(src), 0o640); err != nil {
-		fmt.Fprintf(os.Stderr, "idl: write %s: %v\n", *out, err)
+		fmt.Fprintf(stderr, "idl: write %s: %v\n", *out, err)
 		return 1
 	}
-	fmt.Fprintf(os.Stderr, "idl: wrote %s\n", *out)
+	fmt.Fprintf(stderr, "idl: wrote %s\n", *out)
 	return 0
 }
 
 // ── discover ──────────────────────────────────────────────────────────────────
 
-func runDiscover(args []string) int {
-	fs := flag.NewFlagSet("discover", flag.ContinueOnError)
+func runDiscover(args []string, stdout, stderr io.Writer) int {
+	fs := newFlagSet("discover", stderr)
 	var common commonFlags
 	common.register(fs)
 	wait := fs.Duration("wait", 3*time.Second, "time to collect discovery information")
@@ -391,38 +480,38 @@ func runDiscover(args []string) int {
 
 	p, err := common.newParticipant()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "discover: participant: %v\n", err)
+		fmt.Fprintf(stderr, "discover: participant: %v\n", err)
 		return 1
 	}
 	defer func() { _ = p.Close() }()
 
-	fmt.Printf("discovering: domain=%d wait=%v\n", common.domain, *wait)
+	fmt.Fprintf(stdout, "discovering: domain=%d wait=%v\n", common.domain, *wait)
 	time.Sleep(*wait)
 
 	if hp, ok := p.(dds.HealthProvider); ok {
 		h := hp.Health()
-		fmt.Printf("health: %s\n", h.Status)
+		fmt.Fprintf(stdout, "health: %s\n", h.Status)
 		if h.Details != "" {
-			fmt.Printf("  details: %s\n", h.Details)
+			fmt.Fprintf(stdout, "  details: %s\n", h.Details)
 		}
 	}
 
 	if dp, ok := p.(dds.DiscoveryMetricsProvider); ok {
 		dm := dp.DiscoveryMetrics()
-		fmt.Printf("discovery:\n")
-		fmt.Printf("  announces_sent:     %d\n", dm.AnnouncesSent)
-		fmt.Printf("  announces_received: %d\n", dm.AnnouncesReceived)
-		fmt.Printf("  peers_known:        %d\n", dm.PeersKnown)
-		fmt.Printf("  peer_evictions:     %d\n", dm.PeerEvictions)
-		fmt.Printf("  endpoint_matches:   %d\n", dm.EndpointMatches)
+		fmt.Fprintf(stdout, "discovery:\n")
+		fmt.Fprintf(stdout, "  announces_sent:     %d\n", dm.AnnouncesSent)
+		fmt.Fprintf(stdout, "  announces_received: %d\n", dm.AnnouncesReceived)
+		fmt.Fprintf(stdout, "  peers_known:        %d\n", dm.PeersKnown)
+		fmt.Fprintf(stdout, "  peer_evictions:     %d\n", dm.PeerEvictions)
+		fmt.Fprintf(stdout, "  endpoint_matches:   %d\n", dm.EndpointMatches)
 	}
 
 	if tp, ok := p.(dds.TopicMetricsProvider); ok {
 		topics := tp.TopicMetrics()
 		if len(topics) > 0 {
-			fmt.Printf("topics:\n")
+			fmt.Fprintf(stdout, "topics:\n")
 			for _, tm := range topics {
-				fmt.Printf("  %s: writes=%d delivers=%d drops=%d\n",
+				fmt.Fprintf(stdout, "  %s: writes=%d delivers=%d drops=%d\n",
 					tm.Topic, tm.WriteCount, tm.DeliverCount, tm.DropCount)
 			}
 		}
