@@ -287,18 +287,18 @@ func runConvert(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	}
 
 	var s dds.Sample
-	if err := json.Unmarshal(value, &s); err != nil {
+	if uerr := json.Unmarshal(value, &s); uerr != nil {
 		// Invalid input: emit the RELAY §5 sentinel error name to stderr.
-		fmt.Fprintln(stderr, relayErrorName(err))
+		fmt.Fprintln(stderr, relayErrorName(uerr))
 		return 1
 	}
 
 	msg := s.ToMessage()
 	msg.Timestamp = time.Time{} // normalise for cross-implementation comparison
 
-	out, err := json.MarshalIndent(msg, "", "    ")
-	if err != nil {
-		fmt.Fprintf(stderr, "convert: %v\n", err)
+	out, merr := json.MarshalIndent(msg, "", "    ")
+	if merr != nil {
+		fmt.Fprintf(stderr, "convert: %v\n", merr)
 		return 1
 	}
 	fmt.Fprintln(stdout, string(out))
