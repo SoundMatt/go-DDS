@@ -7,8 +7,27 @@ software).
 **Current baseline:** ASIL-B SEOOC under ISO 26262:2018, verified by `HARA.md`,
 `GC_LATENCY.md`, and `safety-case.md`.
 
-**Updated:** 2026-06-09 — certification document package (`cert/`) now generated;
-gap status updated throughout.
+**Updated:** 2026-06-19 — full lifecycle evidence set generated (SCI, SAS,
+coupling/coverage/cyber reports, SVP/SCMP/SQAP plans, LLRs); gap status updated
+throughout.
+
+## Current automated gap status (go-FuSa v0.30.0)
+
+All machine-checkable objectives are satisfied across every targeted standard;
+the only remaining items are inherently-manual organisational/independence
+objectives (e.g. CSMS governance, network segmentation, independent human
+review) that an SEOOC library cannot self-certify.
+
+| Standard | Profile | Total | Satisfied | Partial (manual) | Gaps |
+|---|---|---|---|---|---|
+| ISO 26262 | ASIL-B | 15 | 15 | 0 | **0** |
+| IEC 61508 | SIL-2 | 19 | 19 | 0 | **0** |
+| IEC 62443-4-2 | SL-2 | 12 | 10 | 2 | **0** |
+| DO-178C | DAL-B | 37 | 30 | 7 | **0** |
+| ISO 21434 | CAL-1 | 17 | 10 | 7 | **0** |
+
+Requirements: 280 total (incl. 6 low-level requirements), 280 traced+tested.
+Regenerate with `gofusa <iso26262|iec61508|iec62443|do178|iso21434>`.
 
 ---
 

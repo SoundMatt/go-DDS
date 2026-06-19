@@ -1,0 +1,468 @@
+{
+  "generatedAt": "2026-06-19T16:14:09.258143Z",
+  "projectRoot": "/Users/matt/Documents/Coding/SoundMatt/go-DDS",
+  "dataCoupling": [
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"DefaultQoSMap\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/mqtt/mqtt.go",
+        "line": 107
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"IdentityMap\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/mqtt/mqtt.go",
+        "line": 144
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"ErrFrameTooLarge\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/wan/wan.go",
+        "line": 45
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"ErrUnauthorized\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/wan/wan.go",
+        "line": 49
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"ErrClosed\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
+        "line": 50
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"ErrNotConnected\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
+        "line": 54
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"ErrTimeout\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
+        "line": 58
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"ErrPayloadTooLarge\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
+        "line": 62
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"ErrDomainOutOfRange\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
+        "line": 67
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"ErrTopicEmpty\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
+        "line": 70
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"ErrQoSMismatch\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
+        "line": 73
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"ErrAccessDenied\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
+        "line": 78
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"ErrDeadlineMissed\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
+        "line": 82
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"ErrSampleRejected\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
+        "line": 86
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"ErrResourceLimits\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
+        "line": 89
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"ErrLoanBuffer\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
+        "line": 94
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"DefaultQoS\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
+        "line": 180
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"ReliableQoS\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
+        "line": 188
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"NoopTracer\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
+        "line": 320
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"ErrNoReply\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rpc/rpc.go",
+        "line": 34
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"EntityIdParticipant\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go",
+        "line": 32
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"EntityIdSPDPWriter\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go",
+        "line": 33
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"EntityIdSPDPReader\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go",
+        "line": 34
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"EntityIdSEDPPubWriter\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go",
+        "line": 35
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"EntityIdSEDPPubReader\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go",
+        "line": 36
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"EntityIdSEDPSubWriter\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go",
+        "line": 37
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"EntityIdSEDPSubReader\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go",
+        "line": 38
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"EntityIdUnknown\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go",
+        "line": 39
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"EntityIdBuiltinParticipant\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/guid.go",
+        "line": 40
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"ErrQueueFull\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/queue.go",
+        "line": 25
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"ErrReplay\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/security/replay.go",
+        "line": 21
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"ErrNotSupported\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/taprio.go",
+        "line": 23
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"ErrNoStream\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/tsn/tsn.go",
+        "line": 51
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"GlobalTopicRegistry\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/xtypes/topic_registry.go",
+        "line": 46
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    },
+    {
+      "ruleId": "COUP001",
+      "severity": "INFO",
+      "message": "exported var \"ErrTypeMismatch\" creates data coupling — callers can read/write shared state directly",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/xtypes/xtypes.go",
+        "line": 268
+      },
+      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
+    }
+  ],
+  "controlCoupling": [
+    {
+      "ruleId": "COUP002",
+      "severity": "INFO",
+      "message": "exported function \"Marshal\" accepts func/interface parameter — documents control coupling",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc.go",
+        "line": 56
+      },
+      "remediation": "document coupling in requirements traceability and verify all injected implementations"
+    },
+    {
+      "ruleId": "COUP002",
+      "severity": "INFO",
+      "message": "exported function \"Unmarshal\" accepts func/interface parameter — documents control coupling",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/grpc/grpc.go",
+        "line": 57
+      },
+      "remediation": "document coupling in requirements traceability and verify all injected implementations"
+    },
+    {
+      "ruleId": "COUP002",
+      "severity": "INFO",
+      "message": "exported function \"WithFilter\" accepts func/interface parameter — documents control coupling",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
+        "line": 345
+      },
+      "remediation": "document coupling in requirements traceability and verify all injected implementations"
+    },
+    {
+      "ruleId": "COUP002",
+      "severity": "INFO",
+      "message": "exported function \"WithDeadlineMissed\" accepts func/interface parameter — documents control coupling",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
+        "line": 364
+      },
+      "remediation": "document coupling in requirements traceability and verify all injected implementations"
+    },
+    {
+      "ruleId": "COUP002",
+      "severity": "INFO",
+      "message": "exported function \"WithDeadlineCallback\" accepts func/interface parameter — documents control coupling",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock.go",
+        "line": 250
+      },
+      "remediation": "document coupling in requirements traceability and verify all injected implementations"
+    },
+    {
+      "ruleId": "COUP002",
+      "severity": "INFO",
+      "message": "exported function \"WithLivelinessCallback\" accepts func/interface parameter — documents control coupling",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/mock/mock.go",
+        "line": 263
+      },
+      "remediation": "document coupling in requirements traceability and verify all injected implementations"
+    },
+    {
+      "ruleId": "COUP002",
+      "severity": "INFO",
+      "message": "exported function \"WithDeadlineCallback\" accepts func/interface parameter — documents control coupling",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
+        "line": 194
+      },
+      "remediation": "document coupling in requirements traceability and verify all injected implementations"
+    },
+    {
+      "ruleId": "COUP002",
+      "severity": "INFO",
+      "message": "exported function \"WithLivelinessCallback\" accepts func/interface parameter — documents control coupling",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
+        "line": 207
+      },
+      "remediation": "document coupling in requirements traceability and verify all injected implementations"
+    },
+    {
+      "ruleId": "COUP002",
+      "severity": "INFO",
+      "message": "exported function \"NewRateMonitor\" accepts func/interface parameter — documents control coupling",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/rate.go",
+        "line": 56
+      },
+      "remediation": "document coupling in requirements traceability and verify all injected implementations"
+    },
+    {
+      "ruleId": "COUP002",
+      "severity": "INFO",
+      "message": "exported function \"Expect\" accepts func/interface parameter — documents control coupling",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/testutil/scenario/scenario.go",
+        "line": 92
+      },
+      "remediation": "document coupling in requirements traceability and verify all injected implementations"
+    },
+    {
+      "ruleId": "COUP002",
+      "severity": "INFO",
+      "message": "exported function \"Assert\" accepts func/interface parameter — documents control coupling",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/testutil/scenario/scenario.go",
+        "line": 143
+      },
+      "remediation": "document coupling in requirements traceability and verify all injected implementations"
+    }
+  ]
+}

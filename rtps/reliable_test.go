@@ -9,6 +9,8 @@ package rtps
 //fusa:test REQ-REL-005
 //fusa:test REQ-REL-008
 //fusa:test REQ-REL-009
+//fusa:test REQ-LLR-001
+//fusa:test REQ-LLR-002
 
 import "testing"
 

@@ -1,0 +1,133 @@
+{
+  "schemaVersion": "1.9",
+  "kind": "gap-report",
+  "tool": "go-FuSa",
+  "toolVersion": "0.30.0",
+  "language": "go",
+  "generatedAt": "2026-06-19T16:21:34.572004Z",
+  "projectRoot": "go-DDS",
+  "standard": "ISO 21434 CAL-1",
+  "objectives": [
+    {
+      "id": "6.1",
+      "title": "Cybersecurity plan",
+      "status": "satisfied",
+      "evidence": [
+        "cyber-plan.json present"
+      ]
+    },
+    {
+      "id": "8.3",
+      "title": "Vulnerability monitoring evidence",
+      "status": "satisfied",
+      "evidence": [
+        "vuln.json present"
+      ]
+    },
+    {
+      "id": "9.1",
+      "title": "TARA — threat analysis",
+      "status": "satisfied",
+      "evidence": [
+        "tara.json present"
+      ]
+    },
+    {
+      "id": "9.2",
+      "title": "TARA — asset identification",
+      "status": "satisfied",
+      "evidence": [
+        "tara.json present"
+      ]
+    },
+    {
+      "id": "9.3",
+      "title": "TARA — threat scenarios",
+      "status": "satisfied",
+      "evidence": [
+        "tara.json present"
+      ]
+    },
+    {
+      "id": "9.4",
+      "title": "TARA — impact and risk rating",
+      "status": "satisfied",
+      "evidence": [
+        "tara.json present"
+      ]
+    },
+    {
+      "id": "10.1",
+      "title": "Cybersecurity requirements",
+      "status": "satisfied",
+      "evidence": [
+        ".fusa-reqs.json present"
+      ]
+    },
+    {
+      "id": "10.4",
+      "title": "Static cybersecurity analysis",
+      "status": "satisfied",
+      "evidence": [
+        "check-report.json present"
+      ]
+    },
+    {
+      "id": "A.1",
+      "title": "SBOM (Annex A work product)",
+      "status": "satisfied",
+      "evidence": [
+        "sbom.json present"
+      ]
+    },
+    {
+      "id": "A.2",
+      "title": "Build provenance (Annex A)",
+      "status": "satisfied",
+      "evidence": [
+        "provenance.json present"
+      ]
+    },
+    {
+      "id": "5.1",
+      "title": "Cybersecurity governance",
+      "status": "partial"
+    },
+    {
+      "id": "6.2",
+      "title": "Cybersecurity responsibility",
+      "status": "partial"
+    },
+    {
+      "id": "7.1",
+      "title": "Supplier management",
+      "status": "partial"
+    },
+    {
+      "id": "12.1",
+      "title": "Production security",
+      "status": "partial"
+    },
+    {
+      "id": "13.1",
+      "title": "Operations monitoring",
+      "status": "partial"
+    },
+    {
+      "id": "14.1",
+      "title": "End-of-support plan",
+      "status": "partial"
+    },
+    {
+      "id": "15.1",
+      "title": "Incident response (PSIRT)",
+      "status": "partial"
+    }
+  ],
+  "summary": {
+    "total": 17,
+    "satisfied": 10,
+    "partial": 7,
+    "gaps": 0
+  }
+}

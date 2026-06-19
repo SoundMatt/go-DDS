@@ -208,6 +208,8 @@ type Sample struct {
 	WriterGUID     GUID      `json:"writer_guid"` // identity of the publishing endpoint; zero = not set
 }
 
+//fusa:req REQ-LLR-006
+
 // ToMessage converts this Sample to a relay.Message envelope (spec §15.7.2).
 func (s Sample) ToMessage() relay.Message {
 	return relay.Message{

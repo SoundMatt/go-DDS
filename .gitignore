@@ -7,8 +7,6 @@
 /check-report.json
 *.json.bak
 /boundary.dot
-/boundary.mermaid
 /tara.json
 /tara.md
 /go-dds
-/cyber-report.json

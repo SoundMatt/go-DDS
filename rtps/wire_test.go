@@ -31,6 +31,7 @@ package rtps
 //fusa:test REQ-FRAG-003
 //fusa:test REQ-FRAG-004
 //fusa:test REQ-FRAG-005
+//fusa:test REQ-LLR-003
 
 import (
 	"bytes"

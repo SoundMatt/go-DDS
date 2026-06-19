@@ -12,6 +12,7 @@ package dds_test
 
 //fusa:test REQ-PART-001
 //fusa:test REQ-SUB-001
+//fusa:test REQ-LLR-006
 
 import (
 	"context"

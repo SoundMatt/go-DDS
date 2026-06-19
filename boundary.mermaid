@@ -1,0 +1,118 @@
+%{init: {"theme": "default"}}%
+flowchart LR
+    % Module: github.com/SoundMatt/go-DDS
+    % Generated: 2026-06-19T16:14:09Z
+
+    github_com_SoundMatt_go_DDS["dds"]
+    github_com_SoundMatt_go_DDS_admin["admin"]
+    github_com_SoundMatt_go_DDS_auto["auto"]
+    github_com_SoundMatt_go_DDS_bridge_domain["domain"]
+    github_com_SoundMatt_go_DDS_bridge_grpc["grpcbridge"]
+    github_com_SoundMatt_go_DDS_bridge_mqtt["mqtt"]
+    github_com_SoundMatt_go_DDS_bridge_rest["rest"]
+    github_com_SoundMatt_go_DDS_bridge_wan["wan"]
+    github_com_SoundMatt_go_DDS_cdr["cdr"]
+    github_com_SoundMatt_go_DDS_cmd_ddstool["github.com/SoundMatt/go-DDS/cmd/ddstool"]
+    github_com_SoundMatt_go_DDS_cmd_go_dds["github.com/SoundMatt/go-DDS/cmd/go-dds"]
+    github_com_SoundMatt_go_DDS_cmd_latmon["github.com/SoundMatt/go-DDS/cmd/latmon"]
+    github_com_SoundMatt_go_DDS_cmd_monitor["github.com/SoundMatt/go-DDS/cmd/monitor"]
+    github_com_SoundMatt_go_DDS_config["config"]
+    github_com_SoundMatt_go_DDS_cyclone["cyclone"]
+    github_com_SoundMatt_go_DDS_examples_auto_transport["github.com/SoundMatt/go-DDS/examples/auto-transport"]
+    github_com_SoundMatt_go_DDS_examples_command_response["github.com/SoundMatt/go-DDS/examples/command-response"]
+    github_com_SoundMatt_go_DDS_examples_loaned_samples["github.com/SoundMatt/go-DDS/examples/loaned-samples"]
+    github_com_SoundMatt_go_DDS_examples_otel_tracing["github.com/SoundMatt/go-DDS/examples/otel-tracing"]
+    github_com_SoundMatt_go_DDS_examples_quickstart_pub["github.com/SoundMatt/go-DDS/examples/quickstart/pub"]
+    github_com_SoundMatt_go_DDS_examples_quickstart_sub["github.com/SoundMatt/go-DDS/examples/quickstart/sub"]
+    github_com_SoundMatt_go_DDS_examples_secure_topic["github.com/SoundMatt/go-DDS/examples/secure-topic"]
+    github_com_SoundMatt_go_DDS_examples_sensor_pipeline["github.com/SoundMatt/go-DDS/examples/sensor-pipeline"]
+    github_com_SoundMatt_go_DDS_examples_taprio_stream["github.com/SoundMatt/go-DDS/examples/taprio-stream"]
+    github_com_SoundMatt_go_DDS_idl["idl"]
+    github_com_SoundMatt_go_DDS_idl_roundtrip["idlgen"]
+    github_com_SoundMatt_go_DDS_interop["interop"]
+    github_com_SoundMatt_go_DDS_mock["mock"]
+    github_com_SoundMatt_go_DDS_monitor["monitor"]
+    github_com_SoundMatt_go_DDS_otel["otel"]
+    github_com_SoundMatt_go_DDS_pool["pool"]
+    github_com_SoundMatt_go_DDS_record["record"]
+    github_com_SoundMatt_go_DDS_rpc["rpc"]
+    github_com_SoundMatt_go_DDS_rtps["rtps"]
+    github_com_SoundMatt_go_DDS_safety["safety"]
+    github_com_SoundMatt_go_DDS_security["security"]
+    github_com_SoundMatt_go_DDS_services["services"]
+    github_com_SoundMatt_go_DDS_shmem["shmem"]
+    github_com_SoundMatt_go_DDS_testutil["testutil"]
+    github_com_SoundMatt_go_DDS_testutil_scenario["scenario"]
+    github_com_SoundMatt_go_DDS_tsn["tsn"]
+    github_com_SoundMatt_go_DDS_xtypes["xtypes"]
+
+    github_com_SoundMatt_go_DDS_admin --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_auto --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_auto --> github_com_SoundMatt_go_DDS_rtps
+    github_com_SoundMatt_go_DDS_auto --> github_com_SoundMatt_go_DDS_shmem
+    github_com_SoundMatt_go_DDS_bridge_domain --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_bridge_grpc --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_bridge_mqtt --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_bridge_rest --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_bridge_wan --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_cmd_ddstool --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_cmd_ddstool --> github_com_SoundMatt_go_DDS_idl
+    github_com_SoundMatt_go_DDS_cmd_ddstool --> github_com_SoundMatt_go_DDS_mock
+    github_com_SoundMatt_go_DDS_cmd_ddstool --> github_com_SoundMatt_go_DDS_rtps
+    github_com_SoundMatt_go_DDS_cmd_go_dds --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_cmd_go_dds --> github_com_SoundMatt_go_DDS_idl
+    github_com_SoundMatt_go_DDS_cmd_go_dds --> github_com_SoundMatt_go_DDS_mock
+    github_com_SoundMatt_go_DDS_cmd_go_dds --> github_com_SoundMatt_go_DDS_rtps
+    github_com_SoundMatt_go_DDS_cmd_latmon --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_cmd_latmon --> github_com_SoundMatt_go_DDS_mock
+    github_com_SoundMatt_go_DDS_cmd_monitor --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_cmd_monitor --> github_com_SoundMatt_go_DDS_monitor
+    github_com_SoundMatt_go_DDS_cmd_monitor --> github_com_SoundMatt_go_DDS_rtps
+    github_com_SoundMatt_go_DDS_cyclone --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_examples_auto_transport --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_examples_auto_transport --> github_com_SoundMatt_go_DDS_auto
+    github_com_SoundMatt_go_DDS_examples_command_response --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_examples_command_response --> github_com_SoundMatt_go_DDS_mock
+    github_com_SoundMatt_go_DDS_examples_command_response --> github_com_SoundMatt_go_DDS_rpc
+    github_com_SoundMatt_go_DDS_examples_loaned_samples --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_examples_loaned_samples --> github_com_SoundMatt_go_DDS_mock
+    github_com_SoundMatt_go_DDS_examples_otel_tracing --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_examples_otel_tracing --> github_com_SoundMatt_go_DDS_otel
+    github_com_SoundMatt_go_DDS_examples_otel_tracing --> github_com_SoundMatt_go_DDS_rtps
+    github_com_SoundMatt_go_DDS_examples_quickstart_pub --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_examples_quickstart_pub --> github_com_SoundMatt_go_DDS_rtps
+    github_com_SoundMatt_go_DDS_examples_quickstart_sub --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_examples_quickstart_sub --> github_com_SoundMatt_go_DDS_rtps
+    github_com_SoundMatt_go_DDS_examples_secure_topic --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_examples_secure_topic --> github_com_SoundMatt_go_DDS_mock
+    github_com_SoundMatt_go_DDS_examples_secure_topic --> github_com_SoundMatt_go_DDS_security
+    github_com_SoundMatt_go_DDS_examples_sensor_pipeline --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_examples_sensor_pipeline --> github_com_SoundMatt_go_DDS_mock
+    github_com_SoundMatt_go_DDS_examples_taprio_stream --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_examples_taprio_stream --> github_com_SoundMatt_go_DDS_mock
+    github_com_SoundMatt_go_DDS_examples_taprio_stream --> github_com_SoundMatt_go_DDS_tsn
+    github_com_SoundMatt_go_DDS_idl_roundtrip --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_idl_roundtrip --> github_com_SoundMatt_go_DDS_cdr
+    github_com_SoundMatt_go_DDS_mock --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_mock --> github_com_SoundMatt_go_DDS_pool
+    github_com_SoundMatt_go_DDS_monitor --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_monitor --> github_com_SoundMatt_go_DDS_safety
+    github_com_SoundMatt_go_DDS_monitor --> github_com_SoundMatt_go_DDS_tsn
+    github_com_SoundMatt_go_DDS_otel --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_pool --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_record --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_rpc --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_rtps --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_rtps --> github_com_SoundMatt_go_DDS_config
+    github_com_SoundMatt_go_DDS_rtps --> github_com_SoundMatt_go_DDS_pool
+    github_com_SoundMatt_go_DDS_rtps --> github_com_SoundMatt_go_DDS_tsn
+    github_com_SoundMatt_go_DDS_safety --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_services --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_services --> github_com_SoundMatt_go_DDS_monitor
+    github_com_SoundMatt_go_DDS_services --> github_com_SoundMatt_go_DDS_record
+    github_com_SoundMatt_go_DDS_shmem --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_shmem --> github_com_SoundMatt_go_DDS_pool
+    github_com_SoundMatt_go_DDS_testutil --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_testutil --> github_com_SoundMatt_go_DDS_mock
+    github_com_SoundMatt_go_DDS_testutil_scenario --> github_com_SoundMatt_go_DDS
+    github_com_SoundMatt_go_DDS_xtypes --> github_com_SoundMatt_go_DDS

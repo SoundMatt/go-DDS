@@ -1,0 +1,357 @@
+{
+  "schemaVersion": "1.9",
+  "kind": "gap-report",
+  "tool": "go-FuSa",
+  "toolVersion": "0.30.0",
+  "language": "go",
+  "generatedAt": "2026-06-19T16:21:34.562437Z",
+  "projectRoot": "go-DDS",
+  "standard": "DO-178C DAL-B",
+  "objectives": [
+    {
+      "id": "A-1.1",
+      "title": "Software Development Plan (SDP) exists and describes software lifecycle",
+      "clause": "A-1",
+      "status": "satisfied",
+      "evidence": [
+        "SAFETY_PLAN.md present"
+      ]
+    },
+    {
+      "id": "A-1.2",
+      "title": "Software Verification Plan (SVP) describes verification activities",
+      "clause": "A-1",
+      "status": "satisfied",
+      "evidence": [
+        "SVP.md present"
+      ]
+    },
+    {
+      "id": "A-1.3",
+      "title": "Software Configuration Management Plan (SCMP) exists",
+      "clause": "A-1",
+      "status": "satisfied",
+      "evidence": [
+        "SCMP.md present"
+      ]
+    },
+    {
+      "id": "A-1.4",
+      "title": "Software Quality Assurance Plan (SQAP) exists",
+      "clause": "A-1",
+      "status": "satisfied",
+      "evidence": [
+        "SQAP.md present"
+      ]
+    },
+    {
+      "id": "A-1.5",
+      "title": "Tool qualification plan addresses tools that could introduce errors",
+      "clause": "A-1",
+      "status": "satisfied",
+      "evidence": [
+        "qualify-report.json present"
+      ]
+    },
+    {
+      "id": "A-2.1",
+      "title": "High-level requirements are developed and documented",
+      "clause": "A-2",
+      "status": "satisfied",
+      "evidence": [
+        ".fusa-reqs.json present"
+      ]
+    },
+    {
+      "id": "A-2.2",
+      "title": "Low-level requirements derived from HLR (Level=LLR in .fusa-reqs.json)",
+      "clause": "A-2",
+      "status": "satisfied",
+      "evidence": [
+        ".fusa-reqs.json contains LLR-tagged requirements"
+      ]
+    },
+    {
+      "id": "A-2.3",
+      "title": "Software architecture is documented (component boundary diagram)",
+      "clause": "A-2",
+      "status": "satisfied",
+      "evidence": [
+        "boundary.mermaid present"
+      ]
+    },
+    {
+      "id": "A-2.4",
+      "title": "Source code implements requirements and conforms to standards",
+      "clause": "A-2",
+      "status": "partial",
+      "evidence": [
+        ".fusa.json found — run 'gofusa check' to assess coding standards conformance"
+      ],
+      "findings": [
+        "review 'gofusa check' output for zero ERROR findings"
+      ]
+    },
+    {
+      "id": "A-2.5",
+      "title": "Integration output (executable) produced from reviewed source",
+      "clause": "A-2",
+      "status": "satisfied",
+      "evidence": [
+        "provenance.json present"
+      ]
+    },
+    {
+      "id": "A-3.1",
+      "title": "Software plans reviewed for completeness and consistency",
+      "clause": "A-3",
+      "status": "partial",
+      "evidence": [
+        "all 4 plan documents present — manual review required"
+      ],
+      "findings": [
+        "requires human review — go-FuSa cannot automatically assess this objective"
+      ]
+    },
+    {
+      "id": "A-4.1",
+      "title": "HLR conform to system requirements",
+      "clause": "A-4",
+      "status": "partial",
+      "findings": [
+        "requires human review — go-FuSa cannot automatically assess this objective"
+      ]
+    },
+    {
+      "id": "A-4.2",
+      "title": "HLR are accurate, consistent, verifiable, and unambiguous",
+      "clause": "A-4",
+      "status": "satisfied",
+      "evidence": [
+        ".fusa-reqs.json present"
+      ]
+    },
+    {
+      "id": "A-4.3",
+      "title": "HLR are compatible with target computer (timing, memory)",
+      "clause": "A-4",
+      "status": "partial",
+      "findings": [
+        "requires human review — go-FuSa cannot automatically assess this objective"
+      ]
+    },
+    {
+      "id": "A-5.1",
+      "title": "LLR conform to HLR, are accurate, consistent, verifiable",
+      "clause": "A-5",
+      "status": "partial",
+      "findings": [
+        "requires human review — go-FuSa cannot automatically assess this objective"
+      ]
+    },
+    {
+      "id": "A-5.2",
+      "title": "Verification of LLR is independent (different person than developer at DAL-A/B)",
+      "clause": "A-5",
+      "status": "partial",
+      "findings": [
+        "requires human review — go-FuSa cannot automatically assess this objective"
+      ]
+    },
+    {
+      "id": "A-6.1",
+      "title": "Software architecture is consistent with HLR",
+      "clause": "A-6",
+      "status": "satisfied",
+      "evidence": [
+        "boundary.mermaid present"
+      ]
+    },
+    {
+      "id": "A-6.2",
+      "title": "No dead code exists in the software (check-report.json from gofusa check)",
+      "clause": "A-6",
+      "status": "satisfied",
+      "evidence": [
+        "check-report.json present"
+      ]
+    },
+    {
+      "id": "A-6.3",
+      "title": "Data coupling and control coupling are characterised (coupling-report.json)",
+      "clause": "A-6",
+      "status": "satisfied",
+      "evidence": [
+        "coupling-report.json present"
+      ]
+    },
+    {
+      "id": "A-7.1",
+      "title": "Source code conforms to software standards (lint, analysis)",
+      "clause": "A-7",
+      "status": "partial",
+      "findings": [
+        "requires human review — go-FuSa cannot automatically assess this objective"
+      ]
+    },
+    {
+      "id": "A-7.2",
+      "title": "Source code is traceable to LLR",
+      "clause": "A-7",
+      "status": "satisfied",
+      "evidence": [
+        ".fusa-reqs.json present"
+      ]
+    },
+    {
+      "id": "A-7.3",
+      "title": "Statement coverage achieved by tests",
+      "clause": "A-7",
+      "status": "satisfied",
+      "evidence": [
+        "coverage-report.json present"
+      ]
+    },
+    {
+      "id": "A-7.4",
+      "title": "Decision coverage achieved by tests (DAL-A/B)",
+      "clause": "A-7",
+      "status": "satisfied",
+      "evidence": [
+        "coverage-report.json present"
+      ]
+    },
+    {
+      "id": "A-8.1",
+      "title": "Test cases exist for all HLR",
+      "clause": "A-8",
+      "status": "satisfied",
+      "evidence": [
+        ".fusa-evidence.json present"
+      ]
+    },
+    {
+      "id": "A-8.2",
+      "title": "Test procedures exist and are derived from test cases",
+      "clause": "A-8",
+      "status": "satisfied",
+      "evidence": [
+        ".fusa-evidence.json present"
+      ]
+    },
+    {
+      "id": "A-8.3",
+      "title": "Test results reviewed and pass/fail criteria established",
+      "clause": "A-8",
+      "status": "satisfied",
+      "evidence": [
+        ".fusa-evidence.json present"
+      ]
+    },
+    {
+      "id": "A-9.1",
+      "title": "Test environment is verified and controlled",
+      "clause": "A-9",
+      "status": "satisfied",
+      "evidence": [
+        "provenance.json present"
+      ]
+    },
+    {
+      "id": "A-9.2",
+      "title": "Regression testing is performed after changes",
+      "clause": "A-9",
+      "status": "satisfied",
+      "evidence": [
+        ".github/workflows/ci.yml present"
+      ]
+    },
+    {
+      "id": "A-10.1",
+      "title": "SBOM produced and configuration items identified",
+      "clause": "A-10",
+      "status": "satisfied",
+      "evidence": [
+        "sbom.json present"
+      ]
+    },
+    {
+      "id": "A-10.2",
+      "title": "Software Configuration Index (SCI) produced",
+      "clause": "A-10",
+      "status": "satisfied",
+      "evidence": [
+        "sci.json present"
+      ]
+    },
+    {
+      "id": "A-10.3",
+      "title": "Problem reports exist and are tracked to closure",
+      "clause": "A-10",
+      "status": "satisfied",
+      "evidence": [
+        ".fusa-problems.json present"
+      ]
+    },
+    {
+      "id": "A-10.4",
+      "title": "Build reproducibility and provenance documented",
+      "clause": "A-10",
+      "status": "satisfied",
+      "evidence": [
+        "provenance.json present"
+      ]
+    },
+    {
+      "id": "A-11.1",
+      "title": "Software Accomplishment Summary (SAS) produced",
+      "clause": "A-11",
+      "status": "satisfied",
+      "evidence": [
+        "sas.md present"
+      ]
+    },
+    {
+      "id": "A-11.2",
+      "title": "Test evidence bundle present",
+      "clause": "A-11",
+      "status": "satisfied",
+      "evidence": [
+        ".fusa-evidence.json present"
+      ]
+    },
+    {
+      "id": "A-11.3",
+      "title": "Safety analysis (FMEA) performed",
+      "clause": "A-11",
+      "status": "satisfied",
+      "evidence": [
+        "fmea.json present"
+      ]
+    },
+    {
+      "id": "A-11.4",
+      "title": "Tool qualification report present",
+      "clause": "A-11",
+      "status": "satisfied",
+      "evidence": [
+        "qualify-report.json present"
+      ]
+    },
+    {
+      "id": "A-11.5",
+      "title": "Vulnerability assessment performed",
+      "clause": "A-11",
+      "status": "satisfied",
+      "evidence": [
+        "vuln.json present"
+      ]
+    }
+  ],
+  "summary": {
+    "total": 37,
+    "satisfied": 30,
+    "partial": 7,
+    "gaps": 0
+  }
+}

@@ -10,6 +10,8 @@ package rtps_test
 
 //fusa:test REQ-SEC-013
 //fusa:test REQ-SEC-003
+//fusa:test REQ-LLR-004
+//fusa:test REQ-LLR-005
 
 import (
 	"bytes"
