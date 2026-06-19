@@ -6,7 +6,10 @@
 package wan
 
 import (
+	"bytes"
+	"encoding/binary"
 	"errors"
+	"io"
 	"net"
 	"testing"
 	"time"
@@ -14,6 +17,50 @@ import (
 	dds "github.com/SoundMatt/go-DDS"
 	"github.com/SoundMatt/go-DDS/mock"
 )
+
+func TestWriteReadAuth_RoundTrip(t *testing.T) {
+	var buf bytes.Buffer
+	if err := writeAuth(&buf, "s3cret"); err != nil {
+		t.Fatalf("writeAuth: %v", err)
+	}
+	tok, err := readAuth(&buf)
+	if err != nil {
+		t.Fatalf("readAuth: %v", err)
+	}
+	if tok != "s3cret" {
+		t.Errorf("token = %q, want s3cret", tok)
+	}
+}
+
+func TestWriteAuth_WriteError(t *testing.T) {
+	// failFirstWrite fails the header write; writeAuth must propagate it.
+	if err := writeAuth(&failFirstWrite{}, "tok"); err == nil {
+		t.Fatal("expected header write error from writeAuth")
+	}
+}
+
+func TestReadAuth_TooLarge(t *testing.T) {
+	var hdr [4]byte
+	binary.BigEndian.PutUint32(hdr[:], maxTokenBytes+1)
+	_, err := readAuth(bytes.NewReader(hdr[:]))
+	if !errors.Is(err, ErrFrameTooLarge) {
+		t.Errorf("readAuth oversized = %v, want ErrFrameTooLarge", err)
+	}
+}
+
+func TestReadAuth_ShortHeader(t *testing.T) {
+	if _, err := readAuth(bytes.NewReader([]byte{0x00})); err == nil {
+		t.Fatal("expected error on short auth header")
+	}
+}
+
+func TestReadAuth_ShortBody(t *testing.T) {
+	var hdr [4]byte
+	binary.BigEndian.PutUint32(hdr[:], 8) // claims 8 bytes but supplies none
+	if _, err := readAuth(io.MultiReader(bytes.NewReader(hdr[:]))); err == nil {
+		t.Fatal("expected error on truncated auth body")
+	}
+}
 
 // failFirstWrite fails on the first Write call, mimicking a broken header send.
 type failFirstWrite struct{ calls int }
