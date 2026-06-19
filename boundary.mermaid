@@ -1,14 +1,12 @@
 %{init: {"theme": "default"}}%
 flowchart LR
     % Module: github.com/SoundMatt/go-DDS
-    % Generated: 2026-06-19T18:06:23Z
+    % Generated: 2026-06-19T18:43:01Z
 
     github_com_SoundMatt_go_DDS["dds"]
     github_com_SoundMatt_go_DDS_admin["admin"]
     github_com_SoundMatt_go_DDS_auto["auto"]
-    github_com_SoundMatt_go_DDS_bridge_domain["domain"]
     github_com_SoundMatt_go_DDS_bridge_grpc["grpcbridge"]
-    github_com_SoundMatt_go_DDS_bridge_mqtt["mqtt"]
     github_com_SoundMatt_go_DDS_bridge_rest["rest"]
     github_com_SoundMatt_go_DDS_bridge_wan["wan"]
     github_com_SoundMatt_go_DDS_cdr["cdr"]
@@ -50,9 +48,7 @@ flowchart LR
     github_com_SoundMatt_go_DDS_auto --> github_com_SoundMatt_go_DDS
     github_com_SoundMatt_go_DDS_auto --> github_com_SoundMatt_go_DDS_rtps
     github_com_SoundMatt_go_DDS_auto --> github_com_SoundMatt_go_DDS_shmem
-    github_com_SoundMatt_go_DDS_bridge_domain --> github_com_SoundMatt_go_DDS
     github_com_SoundMatt_go_DDS_bridge_grpc --> github_com_SoundMatt_go_DDS
-    github_com_SoundMatt_go_DDS_bridge_mqtt --> github_com_SoundMatt_go_DDS
     github_com_SoundMatt_go_DDS_bridge_rest --> github_com_SoundMatt_go_DDS
     github_com_SoundMatt_go_DDS_bridge_wan --> github_com_SoundMatt_go_DDS
     github_com_SoundMatt_go_DDS_cmd_ddstool --> github_com_SoundMatt_go_DDS

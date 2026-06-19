@@ -20,8 +20,6 @@ The API is a stable Go interface. Implementations are swappable without changing
 | `config` | JSON/YAML participant configuration with validation. | Nothing |
 | `monitor` | Real-time web dashboard. `/health`, `/api/topics`, `/api/diagnostics`, SSE discovery events. | Nothing |
 | `tsn` | TSN stream model, TAPRIO scheduling, stream health tracking. | Nothing |
-| `bridge/domain` | Domain bridge — forward samples between two Participant domains in-process. | Nothing |
-| `bridge/mqtt` | Bidirectional DDS ↔ MQTT bridge with QoS and topic mapping. | Nothing |
 | `bridge/wan` | WAN bridge — forward DDS samples between domains over TCP (length-framed JSON, 16 MiB cap); optional TLS + shared-token auth. | Nothing |
 | `admin` | HTTP admin API — `/admin/health`, `/admin/topics`, `/admin/discovery`, `/admin/publish`; bearer-token auth. | Nothing |
 | `services` | Managed service lifecycle — RecorderService, ReplayService (loop + seek), MonitorService. | Nothing |
@@ -452,19 +450,15 @@ _ = d2.FromJSON(payload)   // deserialize with schema validation
 compatible, err := xtypes.CheckCompatibility(&writerDesc, &readerDesc)
 ```
 
-## Domain Bridge
+## Cross-domain / cross-protocol routing
 
-Forward DDS samples between two in-process Participant domains (e.g. a simulator domain and an integration-test domain):
-
-```go
-import "github.com/SoundMatt/go-DDS/bridge/domain"
-
-b, err := domain.New(srcParticipant, dstParticipant, domain.Options{
-    Topics: []string{"vehicle/speed", "vehicle/status"},
-})
-b.Start()
-defer b.Close()
-```
+Same-protocol cross-domain forwarding and cross-protocol bridging are handled
+generically by the RELAY router rather than bespoke bridges: run two go-dds
+spokes and connect them with `relay crossbar` (or compose `dds.Adapt()` nodes
+with `relay/router`). The former `bridge/domain` and `bridge/mqtt` packages were
+removed in favour of this (see the [RELAY conformance](#relay-conformance)
+section); use `relay crossbar` with an `identity` route for DDS→DDS, or a
+re-tag converter for DDS↔other protocols.
 
 ## WAN Bridge
 
@@ -602,7 +596,6 @@ See [ROADMAP.md](ROADMAP.md) for per-milestone goals, sub-items, and success cri
 - [x] Multicast data delivery
 - [x] Shared-memory transport (`shmem/`)
 - [x] INFO_TS submessage — source timestamps in `Sample.Timestamp`
-- [x] MQTT bridge (`bridge/mqtt/`)
 - [x] Typed generics (`TypedPublisher[T]`, `TypedSubscriber[T]`, `JSONCodec[T]`)
 - [x] OpenTelemetry-compatible tracing
 
@@ -641,7 +634,6 @@ See [ROADMAP.md](ROADMAP.md) for per-milestone goals, sub-items, and success cri
 
 - [x] CertPlugin (X.509/ECDSA mutual auth), AccessPolicy (topic ACL), ReplayGuard (anti-replay) — `security/`
 - [x] XTypes dynamic data — TypeDescriptor, TypeIdentifier (content hash), DynamicData, TypeRegistry, CheckCompatibility — `xtypes/`
-- [x] Domain bridge — in-process participant-to-participant forwarding — `bridge/domain/`
 - [x] WAN bridge — TCP forwarding with length-framed JSON wire format, 16 MiB cap — `bridge/wan/`
 - [x] HTTP admin API — health, metrics, discovery, publish; bearer-token auth — `admin/`
 - [x] Managed service lifecycle — RecorderService, ReplayService (loop + seek + speed), MonitorService — `services/`

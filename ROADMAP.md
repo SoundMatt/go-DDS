@@ -156,7 +156,7 @@ API parity does not.
 
 ### Integration
 
-- MQTT bridge ✅
+- MQTT bridge — removed in v0.52.0; cross-protocol bridging is now handled by `relay crossbar` (RELAY router). For DDS↔MQTT, run a go-dds spoke and an MQTT spoke under the crossbar.
 - TSN stream model ✅
 - TCP/TLS transport
 - DTLS transport
@@ -531,7 +531,7 @@ Provide operational services around the middleware.
 
 ### Routing
 
-- Domain bridge ✅
+- Domain bridge — removed in v0.52.0; same-protocol cross-domain forwarding is now an `identity` route in `relay crossbar` / `relay/router` over two go-dds spokes.
 - WAN bridge ✅
 - Protocol bridge ✅ (`bridge/grpc`, `bridge/rest`)
 

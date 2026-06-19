@@ -48,6 +48,7 @@ package rtps
 //fusa:req REQ-SEOOC-001
 //fusa:req REQ-SEOOC-004
 //fusa:req REQ-SEOOC-005
+//fusa:req REQ-SEOOC-008
 //fusa:req REQ-SEOOC-010
 //fusa:req REQ-LLR-004
 //fusa:req REQ-LLR-005

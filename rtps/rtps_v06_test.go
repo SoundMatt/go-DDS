@@ -12,6 +12,7 @@ package rtps_test
 //fusa:test REQ-CONF-001
 //fusa:test REQ-CONF-002
 //fusa:test REQ-DISC-012
+//fusa:test REQ-SEOOC-008
 
 import (
 	"strings"

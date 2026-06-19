@@ -1,6 +1,6 @@
 # Safety Case: github.com/SoundMatt/go-DDS
 
-Generated: 2026-06-11T16:53:11Z  
+Generated: 2026-06-19T18:43:01Z  
 Standard: generic
 
 ## Top Claim
@@ -12,8 +12,8 @@ argued by demonstrating compliance with the safety development lifecycle.
 
 | ID | Description | Status | Detail |
 |---|---|---|---|
-| Sn1 | Coding standard and static analysis checks | ✅ present |  |
-| Sn2 | Requirements traceability matrix | ✅ present | 244 requirements |
+| Sn1 | Coding standard and static analysis checks | ✅ present | 747 findings (0 errors, 441 warnings) |
+| Sn2 | Requirements traceability matrix | ✅ present | 274 requirements |
 | Sn3 | Test evidence bundle | ✅ present | 832/875 tests passed |
 | Sn4 | Tool qualification report | ✅ present | 44/44 cases passed |
 | Sn5 | SBOM (SPDX 3.0.1) | ✅ present |  |

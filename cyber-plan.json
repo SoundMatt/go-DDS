@@ -4,7 +4,7 @@
   "tool": "go-FuSa",
   "toolVersion": "0.30.0",
   "language": "go",
-  "generatedAt": "2026-06-19T18:06:24.999555Z",
+  "generatedAt": "2026-06-19T18:43:02.772851Z",
   "projectRoot": "/Users/matt/Documents/Coding/SoundMatt/go-DDS",
   "standard": "iso26262",
   "asil": "ASIL-B",
@@ -657,36 +657,6 @@
     {
       "ruleId": "ANA002",
       "severity": "WARNING",
-      "message": "goroutine spawned inside range loop — potential unbounded goroutine creation",
-      "location": {
-        "file": "bridge/domain/domain.go",
-        "line": 102,
-        "column": 2,
-        "endLine": 108,
-        "endColumn": 3
-      },
-      "category": "safety",
-      "remediation": "use a semaphore, worker pool, or errgroup to bound concurrency",
-      "fingerprint": "sha256:3471196449c3c43821efd8eb919c320d3198c5796130b6fcc3519f5d910ff830"
-    },
-    {
-      "ruleId": "ANA002",
-      "severity": "WARNING",
-      "message": "goroutine spawned inside range loop — potential unbounded goroutine creation",
-      "location": {
-        "file": "bridge/mqtt/mqtt.go",
-        "line": 254,
-        "column": 2,
-        "endLine": 264,
-        "endColumn": 3
-      },
-      "category": "safety",
-      "remediation": "use a semaphore, worker pool, or errgroup to bound concurrency",
-      "fingerprint": "sha256:9efefbe2d613176d00593b6c36d0fc5dbc93a8653566686c1fd770815f0d8c7c"
-    },
-    {
-      "ruleId": "ANA002",
-      "severity": "WARNING",
       "message": "goroutine spawned inside for loop — potential unbounded goroutine creation",
       "location": {
         "file": "bridge/wan/wan.go",
@@ -1013,36 +983,6 @@
       "category": "safety",
       "remediation": "add %w to the format string to preserve the error chain for errors.Is/As",
       "fingerprint": "sha256:af2b84378f94ecbc21a8477e489f265f0301f001188c52a75744bcf5db2d0f58"
-    },
-    {
-      "ruleId": "ANA006",
-      "severity": "INFO",
-      "message": "fmt.Errorf format string \"mqtt bridge: client is not connected\" does not wrap error with %w",
-      "location": {
-        "file": "bridge/mqtt/mqtt.go",
-        "line": 219,
-        "column": 15,
-        "endLine": 219,
-        "endColumn": 65
-      },
-      "category": "safety",
-      "remediation": "add %w to the format string to preserve the error chain for errors.Is/As",
-      "fingerprint": "sha256:238161bfdd54f861591224743ee9ed6282966d421459dea8d9a2bd59c561722d"
-    },
-    {
-      "ruleId": "ANA006",
-      "severity": "INFO",
-      "message": "fmt.Errorf format string \"stub subscribe error\" does not wrap error with %w",
-      "location": {
-        "file": "bridge/mqtt/mqtt_test.go",
-        "line": 302,
-        "column": 40,
-        "endLine": 302,
-        "endColumn": 74
-      },
-      "category": "safety",
-      "remediation": "add %w to the format string to preserve the error chain for errors.Is/As",
-      "fingerprint": "sha256:bc21ac580f3c644e95ccd8530df61a70c074d2123e3172c36eff10a7c4937fc3"
     },
     {
       "ruleId": "ANA006",
@@ -1455,9 +1395,9 @@
       "message": "fmt.Errorf format string \"rtps: no free port pair for domain %d\" does not wrap error with %w",
       "location": {
         "file": "rtps/participant.go",
-        "line": 411,
+        "line": 412,
         "column": 15,
-        "endLine": 411,
+        "endLine": 412,
         "endColumn": 74
       },
       "category": "safety",
@@ -1560,9 +1500,9 @@
       "message": "fmt.Errorf format string \"safety: publisher panic: %v\" does not wrap error with %w",
       "location": {
         "file": "safety/queue.go",
-        "line": 113,
+        "line": 114,
         "column": 21,
-        "endLine": 113,
+        "endLine": 114,
         "endColumn": 65
       },
       "category": "safety",
@@ -1919,36 +1859,6 @@
       "severity": "WARNING",
       "message": "value \"ignoredRet\" from function call used before checking err — potential nil dereference",
       "location": {
-        "file": "bridge/domain/domain_test.go",
-        "line": 167,
-        "column": 2,
-        "endLine": 167,
-        "endColumn": 82
-      },
-      "category": "safety",
-      "remediation": "check err != nil before using the returned value",
-      "fingerprint": "sha256:aa1bae1b3c92e11d0f084521d7a5ed65c210f350a9b5f7203fe20f9a5d6aa6e5"
-    },
-    {
-      "ruleId": "ANA007",
-      "severity": "WARNING",
-      "message": "value \"ignoredRet\" from function call used before checking err — potential nil dereference",
-      "location": {
-        "file": "bridge/domain/domain_test.go",
-        "line": 180,
-        "column": 2,
-        "endLine": 180,
-        "endColumn": 82
-      },
-      "category": "safety",
-      "remediation": "check err != nil before using the returned value",
-      "fingerprint": "sha256:aa1bae1b3c92e11d0f084521d7a5ed65c210f350a9b5f7203fe20f9a5d6aa6e5"
-    },
-    {
-      "ruleId": "ANA007",
-      "severity": "WARNING",
-      "message": "value \"ignoredRet\" from function call used before checking err — potential nil dereference",
-      "location": {
         "file": "bridge/grpc/grpc_test.go",
         "line": 107,
         "column": 2,
@@ -2078,36 +1988,6 @@
       "category": "safety",
       "remediation": "check err != nil before using the returned value",
       "fingerprint": "sha256:2961b5eb04dd6a9c1a29cb67abc96476a449a15f4a40d8507bb32f1e9c964ecf"
-    },
-    {
-      "ruleId": "ANA007",
-      "severity": "WARNING",
-      "message": "value \"ignoredRet\" from function call used before checking err — potential nil dereference",
-      "location": {
-        "file": "bridge/mqtt/mqtt_test.go",
-        "line": 129,
-        "column": 2,
-        "endLine": 129,
-        "endColumn": 74
-      },
-      "category": "safety",
-      "remediation": "check err != nil before using the returned value",
-      "fingerprint": "sha256:61cada0b4628b5484b310058585c696a8df448956e609dfc71113f0970f5a939"
-    },
-    {
-      "ruleId": "ANA007",
-      "severity": "WARNING",
-      "message": "value \"ignoredRet\" from function call used before checking err — potential nil dereference",
-      "location": {
-        "file": "bridge/mqtt/mqtt_test.go",
-        "line": 317,
-        "column": 2,
-        "endLine": 317,
-        "endColumn": 74
-      },
-      "category": "safety",
-      "remediation": "check err != nil before using the returned value",
-      "fingerprint": "sha256:61cada0b4628b5484b310058585c696a8df448956e609dfc71113f0970f5a939"
     },
     {
       "ruleId": "ANA007",
@@ -3234,18 +3114,6 @@
     {
       "ruleId": "COMP001",
       "severity": "WARNING",
-      "message": "function NewBridge has cyclomatic complexity 12 (threshold 10) — DO-178C §6.3.4",
-      "location": {
-        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/mqtt/mqtt.go",
-        "line": 217
-      },
-      "category": "other",
-      "remediation": "refactor NewBridge to reduce branching; consider extracting helper functions",
-      "fingerprint": "sha256:967054437612615f7b472bdd0648b3ea4dcea92eee3919d61ce6ebaab0a511d9"
-    },
-    {
-      "ruleId": "COMP001",
-      "severity": "WARNING",
       "message": "function Bridge.handleSubscribe has cyclomatic complexity 11 (threshold 10) — DO-178C §6.3.4",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/rest/rest.go",
@@ -3513,7 +3381,7 @@
       "message": "function newParticipant has cyclomatic complexity 16 (threshold 10) — DO-178C §6.3.4",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
-        "line": 386
+        "line": 387
       },
       "category": "other",
       "remediation": "refactor newParticipant to reduce branching; consider extracting helper functions",
@@ -3525,7 +3393,7 @@
       "message": "function participant.NewPublisher has cyclomatic complexity 13 (threshold 10) — DO-178C §6.3.4",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
-        "line": 483
+        "line": 484
       },
       "category": "other",
       "remediation": "refactor participant.NewPublisher to reduce branching; consider extracting helper functions",
@@ -3537,7 +3405,7 @@
       "message": "function participant.NewSubscriber has cyclomatic complexity 24 (threshold 10) — DO-178C §6.3.4",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
-        "line": 535
+        "line": 536
       },
       "category": "other",
       "remediation": "refactor participant.NewSubscriber to reduce branching; consider extracting helper functions",
@@ -3549,7 +3417,7 @@
       "message": "function participant.handleDataPacket has cyclomatic complexity 17 (threshold 10) — DO-178C §6.3.4",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
-        "line": 777
+        "line": 778
       },
       "category": "other",
       "remediation": "refactor participant.handleDataPacket to reduce branching; consider extracting helper functions",
@@ -3561,7 +3429,7 @@
       "message": "function participant.handleAckNack has cyclomatic complexity 16 (threshold 10) — DO-178C §6.3.4",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
-        "line": 907
+        "line": 908
       },
       "category": "other",
       "remediation": "refactor participant.handleAckNack to reduce branching; consider extracting helper functions",
@@ -3573,7 +3441,7 @@
       "message": "function participant.dispatchToReaders has cyclomatic complexity 12 (threshold 10) — DO-178C §6.3.4",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
-        "line": 973
+        "line": 974
       },
       "category": "other",
       "remediation": "refactor participant.dispatchToReaders to reduce branching; consider extracting helper functions",
@@ -3585,7 +3453,7 @@
       "message": "function rtpsWriter.Write has cyclomatic complexity 27 (threshold 10) — DO-178C §6.3.4",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
-        "line": 1183
+        "line": 1184
       },
       "category": "other",
       "remediation": "refactor rtpsWriter.Write to reduce branching; consider extracting helper functions",
@@ -3686,30 +3554,6 @@
       "category": "other",
       "remediation": "refactor readQdiscKind to reduce branching; consider extracting helper functions",
       "fingerprint": "sha256:f7979886acf48eaf516948377bafc4d25d07f80bd5b10fdbf07084979629deab"
-    },
-    {
-      "ruleId": "COUP001",
-      "severity": "INFO",
-      "message": "exported var \"DefaultQoSMap\" creates data coupling — callers can read/write shared state directly",
-      "location": {
-        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/mqtt/mqtt.go",
-        "line": 107
-      },
-      "category": "other",
-      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling",
-      "fingerprint": "sha256:53b3a2c948c42268cdf2303f126fdd4e978c9657afcb000997552aa704c88711"
-    },
-    {
-      "ruleId": "COUP001",
-      "severity": "INFO",
-      "message": "exported var \"IdentityMap\" creates data coupling — callers can read/write shared state directly",
-      "location": {
-        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/mqtt/mqtt.go",
-        "line": 144
-      },
-      "category": "other",
-      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling",
-      "fingerprint": "sha256:733abed2fcf809dd713db78cd90e766ae21efa0defc71873509cc35bcd7ef5db"
     },
     {
       "ruleId": "COUP001",
@@ -4041,7 +3885,7 @@
       "message": "exported var \"ErrQueueFull\" creates data coupling — callers can read/write shared state directly",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/queue.go",
-        "line": 25
+        "line": 26
       },
       "category": "other",
       "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling",
@@ -4185,7 +4029,7 @@
       "message": "exported function \"WithDeadlineCallback\" accepts func/interface parameter — documents control coupling",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
-        "line": 196
+        "line": 197
       },
       "category": "other",
       "remediation": "document coupling in requirements traceability and verify all injected implementations",
@@ -4197,7 +4041,7 @@
       "message": "exported function \"WithLivelinessCallback\" accepts func/interface parameter — documents control coupling",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
-        "line": 209
+        "line": 210
       },
       "category": "other",
       "remediation": "document coupling in requirements traceability and verify all injected implementations",
@@ -5636,7 +5480,7 @@
       "message": "uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
-        "line": 523,
+        "line": 524,
         "column": 10
       },
       "category": "security",
@@ -8763,9 +8607,9 @@
       "message": "return value discarded with blank identifier in multi-value call",
       "location": {
         "file": "rtps/participant.go",
-        "line": 918,
+        "line": 919,
         "column": 2,
-        "endLine": 918,
+        "endLine": 919,
         "endColumn": 47
       },
       "category": "lint",
@@ -9827,25 +9671,10 @@
       "severity": "INFO",
       "message": "recover() call inventoried — verify it is inside a deferred function",
       "location": {
-        "file": "bridge/domain/domain.go",
-        "line": 123,
-        "column": 21,
-        "endLine": 123,
-        "endColumn": 30
-      },
-      "category": "lint",
-      "remediation": "ensure recover() is called only inside a function passed to defer",
-      "fingerprint": "sha256:47efdbdbae39619870943424b0fcc89d9654356a3331e215dc6f2806ac4f2c9d"
-    },
-    {
-      "ruleId": "LINT003",
-      "severity": "INFO",
-      "message": "recover() call inventoried — verify it is inside a deferred function",
-      "location": {
         "file": "safety/queue.go",
-        "line": 111,
+        "line": 112,
         "column": 11,
-        "endLine": 111,
+        "endLine": 112,
         "endColumn": 20
       },
       "category": "lint",
@@ -9948,9 +9777,9 @@
       "message": "import of \"reflect\" package inventoried",
       "location": {
         "file": "rtps/participant.go",
-        "line": 60,
+        "line": 61,
         "column": 2,
-        "endLine": 60,
+        "endLine": 61,
         "endColumn": 11
       },
       "category": "lint",
@@ -10031,36 +9860,6 @@
       "category": "lint",
       "remediation": "prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)",
       "fingerprint": "sha256:4c41802e1c95252ed70c49528a628abaa2ea89c5936c28ecd3f422a650a3f343"
-    },
-    {
-      "ruleId": "LINT006",
-      "severity": "INFO",
-      "message": "package-level var DefaultQoSMap introduces global mutable state",
-      "location": {
-        "file": "bridge/mqtt/mqtt.go",
-        "line": 107,
-        "column": 5,
-        "endLine": 107,
-        "endColumn": 49
-      },
-      "category": "lint",
-      "remediation": "prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)",
-      "fingerprint": "sha256:d233a7900c4780db89aa29a026df46db827a21354c6b54f32c9fd83c801098f3"
-    },
-    {
-      "ruleId": "LINT006",
-      "severity": "INFO",
-      "message": "package-level var IdentityMap introduces global mutable state",
-      "location": {
-        "file": "bridge/mqtt/mqtt.go",
-        "line": 144,
-        "column": 5,
-        "endLine": 144,
-        "endColumn": 47
-      },
-      "category": "lint",
-      "remediation": "prefer passing state explicitly; document justification for any global variable (registries, once-initialised singletons are acceptable)",
-      "fingerprint": "sha256:3471a9f11fdc19135221cc423cf3fd9af60ecc8230a6cf74211a82bffd04a2cb"
     },
     {
       "ruleId": "LINT006",
@@ -10773,9 +10572,9 @@
       "message": "package-level var ErrQueueFull introduces global mutable state",
       "location": {
         "file": "safety/queue.go",
-        "line": 25,
+        "line": 26,
         "column": 5,
-        "endLine": 25,
+        "endLine": 26,
         "endColumn": 52
       },
       "category": "lint",
@@ -10889,33 +10688,33 @@
     }
   ],
   "summary": {
-    "total": 761,
+    "total": 747,
     "errors": 0,
-    "warnings": 448,
-    "infos": 313
+    "warnings": 441,
+    "infos": 306
   },
   "summaryTable": {
     "by_category": [
       {
         "category": "ANA",
         "errors": 0,
-        "warnings": 154,
-        "infos": 60,
-        "total": 214
+        "warnings": 148,
+        "infos": 58,
+        "total": 206
       },
       {
         "category": "COMP",
         "errors": 0,
-        "warnings": 39,
+        "warnings": 38,
         "infos": 0,
-        "total": 39
+        "total": 38
       },
       {
         "category": "COUP",
         "errors": 0,
         "warnings": 0,
-        "infos": 46,
-        "total": 46
+        "infos": 44,
+        "total": 44
       },
       {
         "category": "CYBER",
@@ -10928,8 +10727,8 @@
         "category": "LINT",
         "errors": 0,
         "warnings": 252,
-        "infos": 69,
-        "total": 321
+        "infos": 66,
+        "total": 318
       }
     ],
     "by_rule": [
@@ -10946,17 +10745,17 @@
       {
         "ruleId": "ANA007",
         "severity": "WARNING",
-        "count": 88
+        "count": 84
       },
       {
         "ruleId": "LINT006",
         "severity": "INFO",
-        "count": 61
+        "count": 59
       },
       {
         "ruleId": "ANA006",
         "severity": "INFO",
-        "count": 60
+        "count": 58
       },
       {
         "ruleId": "ANA001",
@@ -10966,17 +10765,17 @@
       {
         "ruleId": "COMP001",
         "severity": "WARNING",
-        "count": 39
+        "count": 38
       },
       {
         "ruleId": "COUP001",
         "severity": "INFO",
-        "count": 35
+        "count": 33
       },
       {
         "ruleId": "ANA002",
         "severity": "WARNING",
-        "count": 15
+        "count": 13
       },
       {
         "ruleId": "COUP002",
@@ -11009,11 +10808,6 @@
         "count": 2
       },
       {
-        "ruleId": "LINT003",
-        "severity": "INFO",
-        "count": 2
-      },
-      {
         "ruleId": "LINT004",
         "severity": "WARNING",
         "count": 2
@@ -11022,8 +10816,13 @@
         "ruleId": "CYBER005",
         "severity": "WARNING",
         "count": 1
+      },
+      {
+        "ruleId": "LINT003",
+        "severity": "INFO",
+        "count": 1
       }
     ],
-    "file_count": 150
+    "file_count": 145
   }
 }

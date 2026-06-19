@@ -1185,7 +1185,7 @@
       "message": "uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
-        "line": 523,
+        "line": 524,
         "column": 10
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"

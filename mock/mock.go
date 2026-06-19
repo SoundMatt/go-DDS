@@ -266,7 +266,7 @@ func WithLivelinessCallback(fn func(dds.GUID, dds.LivelinessEvent)) Option {
 
 // IsolatedBroker creates the participant with its own independent broker that
 // is not shared with any other participant. Use this when testing components
-// that bridge between separate DDS domains (e.g. WAN or domain bridges), where
+// that bridge between separate DDS domains (e.g. the WAN bridge), where
 // publishing on one participant must not echo to subscribers on another.
 func IsolatedBroker() Option {
 	return func(p *participant) {

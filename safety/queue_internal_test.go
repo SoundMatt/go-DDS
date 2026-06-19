@@ -9,6 +9,7 @@
 package safety
 
 //fusa:test REQ-SAFETY-002
+//fusa:test REQ-SEOOC-009
 
 import (
 	"context"
