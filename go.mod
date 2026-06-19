@@ -3,7 +3,7 @@ module github.com/SoundMatt/go-DDS
 go 1.25.0
 
 require (
-	github.com/SoundMatt/RELAY v1.7.0
+	github.com/SoundMatt/RELAY v1.10.0
 	go.opentelemetry.io/otel v1.44.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.44.0
 	go.opentelemetry.io/otel/sdk v1.44.0

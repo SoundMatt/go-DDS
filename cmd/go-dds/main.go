@@ -40,7 +40,7 @@ import (
 )
 
 // toolVersion may be overridden at build time via -ldflags "-X main.toolVersion=x.y.z".
-var toolVersion = "0.48.0"
+var toolVersion = "0.50.0"
 
 const (
 	toolName    = "go-dds"
@@ -69,6 +69,10 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return runStatus(args[1:], stdout)
 	case "convert":
 		return runConvert(args[1:], stdin, stdout, stderr)
+	case "send":
+		return runSend(args[1:], stdin, stdout, stderr)
+	case "subscribe":
+		return runSubscribe(args[1:], stdout, stderr)
 	case "pub":
 		return runPub(args[1:], stdout, stderr)
 	case "sub":
@@ -98,8 +102,10 @@ SUBCOMMANDS
   capabilities  Print supported commands, transports, and interfaces (JSON)
   status        Print self-assessed health status
   convert       Convert a canonical dds.Sample (stdin JSON) to a relay.Message
-  pub           Publish a message to a DDS topic
-  sub           Subscribe to a DDS topic and print samples
+  send          Publish a message, or stream relay.Message NDJSON from stdin
+  subscribe     Subscribe to a topic and print relay.Message NDJSON / text
+  pub           (alias of send) Publish a message to a DDS topic
+  sub           (alias of subscribe) Subscribe and print samples
   discover      Print discovery and health diagnostics
   idl           Compile an IDL file to Go source code
   help          Show this message
@@ -189,7 +195,7 @@ func capabilitiesDoc() map[string]any {
 		"tool":                toolName,
 		"version":             toolVersion,
 		"spec_version":        dds.SpecVersion,
-		"commands":            []string{"version", "capabilities", "status", "convert", "pub", "sub", "discover", "idl"},
+		"commands":            []string{"version", "capabilities", "status", "convert", "send", "subscribe", "discover", "idl"},
 		"transports":          []string{"rtps", "shmem", "mock"},
 		"features":            []string{"reliable", "transient-local", "fragmentation", "security", "loaning", "shmem-zerocopy"},
 		"interfaces":          []string{"Node"},
@@ -315,6 +321,181 @@ func relayErrorName(err error) string {
 		return "ErrPayloadTooLarge"
 	default:
 		return "ErrInvalidMessage"
+	}
+}
+
+// ── send (RELAY §11.2) ──────────────────────────────────────────────────────
+
+// runSend implements `send [--topic T --payload P] [--format text|json]`.
+//
+// In single-message mode it publishes one payload to a topic. In streaming-sink
+// mode (`send --format json` with no --topic) it reads a stream of relay.Message
+// values as NDJSON on stdin and publishes each until EOF — the egress dual of
+// `subscribe --format json` and the sink used by `relay crossbar` (§11.2.1).
+func runSend(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+	fs := newFlagSet("send", stderr)
+	var common commonFlags
+	common.register(fs)
+	topic := fs.String("topic", "", "DDS topic name (single-message mode)")
+	payload := fs.String("payload", "", "payload string to publish (single-message mode)")
+	format := fs.String("format", "text", "output format: text or json (json with no -topic = NDJSON sink)")
+	if err := fs.Parse(args); err != nil {
+		return 1
+	}
+
+	p, err := common.newParticipant()
+	if err != nil {
+		fmt.Fprintf(stderr, "send: participant: %v\n", err)
+		return 1
+	}
+	defer func() { _ = p.Close() }()
+
+	// Streaming NDJSON sink: `send --format json` with no protocol flags.
+	if *format == "json" && *topic == "" {
+		return sendSink(p, stdin, stdout, stderr)
+	}
+
+	if *topic == "" {
+		fmt.Fprintln(stderr, "send: -topic is required (or use --format json for the NDJSON sink)")
+		return 1
+	}
+	pub, err := p.NewPublisher(*topic, dds.DefaultQoS)
+	if err != nil {
+		fmt.Fprintf(stderr, "send: publisher: %v\n", err)
+		return 1
+	}
+	defer func() { _ = pub.Close() }()
+	if err := pub.Write([]byte(*payload)); err != nil {
+		fmt.Fprintf(stderr, "send: write: %v\n", err)
+		return 1
+	}
+	fmt.Fprintf(stdout, "sent: topic=%s payload=%q\n", *topic, *payload)
+	return 0
+}
+
+// sendSink reads relay.Message NDJSON from r and publishes each message to its
+// topic (msg.ID), caching one publisher per topic, until EOF.
+func sendSink(p dds.Participant, r io.Reader, stdout, stderr io.Writer) int {
+	pubs := make(map[string]dds.Publisher)
+	defer func() {
+		for _, pub := range pubs {
+			_ = pub.Close()
+		}
+	}()
+
+	dec := json.NewDecoder(r)
+	count := 0
+	for {
+		var m relay.Message
+		if err := dec.Decode(&m); err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			fmt.Fprintf(stderr, "send: decode NDJSON: %v\n", err)
+			return 1
+		}
+		s, err := dds.FromMessage(m)
+		if err != nil {
+			fmt.Fprintf(stderr, "send: %s\n", relayErrorName(err))
+			return 1
+		}
+		if s.Topic == "" {
+			fmt.Fprintln(stderr, "send: message has empty topic (id); skipping")
+			continue
+		}
+		pub, ok := pubs[s.Topic]
+		if !ok {
+			pub, err = p.NewPublisher(s.Topic, dds.DefaultQoS)
+			if err != nil {
+				fmt.Fprintf(stderr, "send: publisher %q: %v\n", s.Topic, err)
+				return 1
+			}
+			pubs[s.Topic] = pub
+		}
+		if err := pub.Write(s.Payload); err != nil {
+			fmt.Fprintf(stderr, "send: write %q: %v\n", s.Topic, err)
+			return 1
+		}
+		count++
+	}
+	fmt.Fprintf(stdout, "sent %d message(s)\n", count)
+	return 0
+}
+
+// ── subscribe (RELAY §11.2) ─────────────────────────────────────────────────
+
+// runSubscribe implements `subscribe --topic T [--format text|json] [--count N]`.
+// With --format json it prints each received sample as one relay.Message NDJSON
+// line on stdout — the source consumed by `relay crossbar`. A --count of 0 (the
+// default) streams indefinitely until the process is stopped or --timeout fires.
+func runSubscribe(args []string, stdout, stderr io.Writer) int {
+	fs := newFlagSet("subscribe", stderr)
+	var common commonFlags
+	common.register(fs)
+	topic := fs.String("topic", "", "DDS topic name (required)")
+	format := fs.String("format", "text", "output format: text or json (NDJSON)")
+	count := fs.Int("count", 0, "stop after N samples (0 = stream until stopped)")
+	timeout := fs.Duration("timeout", 0, "exit after no sample for this duration (0 = never)")
+	if err := fs.Parse(args); err != nil {
+		return 1
+	}
+	if *topic == "" {
+		fmt.Fprintln(stderr, "subscribe: -topic is required")
+		return 1
+	}
+
+	p, err := common.newParticipant()
+	if err != nil {
+		fmt.Fprintf(stderr, "subscribe: participant: %v\n", err)
+		return 1
+	}
+	defer func() { _ = p.Close() }()
+
+	sub, err := p.NewSubscriber(*topic, dds.DefaultQoS)
+	if err != nil {
+		fmt.Fprintf(stderr, "subscribe: subscriber: %v\n", err)
+		return 1
+	}
+	defer func() { _ = sub.Close() }()
+
+	enc := json.NewEncoder(stdout) // compact, one JSON object per line = NDJSON
+
+	// A single timer, reset after each sample, bounds idle time when --timeout>0.
+	var timer *time.Timer
+	var idle <-chan time.Time
+	if *timeout > 0 {
+		timer = time.NewTimer(*timeout)
+		defer timer.Stop()
+		idle = timer.C
+	}
+
+	received := 0
+	for {
+		if *count > 0 && received >= *count {
+			return 0
+		}
+		select {
+		case s, ok := <-sub.C():
+			if !ok {
+				return 0
+			}
+			received++
+			if *format == "json" {
+				_ = enc.Encode(s.ToMessage()) // Encode appends '\n' → NDJSON
+			} else {
+				fmt.Fprintf(stdout, "[%d] topic=%s time=%s payload=%s\n",
+					received, s.Topic, s.Timestamp.Format(time.RFC3339Nano), s.Payload)
+			}
+			if timer != nil {
+				if !timer.Stop() {
+					<-timer.C
+				}
+				timer.Reset(*timeout)
+			}
+		case <-idle:
+			fmt.Fprintf(stderr, "subscribe: idle timeout after %v (received %d)\n", *timeout, received)
+			return 0
+		}
 	}
 }
 

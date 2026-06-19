@@ -1,7 +1,7 @@
 {
   "project": "go-DDS",
   "version": "1",
-  "generated": "2026-06-19T16:14:21.150702Z",
+  "generated": "2026-06-19T18:06:23.327087Z",
   "items": [
     {
       "name": "Software Development Plan",
@@ -15,28 +15,31 @@
       "name": "Software Verification Plan",
       "file": "SVP.md",
       "class": "Plan",
-      "present": false,
+      "sha256": "e031a322379425c6e8f8689ac75a3793658f7fde543336bb32b63f323157fcc4",
+      "present": true,
       "note": "DO-178C §11.3"
     },
     {
       "name": "Software Configuration Management Plan",
       "file": "SCMP.md",
       "class": "Plan",
-      "present": false,
+      "sha256": "ee033c56b11c37d2ebefedc1eaf8b9087169235457d0c9c1ff17b7d2321fee1f",
+      "present": true,
       "note": "DO-178C §11.4"
     },
     {
       "name": "Software Quality Assurance Plan",
       "file": "SQAP.md",
       "class": "Plan",
-      "present": false,
+      "sha256": "f530d369b853023af1bba97d14f8f917f9c0b659f6d12c522df8984455ea1acb",
+      "present": true,
       "note": "DO-178C §11.5"
     },
     {
       "name": "Requirements Manifest",
       "file": ".fusa-reqs.json",
       "class": "Development",
-      "sha256": "21362bb78591796fc6307988e6392e8322122446e1461d4cf2327199247adfee",
+      "sha256": "7d27cdafd8255ec21406050ac85a20879a0c19d2244cb5d7a881c4d66731e673",
       "present": true,
       "note": "DO-178C §11.9"
     },
@@ -187,7 +190,7 @@
       "name": "CI Workflow",
       "file": ".github/workflows/ci.yml",
       "class": "Configuration Management",
-      "sha256": "6a087eb2e2c6f7b0f877e63a8fc82aaa5c562078507f296cff19e0a9df7d943f",
+      "sha256": "d4eb011c8d66e5a13639557ee53d4c1cbb5f6dae6327be2e93a9b7aaf5fd71c7",
       "present": true,
       "note": "DO-178C §12.2 (tool env)"
     },

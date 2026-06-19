@@ -374,20 +374,27 @@ go run github.com/SoundMatt/go-DDS/cmd/ddstool discover -wait 5s
 ## RELAY conformance
 
 go-DDS conforms to the [RELAY](https://github.com/SoundMatt/RELAY) cross-protocol
-spec (currently **v1.7**). `dds.SpecVersion` tracks `relay.SpecVersion`
-automatically, and `Sample.ToMessage()` / `FromMessage()` map to the canonical
-`relay.Message` envelope (spec §15.7).
+spec (currently **v1.10**). `dds.SpecVersion` tracks `relay.SpecVersion`
+automatically; the RELAY adapter module (`adapt.go`, spec §13.7) maps
+`Sample.ToMessage()` / `FromMessage()` to the canonical `relay.Message` envelope
+(spec §15.7).
 
 The `cmd/go-dds` binary is a RELAY-conformant CLI. It emits the §12 `version`,
-`capabilities`, and `status` documents, and implements the §11.2 `convert`
-interop driver — read a canonical `dds.Sample` as JSON on stdin, get the
-`relay.Message` on stdout:
+`capabilities`, and `status` documents, implements the §11.2 `convert` interop
+driver, and acts as a `relay crossbar` spoke via streaming `subscribe`/`send`:
 
 ```bash
 go build -o go-dds ./cmd/go-dds
 ./go-dds capabilities                       # §12.2 capabilities document (JSON)
+
+# convert: canonical dds.Sample (stdin) → relay.Message (stdout)
 echo '{"topic":"rt/chatter","payload":"aGVsbG8=","timestamp":"0001-01-01T00:00:00Z","seq":7,"writer_guid":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]}' \
-  | ./go-dds convert --protocol DDS         # → relay.Message (JSON)
+  | ./go-dds convert --protocol DDS
+
+# crossbar spoke: subscribe writes relay.Message NDJSON; send reads it back
+./go-dds subscribe --topic rt/chatter --format json   # NDJSON source (stdout)
+echo '{"protocol":2,"id":"rt/chatter","payload":"aGVsbG8="}' \
+  | ./go-dds send --format json                        # NDJSON sink (stdin)
 ```
 
 CI enforces conformance with the upstream `relay` checker (`relay conform
