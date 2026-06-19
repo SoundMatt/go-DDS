@@ -1,7 +1,7 @@
 {
   "project": "go-DDS",
   "version": "1",
-  "generated": "2026-06-19T18:06:23.327087Z",
+  "generated": "2026-06-19T18:43:01.182308Z",
   "items": [
     {
       "name": "Software Development Plan",
@@ -39,7 +39,7 @@
       "name": "Requirements Manifest",
       "file": ".fusa-reqs.json",
       "class": "Development",
-      "sha256": "7d27cdafd8255ec21406050ac85a20879a0c19d2244cb5d7a881c4d66731e673",
+      "sha256": "e295c9e64d34ecf14aa314e4aa10237fa12cfe7fb3f60cccd8459299cce5101c",
       "present": true,
       "note": "DO-178C §11.9"
     },
@@ -86,7 +86,7 @@
       "name": "Vulnerability Report",
       "file": "vuln.json",
       "class": "Verification",
-      "sha256": "7518dda8b85a07114deed47a4e4e18eb76874d8e77656ac885b1daac005fc311",
+      "sha256": "4532a2ca37392fefc80efbb691067793d5dffdf4f07b4718055aa6461f99d864",
       "present": true,
       "note": "ISO 21434 / OSV"
     },
@@ -94,7 +94,7 @@
       "name": "FMEA Table",
       "file": "fmea.json",
       "class": "Verification",
-      "sha256": "71d18bee2dcbd76e884b601c2b9e07a364c42975e68b8d326a2a9b2e600c1dc5",
+      "sha256": "0ded94c7ff9405e87e3d22d0a52c32bfdf023ca95010318f2902a9d3788f6d7e",
       "present": true,
       "note": "DO-178C §11.9 (safety analysis)"
     },
@@ -118,7 +118,7 @@
       "name": "Boundary Diagram",
       "file": "boundary.mermaid",
       "class": "Verification",
-      "sha256": "8bd9019badad47cd5a8967d9c25dcf66363ed290db2cbeafed831303c33ba1f4",
+      "sha256": "1f4b2406cc4aca0f8908e97675b2180ac99816a107ebf6c926b92548e5bac14d",
       "present": true,
       "note": "DO-178C §11.10 (architecture)"
     },
@@ -126,7 +126,7 @@
       "name": "Cyber Report",
       "file": "cyber-report.json",
       "class": "Verification",
-      "sha256": "7bd63b5a25691e3d8da706f8d4c00372ccb6303155006bac4c20392775dac164",
+      "sha256": "3a7308d9dd1d266b8b1dbca1a9da1fcf6685362c58474106c65ae5183a9d5d4d",
       "present": true,
       "note": "ISO 21434 §11"
     },
@@ -134,7 +134,7 @@
       "name": "Tool Qualification Report",
       "file": "qualify-report.json",
       "class": "Quality Assurance",
-      "sha256": "30d6123ec612c82232aa0ca54fe84b004107677777baccb60f13989bd64b0752",
+      "sha256": "b3198835365861ef9b246632866834b8c97666075b059fd50687c9cad7e1f4da",
       "present": true,
       "note": "DO-178C §12 / DO-330"
     },
@@ -142,7 +142,7 @@
       "name": "Safety Case",
       "file": "safety-case.json",
       "class": "Accomplishment Summary",
-      "sha256": "a02b72a7244a59a36ed91306ea1daafed68b616f290d9c7f7df7b0efc2f2c551",
+      "sha256": "a94cb037e3c76bf9e83e480e03bd88486a580b5d56418b089893c202708b6073",
       "present": true,
       "note": "DO-178C §11.20 (SAS input)"
     },
@@ -150,7 +150,7 @@
       "name": "Software Accomplishment Summary",
       "file": "sas.md",
       "class": "Accomplishment Summary",
-      "sha256": "e5f36d2d36abff71086c63b72cd475a4780679c09d7c3b144f965ae328f0b483",
+      "sha256": "908f952993545f7557573b098802fbc979ed34404b18aa01bfbbd41c9bb9eb39",
       "present": true,
       "note": "DO-178C §11.20"
     },
@@ -190,7 +190,7 @@
       "name": "CI Workflow",
       "file": ".github/workflows/ci.yml",
       "class": "Configuration Management",
-      "sha256": "d4eb011c8d66e5a13639557ee53d4c1cbb5f6dae6327be2e93a9b7aaf5fd71c7",
+      "sha256": "af3a1d19b17ececd48dfc379b5950098127c9ba70f39d60af8df76de24090948",
       "present": true,
       "note": "DO-178C §12.2 (tool env)"
     },

@@ -1153,22 +1153,6 @@
       "asil": "ASIL-A"
     },
     {
-      "id": "REQ-BRIDGE-001",
-      "title": "Domain bridge sample forwarding",
-      "text": "The domain bridge shall forward every sample received from a bridged topic on src to the matching topic on dst.",
-      "standard": "iso26262",
-      "level": "ASIL-A",
-      "asil": "ASIL-A"
-    },
-    {
-      "id": "REQ-BRIDGE-002",
-      "title": "Domain bridge stop on close",
-      "text": "After Bridge.Close() is called, no further samples shall be forwarded. All forwarding goroutines shall have exited by the time Close() returns.",
-      "standard": "iso26262",
-      "level": "ASIL-A",
-      "asil": "ASIL-A"
-    },
-    {
       "id": "REQ-BRIDGE-003",
       "title": "REST bridge empty topic rejection",
       "text": "REST bridge POST /topics/{t} and GET /topics/{t} with an empty or missing topic name shall return HTTP 400.",
@@ -1655,38 +1639,6 @@
       "standard": "iso26262",
       "level": "ASIL-B",
       "asil": "ASIL-B"
-    },
-    {
-      "id": "REQ-MQTT-001",
-      "title": "MQTT bridge bidirectional forwarding",
-      "text": "MQTT bridge shall forward DDS samples to the MQTT broker (fromDDS) and MQTT messages to DDS (fromMQTT), independently and concurrently.",
-      "standard": "iso26262",
-      "level": "ASIL-A",
-      "asil": "ASIL-A"
-    },
-    {
-      "id": "REQ-MQTT-002",
-      "title": "MQTT QoS mapping",
-      "text": "DDS BestEffort reliability shall map to MQTT QoS 0; DDS Reliable reliability shall map to MQTT QoS 1.",
-      "standard": "iso26262",
-      "level": "ASIL-A",
-      "asil": "ASIL-A"
-    },
-    {
-      "id": "REQ-MQTT-003",
-      "title": "MQTT publisher on demand",
-      "text": "MQTT bridge shall create DDS publishers on demand when the first message for a topic arrives from the MQTT broker.",
-      "standard": "iso26262",
-      "level": "ASIL-A",
-      "asil": "ASIL-A"
-    },
-    {
-      "id": "REQ-MQTT-004",
-      "title": "MQTT default topic subscription",
-      "text": "When no MQTT topics are configured, the MQTT bridge shall subscribe to \"#\" (all topics) on the MQTT broker.",
-      "standard": "iso26262",
-      "level": "ASIL-A",
-      "asil": "ASIL-A"
     },
     {
       "id": "REQ-SEOOC-001",

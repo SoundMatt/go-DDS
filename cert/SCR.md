@@ -51,9 +51,7 @@
 | Package | Coverage | Status |
 |---|---|---|
 | `admin` | 96.1% | PASS |
-| `bridge/domain` | 95.0% | PASS |
 | `bridge/grpc` | 75.6% | PASS |
-| `bridge/mqtt` | 97.5% | PASS |
 | `bridge/rest` | 78.8% | PASS |
 | `bridge/wan` | 92.8% | PASS |
 | `config` | 100.0% | PASS |

@@ -61,9 +61,7 @@ have the right to contribute under the existing license.
 | `.` | `dds` package — core interfaces (`Participant`, `Publisher`, `Subscriber`, `QoS`, `WaitSet`, `LoaningPublisher`) |
 | `admin/` | Participant administration — statistics, topic enumeration, remote control |
 | `auto/` | `NewParticipant` factory that auto-selects transport (shmem → RTPS fallback) |
-| `bridge/domain/` | Cross-domain bridge for routing samples between DDS domains |
 | `bridge/grpc/` | gRPC bridge — expose a DDS topic over a gRPC stream for WAN connectivity |
-| `bridge/mqtt/` | MQTT bridge — forward DDS samples to/from an MQTT broker |
 | `cdr/` | OMG Common Data Representation (CDR) encoder/decoder |
 | `cmd/ddstool/` | CLI: IDL compilation, topic echo, latency probe, pub/sub |
 | `cmd/latmon/` | Latency monitor daemon |

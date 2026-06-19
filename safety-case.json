@@ -1,6 +1,6 @@
 {
   "format": "go-FuSa Safety Case v1",
-  "generatedAt": "2026-06-11T16:53:11.254778Z",
+  "generatedAt": "2026-06-19T18:43:01.174436Z",
   "module": "github.com/SoundMatt/go-DDS",
   "standard": "generic",
   "evidence": [
@@ -8,14 +8,15 @@
       "id": "check",
       "description": "Coding standard and static analysis checks",
       "file": "check-report.json",
-      "status": "present"
+      "status": "present",
+      "detail": "747 findings (0 errors, 441 warnings)"
     },
     {
       "id": "trace",
       "description": "Requirements traceability matrix",
       "file": ".fusa-reqs.json",
       "status": "present",
-      "detail": "244 requirements"
+      "detail": "274 requirements"
     },
     {
       "id": "verify",

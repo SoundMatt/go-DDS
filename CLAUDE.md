@@ -20,7 +20,7 @@ Pure-Go interface (`dds` package) with swappable backends and transports:
 | `interop/`      | Wire-compat tests vs CycloneDDS (`-tags interop`)             |
 | `monitor/`      | Real-time web monitor (SSE, no external deps)                 |
 | `tsn/`          | TSN stream model (TAPRIO, SO_TXTIME, AFDX Virtual Links)      |
-| `bridge/`       | Protocol bridges: gRPC, REST, MQTT, WAN, domain, grpc         |
+| `bridge/`       | Gateways to non-RELAY ecosystems: gRPC, REST, WAN (domain/mqtt removed — use `relay crossbar`) |
 | `rpc/`          | Request-reply (Requester/Replier) over DDS topics             |
 | `otel/`         | OpenTelemetry tracing adapter                                 |
 | `idl/`          | IDL parser + Go code generator (structs, enums, @key)         |

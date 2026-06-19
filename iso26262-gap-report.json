@@ -4,7 +4,7 @@
   "tool": "go-FuSa",
   "toolVersion": "0.30.0",
   "language": "go",
-  "generatedAt": "2026-06-19T18:06:37.582982Z",
+  "generatedAt": "2026-06-19T18:43:05.489157Z",
   "projectRoot": "go-DDS",
   "standard": "ISO 26262 ASIL-B",
   "objectives": [

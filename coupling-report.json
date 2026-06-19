@@ -1,27 +1,7 @@
 {
-  "generatedAt": "2026-06-19T18:06:23.370353Z",
+  "generatedAt": "2026-06-19T18:43:01.214405Z",
   "projectRoot": "/Users/matt/Documents/Coding/SoundMatt/go-DDS",
   "dataCoupling": [
-    {
-      "ruleId": "COUP001",
-      "severity": "INFO",
-      "message": "exported var \"DefaultQoSMap\" creates data coupling — callers can read/write shared state directly",
-      "location": {
-        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/mqtt/mqtt.go",
-        "line": 107
-      },
-      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
-    },
-    {
-      "ruleId": "COUP001",
-      "severity": "INFO",
-      "message": "exported var \"IdentityMap\" creates data coupling — callers can read/write shared state directly",
-      "location": {
-        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/bridge/mqtt/mqtt.go",
-        "line": 144
-      },
-      "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
-    },
     {
       "ruleId": "COUP001",
       "severity": "INFO",
@@ -298,7 +278,7 @@
       "message": "exported var \"ErrQueueFull\" creates data coupling — callers can read/write shared state directly",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/safety/queue.go",
-        "line": 25
+        "line": 26
       },
       "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling"
     },
@@ -420,7 +400,7 @@
       "message": "exported function \"WithDeadlineCallback\" accepts func/interface parameter — documents control coupling",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
-        "line": 196
+        "line": 197
       },
       "remediation": "document coupling in requirements traceability and verify all injected implementations"
     },
@@ -430,7 +410,7 @@
       "message": "exported function \"WithLivelinessCallback\" accepts func/interface parameter — documents control coupling",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
-        "line": 209
+        "line": 210
       },
       "remediation": "document coupling in requirements traceability and verify all injected implementations"
     },

@@ -11,6 +11,7 @@ package safety
 //fusa:req REQ-SAFETY-012
 //fusa:req REQ-SAFETY-014
 //fusa:req REQ-SEOOC-007
+//fusa:req REQ-SEOOC-009
 
 import (
 	"errors"
