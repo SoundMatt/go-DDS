@@ -134,6 +134,34 @@ jobs:
       - name: go test (rtps wire + intra-process, -race)
         run: go test -race -count=1 -short -v ./rtps/... ./security/...
 
+  # ── RELAY conformance gate (spec §12 CLI documents + §11.2 interop) ────────
+  # Validates the go-dds CLI against the JSON Schemas embedded in the pinned
+  # relay binary (authoritative, unlike hand-rolled JSON asserts), then checks
+  # the convert driver is behaviourally interchangeable with the RELAY
+  # reference for every DDS golden vector. Pin the relay version so spec bumps
+  # are an explicit upgrade, not a surprise CI break (tracks RELAY v1.7).
+  relay-conform:
+    name: RELAY conform
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.25"
+
+      - name: Install relay CLI
+        run: go install github.com/SoundMatt/RELAY/cmd/relay@v1.7.0
+
+      - name: Build go-dds CLI
+        run: go build -o /tmp/go-dds ./cmd/go-dds
+
+      - name: relay conform --strict
+        run: relay conform --strict /tmp/go-dds
+
+      - name: relay interop --protocol DDS --strict
+        run: relay interop --protocol DDS --strict /tmp/go-dds
+
   # ── CycloneDDS CGo build (Linux only — requires system library) ───────────
   # libcyclonedds-dev is not reliably available in the Ubuntu 22.04 apt repo.
   # The install step probes availability and sets an output flag; all

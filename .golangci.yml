@@ -36,6 +36,13 @@ linters:
       - path: examples/
         text: "Close.*is not checked"
         linters: [errcheck]
+      # cmd/go-dds is a CLI: writes to stdout/stderr via the fmt.Fprint* family
+      # are unactionable (the process is already emitting its final output), so
+      # their error returns need not be checked. Other errcheck findings in the
+      # package (e.g. os.WriteFile) still surface.
+      - path: cmd/go-dds/
+        text: "fmt\\.Fprint"
+        linters: [errcheck]
       # noctx: pre-existing uses of net.Listen/net.Dial/exec.Command without a
       # context in admin, bridge/wan, monitor, and testutil. These are
       # functionally correct; threading context through the listener/dialer API
