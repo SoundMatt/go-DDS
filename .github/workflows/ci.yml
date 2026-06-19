@@ -301,13 +301,16 @@ jobs:
       - name: gocyclo complexity hotspots (informational)
         run: go run github.com/fzipp/gocyclo/cmd/gocyclo@v0.6.0 -over 15 -top 20 ./... || true
 
-  # ── go-FuSa safety checks ─────────────────────────────────────────────────
-  # Pinned to v0.30.0; exits 1 on any ERROR-level finding.
-  # Warnings are reported but do not fail the job (no --strict).
-  # To upgrade: install the new version locally, run 'gofusa check ./...',
-  # fix all findings, then bump the @version pin below.
+  # ── go-FuSa full lifecycle (RELAY §20 continuous conformance) ──────────────
+  # Pinned to v0.30.0. RELAY spec §20 makes conformance continuously proven:
+  # this job runs the FULL go-FuSa lifecycle and gates on every stage —
+  # static analysis (check), 100% requirement traceability (traced AND tested),
+  # cybersecurity analysis (cyber), dependency vulnerability scan (vuln), and
+  # the tool-qualification suite (qualify). Any ERROR / finding / failure fails
+  # the build. To upgrade: install the new version locally, run the same
+  # commands, fix all findings, then bump the @version pin below.
   gofusa:
-    name: go-FuSa safety check (v0.30.0)
+    name: go-FuSa lifecycle §20 (v0.30.0)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -337,22 +340,33 @@ jobs:
             fi
           done
           [ "$missing" -eq 0 ] || exit 1
-      - name: Verify traceability (all requirements traced and tested)
+      - name: Verify traceability (100% traced AND tested — §20.1.2)
         run: |
-          gofusa trace --format json -output /tmp/trace.json 2>/dev/null || true
+          gofusa trace --format json -output /tmp/trace.json
           python3 - << 'PYEOF'
           import json, sys
-          try:
-              d = json.load(open('/tmp/trace.json'))
-              cov = d.get('coverage', {})
-              total   = cov.get('totalRequirements', 0)
-              traced  = cov.get('tracedRequirements', 0)
-              tested  = cov.get('testedRequirements', 0)
-              if total > 0 and tested < total:
-                  print(f"::warning::Untested requirements: {total - tested}")
-              if total > 0 and traced < total:
-                  print(f"::error::Untraced requirements: {total - traced}")
-                  sys.exit(1)
-          except Exception:
-              pass  # gofusa trace JSON may not be available; gofusa check covers this
+          d = json.load(open('/tmp/trace.json'))
+          cov = d.get('coverage', {})
+          total  = cov.get('totalRequirements', 0)
+          traced = cov.get('tracedRequirements', 0)
+          tested = cov.get('testedRequirements', 0)
+          if total == 0:
+              print("::error::No requirements found in .fusa-reqs.json")
+              sys.exit(1)
+          fail = False
+          if traced < total:
+              print(f"::error::Untraced requirements: {total - traced} of {total}")
+              fail = True
+          if tested < total:
+              print(f"::error::Untested requirements: {total - tested} of {total}")
+              fail = True
+          if fail:
+              sys.exit(1)
+          print(f"Traceability: {total}/{total} requirements traced and tested")
           PYEOF
+      - name: Cybersecurity analysis (0 errors — §20.1.2)
+        run: gofusa cyber
+      - name: Dependency vulnerability scan (§20.1.2)
+        run: gofusa vuln
+      - name: Tool qualification suite (§20.1.2)
+        run: gofusa qualify
