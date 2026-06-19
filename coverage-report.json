@@ -1,97 +1,61 @@
 {
-  "generated": "2026-06-19T16:14:32.474497Z",
+  "generated": "2026-06-19T18:06:37.575148Z",
   "dal": "DAL-B",
-  "stmtTotal": 5931,
-  "stmtCovered": 5023,
-  "stmtPct": 84.69060866632945,
+  "stmtTotal": 6044,
+  "stmtCovered": 5129,
+  "stmtPct": 84.86101919258769,
   "stmtRequired": true,
-  "decisionPct": 83.76210235131397,
+  "decisionPct": 84.1933731667572,
   "decisionNote": "approximated from block coverage — use '-covermode=atomic' for best accuracy",
   "decisionRequired": true,
   "mcdcRequired": false,
   "files": [
     {
-      "file": "github.com/SoundMatt/go-DDS/xtypes/xtypes.go",
-      "stmts": 98,
-      "covered": 97,
-      "stmtPct": 98.9795918367347
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/tsn/taprio_stub.go",
-      "stmts": 2,
-      "covered": 2,
-      "stmtPct": 100
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/rtps/transport.go",
-      "stmts": 87,
-      "covered": 64,
-      "stmtPct": 73.5632183908046
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/security/security.go",
-      "stmts": 44,
-      "covered": 40,
-      "stmtPct": 90.9090909090909
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/rtps/cdr.go",
-      "stmts": 61,
-      "covered": 60,
-      "stmtPct": 98.36065573770492
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/record/fault.go",
-      "stmts": 65,
-      "covered": 65,
-      "stmtPct": 100
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/shmem/shmem.go",
-      "stmts": 293,
-      "covered": 285,
-      "stmtPct": 97.26962457337883
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/monitor/monitor.go",
-      "stmts": 201,
-      "covered": 194,
-      "stmtPct": 96.51741293532338
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/cdr/cdr.go",
-      "stmts": 127,
-      "covered": 126,
-      "stmtPct": 99.21259842519684
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/cmd/ddstool/main.go",
-      "stmts": 154,
+      "file": "github.com/SoundMatt/go-DDS/examples/otel-tracing/main.go",
+      "stmts": 32,
       "covered": 0,
       "stmtPct": 0
     },
     {
-      "file": "github.com/SoundMatt/go-DDS/services/services.go",
-      "stmts": 68,
-      "covered": 68,
+      "file": "github.com/SoundMatt/go-DDS/examples/sensor-pipeline/main.go",
+      "stmts": 39,
+      "covered": 0,
+      "stmtPct": 0
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/bridge/domain/domain.go",
+      "stmts": 40,
+      "covered": 40,
       "stmtPct": 100
     },
     {
-      "file": "github.com/SoundMatt/go-DDS/rtps/fragment.go",
-      "stmts": 87,
-      "covered": 87,
+      "file": "github.com/SoundMatt/go-DDS/otel/tracer.go",
+      "stmts": 8,
+      "covered": 8,
+      "stmtPct": 100
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/safety/metrics.go",
+      "stmts": 9,
+      "covered": 9,
+      "stmtPct": 100
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/rtps/participant.go",
+      "stmts": 624,
+      "covered": 559,
+      "stmtPct": 89.58333333333333
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/shmem/loan.go",
+      "stmts": 21,
+      "covered": 21,
       "stmtPct": 100
     },
     {
       "file": "github.com/SoundMatt/go-DDS/rtps/loan.go",
       "stmts": 21,
       "covered": 21,
-      "stmtPct": 100
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/rtps/log.go",
-      "stmts": 6,
-      "covered": 6,
       "stmtPct": 100
     },
     {
@@ -107,40 +71,52 @@
       "stmtPct": 100
     },
     {
-      "file": "github.com/SoundMatt/go-DDS/testutil/testutil.go",
-      "stmts": 58,
-      "covered": 57,
-      "stmtPct": 98.27586206896552
+      "file": "github.com/SoundMatt/go-DDS/security/security.go",
+      "stmts": 44,
+      "covered": 40,
+      "stmtPct": 90.9090909090909
     },
     {
-      "file": "github.com/SoundMatt/go-DDS/examples/command-response/main.go",
-      "stmts": 33,
+      "file": "github.com/SoundMatt/go-DDS/pool/pool.go",
+      "stmts": 40,
+      "covered": 39,
+      "stmtPct": 97.5
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/tsn/diagnostics.go",
+      "stmts": 66,
+      "covered": 66,
+      "stmtPct": 100
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/record/fault.go",
+      "stmts": 65,
+      "covered": 65,
+      "stmtPct": 100
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/shmem/shmem.go",
+      "stmts": 293,
+      "covered": 285,
+      "stmtPct": 97.26962457337883
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/examples/secure-topic/main.go",
+      "stmts": 88,
       "covered": 0,
       "stmtPct": 0
     },
     {
-      "file": "github.com/SoundMatt/go-DDS/rtps/wildcard.go",
-      "stmts": 10,
-      "covered": 10,
+      "file": "github.com/SoundMatt/go-DDS/security/replay.go",
+      "stmts": 20,
+      "covered": 20,
       "stmtPct": 100
     },
     {
-      "file": "github.com/SoundMatt/go-DDS/safety/metrics.go",
-      "stmts": 9,
-      "covered": 9,
-      "stmtPct": 100
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/rtps/guid.go",
-      "stmts": 14,
-      "covered": 13,
-      "stmtPct": 92.85714285714286
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/security/discovery.go",
-      "stmts": 40,
-      "covered": 40,
-      "stmtPct": 100
+      "file": "github.com/SoundMatt/go-DDS/idl/parser.go",
+      "stmts": 275,
+      "covered": 273,
+      "stmtPct": 99.27272727272727
     },
     {
       "file": "github.com/SoundMatt/go-DDS/cmd/latmon/main.go",
@@ -149,8 +125,182 @@
       "stmtPct": 0
     },
     {
+      "file": "github.com/SoundMatt/go-DDS/examples/loaned-samples/main.go",
+      "stmts": 26,
+      "covered": 0,
+      "stmtPct": 0
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/security/cert.go",
+      "stmts": 72,
+      "covered": 71,
+      "stmtPct": 98.61111111111111
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/tsn/taprio_stub.go",
+      "stmts": 2,
+      "covered": 2,
+      "stmtPct": 100
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/tsn/tsn.go",
+      "stmts": 51,
+      "covered": 51,
+      "stmtPct": 100
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/rtps/persist.go",
+      "stmts": 35,
+      "covered": 35,
+      "stmtPct": 100
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/xtypes/xtypes.go",
+      "stmts": 98,
+      "covered": 97,
+      "stmtPct": 98.9795918367347
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/cmd/ddstool/main.go",
+      "stmts": 154,
+      "covered": 0,
+      "stmtPct": 0
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/rtps/sedp.go",
+      "stmts": 137,
+      "covered": 121,
+      "stmtPct": 88.32116788321167
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/rtps/transport.go",
+      "stmts": 87,
+      "covered": 64,
+      "stmtPct": 73.5632183908046
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/xtypes/topic_registry.go",
+      "stmts": 25,
+      "covered": 25,
+      "stmtPct": 100
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/cyclone/stub.go",
+      "stmts": 2,
+      "covered": 2,
+      "stmtPct": 100
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/services/services.go",
+      "stmts": 68,
+      "covered": 68,
+      "stmtPct": 100
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/adapt.go",
+      "stmts": 70,
+      "covered": 63,
+      "stmtPct": 90
+    },
+    {
       "file": "github.com/SoundMatt/go-DDS/examples/quickstart/pub/main.go",
       "stmts": 24,
+      "covered": 0,
+      "stmtPct": 0
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/rtps/guid.go",
+      "stmts": 14,
+      "covered": 13,
+      "stmtPct": 92.85714285714286
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/examples/command-response/main.go",
+      "stmts": 33,
+      "covered": 0,
+      "stmtPct": 0
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/security/discovery.go",
+      "stmts": 40,
+      "covered": 40,
+      "stmtPct": 100
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/mock/mock.go",
+      "stmts": 228,
+      "covered": 223,
+      "stmtPct": 97.80701754385964
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/bridge/grpc/grpc.go",
+      "stmts": 162,
+      "covered": 160,
+      "stmtPct": 98.76543209876543
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/monitor/monitor.go",
+      "stmts": 201,
+      "covered": 194,
+      "stmtPct": 96.51741293532338
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/rtps/log.go",
+      "stmts": 6,
+      "covered": 6,
+      "stmtPct": 100
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/dds.go",
+      "stmts": 112,
+      "covered": 109,
+      "stmtPct": 97.32142857142857
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/safety/rate.go",
+      "stmts": 29,
+      "covered": 29,
+      "stmtPct": 100
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/record/record.go",
+      "stmts": 71,
+      "covered": 71,
+      "stmtPct": 100
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/examples/taprio-stream/main.go",
+      "stmts": 49,
+      "covered": 0,
+      "stmtPct": 0
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/cmd/go-dds/main.go",
+      "stmts": 345,
+      "covered": 301,
+      "stmtPct": 87.2463768115942
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/tsn/taprio.go",
+      "stmts": 25,
+      "covered": 25,
+      "stmtPct": 100
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/config/config.go",
+      "stmts": 37,
+      "covered": 37,
+      "stmtPct": 100
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/idl/gen.go",
+      "stmts": 288,
+      "covered": 280,
+      "stmtPct": 97.22222222222223
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/cmd/monitor/main.go",
+      "stmts": 29,
       "covered": 0,
       "stmtPct": 0
     },
@@ -161,166 +311,34 @@
       "stmtPct": 0
     },
     {
-      "file": "github.com/SoundMatt/go-DDS/examples/sensor-pipeline/main.go",
-      "stmts": 39,
-      "covered": 0,
-      "stmtPct": 0
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/cyclone/stub.go",
-      "stmts": 2,
-      "covered": 2,
-      "stmtPct": 100
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/security/replay.go",
-      "stmts": 20,
-      "covered": 20,
-      "stmtPct": 100
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/bridge/wan/wan.go",
-      "stmts": 160,
-      "covered": 150,
-      "stmtPct": 93.75
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/pool/pool.go",
-      "stmts": 40,
-      "covered": 39,
-      "stmtPct": 97.5
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/mock/mock.go",
-      "stmts": 228,
-      "covered": 223,
-      "stmtPct": 97.80701754385964
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/rpc/rpc.go",
-      "stmts": 108,
-      "covered": 107,
-      "stmtPct": 99.07407407407408
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/tsn/taprio.go",
-      "stmts": 25,
-      "covered": 25,
-      "stmtPct": 100
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/examples/secure-topic/main.go",
-      "stmts": 88,
-      "covered": 0,
-      "stmtPct": 0
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/safety/e2e.go",
-      "stmts": 90,
-      "covered": 90,
-      "stmtPct": 100
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/shmem/loan.go",
-      "stmts": 21,
-      "covered": 21,
-      "stmtPct": 100
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/bridge/grpc/config.go",
-      "stmts": 20,
-      "covered": 20,
-      "stmtPct": 100
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/config/config.go",
-      "stmts": 37,
-      "covered": 37,
-      "stmtPct": 100
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/security/cert.go",
-      "stmts": 72,
-      "covered": 71,
-      "stmtPct": 98.61111111111111
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/examples/loaned-samples/main.go",
-      "stmts": 26,
-      "covered": 0,
-      "stmtPct": 0
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/mock/loan.go",
-      "stmts": 21,
-      "covered": 21,
-      "stmtPct": 100
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/rtps/persist.go",
-      "stmts": 35,
-      "covered": 35,
-      "stmtPct": 100
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/record/record.go",
-      "stmts": 71,
-      "covered": 71,
-      "stmtPct": 100
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/idl/parser.go",
-      "stmts": 275,
-      "covered": 273,
-      "stmtPct": 99.27272727272727
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/safety/queue.go",
-      "stmts": 25,
-      "covered": 25,
-      "stmtPct": 100
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/rtps/spdp.go",
-      "stmts": 163,
-      "covered": 151,
-      "stmtPct": 92.63803680981596
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/dds.go",
-      "stmts": 182,
-      "covered": 160,
-      "stmtPct": 87.91208791208791
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/otel/tracer.go",
-      "stmts": 8,
-      "covered": 8,
-      "stmtPct": 100
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/rtps/participant.go",
-      "stmts": 624,
-      "covered": 559,
-      "stmtPct": 89.58333333333333
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/examples/taprio-stream/main.go",
-      "stmts": 49,
-      "covered": 0,
-      "stmtPct": 0
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/idl/gen.go",
-      "stmts": 288,
-      "covered": 280,
-      "stmtPct": 97.22222222222223
-    },
-    {
       "file": "github.com/SoundMatt/go-DDS/security/access.go",
       "stmts": 12,
       "covered": 12,
       "stmtPct": 100
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/rtps/traffic_other.go",
+      "stmts": 6,
+      "covered": 6,
+      "stmtPct": 100
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/rtps/wildcard.go",
+      "stmts": 10,
+      "covered": 10,
+      "stmtPct": 100
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/bridge/mqtt/mqtt.go",
+      "stmts": 81,
+      "covered": 81,
+      "stmtPct": 100
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/cdr/cdr.go",
+      "stmts": 127,
+      "covered": 126,
+      "stmtPct": 99.21259842519684
     },
     {
       "file": "github.com/SoundMatt/go-DDS/bridge/rest/rest.go",
@@ -329,51 +347,21 @@
       "stmtPct": 98.23008849557522
     },
     {
-      "file": "github.com/SoundMatt/go-DDS/rtps/message.go",
-      "stmts": 143,
-      "covered": 141,
-      "stmtPct": 98.6013986013986
+      "file": "github.com/SoundMatt/go-DDS/bridge/wan/wan.go",
+      "stmts": 160,
+      "covered": 154,
+      "stmtPct": 96.25
     },
     {
-      "file": "github.com/SoundMatt/go-DDS/bridge/grpc/grpc.go",
-      "stmts": 162,
-      "covered": 160,
-      "stmtPct": 98.76543209876543
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/tsn/diagnostics.go",
-      "stmts": 66,
-      "covered": 66,
-      "stmtPct": 100
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/safety/rate.go",
-      "stmts": 29,
-      "covered": 29,
+      "file": "github.com/SoundMatt/go-DDS/mock/loan.go",
+      "stmts": 21,
+      "covered": 21,
       "stmtPct": 100
     },
     {
       "file": "github.com/SoundMatt/go-DDS/rtps/locator.go",
       "stmts": 34,
       "covered": 34,
-      "stmtPct": 100
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/cmd/monitor/main.go",
-      "stmts": 29,
-      "covered": 0,
-      "stmtPct": 0
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/examples/auto-transport/main.go",
-      "stmts": 27,
-      "covered": 0,
-      "stmtPct": 0
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/idl/roundtrip/schema_gen.go",
-      "stmts": 75,
-      "covered": 75,
       "stmtPct": 100
     },
     {
@@ -389,16 +377,64 @@
       "stmtPct": 100
     },
     {
-      "file": "github.com/SoundMatt/go-DDS/bridge/mqtt/mqtt.go",
-      "stmts": 81,
-      "covered": 81,
+      "file": "github.com/SoundMatt/go-DDS/idl/roundtrip/schema_gen.go",
+      "stmts": 75,
+      "covered": 75,
       "stmtPct": 100
     },
     {
-      "file": "github.com/SoundMatt/go-DDS/cmd/go-dds/main.go",
-      "stmts": 232,
-      "covered": 210,
-      "stmtPct": 90.51724137931035
+      "file": "github.com/SoundMatt/go-DDS/rpc/rpc.go",
+      "stmts": 108,
+      "covered": 106,
+      "stmtPct": 98.14814814814815
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/safety/queue.go",
+      "stmts": 25,
+      "covered": 25,
+      "stmtPct": 100
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/rtps/cdr.go",
+      "stmts": 61,
+      "covered": 60,
+      "stmtPct": 98.36065573770492
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/rtps/fragment.go",
+      "stmts": 87,
+      "covered": 87,
+      "stmtPct": 100
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/rtps/spdp.go",
+      "stmts": 163,
+      "covered": 151,
+      "stmtPct": 92.63803680981596
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/rtps/message.go",
+      "stmts": 143,
+      "covered": 141,
+      "stmtPct": 98.6013986013986
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/bridge/grpc/config.go",
+      "stmts": 20,
+      "covered": 20,
+      "stmtPct": 100
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/examples/auto-transport/main.go",
+      "stmts": 27,
+      "covered": 0,
+      "stmtPct": 0
+    },
+    {
+      "file": "github.com/SoundMatt/go-DDS/safety/e2e.go",
+      "stmts": 90,
+      "covered": 90,
+      "stmtPct": 100
     },
     {
       "file": "github.com/SoundMatt/go-DDS/rtps/reliable.go",
@@ -407,79 +443,50 @@
       "stmtPct": 97.26027397260275
     },
     {
-      "file": "github.com/SoundMatt/go-DDS/examples/otel-tracing/main.go",
-      "stmts": 32,
-      "covered": 0,
-      "stmtPct": 0
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/bridge/domain/domain.go",
-      "stmts": 40,
-      "covered": 40,
-      "stmtPct": 100
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/tsn/tsn.go",
-      "stmts": 51,
-      "covered": 51,
-      "stmtPct": 100
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/rtps/sedp.go",
-      "stmts": 137,
-      "covered": 121,
-      "stmtPct": 88.32116788321167
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/rtps/traffic_other.go",
-      "stmts": 6,
-      "covered": 6,
-      "stmtPct": 100
-    },
-    {
-      "file": "github.com/SoundMatt/go-DDS/xtypes/topic_registry.go",
-      "stmts": 25,
-      "covered": 25,
-      "stmtPct": 100
+      "file": "github.com/SoundMatt/go-DDS/testutil/testutil.go",
+      "stmts": 58,
+      "covered": 57,
+      "stmtPct": 98.27586206896552
     }
   ],
   "gaps": [
-    "github.com/SoundMatt/go-DDS/xtypes/xtypes.go: 99.0% statement coverage",
-    "github.com/SoundMatt/go-DDS/rtps/transport.go: 73.6% statement coverage",
-    "github.com/SoundMatt/go-DDS/security/security.go: 90.9% statement coverage",
-    "github.com/SoundMatt/go-DDS/rtps/cdr.go: 98.4% statement coverage",
-    "github.com/SoundMatt/go-DDS/shmem/shmem.go: 97.3% statement coverage",
-    "github.com/SoundMatt/go-DDS/monitor/monitor.go: 96.5% statement coverage",
-    "github.com/SoundMatt/go-DDS/cdr/cdr.go: 99.2% statement coverage",
-    "github.com/SoundMatt/go-DDS/cmd/ddstool/main.go: 0.0% statement coverage",
-    "github.com/SoundMatt/go-DDS/testutil/testutil.go: 98.3% statement coverage",
-    "github.com/SoundMatt/go-DDS/examples/command-response/main.go: 0.0% statement coverage",
-    "github.com/SoundMatt/go-DDS/rtps/guid.go: 92.9% statement coverage",
-    "github.com/SoundMatt/go-DDS/cmd/latmon/main.go: 0.0% statement coverage",
-    "github.com/SoundMatt/go-DDS/examples/quickstart/pub/main.go: 0.0% statement coverage",
-    "github.com/SoundMatt/go-DDS/examples/quickstart/sub/main.go: 0.0% statement coverage",
-    "github.com/SoundMatt/go-DDS/examples/sensor-pipeline/main.go: 0.0% statement coverage",
-    "github.com/SoundMatt/go-DDS/bridge/wan/wan.go: 93.8% statement coverage",
-    "github.com/SoundMatt/go-DDS/pool/pool.go: 97.5% statement coverage",
-    "github.com/SoundMatt/go-DDS/mock/mock.go: 97.8% statement coverage",
-    "github.com/SoundMatt/go-DDS/rpc/rpc.go: 99.1% statement coverage",
-    "github.com/SoundMatt/go-DDS/examples/secure-topic/main.go: 0.0% statement coverage",
-    "github.com/SoundMatt/go-DDS/security/cert.go: 98.6% statement coverage",
-    "github.com/SoundMatt/go-DDS/examples/loaned-samples/main.go: 0.0% statement coverage",
-    "github.com/SoundMatt/go-DDS/idl/parser.go: 99.3% statement coverage",
-    "github.com/SoundMatt/go-DDS/rtps/spdp.go: 92.6% statement coverage",
-    "github.com/SoundMatt/go-DDS/dds.go: 87.9% statement coverage",
-    "github.com/SoundMatt/go-DDS/rtps/participant.go: 89.6% statement coverage",
-    "github.com/SoundMatt/go-DDS/examples/taprio-stream/main.go: 0.0% statement coverage",
-    "github.com/SoundMatt/go-DDS/idl/gen.go: 97.2% statement coverage",
-    "github.com/SoundMatt/go-DDS/bridge/rest/rest.go: 98.2% statement coverage",
-    "github.com/SoundMatt/go-DDS/rtps/message.go: 98.6% statement coverage",
-    "github.com/SoundMatt/go-DDS/bridge/grpc/grpc.go: 98.8% statement coverage",
-    "github.com/SoundMatt/go-DDS/cmd/monitor/main.go: 0.0% statement coverage",
-    "github.com/SoundMatt/go-DDS/examples/auto-transport/main.go: 0.0% statement coverage",
-    "github.com/SoundMatt/go-DDS/cmd/go-dds/main.go: 90.5% statement coverage",
-    "github.com/SoundMatt/go-DDS/rtps/reliable.go: 97.3% statement coverage",
     "github.com/SoundMatt/go-DDS/examples/otel-tracing/main.go: 0.0% statement coverage",
-    "github.com/SoundMatt/go-DDS/rtps/sedp.go: 88.3% statement coverage"
+    "github.com/SoundMatt/go-DDS/examples/sensor-pipeline/main.go: 0.0% statement coverage",
+    "github.com/SoundMatt/go-DDS/rtps/participant.go: 89.6% statement coverage",
+    "github.com/SoundMatt/go-DDS/security/security.go: 90.9% statement coverage",
+    "github.com/SoundMatt/go-DDS/pool/pool.go: 97.5% statement coverage",
+    "github.com/SoundMatt/go-DDS/shmem/shmem.go: 97.3% statement coverage",
+    "github.com/SoundMatt/go-DDS/examples/secure-topic/main.go: 0.0% statement coverage",
+    "github.com/SoundMatt/go-DDS/idl/parser.go: 99.3% statement coverage",
+    "github.com/SoundMatt/go-DDS/cmd/latmon/main.go: 0.0% statement coverage",
+    "github.com/SoundMatt/go-DDS/examples/loaned-samples/main.go: 0.0% statement coverage",
+    "github.com/SoundMatt/go-DDS/security/cert.go: 98.6% statement coverage",
+    "github.com/SoundMatt/go-DDS/xtypes/xtypes.go: 99.0% statement coverage",
+    "github.com/SoundMatt/go-DDS/cmd/ddstool/main.go: 0.0% statement coverage",
+    "github.com/SoundMatt/go-DDS/rtps/sedp.go: 88.3% statement coverage",
+    "github.com/SoundMatt/go-DDS/rtps/transport.go: 73.6% statement coverage",
+    "github.com/SoundMatt/go-DDS/adapt.go: 90.0% statement coverage",
+    "github.com/SoundMatt/go-DDS/examples/quickstart/pub/main.go: 0.0% statement coverage",
+    "github.com/SoundMatt/go-DDS/rtps/guid.go: 92.9% statement coverage",
+    "github.com/SoundMatt/go-DDS/examples/command-response/main.go: 0.0% statement coverage",
+    "github.com/SoundMatt/go-DDS/mock/mock.go: 97.8% statement coverage",
+    "github.com/SoundMatt/go-DDS/bridge/grpc/grpc.go: 98.8% statement coverage",
+    "github.com/SoundMatt/go-DDS/monitor/monitor.go: 96.5% statement coverage",
+    "github.com/SoundMatt/go-DDS/dds.go: 97.3% statement coverage",
+    "github.com/SoundMatt/go-DDS/examples/taprio-stream/main.go: 0.0% statement coverage",
+    "github.com/SoundMatt/go-DDS/cmd/go-dds/main.go: 87.2% statement coverage",
+    "github.com/SoundMatt/go-DDS/idl/gen.go: 97.2% statement coverage",
+    "github.com/SoundMatt/go-DDS/cmd/monitor/main.go: 0.0% statement coverage",
+    "github.com/SoundMatt/go-DDS/examples/quickstart/sub/main.go: 0.0% statement coverage",
+    "github.com/SoundMatt/go-DDS/cdr/cdr.go: 99.2% statement coverage",
+    "github.com/SoundMatt/go-DDS/bridge/rest/rest.go: 98.2% statement coverage",
+    "github.com/SoundMatt/go-DDS/bridge/wan/wan.go: 96.2% statement coverage",
+    "github.com/SoundMatt/go-DDS/rpc/rpc.go: 98.1% statement coverage",
+    "github.com/SoundMatt/go-DDS/rtps/cdr.go: 98.4% statement coverage",
+    "github.com/SoundMatt/go-DDS/rtps/spdp.go: 92.6% statement coverage",
+    "github.com/SoundMatt/go-DDS/rtps/message.go: 98.6% statement coverage",
+    "github.com/SoundMatt/go-DDS/examples/auto-transport/main.go: 0.0% statement coverage",
+    "github.com/SoundMatt/go-DDS/rtps/reliable.go: 97.3% statement coverage",
+    "github.com/SoundMatt/go-DDS/testutil/testutil.go: 98.3% statement coverage"
   ]
 }

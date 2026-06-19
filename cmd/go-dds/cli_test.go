@@ -227,6 +227,109 @@ func TestIDL_WriteError(t *testing.T) {
 	}
 }
 
+func TestSend_SingleMessage(t *testing.T) {
+	code, out, errOut := runCLI("", "send", "-mock", "-topic", "rt/send", "-payload", "hi")
+	if code != 0 {
+		t.Fatalf("exit = %d, stderr=%s", code, errOut)
+	}
+	if !strings.Contains(out, "sent: topic=rt/send") {
+		t.Errorf("unexpected send output: %s", out)
+	}
+}
+
+func TestSend_MissingTopic(t *testing.T) {
+	// text mode without a topic is an error.
+	if code, _, _ := runCLI("", "send", "-mock"); code != 1 {
+		t.Errorf("send without topic: exit = %d, want 1", code)
+	}
+}
+
+func TestSend_NDJSONSink(t *testing.T) {
+	// Two relay.Message NDJSON lines on stdin → published, "sent 2".
+	in := `{"protocol":2,"id":"rt/sink","payload":"aGk=","seq":1}
+{"protocol":2,"id":"rt/sink","payload":"Ynll","seq":2}
+`
+	code, out, errOut := runCLI(in, "send", "--format", "json", "-mock")
+	if code != 0 {
+		t.Fatalf("exit = %d, stderr=%s", code, errOut)
+	}
+	if !strings.Contains(out, "sent 2 message(s)") {
+		t.Errorf("unexpected sink output: %s", out)
+	}
+}
+
+func TestSend_NDJSONSink_BadLine(t *testing.T) {
+	code, _, errOut := runCLI("{not json", "send", "--format", "json", "-mock")
+	if code != 1 {
+		t.Fatalf("exit = %d, want 1", code)
+	}
+	if !strings.Contains(errOut, "decode NDJSON") {
+		t.Errorf("stderr %q missing decode error", errOut)
+	}
+}
+
+func TestSubscribe_JSON_NDJSON(t *testing.T) {
+	const topic = "rt/subjson"
+	p, err := mock.New(dds.Domain(0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pub, err := p.NewPublisher(topic, dds.DefaultQoS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stop := make(chan struct{})
+	go func() {
+		tk := time.NewTicker(10 * time.Millisecond)
+		defer tk.Stop()
+		for {
+			select {
+			case <-stop:
+				return
+			case <-tk.C:
+				_ = pub.Write([]byte("hello"))
+			}
+		}
+	}()
+
+	code, out, errOut := runCLI("", "subscribe", "-mock", "-topic", topic, "-format", "json", "-count", "1", "-timeout", "3s")
+	close(stop)
+	_ = pub.Close()
+	_ = p.Close()
+
+	if code != 0 {
+		t.Fatalf("exit = %d, stderr=%s", code, errOut)
+	}
+	// The emitted line must be a valid relay.Message (NDJSON).
+	line := strings.TrimSpace(out)
+	var m relay.Message
+	if err := json.Unmarshal([]byte(line), &m); err != nil {
+		t.Fatalf("subscribe output is not relay.Message NDJSON: %v\nout=%q", err, out)
+	}
+	if m.ID != topic || string(m.Payload) != "hello" {
+		t.Errorf("got id=%q payload=%q, want %q/hello", m.ID, m.Payload, topic)
+	}
+}
+
+func TestSubscribe_Errors(t *testing.T) {
+	if code, _, _ := runCLI("", "subscribe", "-mock"); code != 1 {
+		t.Errorf("missing topic: exit = %d, want 1", code)
+	}
+	if code, _, _ := runCLI("", "subscribe", "--nope"); code != 1 {
+		t.Errorf("bad flag: exit = %d, want 1", code)
+	}
+}
+
+func TestSubscribe_Timeout(t *testing.T) {
+	code, _, errOut := runCLI("", "subscribe", "-mock", "-topic", "rt/idle2", "-timeout", "50ms")
+	if code != 0 {
+		t.Fatalf("exit = %d", code)
+	}
+	if !strings.Contains(errOut, "idle timeout") {
+		t.Errorf("expected idle timeout, got %s", errOut)
+	}
+}
+
 func TestPub_Mock(t *testing.T) {
 	code, out, errOut := runCLI("", "pub", "-mock", "-topic", "cli/pub", "-payload", "hi", "-count", "2")
 	if code != 0 {

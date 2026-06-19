@@ -4,7 +4,7 @@
   "tool": "go-FuSa",
   "toolVersion": "0.30.0",
   "language": "go",
-  "generatedAt": "2026-06-19T16:17:51.550798Z",
+  "generatedAt": "2026-06-19T18:06:24.999555Z",
   "projectRoot": "/Users/matt/Documents/Coding/SoundMatt/go-DDS",
   "standard": "iso26262",
   "asil": "ASIL-B",
@@ -315,9 +315,9 @@
       "message": "goroutine launched without visible termination signal",
       "location": {
         "file": "bridge/wan/wan_internal_test.go",
-        "line": 115,
+        "line": 162,
         "column": 2,
-        "endLine": 118,
+        "endLine": 165,
         "endColumn": 5
       },
       "category": "safety",
@@ -885,9 +885,9 @@
       "message": "time.Sleep inside goroutine cannot be interrupted",
       "location": {
         "file": "bridge/wan/wan_internal_test.go",
-        "line": 116,
+        "line": 163,
         "column": 3,
-        "endLine": 116,
+        "endLine": 163,
         "endColumn": 36
       },
       "category": "safety",
@@ -1305,9 +1305,9 @@
       "message": "fmt.Errorf format string \"dds: ProtoCodec[%T]: type assertion failed\" does not wrap error with %w",
       "location": {
         "file": "dds.go",
-        "line": 854,
+        "line": 828,
         "column": 16,
-        "endLine": 854,
+        "endLine": 828,
         "endColumn": 78
       },
       "category": "safety",
@@ -1455,9 +1455,9 @@
       "message": "fmt.Errorf format string \"rtps: no free port pair for domain %d\" does not wrap error with %w",
       "location": {
         "file": "rtps/participant.go",
-        "line": 409,
+        "line": 411,
         "column": 15,
-        "endLine": 409,
+        "endLine": 411,
         "endColumn": 74
       },
       "category": "safety",
@@ -3282,7 +3282,7 @@
     {
       "ruleId": "COMP001",
       "severity": "WARNING",
-      "message": "function run has cyclomatic complexity 11 (threshold 10) — DO-178C §6.3.4",
+      "message": "function run has cyclomatic complexity 13 (threshold 10) — DO-178C §6.3.4",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/cmd/go-dds/main.go",
         "line": 58
@@ -3294,10 +3294,22 @@
     {
       "ruleId": "COMP001",
       "severity": "WARNING",
+      "message": "function runSubscribe has cyclomatic complexity 16 (threshold 10) — DO-178C §6.3.4",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/cmd/go-dds/main.go",
+        "line": 431
+      },
+      "category": "other",
+      "remediation": "refactor runSubscribe to reduce branching; consider extracting helper functions",
+      "fingerprint": "sha256:1a14012cb918082a157d9d43992a9baf5a40a772957a38ba2ac4d39c4f6a7b57"
+    },
+    {
+      "ruleId": "COMP001",
+      "severity": "WARNING",
       "message": "function runPub has cyclomatic complexity 14 (threshold 10) — DO-178C §6.3.4",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/cmd/go-dds/main.go",
-        "line": 323
+        "line": 504
       },
       "category": "other",
       "remediation": "refactor runPub to reduce branching; consider extracting helper functions",
@@ -3309,7 +3321,7 @@
       "message": "function runSub has cyclomatic complexity 13 (threshold 10) — DO-178C §6.3.4",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/cmd/go-dds/main.go",
-        "line": 373
+        "line": 554
       },
       "category": "other",
       "remediation": "refactor runSub to reduce branching; consider extracting helper functions",
@@ -3489,7 +3501,7 @@
       "message": "function fragmentAssembler.receive has cyclomatic complexity 16 (threshold 10) — DO-178C §6.3.4",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 129
+        "line": 130
       },
       "category": "other",
       "remediation": "refactor fragmentAssembler.receive to reduce branching; consider extracting helper functions",
@@ -3501,7 +3513,7 @@
       "message": "function newParticipant has cyclomatic complexity 16 (threshold 10) — DO-178C §6.3.4",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
-        "line": 384
+        "line": 386
       },
       "category": "other",
       "remediation": "refactor newParticipant to reduce branching; consider extracting helper functions",
@@ -3513,7 +3525,7 @@
       "message": "function participant.NewPublisher has cyclomatic complexity 13 (threshold 10) — DO-178C §6.3.4",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
-        "line": 481
+        "line": 483
       },
       "category": "other",
       "remediation": "refactor participant.NewPublisher to reduce branching; consider extracting helper functions",
@@ -3525,7 +3537,7 @@
       "message": "function participant.NewSubscriber has cyclomatic complexity 24 (threshold 10) — DO-178C §6.3.4",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
-        "line": 533
+        "line": 535
       },
       "category": "other",
       "remediation": "refactor participant.NewSubscriber to reduce branching; consider extracting helper functions",
@@ -3537,7 +3549,7 @@
       "message": "function participant.handleDataPacket has cyclomatic complexity 17 (threshold 10) — DO-178C §6.3.4",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
-        "line": 775
+        "line": 777
       },
       "category": "other",
       "remediation": "refactor participant.handleDataPacket to reduce branching; consider extracting helper functions",
@@ -3549,7 +3561,7 @@
       "message": "function participant.handleAckNack has cyclomatic complexity 16 (threshold 10) — DO-178C §6.3.4",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
-        "line": 905
+        "line": 907
       },
       "category": "other",
       "remediation": "refactor participant.handleAckNack to reduce branching; consider extracting helper functions",
@@ -3561,7 +3573,7 @@
       "message": "function participant.dispatchToReaders has cyclomatic complexity 12 (threshold 10) — DO-178C §6.3.4",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
-        "line": 971
+        "line": 973
       },
       "category": "other",
       "remediation": "refactor participant.dispatchToReaders to reduce branching; consider extracting helper functions",
@@ -3573,7 +3585,7 @@
       "message": "function rtpsWriter.Write has cyclomatic complexity 27 (threshold 10) — DO-178C §6.3.4",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
-        "line": 1181
+        "line": 1183
       },
       "category": "other",
       "remediation": "refactor rtpsWriter.Write to reduce branching; consider extracting helper functions",
@@ -3729,7 +3741,7 @@
       "message": "exported var \"ErrClosed\" creates data coupling — callers can read/write shared state directly",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
-        "line": 50
+        "line": 49
       },
       "category": "other",
       "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling",
@@ -3741,7 +3753,7 @@
       "message": "exported var \"ErrNotConnected\" creates data coupling — callers can read/write shared state directly",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
-        "line": 54
+        "line": 53
       },
       "category": "other",
       "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling",
@@ -3753,7 +3765,7 @@
       "message": "exported var \"ErrTimeout\" creates data coupling — callers can read/write shared state directly",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
-        "line": 58
+        "line": 57
       },
       "category": "other",
       "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling",
@@ -3765,7 +3777,7 @@
       "message": "exported var \"ErrPayloadTooLarge\" creates data coupling — callers can read/write shared state directly",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
-        "line": 62
+        "line": 61
       },
       "category": "other",
       "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling",
@@ -3777,7 +3789,7 @@
       "message": "exported var \"ErrDomainOutOfRange\" creates data coupling — callers can read/write shared state directly",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
-        "line": 67
+        "line": 66
       },
       "category": "other",
       "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling",
@@ -3789,7 +3801,7 @@
       "message": "exported var \"ErrTopicEmpty\" creates data coupling — callers can read/write shared state directly",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
-        "line": 70
+        "line": 69
       },
       "category": "other",
       "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling",
@@ -3801,7 +3813,7 @@
       "message": "exported var \"ErrQoSMismatch\" creates data coupling — callers can read/write shared state directly",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
-        "line": 73
+        "line": 72
       },
       "category": "other",
       "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling",
@@ -3813,7 +3825,7 @@
       "message": "exported var \"ErrAccessDenied\" creates data coupling — callers can read/write shared state directly",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
-        "line": 78
+        "line": 77
       },
       "category": "other",
       "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling",
@@ -3825,7 +3837,7 @@
       "message": "exported var \"ErrDeadlineMissed\" creates data coupling — callers can read/write shared state directly",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
-        "line": 82
+        "line": 81
       },
       "category": "other",
       "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling",
@@ -3837,7 +3849,7 @@
       "message": "exported var \"ErrSampleRejected\" creates data coupling — callers can read/write shared state directly",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
-        "line": 86
+        "line": 85
       },
       "category": "other",
       "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling",
@@ -3849,7 +3861,7 @@
       "message": "exported var \"ErrResourceLimits\" creates data coupling — callers can read/write shared state directly",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
-        "line": 89
+        "line": 88
       },
       "category": "other",
       "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling",
@@ -3861,7 +3873,7 @@
       "message": "exported var \"ErrLoanBuffer\" creates data coupling — callers can read/write shared state directly",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
-        "line": 94
+        "line": 93
       },
       "category": "other",
       "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling",
@@ -3873,7 +3885,7 @@
       "message": "exported var \"DefaultQoS\" creates data coupling — callers can read/write shared state directly",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
-        "line": 180
+        "line": 179
       },
       "category": "other",
       "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling",
@@ -3885,7 +3897,7 @@
       "message": "exported var \"ReliableQoS\" creates data coupling — callers can read/write shared state directly",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
-        "line": 188
+        "line": 187
       },
       "category": "other",
       "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling",
@@ -3897,7 +3909,7 @@
       "message": "exported var \"NoopTracer\" creates data coupling — callers can read/write shared state directly",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
-        "line": 320
+        "line": 294
       },
       "category": "other",
       "remediation": "replace exported vars with accessor functions or encapsulate in a struct to control coupling",
@@ -4125,7 +4137,7 @@
       "message": "exported function \"WithFilter\" accepts func/interface parameter — documents control coupling",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
-        "line": 345
+        "line": 319
       },
       "category": "other",
       "remediation": "document coupling in requirements traceability and verify all injected implementations",
@@ -4137,7 +4149,7 @@
       "message": "exported function \"WithDeadlineMissed\" accepts func/interface parameter — documents control coupling",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/dds.go",
-        "line": 364
+        "line": 338
       },
       "category": "other",
       "remediation": "document coupling in requirements traceability and verify all injected implementations",
@@ -4173,7 +4185,7 @@
       "message": "exported function \"WithDeadlineCallback\" accepts func/interface parameter — documents control coupling",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
-        "line": 194
+        "line": 196
       },
       "category": "other",
       "remediation": "document coupling in requirements traceability and verify all injected implementations",
@@ -4185,7 +4197,7 @@
       "message": "exported function \"WithLivelinessCallback\" accepts func/interface parameter — documents control coupling",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
-        "line": 207
+        "line": 209
       },
       "category": "other",
       "remediation": "document coupling in requirements traceability and verify all injected implementations",
@@ -4272,7 +4284,7 @@
       "message": "import of math/rand — use crypto/rand for security-sensitive random values",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/wire_test.go",
-        "line": 37,
+        "line": 38,
         "column": 2
       },
       "category": "security",
@@ -4675,7 +4687,7 @@
       "message": "byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/relay_test.go",
-        "line": 42,
+        "line": 43,
         "column": 13
       },
       "category": "security",
@@ -4688,7 +4700,7 @@
       "message": "byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/relay_test.go",
-        "line": 70,
+        "line": 71,
         "column": 13
       },
       "category": "security",
@@ -4779,7 +4791,7 @@
       "message": "uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 63,
+        "line": 64,
         "column": 42
       },
       "category": "security",
@@ -4792,7 +4804,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 74,
+        "line": 75,
         "column": 45
       },
       "category": "security",
@@ -4805,7 +4817,7 @@
       "message": "int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 99,
+        "line": 100,
         "column": 24
       },
       "category": "security",
@@ -4818,7 +4830,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 137,
+        "line": 138,
         "column": 12
       },
       "category": "security",
@@ -4831,7 +4843,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 137,
+        "line": 138,
         "column": 33
       },
       "category": "security",
@@ -4844,7 +4856,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 137,
+        "line": 138,
         "column": 63
       },
       "category": "security",
@@ -4857,7 +4869,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 166,
+        "line": 167,
         "column": 24
       },
       "category": "security",
@@ -4870,7 +4882,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 166,
+        "line": 167,
         "column": 37
       },
       "category": "security",
@@ -4883,34 +4895,8 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 167,
+        "line": 168,
         "column": 16
-      },
-      "category": "security",
-      "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic",
-      "fingerprint": "sha256:3ae7ef436cc075504203c5ff2861c6619e0d38a9450acf7a67dbbb16098a83ee"
-    },
-    {
-      "ruleId": "CYBER009",
-      "severity": "INFO",
-      "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
-      "location": {
-        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 170,
-        "column": 16
-      },
-      "category": "security",
-      "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic",
-      "fingerprint": "sha256:3ae7ef436cc075504203c5ff2861c6619e0d38a9450acf7a67dbbb16098a83ee"
-    },
-    {
-      "ruleId": "CYBER009",
-      "severity": "INFO",
-      "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
-      "location": {
-        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 170,
-        "column": 28
       },
       "category": "security",
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic",
@@ -4923,19 +4909,6 @@
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
         "line": 171,
-        "column": 26
-      },
-      "category": "security",
-      "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic",
-      "fingerprint": "sha256:3ae7ef436cc075504203c5ff2861c6619e0d38a9450acf7a67dbbb16098a83ee"
-    },
-    {
-      "ruleId": "CYBER009",
-      "severity": "INFO",
-      "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
-      "location": {
-        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 172,
         "column": 16
       },
       "category": "security",
@@ -4948,8 +4921,8 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 173,
-        "column": 14
+        "line": 171,
+        "column": 28
       },
       "category": "security",
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic",
@@ -4961,8 +4934,34 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 176,
-        "column": 12
+        "line": 172,
+        "column": 26
+      },
+      "category": "security",
+      "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic",
+      "fingerprint": "sha256:3ae7ef436cc075504203c5ff2861c6619e0d38a9450acf7a67dbbb16098a83ee"
+    },
+    {
+      "ruleId": "CYBER009",
+      "severity": "INFO",
+      "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
+        "line": 173,
+        "column": 16
+      },
+      "category": "security",
+      "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic",
+      "fingerprint": "sha256:3ae7ef436cc075504203c5ff2861c6619e0d38a9450acf7a67dbbb16098a83ee"
+    },
+    {
+      "ruleId": "CYBER009",
+      "severity": "INFO",
+      "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
+        "line": 174,
+        "column": 14
       },
       "category": "security",
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic",
@@ -4975,6 +4974,19 @@
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
         "line": 177,
+        "column": 12
+      },
+      "category": "security",
+      "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic",
+      "fingerprint": "sha256:3ae7ef436cc075504203c5ff2861c6619e0d38a9450acf7a67dbbb16098a83ee"
+    },
+    {
+      "ruleId": "CYBER009",
+      "severity": "INFO",
+      "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
+        "line": 178,
         "column": 10
       },
       "category": "security",
@@ -4987,7 +4999,7 @@
       "message": "uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 204,
+        "line": 205,
         "column": 10
       },
       "category": "security",
@@ -5000,7 +5012,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 206,
+        "line": 207,
         "column": 14
       },
       "category": "security",
@@ -5013,7 +5025,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 223,
+        "line": 224,
         "column": 25
       },
       "category": "security",
@@ -5624,7 +5636,7 @@
       "message": "uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
-        "line": 521,
+        "line": 523,
         "column": 10
       },
       "category": "security",
@@ -5650,7 +5662,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/reliable.go",
-        "line": 39,
+        "line": 41,
         "column": 16
       },
       "category": "security",
@@ -5663,7 +5675,7 @@
       "message": "int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/reliable.go",
-        "line": 44,
+        "line": 46,
         "column": 30
       },
       "category": "security",
@@ -5676,7 +5688,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/reliable.go",
-        "line": 44,
+        "line": 46,
         "column": 51
       },
       "category": "security",
@@ -5689,7 +5701,7 @@
       "message": "byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/reliable_test.go",
-        "line": 22,
+        "line": 24,
         "column": 21
       },
       "category": "security",
@@ -5741,7 +5753,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/wire_test.go",
-        "line": 119,
+        "line": 120,
         "column": 9
       },
       "category": "security",
@@ -5754,7 +5766,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/wire_test.go",
-        "line": 119,
+        "line": 120,
         "column": 30
       },
       "category": "security",
@@ -5767,7 +5779,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/wire_test.go",
-        "line": 119,
+        "line": 120,
         "column": 54
       },
       "category": "security",
@@ -5780,7 +5792,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/wire_test.go",
-        "line": 119,
+        "line": 120,
         "column": 79
       },
       "category": "security",
@@ -6665,6 +6677,51 @@
       "severity": "WARNING",
       "message": "return value discarded with blank identifier in multi-value call",
       "location": {
+        "file": "bridge/wan/wan_internal_test.go",
+        "line": 45,
+        "column": 2,
+        "endLine": 45,
+        "endColumn": 45
+      },
+      "category": "lint",
+      "remediation": "assign all return values to named variables and handle each explicitly",
+      "fingerprint": "sha256:2fdbbc933c6ee85bde272042a6f56124e1b53cea260a07f58c8e43dcbc45cdcd"
+    },
+    {
+      "ruleId": "LINT001",
+      "severity": "WARNING",
+      "message": "return value discarded with blank identifier in multi-value call",
+      "location": {
+        "file": "bridge/wan/wan_internal_test.go",
+        "line": 52,
+        "column": 5,
+        "endLine": 52,
+        "endColumn": 54
+      },
+      "category": "lint",
+      "remediation": "assign all return values to named variables and handle each explicitly",
+      "fingerprint": "sha256:2fdbbc933c6ee85bde272042a6f56124e1b53cea260a07f58c8e43dcbc45cdcd"
+    },
+    {
+      "ruleId": "LINT001",
+      "severity": "WARNING",
+      "message": "return value discarded with blank identifier in multi-value call",
+      "location": {
+        "file": "bridge/wan/wan_internal_test.go",
+        "line": 60,
+        "column": 5,
+        "endLine": 60,
+        "endColumn": 64
+      },
+      "category": "lint",
+      "remediation": "assign all return values to named variables and handle each explicitly",
+      "fingerprint": "sha256:2fdbbc933c6ee85bde272042a6f56124e1b53cea260a07f58c8e43dcbc45cdcd"
+    },
+    {
+      "ruleId": "LINT001",
+      "severity": "WARNING",
+      "message": "return value discarded with blank identifier in multi-value call",
+      "location": {
         "file": "bridge/wan/wan_test.go",
         "line": 268,
         "column": 5,
@@ -7131,24 +7188,9 @@
       "message": "return value discarded with blank identifier in multi-value call",
       "location": {
         "file": "cmd/go-dds/cli_test.go",
-        "line": 241,
+        "line": 242,
         "column": 5,
-        "endLine": 241,
-        "endColumn": 45
-      },
-      "category": "lint",
-      "remediation": "assign all return values to named variables and handle each explicitly",
-      "fingerprint": "sha256:cf595b10ac0dfe313de10012f1d455f90de828383b5cce62ddb4b2d0df8dcfbe"
-    },
-    {
-      "ruleId": "LINT001",
-      "severity": "WARNING",
-      "message": "return value discarded with blank identifier in multi-value call",
-      "location": {
-        "file": "cmd/go-dds/cli_test.go",
-        "line": 244,
-        "column": 5,
-        "endLine": 244,
+        "endLine": 242,
         "endColumn": 46
       },
       "category": "lint",
@@ -7161,10 +7203,10 @@
       "message": "return value discarded with blank identifier in multi-value call",
       "location": {
         "file": "cmd/go-dds/cli_test.go",
-        "line": 291,
+        "line": 262,
         "column": 2,
-        "endLine": 291,
-        "endColumn": 89
+        "endLine": 262,
+        "endColumn": 77
       },
       "category": "lint",
       "remediation": "assign all return values to named variables and handle each explicitly",
@@ -7176,39 +7218,9 @@
       "message": "return value discarded with blank identifier in multi-value call",
       "location": {
         "file": "cmd/go-dds/cli_test.go",
-        "line": 301,
+        "line": 315,
         "column": 5,
-        "endLine": 301,
-        "endColumn": 45
-      },
-      "category": "lint",
-      "remediation": "assign all return values to named variables and handle each explicitly",
-      "fingerprint": "sha256:cf595b10ac0dfe313de10012f1d455f90de828383b5cce62ddb4b2d0df8dcfbe"
-    },
-    {
-      "ruleId": "LINT001",
-      "severity": "WARNING",
-      "message": "return value discarded with blank identifier in multi-value call",
-      "location": {
-        "file": "cmd/go-dds/cli_test.go",
-        "line": 304,
-        "column": 5,
-        "endLine": 304,
-        "endColumn": 46
-      },
-      "category": "lint",
-      "remediation": "assign all return values to named variables and handle each explicitly",
-      "fingerprint": "sha256:cf595b10ac0dfe313de10012f1d455f90de828383b5cce62ddb4b2d0df8dcfbe"
-    },
-    {
-      "ruleId": "LINT001",
-      "severity": "WARNING",
-      "message": "return value discarded with blank identifier in multi-value call",
-      "location": {
-        "file": "cmd/go-dds/cli_test.go",
-        "line": 320,
-        "column": 5,
-        "endLine": 320,
+        "endLine": 315,
         "endColumn": 51
       },
       "category": "lint",
@@ -7221,10 +7233,40 @@
       "message": "return value discarded with blank identifier in multi-value call",
       "location": {
         "file": "cmd/go-dds/cli_test.go",
-        "line": 344,
+        "line": 318,
+        "column": 5,
+        "endLine": 318,
+        "endColumn": 52
+      },
+      "category": "lint",
+      "remediation": "assign all return values to named variables and handle each explicitly",
+      "fingerprint": "sha256:cf595b10ac0dfe313de10012f1d455f90de828383b5cce62ddb4b2d0df8dcfbe"
+    },
+    {
+      "ruleId": "LINT001",
+      "severity": "WARNING",
+      "message": "return value discarded with blank identifier in multi-value call",
+      "location": {
+        "file": "cmd/go-dds/cli_test.go",
+        "line": 324,
         "column": 2,
+        "endLine": 324,
+        "endColumn": 95
+      },
+      "category": "lint",
+      "remediation": "assign all return values to named variables and handle each explicitly",
+      "fingerprint": "sha256:cf595b10ac0dfe313de10012f1d455f90de828383b5cce62ddb4b2d0df8dcfbe"
+    },
+    {
+      "ruleId": "LINT001",
+      "severity": "WARNING",
+      "message": "return value discarded with blank identifier in multi-value call",
+      "location": {
+        "file": "cmd/go-dds/cli_test.go",
+        "line": 344,
+        "column": 5,
         "endLine": 344,
-        "endColumn": 85
+        "endColumn": 45
       },
       "category": "lint",
       "remediation": "assign all return values to named variables and handle each explicitly",
@@ -7236,24 +7278,9 @@
       "message": "return value discarded with blank identifier in multi-value call",
       "location": {
         "file": "cmd/go-dds/cli_test.go",
-        "line": 358,
+        "line": 347,
         "column": 5,
-        "endLine": 358,
-        "endColumn": 36
-      },
-      "category": "lint",
-      "remediation": "assign all return values to named variables and handle each explicitly",
-      "fingerprint": "sha256:cf595b10ac0dfe313de10012f1d455f90de828383b5cce62ddb4b2d0df8dcfbe"
-    },
-    {
-      "ruleId": "LINT001",
-      "severity": "WARNING",
-      "message": "return value discarded with blank identifier in multi-value call",
-      "location": {
-        "file": "cmd/go-dds/cli_test.go",
-        "line": 361,
-        "column": 5,
-        "endLine": 361,
+        "endLine": 347,
         "endColumn": 46
       },
       "category": "lint",
@@ -7266,9 +7293,114 @@
       "message": "return value discarded with blank identifier in multi-value call",
       "location": {
         "file": "cmd/go-dds/cli_test.go",
-        "line": 364,
+        "line": 394,
+        "column": 2,
+        "endLine": 394,
+        "endColumn": 89
+      },
+      "category": "lint",
+      "remediation": "assign all return values to named variables and handle each explicitly",
+      "fingerprint": "sha256:cf595b10ac0dfe313de10012f1d455f90de828383b5cce62ddb4b2d0df8dcfbe"
+    },
+    {
+      "ruleId": "LINT001",
+      "severity": "WARNING",
+      "message": "return value discarded with blank identifier in multi-value call",
+      "location": {
+        "file": "cmd/go-dds/cli_test.go",
+        "line": 404,
         "column": 5,
-        "endLine": 364,
+        "endLine": 404,
+        "endColumn": 45
+      },
+      "category": "lint",
+      "remediation": "assign all return values to named variables and handle each explicitly",
+      "fingerprint": "sha256:cf595b10ac0dfe313de10012f1d455f90de828383b5cce62ddb4b2d0df8dcfbe"
+    },
+    {
+      "ruleId": "LINT001",
+      "severity": "WARNING",
+      "message": "return value discarded with blank identifier in multi-value call",
+      "location": {
+        "file": "cmd/go-dds/cli_test.go",
+        "line": 407,
+        "column": 5,
+        "endLine": 407,
+        "endColumn": 46
+      },
+      "category": "lint",
+      "remediation": "assign all return values to named variables and handle each explicitly",
+      "fingerprint": "sha256:cf595b10ac0dfe313de10012f1d455f90de828383b5cce62ddb4b2d0df8dcfbe"
+    },
+    {
+      "ruleId": "LINT001",
+      "severity": "WARNING",
+      "message": "return value discarded with blank identifier in multi-value call",
+      "location": {
+        "file": "cmd/go-dds/cli_test.go",
+        "line": 423,
+        "column": 5,
+        "endLine": 423,
+        "endColumn": 51
+      },
+      "category": "lint",
+      "remediation": "assign all return values to named variables and handle each explicitly",
+      "fingerprint": "sha256:cf595b10ac0dfe313de10012f1d455f90de828383b5cce62ddb4b2d0df8dcfbe"
+    },
+    {
+      "ruleId": "LINT001",
+      "severity": "WARNING",
+      "message": "return value discarded with blank identifier in multi-value call",
+      "location": {
+        "file": "cmd/go-dds/cli_test.go",
+        "line": 447,
+        "column": 2,
+        "endLine": 447,
+        "endColumn": 85
+      },
+      "category": "lint",
+      "remediation": "assign all return values to named variables and handle each explicitly",
+      "fingerprint": "sha256:cf595b10ac0dfe313de10012f1d455f90de828383b5cce62ddb4b2d0df8dcfbe"
+    },
+    {
+      "ruleId": "LINT001",
+      "severity": "WARNING",
+      "message": "return value discarded with blank identifier in multi-value call",
+      "location": {
+        "file": "cmd/go-dds/cli_test.go",
+        "line": 461,
+        "column": 5,
+        "endLine": 461,
+        "endColumn": 36
+      },
+      "category": "lint",
+      "remediation": "assign all return values to named variables and handle each explicitly",
+      "fingerprint": "sha256:cf595b10ac0dfe313de10012f1d455f90de828383b5cce62ddb4b2d0df8dcfbe"
+    },
+    {
+      "ruleId": "LINT001",
+      "severity": "WARNING",
+      "message": "return value discarded with blank identifier in multi-value call",
+      "location": {
+        "file": "cmd/go-dds/cli_test.go",
+        "line": 464,
+        "column": 5,
+        "endLine": 464,
+        "endColumn": 46
+      },
+      "category": "lint",
+      "remediation": "assign all return values to named variables and handle each explicitly",
+      "fingerprint": "sha256:cf595b10ac0dfe313de10012f1d455f90de828383b5cce62ddb4b2d0df8dcfbe"
+    },
+    {
+      "ruleId": "LINT001",
+      "severity": "WARNING",
+      "message": "return value discarded with blank identifier in multi-value call",
+      "location": {
+        "file": "cmd/go-dds/cli_test.go",
+        "line": 467,
+        "column": 5,
+        "endLine": 467,
         "endColumn": 62
       },
       "category": "lint",
@@ -8361,9 +8493,9 @@
       "message": "return value discarded with blank identifier in multi-value call",
       "location": {
         "file": "rtps/access_test.go",
-        "line": 39,
+        "line": 41,
         "column": 5,
-        "endLine": 39,
+        "endLine": 41,
         "endColumn": 61
       },
       "category": "lint",
@@ -8376,9 +8508,9 @@
       "message": "return value discarded with blank identifier in multi-value call",
       "location": {
         "file": "rtps/access_test.go",
-        "line": 50,
+        "line": 52,
         "column": 5,
-        "endLine": 50,
+        "endLine": 52,
         "endColumn": 60
       },
       "category": "lint",
@@ -8391,9 +8523,9 @@
       "message": "return value discarded with blank identifier in multi-value call",
       "location": {
         "file": "rtps/access_test.go",
-        "line": 67,
+        "line": 69,
         "column": 5,
-        "endLine": 67,
+        "endLine": 69,
         "endColumn": 58
       },
       "category": "lint",
@@ -8631,9 +8763,9 @@
       "message": "return value discarded with blank identifier in multi-value call",
       "location": {
         "file": "rtps/participant.go",
-        "line": 916,
+        "line": 918,
         "column": 2,
-        "endLine": 916,
+        "endLine": 918,
         "endColumn": 47
       },
       "category": "lint",
@@ -8721,9 +8853,9 @@
       "message": "return value discarded with blank identifier in multi-value call",
       "location": {
         "file": "rtps/reliable_test.go",
-        "line": 62,
+        "line": 64,
         "column": 2,
-        "endLine": 62,
+        "endLine": 64,
         "endColumn": 27
       },
       "category": "lint",
@@ -8886,9 +9018,9 @@
       "message": "return value discarded with blank identifier in multi-value call",
       "location": {
         "file": "rtps/wire_test.go",
-        "line": 363,
+        "line": 364,
         "column": 3,
-        "endLine": 363,
+        "endLine": 364,
         "endColumn": 40
       },
       "category": "lint",
@@ -8901,9 +9033,9 @@
       "message": "return value discarded with blank identifier in multi-value call",
       "location": {
         "file": "rtps/wire_test.go",
-        "line": 492,
+        "line": 493,
         "column": 5,
-        "endLine": 492,
+        "endLine": 493,
         "endColumn": 35
       },
       "category": "lint",
@@ -8916,9 +9048,9 @@
       "message": "return value discarded with blank identifier in multi-value call",
       "location": {
         "file": "rtps/wire_test.go",
-        "line": 550,
+        "line": 551,
         "column": 5,
-        "endLine": 550,
+        "endLine": 551,
         "endColumn": 44
       },
       "category": "lint",
@@ -8931,9 +9063,9 @@
       "message": "return value discarded with blank identifier in multi-value call",
       "location": {
         "file": "rtps/wire_test.go",
-        "line": 562,
+        "line": 563,
         "column": 5,
-        "endLine": 562,
+        "endLine": 563,
         "endColumn": 35
       },
       "category": "lint",
@@ -8946,9 +9078,9 @@
       "message": "return value discarded with blank identifier in multi-value call",
       "location": {
         "file": "rtps/wire_test.go",
-        "line": 567,
+        "line": 568,
         "column": 5,
-        "endLine": 567,
+        "endLine": 568,
         "endColumn": 36
       },
       "category": "lint",
@@ -8961,9 +9093,9 @@
       "message": "return value discarded with blank identifier in multi-value call",
       "location": {
         "file": "rtps/wire_test.go",
-        "line": 572,
+        "line": 573,
         "column": 5,
-        "endLine": 572,
+        "endLine": 573,
         "endColumn": 35
       },
       "category": "lint",
@@ -8976,9 +9108,9 @@
       "message": "return value discarded with blank identifier in multi-value call",
       "location": {
         "file": "rtps/wire_test.go",
-        "line": 604,
+        "line": 605,
         "column": 6,
-        "endLine": 604,
+        "endLine": 605,
         "endColumn": 36
       },
       "category": "lint",
@@ -9771,9 +9903,9 @@
       "message": "import of \"reflect\" package inventoried",
       "location": {
         "file": "dds.go",
-        "line": 31,
+        "line": 30,
         "column": 2,
-        "endLine": 31,
+        "endLine": 30,
         "endColumn": 11
       },
       "category": "lint",
@@ -9801,9 +9933,9 @@
       "message": "import of \"reflect\" package inventoried",
       "location": {
         "file": "relay_test.go",
-        "line": 19,
+        "line": 20,
         "column": 2,
-        "endLine": 19,
+        "endLine": 20,
         "endColumn": 11
       },
       "category": "lint",
@@ -9816,9 +9948,9 @@
       "message": "import of \"reflect\" package inventoried",
       "location": {
         "file": "rtps/participant.go",
-        "line": 58,
+        "line": 60,
         "column": 2,
-        "endLine": 58,
+        "endLine": 60,
         "endColumn": 11
       },
       "category": "lint",
@@ -10116,9 +10248,9 @@
       "message": "package-level var ErrClosed introduces global mutable state",
       "location": {
         "file": "dds.go",
-        "line": 50,
+        "line": 49,
         "column": 5,
-        "endLine": 50,
+        "endLine": 49,
         "endColumn": 73
       },
       "category": "lint",
@@ -10131,9 +10263,9 @@
       "message": "package-level var ErrNotConnected introduces global mutable state",
       "location": {
         "file": "dds.go",
-        "line": 54,
+        "line": 53,
         "column": 5,
-        "endLine": 54,
+        "endLine": 53,
         "endColumn": 82
       },
       "category": "lint",
@@ -10146,9 +10278,9 @@
       "message": "package-level var ErrTimeout introduces global mutable state",
       "location": {
         "file": "dds.go",
-        "line": 58,
+        "line": 57,
         "column": 5,
-        "endLine": 58,
+        "endLine": 57,
         "endColumn": 66
       },
       "category": "lint",
@@ -10161,9 +10293,9 @@
       "message": "package-level var ErrPayloadTooLarge introduces global mutable state",
       "location": {
         "file": "dds.go",
-        "line": 62,
+        "line": 61,
         "column": 5,
-        "endLine": 62,
+        "endLine": 61,
         "endColumn": 108
       },
       "category": "lint",
@@ -10176,9 +10308,9 @@
       "message": "package-level var ErrDomainOutOfRange introduces global mutable state",
       "location": {
         "file": "dds.go",
-        "line": 67,
+        "line": 66,
         "column": 5,
-        "endLine": 67,
+        "endLine": 66,
         "endColumn": 94
       },
       "category": "lint",
@@ -10191,9 +10323,9 @@
       "message": "package-level var ErrTopicEmpty introduces global mutable state",
       "location": {
         "file": "dds.go",
-        "line": 70,
+        "line": 69,
         "column": 5,
-        "endLine": 70,
+        "endLine": 69,
         "endColumn": 68
       },
       "category": "lint",
@@ -10206,9 +10338,9 @@
       "message": "package-level var ErrQoSMismatch introduces global mutable state",
       "location": {
         "file": "dds.go",
-        "line": 73,
+        "line": 72,
         "column": 5,
-        "endLine": 73,
+        "endLine": 72,
         "endColumn": 93
       },
       "category": "lint",
@@ -10221,9 +10353,9 @@
       "message": "package-level var ErrAccessDenied introduces global mutable state",
       "location": {
         "file": "dds.go",
-        "line": 78,
+        "line": 77,
         "column": 5,
-        "endLine": 78,
+        "endLine": 77,
         "endColumn": 68
       },
       "category": "lint",
@@ -10236,9 +10368,9 @@
       "message": "package-level var ErrDeadlineMissed introduces global mutable state",
       "location": {
         "file": "dds.go",
-        "line": 82,
+        "line": 81,
         "column": 5,
-        "endLine": 82,
+        "endLine": 81,
         "endColumn": 122
       },
       "category": "lint",
@@ -10251,9 +10383,9 @@
       "message": "package-level var ErrSampleRejected introduces global mutable state",
       "location": {
         "file": "dds.go",
-        "line": 86,
+        "line": 85,
         "column": 5,
-        "endLine": 86,
+        "endLine": 85,
         "endColumn": 118
       },
       "category": "lint",
@@ -10266,9 +10398,9 @@
       "message": "package-level var ErrResourceLimits introduces global mutable state",
       "location": {
         "file": "dds.go",
-        "line": 89,
+        "line": 88,
         "column": 5,
-        "endLine": 89,
+        "endLine": 88,
         "endColumn": 67
       },
       "category": "lint",
@@ -10281,9 +10413,9 @@
       "message": "package-level var ErrLoanBuffer introduces global mutable state",
       "location": {
         "file": "dds.go",
-        "line": 94,
+        "line": 93,
         "column": 5,
-        "endLine": 94,
+        "endLine": 93,
         "endColumn": 74
       },
       "category": "lint",
@@ -10296,9 +10428,9 @@
       "message": "package-level var DefaultQoS introduces global mutable state",
       "location": {
         "file": "dds.go",
-        "line": 180,
+        "line": 179,
         "column": 5,
-        "endLine": 184,
+        "endLine": 183,
         "endColumn": 2
       },
       "category": "lint",
@@ -10311,9 +10443,9 @@
       "message": "package-level var ReliableQoS introduces global mutable state",
       "location": {
         "file": "dds.go",
-        "line": 188,
+        "line": 187,
         "column": 5,
-        "endLine": 192,
+        "endLine": 191,
         "endColumn": 2
       },
       "category": "lint",
@@ -10326,9 +10458,9 @@
       "message": "package-level var NoopTracer introduces global mutable state",
       "location": {
         "file": "dds.go",
-        "line": 320,
+        "line": 294,
         "column": 5,
-        "endLine": 320,
+        "endLine": 294,
         "endColumn": 41
       },
       "category": "lint",
@@ -10757,9 +10889,9 @@
     }
   ],
   "summary": {
-    "total": 752,
+    "total": 761,
     "errors": 0,
-    "warnings": 439,
+    "warnings": 448,
     "infos": 313
   },
   "summaryTable": {
@@ -10774,9 +10906,9 @@
       {
         "category": "COMP",
         "errors": 0,
-        "warnings": 38,
+        "warnings": 39,
         "infos": 0,
-        "total": 38
+        "total": 39
       },
       {
         "category": "COUP",
@@ -10795,16 +10927,16 @@
       {
         "category": "LINT",
         "errors": 0,
-        "warnings": 244,
+        "warnings": 252,
         "infos": 69,
-        "total": 313
+        "total": 321
       }
     ],
     "by_rule": [
       {
         "ruleId": "LINT001",
         "severity": "WARNING",
-        "count": 236
+        "count": 244
       },
       {
         "ruleId": "CYBER009",
@@ -10834,7 +10966,7 @@
       {
         "ruleId": "COMP001",
         "severity": "WARNING",
-        "count": 38
+        "count": 39
       },
       {
         "ruleId": "COUP001",

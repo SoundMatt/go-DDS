@@ -3,7 +3,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// RELAY spec v1.7 conformance tests: Sample<->Message round-trip against the
+// RELAY spec v1.10 conformance tests: Sample<->Message round-trip against the
 // published golden vector (spec/vectors/dds-sample.json), domain validation
 // (spec/vectors/errors/dds-domain-out-of-range.json), and the Adapt() Node
 // adapter's WithTopic subscription routing (§14.1).
@@ -30,8 +30,8 @@ func TestSpecVersion_TracksRelay(t *testing.T) {
 	if dds.SpecVersion != relay.SpecVersion {
 		t.Errorf("SpecVersion = %q, want it to track relay.SpecVersion %q", dds.SpecVersion, relay.SpecVersion)
 	}
-	if dds.SpecVersion != "1.7" {
-		t.Errorf("SpecVersion = %q, want %q (RELAY v1.7 spec)", dds.SpecVersion, "1.7")
+	if dds.SpecVersion != "1.10" {
+		t.Errorf("SpecVersion = %q, want %q (RELAY v1.10 spec)", dds.SpecVersion, "1.10")
 	}
 }
 

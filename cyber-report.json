@@ -41,7 +41,7 @@
       "message": "import of math/rand — use crypto/rand for security-sensitive random values",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/wire_test.go",
-        "line": 37,
+        "line": 38,
         "column": 2
       },
       "remediation": "use crypto/rand.Read or crypto/rand.Int for tokens, nonces, and keys"
@@ -382,7 +382,7 @@
       "message": "byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/relay_test.go",
-        "line": 42,
+        "line": 43,
         "column": 13
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
@@ -393,7 +393,7 @@
       "message": "byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/relay_test.go",
-        "line": 70,
+        "line": 71,
         "column": 13
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
@@ -470,7 +470,7 @@
       "message": "uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 63,
+        "line": 64,
         "column": 42
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
@@ -481,7 +481,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 74,
+        "line": 75,
         "column": 45
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
@@ -492,7 +492,7 @@
       "message": "int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 99,
+        "line": 100,
         "column": 24
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
@@ -503,7 +503,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 137,
+        "line": 138,
         "column": 12
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
@@ -514,7 +514,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 137,
+        "line": 138,
         "column": 33
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
@@ -525,7 +525,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 137,
+        "line": 138,
         "column": 63
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
@@ -536,7 +536,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 166,
+        "line": 167,
         "column": 24
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
@@ -547,7 +547,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 166,
+        "line": 167,
         "column": 37
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
@@ -558,30 +558,8 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 167,
+        "line": 168,
         "column": 16
-      },
-      "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
-    },
-    {
-      "ruleId": "CYBER009",
-      "severity": "INFO",
-      "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
-      "location": {
-        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 170,
-        "column": 16
-      },
-      "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
-    },
-    {
-      "ruleId": "CYBER009",
-      "severity": "INFO",
-      "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
-      "location": {
-        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 170,
-        "column": 28
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
     },
@@ -592,17 +570,6 @@
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
         "line": 171,
-        "column": 26
-      },
-      "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
-    },
-    {
-      "ruleId": "CYBER009",
-      "severity": "INFO",
-      "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
-      "location": {
-        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 172,
         "column": 16
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
@@ -613,8 +580,8 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 173,
-        "column": 14
+        "line": 171,
+        "column": 28
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
     },
@@ -624,8 +591,30 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 176,
-        "column": 12
+        "line": 172,
+        "column": 26
+      },
+      "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
+    },
+    {
+      "ruleId": "CYBER009",
+      "severity": "INFO",
+      "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
+        "line": 173,
+        "column": 16
+      },
+      "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
+    },
+    {
+      "ruleId": "CYBER009",
+      "severity": "INFO",
+      "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
+        "line": 174,
+        "column": 14
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
     },
@@ -636,6 +625,17 @@
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
         "line": 177,
+        "column": 12
+      },
+      "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
+    },
+    {
+      "ruleId": "CYBER009",
+      "severity": "INFO",
+      "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
+      "location": {
+        "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
+        "line": 178,
         "column": 10
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
@@ -646,7 +646,7 @@
       "message": "uint16(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 204,
+        "line": 205,
         "column": 10
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
@@ -657,7 +657,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 206,
+        "line": 207,
         "column": 14
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
@@ -668,7 +668,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/fragment.go",
-        "line": 223,
+        "line": 224,
         "column": 25
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
@@ -1185,7 +1185,7 @@
       "message": "uint8(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/participant.go",
-        "line": 521,
+        "line": 523,
         "column": 10
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
@@ -1207,7 +1207,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/reliable.go",
-        "line": 39,
+        "line": 41,
         "column": 16
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
@@ -1218,7 +1218,7 @@
       "message": "int32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/reliable.go",
-        "line": 44,
+        "line": 46,
         "column": 30
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
@@ -1229,7 +1229,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/reliable.go",
-        "line": 44,
+        "line": 46,
         "column": 51
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
@@ -1240,7 +1240,7 @@
       "message": "byte(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/reliable_test.go",
-        "line": 22,
+        "line": 24,
         "column": 21
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
@@ -1284,7 +1284,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/wire_test.go",
-        "line": 119,
+        "line": 120,
         "column": 9
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
@@ -1295,7 +1295,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/wire_test.go",
-        "line": 119,
+        "line": 120,
         "column": 30
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
@@ -1306,7 +1306,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/wire_test.go",
-        "line": 119,
+        "line": 120,
         "column": 54
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
@@ -1317,7 +1317,7 @@
       "message": "uint32(x) — explicit narrowing conversion may silently truncate bits if x exceeds the target type's range",
       "location": {
         "file": "/Users/matt/Documents/Coding/SoundMatt/go-DDS/rtps/wire_test.go",
-        "line": 119,
+        "line": 120,
         "column": 79
       },
       "remediation": "add an explicit range check before the conversion, or use math/bits or saturating arithmetic"
