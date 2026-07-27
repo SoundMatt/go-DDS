@@ -905,6 +905,286 @@ go-DDS ships with certification packages targeting ASIL-D (automotive), IEC 6230
 
 ---
 
+## Architecture Initiative — Multi-Module Repository Split (Tracked: #71)
+
+Unlike Milestones 1–20, this is not tied to a single feature release: it is a
+cross-cutting restructuring of the repo itself, expected to land across
+several `v0.x` releases ahead of the `v1.0` stable-core cut (Milestone 14).
+It has no dedicated row in the Release Plan table above — treat it as running
+alongside whichever milestone is current when each phase lands.
+
+### Why
+
+go-DDS is one Go module containing 24 top-level packages and ~40k LOC. Every
+tag versions the whole module, so a change to a peripheral, high-churn
+package forces a release of the stable core — and vice versa: the core can't
+cut a meaningful `v1.0` while it drags 24 packages' worth of API surface
+along with it. Concrete evidence gathered directly from the current tree
+(`go-DDS@2160603`, non-test Go LOC, `find <pkg> -name '*.go' -not -name
+'*_test.go' | xargs wc -l`):
+
+| Package | Prod LOC | Test LOC | Proposed group |
+|---|---|---|---|
+| `rtps` | 4,106 | 6,670 | core |
+| root (`dds`, `adapt`) | 1,034 | 1,408 | core |
+| `mock` | 654 | 2,760 | core |
+| `shmem` | 776 | 1,514 | core |
+| `security` | 639 | 1,312 | core |
+| `pool` | 139 | 246 | core |
+| `auto` | 129 | 212 | core |
+| `bridge/grpc`+`rest`+`wan` | 1,235 | 3,274 | bridges |
+| `idl` | 1,382 | 1,910 | tools |
+| `cdr` | 348 | 502 | tools |
+| `xtypes` | 460 | 729 | tools |
+| `cmd/*` (4 binaries) | 1,462 | 558 | split — see below |
+| `monitor` | 504 | 940 | observability |
+| `admin` | 197 | 510 | observability |
+| `otel` | 64 | 31 | observability |
+| `services` | 231 | 544 | observability |
+| `record` | 395 | 982 | observability |
+| `safety` | 658 | 1,570 | safety |
+| `tsn` | 824 | 865 | safety |
+| `cert/` | 0 (docs only) | — | safety |
+
+The periphery (bridges + tools + observability + safety, excluding `cert/`
+docs) is ~6.3k prod LOC against core's ~7.5k — i.e. the non-core surface is
+already roughly as large as the core it's bundled with, and growing faster
+(bridges, idl, and observability have absorbed most feature work since
+v0.10). That is the versioning-coupling problem #71 describes, with numbers
+attached.
+
+**Two things #71's plan gets right that need correcting before any split:**
+
+1. **The `bridges` group is smaller than #71 assumed.** #71 lists `mqtt`,
+   `wan`, `rest`, `grpc`, `domain` under `bridges/go.mod`. `bridge/mqtt` and
+   `bridge/domain` were already removed in #98 ("remove domain + mqtt
+   bridges — subsumed by RELAY crossbar"), so the group is now just
+   `bridge/{grpc,rest,wan}` — 3 packages, 1,235 LOC, not 5. RELAY#59's draft
+   module-name registry still lists `mqttbr`/`domainbr` as proposed DDS
+   bridge names for packages that no longer exist in this repo — flagging
+   that back on RELAY#59 as an additional reason those names aren't ready to
+   ratify as-is.
+2. **`core` is not currently a leaf.** `rtps/participant.go` imports `tsn`
+   in production code (`WithTSNConfig`, the `tsnConfig`/`tsnStream` fields on
+   `Participant`) — not just in tests. As proposed, `core` would depend on
+   `safety`, which defeats the entire point of a stable, independently-tagged
+   core: core's `go.mod` would transitively pin a `safety` module version,
+   and a `safety` release would force a `go.sum` bump (though not
+   necessarily a semver-major bump) in every core consumer. This has to be
+   resolved before `go.mod` boundaries are cut, not worked around after
+   (see Phase 0 below).
+3. **The `cmd/` tree has outgrown a single `tools` bucket.** #71 (filed
+   against an earlier tree) lists only `cmd/ddstool` moving to `tools`. The
+   repo now has four binaries with different dependency footprints:
+   `cmd/ddstool` and `cmd/go-dds` (need `idl` + core), `cmd/latmon` (core
+   only), and `cmd/monitor` (needs the `monitor` package directly, i.e.
+   `observability` + core). A single `tools/go.mod` can't cleanly own all
+   four without also pulling in `observability` — each binary needs to ship
+   from the module that owns its heaviest dependency.
+
+### Target Layout
+
+```
+go-DDS/
+├── go.mod                  # core: dds (root), rtps, mock, shmem, auto, pool, security
+├── bridges/go.mod          # bridge/grpc, bridge/rest, bridge/wan
+├── tools/go.mod            # idl, cdr, xtypes, cmd/ddstool, cmd/go-dds
+├── observability/go.mod    # monitor, admin, otel, services, record, cmd/monitor
+├── safety/go.mod           # safety, tsn, cert/ (evidence, non-code)
+└── examples/go.mod         # examples/*, cmd/latmon; depends on tagged versions of the above, never same-repo relative imports
+```
+
+Import graph as it exists today (production code only, gathered by grepping
+`github.com/SoundMatt/go-DDS/...` imports across the tree), annotated with
+which proposed group each edge crosses:
+
+```
+dds (core)      -> mock, rtps, cyclone                    [intra-core]
+rtps (core)     -> pool, security, config                 [intra-core]
+rtps (core)     -> tsn                                     [core -> safety: BLOCKER, see Phase 0]
+mock (core)     -> pool                                    [intra-core]
+shmem (core)    -> pool                                    [intra-core]
+auto (core)     -> rtps, shmem                              [intra-core]
+bridge/*        -> mock                                     [bridges -> core: OK]
+idl (tools)     -> cdr, mock                                 [intra-tools + tools -> core: OK]
+cmd/ddstool     -> idl, mock, rtps                            [tools -> tools + core: OK]
+cmd/go-dds      -> idl, mock, rtps                            [tools -> tools + core: OK]
+cmd/monitor     -> monitor, rtps                               [observability -> observability + core: OK]
+cmd/latmon      -> mock                                        [examples -> core: OK]
+monitor (obs.)  -> mock, safety, tsn                             [observability -> safety: extraction-order constraint]
+admin (obs.)    -> mock                                          [observability -> core: OK]
+otel (obs.)     -> rtps                                           [observability -> core: OK]
+record (obs.)   -> mock                                           [observability -> core: OK]
+services (obs.) -> mock, monitor, record                           [intra-observability + -> core: OK]
+safety          -> mock                                             [safety -> core: OK]
+tsn             -> (no go-DDS imports)                                [leaf]
+security        -> (no go-DDS imports)                                 [leaf]
+xtypes          -> (no go-DDS imports, and nothing imports it yet)      [leaf, unused]
+```
+
+Aside from the `rtps -> tsn` blocker, this is a clean DAG: bridges, tools,
+and safety each depend only on core; observability depends on core plus
+(via `monitor`) on safety. No cycles.
+
+### What Breaks
+
+- **Import paths change for every non-core package.** Anything currently
+  importing `github.com/SoundMatt/go-DDS/bridge/grpc`,
+  `.../idl`, `.../monitor`, `.../safety`, `.../tsn`, etc. keeps the same
+  path (Go submodules don't change the import path, only the release
+  cadence and `go.mod` that governs it) — so this is **not** a Go import
+  rewrite. What changes is: (a) `go get github.com/SoundMatt/go-DDS` alone
+  no longer pulls in bridges/tools/observability/safety — consumers must add
+  a second `go get` per submodule they use, and (b) each submodule gets its
+  own tag sequence (`bridges/v0.1.0`, `safety/v0.1.0`, ...), so a consumer
+  pinning `go-DDS v0.35.0` today has no submodule-tag equivalent to pin to
+  until the split lands and the first submodule tags are cut.
+- **`go.sum`/`go.mod` churn for every downstream consumer** on the first
+  release after the split, even if no code changes — because the module
+  boundary itself is a `go.mod` structural change.
+- **CI and any script assuming a single `go.mod`/`go.sum` at repo root**
+  (see CI section below).
+- **RELAY's own `go.mod` dependency on `github.com/SoundMatt/RELAY` is the
+  other direction** (go-DDS depends on RELAY, not vice versa) so this does
+  not, by itself, force a RELAY-side change — but RELAY's `relay conform`
+  and `relay interop` CI gates invoke the built `cmd/go-dds` binary, which
+  after the split lives in `tools/`. The RELAY-facing CI jobs
+  (`relay-conform`, `test-interop`) need their `go build`/`go install`
+  invocation updated to build from `tools/` instead of repo root once that
+  move happens.
+
+### Backwards Compatibility Approach
+
+go-DDS is still pre-v1.0 (`v0.x`), which under Go's own module conventions
+means breaking changes are expected between minor releases and no
+compatibility promise is owed yet. Given that, and given the module
+boundary is a structural (`go.mod` location) change rather than an import-path
+rename, **a clean cut is preferred over a deprecation shim**:
+
+- No compatibility forwarding packages, no re-exported symbols at the old
+  location — the packages don't move on disk in a way that changes their
+  import path, so there is nothing to forward.
+- The compatibility cost is entirely in `go.mod`/`go.sum`/tagging, and is
+  paid once, at the release that introduces `bridges/go.mod` (etc.) for the
+  first time. Document it prominently in that release's CHANGELOG entry
+  (see #71's separate `CHANGELOG.md` proposal) so downstream consumers know
+  to add the second `go get`.
+- Because this is exactly the kind of core-API-surface decision v1.0 is
+  meant to freeze (Milestone 14), doing the split **before** the v1.0 tag —
+  not after — is the point: v1.0 should be the tag where "core" first means
+  a genuinely small, independently stable surface (`dds`, `rtps`, `mock`,
+  `shmem`, `auto`, `pool`, `security` — ~7.5k LOC), not the 24-package
+  module as it exists today. If the split lands after v1.0 instead, core's
+  v1.0 API-stability promise would have been made against a surface 3x
+  larger than intended.
+
+### Phased Plan
+
+Order is derived from the import graph above, not from #71's listed group
+order — you cannot cut a module boundary through a live production import,
+and `core -> tsn` and `observability -> safety` are both real edges today.
+
+- ⬜ **Phase 0 — Decouple `rtps` from `tsn` (prerequisite, no module split yet).**
+  Replace `rtps.Participant`'s direct `*tsn.StreamConfig`/`*tsn.Stream`
+  fields with a small interface defined in `rtps` (e.g. `TSNStreamConfig`)
+  that `tsn.StreamConfig` satisfies structurally, so `rtps` no longer
+  imports `tsn` at compile time; `WithTSNConfig` accepts the interface.
+  This is the only code change in this entire initiative — everything after
+  Phase 0 is pure module/file reorganization. Add a CI check (a small
+  import-graph lint, in the spirit of the existing `static-analysis` job)
+  that fails if any package under future `core` imports anything outside
+  `{dds root, rtps, mock, shmem, auto, pool, security, config, cyclone}` —
+  this is the guardrail that keeps core a leaf permanently, not just at
+  cut time.
+- ⬜ **Phase A — Extract `safety/go.mod`** (`safety`, `tsn`, `cert/`).
+  Smallest group (1,482 LOC prod), and after Phase 0 it depends on nothing
+  but core — fully self-contained. This also matches RELAY's roadmap
+  cross-language priority tier for DDS parity work (RELAY ROADMAP.md,
+  "Planned — DDS cross-language architecture alignment", Tier 2 —
+  `safety`/`security` right after the Tier 1 `rtps` port), so cutting it
+  first gives cpp-DDS/rust-DDS a stable `safety` module shape to target
+  early rather than last.
+- ⬜ **Phase B — Extract `bridges/go.mod`** (`bridge/grpc`, `bridge/rest`,
+  `bridge/wan`). Only depends on core (`mock`); no dependency on `safety`,
+  so it doesn't need to wait on Phase A except for repo-hygiene reasons
+  (doing them in sequence rather than in parallel keeps each PR reviewable).
+- ⬜ **Phase C — Extract `tools/go.mod`** (`idl`, `cdr`, `xtypes`,
+  `cmd/ddstool`, `cmd/go-dds`). `idl` and `cmd/*` only depend on core;
+  `xtypes` is currently a leaf with zero fan-in anywhere in the tree, so
+  moving it is risk-free.
+- ⬜ **Phase D — Extract `observability/go.mod`** (`monitor`, `admin`,
+  `otel`, `services`, `record`, `cmd/monitor`). Deliberately last among the
+  four peripheral groups because `monitor` imports `safety` and `tsn` in
+  production code — this group can only cleanly depend on a *released,
+  tagged* `safety` module, which requires Phase A to have shipped first.
+  Doing D before A would mean either a temporary same-repo relative
+  `replace` directive (workable but adds noise) or `observability` briefly
+  importing `safety` via relative path while both live pre-split, which
+  Phase A's earlier landing avoids entirely.
+- ⬜ **Phase E — `examples/go.mod`** (`examples/*`, `cmd/latmon`), depending
+  only on tagged versions of core + whichever peripheral modules each
+  example demonstrates. Last, since examples are meant to exercise the
+  *released* module boundaries as an implicit integration test of the split.
+- ⬜ **Phase F — Root cleanup**: move the root Markdown wall (`HARA.md`,
+  `SAFETY_PLAN.md`, `SEOOC.md`, `STANDARDS_GAP.md`, etc.) into `docs/` and
+  add the per-package maturity matrix + `CHANGELOG.md`/`SUPPORT.md`, per
+  #71's secondary asks. Independent of the module split proper; can run in
+  parallel with any phase above.
+
+### CI/Testing Implications
+
+The current `.github/workflows/ci.yml` (`test-mock`, `test-rtps`,
+`test-cyclone`, `test-interop`, `relay-conform`, `benchmark-smoke`,
+`fuzz-short`, `lint`, `static-analysis`, `gofusa`, `generate` — 11 jobs) runs
+`go build ./...` / `go vet ./...` / `go test ./...` once, at repo root,
+because there is exactly one `go.mod` today. A multi-module repo needs:
+
+- Each job that runs `go build|vet|test ./...` becomes a matrix over
+  modules (`.`, `bridges/`, `tools/`, `observability/`, `safety/`,
+  `examples/`), or an explicit per-module step list — `./...` from repo
+  root silently stops covering submodules once they have their own
+  `go.mod` (Go treats a directory with its own `go.mod` as a module
+  boundary the parent's `./...` does not cross).
+- `relay-conform` and `test-interop` (which build/run `cmd/go-dds`) need
+  their working directory changed to `tools/` once Phase C lands.
+- A `go.work` file at repo root for local multi-module development (`go
+  work use . bridges tools observability safety examples`) so `go build
+  ./...` and IDE tooling keep working across module boundaries during
+  day-to-day development, without that file affecting the published
+  module graph (CI should not rely on `go.work` — it should build each
+  module independently the way an external consumer would).
+- The Phase 0 import-graph lint (core must stay a leaf) becomes a permanent
+  CI job, not a one-time check.
+- Release tagging changes from one `vX.Y.Z` tag per release to one tag per
+  module per release that touches it (`vX.Y.Z` for core,
+  `safety/vX.Y.Z` for the safety module, etc., per Go's multi-module
+  tagging convention) — `.github/workflows/release.yml` needs to detect
+  which module(s) changed and tag only those.
+
+### Module Naming Caveat
+
+RELAY spec §13.7.2's module-name registry does not yet have a DDS entry —
+it's proposed but not ratified at RELAY#59. The group/package names used
+above (`core`, `bridges`, `tools`, `observability`, `safety`, and the
+individual package names `rtps`/`xtypes`/`tsn`/`idl`/`cdr`/`shmem`/bridge
+names) match #71's and RELAY#59's current drafts, but RELAY#59 is itself
+already stale in one respect (it lists `mqttbr`/`domainbr` for bridges this
+repo removed in #98 — see "Why" above). Treat every name in this section as
+provisional: once RELAY#59 lands as a ratified §13.7.2 entry, this repo's
+actual `go.mod` paths/directory names may need to change to match the
+spec-blessed registry rather than the other way around. Don't start Phase A
+by hard-coding these names into tooling, docs, or external announcements as
+final.
+
+Success Criteria:
+`core` ships as an independently-tagged, dependency-leaf Go module of ~7
+packages; `bridges`, `tools`, `observability`, and `safety` each version
+independently; CI covers all six modules; and the resulting layout is the
+one cpp-DDS and rust-DDS build out to match (RELAY ROADMAP.md, "Planned —
+DDS cross-language architecture alignment").
+
+---
+
 ## Explicit Non-Goals
 
 ### Data Models
