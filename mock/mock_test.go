@@ -452,6 +452,20 @@ func TestMultipleDomains_ShareBroker(t *testing.T) {
 	}
 }
 
+func TestNew_ValidatesDomain(t *testing.T) {
+	if _, err := mock.New(dds.Domain(233)); !errors.Is(err, dds.ErrDomainOutOfRange) {
+		t.Errorf("New(233) error = %v, want ErrDomainOutOfRange", err)
+	}
+	if _, err := mock.New(dds.Domain(-1)); !errors.Is(err, dds.ErrDomainOutOfRange) {
+		t.Errorf("New(-1) error = %v, want ErrDomainOutOfRange", err)
+	}
+	p, err := mock.New(dds.Domain(232))
+	if err != nil {
+		t.Fatalf("New(232) unexpected error: %v", err)
+	}
+	defer p.Close()
+}
+
 func TestContentFilter_DeliverMatchingOnly(t *testing.T) {
 	p := newParticipant(t)
 

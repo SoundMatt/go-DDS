@@ -65,11 +65,13 @@ var ErrPayloadTooLarge = fmt.Errorf("dds: payload exceeds QoS MaxSampleSize: %w"
 // already test for a participant start-up failure continue to match.
 var ErrDomainOutOfRange = fmt.Errorf("dds: domain out of range [0,232]: %w", ErrNotConnected)
 
-// ErrTopicEmpty is returned when an empty topic string is passed.
-var ErrTopicEmpty = errors.New("dds: topic name must not be empty")
+// ErrTopicEmpty is returned when an empty topic string is passed. Wraps
+// ErrNotConnected per spec §5.4.
+var ErrTopicEmpty = fmt.Errorf("dds: topic name must not be empty: %w", ErrNotConnected)
 
-// ErrQoSMismatch is returned when a publisher and subscriber have incompatible QoS policies.
-var ErrQoSMismatch = errors.New("dds: QoS incompatibility between publisher and subscriber")
+// ErrQoSMismatch is returned when a publisher and subscriber have incompatible
+// QoS policies. Wraps ErrNotConnected per spec §5.4.
+var ErrQoSMismatch = fmt.Errorf("dds: QoS incompatibility between publisher and subscriber: %w", ErrNotConnected)
 
 // ErrAccessDenied is returned when a topic ACL forbids creating a publisher or
 // subscriber for the requested topic. It is only ever returned when an access
@@ -84,13 +86,15 @@ var ErrDeadlineMissed = fmt.Errorf("dds: deadline missed — no sample within Qo
 // limits are exceeded. Wraps relay.ErrPayloadTooLarge per spec §5.3.
 var ErrSampleRejected = fmt.Errorf("dds: sample rejected — resource limits exceeded: %w", relay.ErrPayloadTooLarge)
 
-// ErrResourceLimits is returned when a resource limit is exceeded.
-var ErrResourceLimits = errors.New("dds: resource limit exceeded")
+// ErrResourceLimits is returned when a resource limit is exceeded. Wraps
+// ErrPayloadTooLarge per spec §5.4.
+var ErrResourceLimits = fmt.Errorf("dds: resource limit exceeded: %w", ErrPayloadTooLarge)
 
 // ErrLoanBuffer is returned when a loaned buffer cannot be obtained (pool
 // exhausted or size exceeds pool capacity) or when Commit is called with a
-// buffer that was not issued by the same LoaningPublisher.
-var ErrLoanBuffer = errors.New("dds: loan buffer unavailable or invalid")
+// buffer that was not issued by the same LoaningPublisher. Wraps ErrClosed
+// per spec §5.4.
+var ErrLoanBuffer = fmt.Errorf("dds: loan buffer unavailable or invalid: %w", ErrClosed)
 
 // ── Domain ────────────────────────────────────────────────────────────────────
 

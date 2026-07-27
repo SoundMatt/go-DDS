@@ -197,7 +197,7 @@ func capabilitiesDoc() map[string]any {
 		"spec_version":        dds.SpecVersion,
 		"commands":            []string{"version", "capabilities", "status", "convert", "send", "subscribe", "discover", "idl"},
 		"transports":          []string{"rtps", "shmem", "mock"},
-		"features":            []string{"reliable", "transient-local", "fragmentation", "security", "loaning", "shmem-zerocopy"},
+		"features":            []string{"reliable", "transient-local", "fragmentation", "security", "loaning", "shmem-zerocopy", "tsn"},
 		"interfaces":          []string{"Node"},
 		"optional_interfaces": []string{"HealthProvider", "MetricsProvider", "Drainer", "LoaningPublisher"},
 		"adapt":               true,

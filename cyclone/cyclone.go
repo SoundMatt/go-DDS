@@ -142,7 +142,11 @@ func New(domain dds.Domain) (dds.Participant, error) {
 }
 
 // NewWithOptions creates a CycloneDDS Participant with explicit options.
+// Domain is validated as 0–232 inclusive per spec §17 requirement 11.
 func NewWithOptions(domain dds.Domain, opts Options) (dds.Participant, error) {
+	if err := dds.ValidateDomain(domain); err != nil {
+		return nil, err
+	}
 	pid := C.go_dds_create_participant(C.int32_t(domain))
 	if pid < 0 {
 		return nil, fmt.Errorf("cyclone: dds_create_participant failed (rc=%d)", int(pid))

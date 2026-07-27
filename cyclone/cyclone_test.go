@@ -11,6 +11,7 @@ package cyclone_test
 //fusa:test REQ-CYCLONE-004
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -63,6 +64,19 @@ func TestCyclone_NewWithOptions(t *testing.T) {
 		}
 	case <-time.After(3 * time.Second):
 		t.Fatal("timeout waiting for sample")
+	}
+}
+
+// TestCyclone_NewWithOptions_ValidatesDomain asserts domain range is
+// validated before any CGo call, so it fails deterministically (spec §17
+// requirement 11) regardless of whether the CycloneDDS system library is
+// installed on the test host.
+func TestCyclone_NewWithOptions_ValidatesDomain(t *testing.T) {
+	if _, err := cyclone.NewWithOptions(dds.Domain(233), cyclone.Options{}); !errors.Is(err, dds.ErrDomainOutOfRange) {
+		t.Errorf("NewWithOptions(233, ...) error = %v, want ErrDomainOutOfRange", err)
+	}
+	if _, err := cyclone.NewWithOptions(dds.Domain(-1), cyclone.Options{}); !errors.Is(err, dds.ErrDomainOutOfRange) {
+		t.Errorf("NewWithOptions(-1, ...) error = %v, want ErrDomainOutOfRange", err)
 	}
 }
 

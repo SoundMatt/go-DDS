@@ -729,6 +729,30 @@ func TestNewSentinels_ErrorsIs(t *testing.T) {
 	}
 }
 
+// TestProtocolSpecificSentinels_WrapMandatoryParent asserts, per spec §5.4,
+// that the DDS-specific sentinels wrap their mandated mandatory-sentinel
+// parent so errors.Is reaches it directly from the base definition — not
+// only when a caller happens to wrap it again.
+func TestProtocolSpecificSentinels_WrapMandatoryParent(t *testing.T) {
+	cases := []struct {
+		name   string
+		err    error
+		parent error
+	}{
+		{"ErrTopicEmpty wraps ErrNotConnected", dds.ErrTopicEmpty, dds.ErrNotConnected},
+		{"ErrQoSMismatch wraps ErrNotConnected", dds.ErrQoSMismatch, dds.ErrNotConnected},
+		{"ErrResourceLimits wraps ErrPayloadTooLarge", dds.ErrResourceLimits, dds.ErrPayloadTooLarge},
+		{"ErrLoanBuffer wraps ErrClosed", dds.ErrLoanBuffer, dds.ErrClosed},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if !errors.Is(tc.err, tc.parent) {
+				t.Errorf("errors.Is(%v, %v) = false, want true (spec §5.4)", tc.err, tc.parent)
+			}
+		})
+	}
+}
+
 func TestTryRead_Interface(t *testing.T) {
 	p := newMockParticipant(t)
 	sub, err := p.NewSubscriber("tryread/iface", dds.DefaultQoS)
