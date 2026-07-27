@@ -23,9 +23,9 @@ import (
 
 	dds "github.com/SoundMatt/go-DDS"
 	"github.com/SoundMatt/go-DDS/mock"
-	"github.com/SoundMatt/go-DDS/monitor"
-	"github.com/SoundMatt/go-DDS/record"
-	"github.com/SoundMatt/go-DDS/services"
+	"github.com/SoundMatt/go-DDS/observability/monitor"
+	"github.com/SoundMatt/go-DDS/observability/record"
+	"github.com/SoundMatt/go-DDS/observability/services"
 )
 
 // failAfterNParticipant wraps a real participant and fails NewSubscriber after

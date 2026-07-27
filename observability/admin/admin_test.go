@@ -22,8 +22,8 @@ import (
 	"testing"
 
 	dds "github.com/SoundMatt/go-DDS"
-	"github.com/SoundMatt/go-DDS/admin"
 	"github.com/SoundMatt/go-DDS/mock"
+	"github.com/SoundMatt/go-DDS/observability/admin"
 )
 
 func newPart(t *testing.T) dds.Participant {

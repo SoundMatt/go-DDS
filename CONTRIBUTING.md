@@ -59,24 +59,19 @@ have the right to contribute under the existing license.
 | Directory | What it contains |
 |---|---|
 | `.` | `dds` package — core interfaces (`Participant`, `Publisher`, `Subscriber`, `QoS`, `WaitSet`, `LoaningPublisher`) |
-| `admin/` | Participant administration — statistics, topic enumeration, remote control |
 | `auto/` | `NewParticipant` factory that auto-selects transport (shmem → RTPS fallback) |
 | `bridge/grpc/` | gRPC bridge — expose a DDS topic over a gRPC stream for WAN connectivity |
 | `cmd/latmon/` | Latency monitor daemon |
-| `cmd/monitor/` | Real-time web monitor daemon |
 | `config/` | `ParticipantConfig` — YAML/TOML-loadable runtime tuning (heartbeat, SPDP, peer locators) |
 | `cyclone/` | CycloneDDS via CGo (`-tags cyclone`) |
 | `interop/` | Wire-compatibility tests against CycloneDDS. Requires Docker and `-tags interop`. |
 | `mock/` | In-process pub/sub. Zero dependencies. Use for unit tests. |
-| `monitor/` | Real-time web monitor server (SSE push, no external deps) |
-| `otel/` | OpenTelemetry tracing adapter — wraps a `Participant` with OTLP spans |
+| `observability/` (`go.mod`) | Independent module: `observability/monitor` (real-time web monitor server, SSE push, no external deps), `observability/admin` (participant administration — statistics, topic enumeration, remote control), `observability/otel` (OpenTelemetry tracing adapter — wraps a `Participant` with OTLP spans), `observability/services` (higher-level service patterns — service server, service client), `observability/record` (fault injection and sample recording/replay for deterministic testing), `observability/cmd/monitor` (real-time web monitor daemon) |
 | `pool/` | `BytePool` — sync.Pool-backed buffer recycling used by `LoaningPublisher` |
-| `record/` | Fault injection and sample recording/replay for deterministic testing |
 | `rpc/` | Request/response RPC layer built on DDS pub/sub |
 | `rtps/` | Pure-Go RTPS/UDP transport. No CGo. |
 | `safety/` | E2E safety wrapper: CRC framing, GC latency profiling, ASIL-B compliance helpers |
 | `security/` | Pluggable payload security (NullPlugin, HMAC-SHA-256, AES-256-GCM) |
-| `services/` | Higher-level service patterns (service server, service client) |
 | `shmem/` | Shared-memory transport for intra-host zero-copy messaging |
 | `testutil/` | Test helpers: `Eventually`, `Drain`, channel utilities |
 | `testutil/scenario/` | Declarative scenario DSL: `Publish`, `Expect`, `ExpectNone`, `Wait`, `Assert`, `Run` |

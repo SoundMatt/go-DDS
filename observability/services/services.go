@@ -30,8 +30,8 @@ import (
 	"sync"
 
 	dds "github.com/SoundMatt/go-DDS"
-	"github.com/SoundMatt/go-DDS/monitor"
-	"github.com/SoundMatt/go-DDS/record"
+	"github.com/SoundMatt/go-DDS/observability/monitor"
+	"github.com/SoundMatt/go-DDS/observability/record"
 )
 
 // ── RecorderService ───────────────────────────────────────────────────────────

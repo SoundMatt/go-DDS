@@ -18,12 +18,12 @@ The API is a stable Go interface. Implementations are swappable without changing
 | `security` | Pluggable payload security — NullPlugin, HMAC-SHA-256, AES-256-GCM, CertPlugin (X.509/ECDSA), AccessPolicy (topic ACL), ReplayGuard (anti-replay); `HMACDiscoveryPlugin` for SPDP-layer peer authentication. | Nothing |
 | `tools/xtypes` | Dynamic Data / XTypes — TypeDescriptor, TypeIdentifier, DynamicData, TypeRegistry, CheckCompatibility. | `go get github.com/SoundMatt/go-DDS/tools` |
 | `config` | JSON/YAML participant configuration with validation. | Nothing |
-| `monitor` | Real-time web dashboard. `/health`, `/api/topics`, `/api/diagnostics`, SSE discovery events. | Nothing |
+| `observability/monitor` | Real-time web dashboard. `/health`, `/api/topics`, `/api/diagnostics`, SSE discovery events. | `go get github.com/SoundMatt/go-DDS/observability` |
 | `tsn` | TSN stream model, TAPRIO scheduling, stream health tracking. | Nothing |
 | `bridge/wan` | WAN bridge — forward DDS samples between domains over TCP (length-framed JSON, 16 MiB cap); optional TLS + shared-token auth. | Nothing |
-| `admin` | HTTP admin API — `/admin/health`, `/admin/topics`, `/admin/discovery`, `/admin/publish`; bearer-token auth. | Nothing |
-| `services` | Managed service lifecycle — RecorderService, ReplayService (loop + seek), MonitorService. | Nothing |
-| `record` | Topic recording to JSONL, deterministic replay (real-time or scaled), fault injection. | Nothing |
+| `observability/admin` | HTTP admin API — `/admin/health`, `/admin/topics`, `/admin/discovery`, `/admin/publish`; bearer-token auth. | `go get github.com/SoundMatt/go-DDS/observability` |
+| `observability/services` | Managed service lifecycle — RecorderService, ReplayService (loop + seek), MonitorService. | `go get github.com/SoundMatt/go-DDS/observability` |
+| `observability/record` | Topic recording to JSONL, deterministic replay (real-time or scaled), fault injection. | `go get github.com/SoundMatt/go-DDS/observability` |
 | `pool` | Allocation-free byte-slice recycling and fixed-capacity sample ring buffer. | Nothing |
 | `safety` | E2E protection header (CRC-16, sequence counter, freshness) and deterministic queue. | Nothing |
 | `testutil` | Test harness helpers: `NewParticipant`, `AssertSample`, `TopicRecorder`, `BurstPublish`. | Nothing |
@@ -209,7 +209,7 @@ p, err := rtps.New(dds.Domain(0), rtps.WithConfig(cfg))
 The `monitor` package serves a live web dashboard with no external dependencies:
 
 ```go
-import "github.com/SoundMatt/go-DDS/monitor"
+import "github.com/SoundMatt/go-DDS/observability/monitor"
 
 mon := monitor.New(p) // p implements MetricsProvider, HealthProvider, etc.
 log.Fatal(http.ListenAndServe(":8080", mon))
@@ -229,7 +229,7 @@ Endpoints:
 Record live traffic to a JSONL file and replay it deterministically:
 
 ```go
-import "github.com/SoundMatt/go-DDS/record"
+import "github.com/SoundMatt/go-DDS/observability/record"
 
 // Record
 sub, _ := p.NewSubscriber("vehicle/speed", dds.DefaultQoS)
@@ -253,7 +253,7 @@ pl.PlayFiltered(ctx, []string{"vehicle/speed"})
 Stress-test consumers by wrapping any publisher with configurable faults:
 
 ```go
-import "github.com/SoundMatt/go-DDS/record"
+import "github.com/SoundMatt/go-DDS/observability/record"
 
 pub, _ := p.NewPublisher("vehicle/speed", dds.DefaultQoS)
 faulty := record.NewFaultPublisher(pub, record.FaultOptions{
@@ -485,7 +485,7 @@ Wire format: 4-byte big-endian length prefix + JSON `{"t":"<topic>","p":"<base64
 HTTP endpoints for runtime inspection and publishing without a DDS client:
 
 ```go
-import "github.com/SoundMatt/go-DDS/admin"
+import "github.com/SoundMatt/go-DDS/observability/admin"
 
 srv, err := admin.New(p, admin.Options{
     Addr:  ":8081",
@@ -506,7 +506,7 @@ defer srv.Close()
 Managed lifecycle wrappers for recorder, replay, and monitor:
 
 ```go
-import "github.com/SoundMatt/go-DDS/services"
+import "github.com/SoundMatt/go-DDS/observability/services"
 
 // Record to file with managed start/stop
 recSvc := services.NewRecorderService(p, services.RecorderOptions{

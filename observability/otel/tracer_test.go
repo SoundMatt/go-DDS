@@ -14,7 +14,7 @@ import (
 	"testing"
 
 	dds "github.com/SoundMatt/go-DDS"
-	ddsotel "github.com/SoundMatt/go-DDS/otel"
+	ddsotel "github.com/SoundMatt/go-DDS/observability/otel"
 	"go.opentelemetry.io/otel/trace/noop"
 )
 

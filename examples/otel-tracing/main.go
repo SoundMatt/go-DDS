@@ -24,7 +24,7 @@ import (
 	"time"
 
 	dds "github.com/SoundMatt/go-DDS"
-	ddsotel "github.com/SoundMatt/go-DDS/otel"
+	ddsotel "github.com/SoundMatt/go-DDS/observability/otel"
 	"github.com/SoundMatt/go-DDS/rtps"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"

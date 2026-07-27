@@ -22,7 +22,7 @@ import (
 
 	dds "github.com/SoundMatt/go-DDS"
 	"github.com/SoundMatt/go-DDS/mock"
-	"github.com/SoundMatt/go-DDS/record"
+	"github.com/SoundMatt/go-DDS/observability/record"
 )
 
 // errWritePublisher always returns an error from Write/WriteCtx.
