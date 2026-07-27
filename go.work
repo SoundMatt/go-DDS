@@ -1,0 +1,16 @@
+go 1.25.0
+
+// Local multi-module development only (ROADMAP.md, "Architecture
+// Initiative" #71, "CI/Testing Implications"). Lets `go build ./...` and
+// editor tooling work across the repo's module boundaries without every
+// module needing a `replace` directive for every sibling. Does NOT affect
+// the published module graph (each module's own go.mod/go.sum is what
+// consumers and CI resolve against) — CI builds/tests each module
+// independently rather than relying on this file. Add new module
+// directories here as later phases (tools/, observability/, examples/)
+// extract their own go.mod.
+use (
+	.
+	./bridge
+	./safety
+)
