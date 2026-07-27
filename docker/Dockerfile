@@ -4,6 +4,11 @@
 FROM golang:1.26-alpine AS builder
 WORKDIR /src
 COPY go.mod go.sum ./
+# safety/go.mod must be present before `go mod download`: the root go.mod's
+# `replace github.com/SoundMatt/go-DDS/safety => ./safety` directive (added
+# in the Phase A module split, ROADMAP.md "Architecture Initiative" #71)
+# resolves to this local path, and the Go toolchain reads it eagerly.
+COPY safety/go.mod safety/go.sum ./safety/
 RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -trimpath -o /bin/monitor ./cmd/monitor
