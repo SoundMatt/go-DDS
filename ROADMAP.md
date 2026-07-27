@@ -1109,8 +1109,9 @@ and `core -> tsn` and `observability -> safety` are both real edges today.
   `bridge/wan`). Only depends on core (`mock`); no dependency on `safety`,
   so it doesn't need to wait on Phase A except for repo-hygiene reasons
   (doing them in sequence rather than in parallel keeps each PR reviewable).
-  Shipped as `bridge/go.mod` (module `github.com/SoundMatt/go-DDS/bridge`,
-  first tag `bridge/v0.1.0`) — named after the existing `bridge/` directory
+  Shipped in #112 as `bridge/go.mod` (module
+  `github.com/SoundMatt/go-DDS/bridge`, first tag `bridge/v0.1.0`) — named
+  after the existing `bridge/` directory
   rather than the roadmap's provisional "bridges" group name, so
   `bridge/grpc`/`bridge/rest`/`bridge/wan` import paths stay unchanged per
   the "Module Naming Caveat" below. Root `go.mod` needed no `require`/
