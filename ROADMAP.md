@@ -1147,7 +1147,7 @@ and `core -> tsn` and `observability -> safety` are both real edges today.
   `test-safety`/`test-bridge`; `relay-conform`'s `Build go-dds CLI` step and
   `fuzz-short`'s `FuzzIDLParser`/`FuzzIDLGenerate` steps now run with
   `working-directory: tools`, per "CI/Testing Implications".
-- ⬜ **Phase D — Extract `observability/go.mod`** (`monitor`, `admin`,
+- ✅ **Phase D — Extract `observability/go.mod`** (`monitor`, `admin`,
   `otel`, `services`, `record`, `cmd/monitor`). Deliberately last among the
   four peripheral groups because `monitor` imports `safety` and `tsn` in
   production code — this group can only cleanly depend on a *released,
@@ -1155,7 +1155,36 @@ and `core -> tsn` and `observability -> safety` are both real edges today.
   Doing D before A would mean either a temporary same-repo relative
   `replace` directive (workable but adds noise) or `observability` briefly
   importing `safety` via relative path while both live pre-split, which
-  Phase A's earlier landing avoids entirely.
+  Phase A's earlier landing avoids entirely. Like `tools/` (Phase C, unlike
+  `bridge`/`safety`), these five packages did not already share one
+  directory, so this phase physically moved them under a new
+  `observability/` directory (`observability/monitor`, `observability/admin`,
+  `observability/otel`, `observability/services`, `observability/record`,
+  `observability/cmd/monitor`), changing their Go import paths — the same
+  deliberate deviation Phase C called out, made for the same reason (no
+  path-preserving alternative could produce one `observability/go.mod`);
+  `cmd/monitor`'s install path moves too, but as a `package main` binary it
+  has no library import-path consumers to break. Took the `monitor`->`safety`
+  dependency from the tagged `safety/v0.1.0` module (a `go.mod` `require`,
+  not a relative-path `replace`), per this phase's whole reason for coming
+  after Phase A. Unlike Phases B/C, root `go.mod` **did** need a change:
+  `examples/otel-tracing` (still root-tree pending Phase E) imports the
+  `otel` package, so root now takes `github.com/SoundMatt/go-DDS/observability
+  v0.1.0` with an in-repo `replace ... => ./observability`, mirroring how
+  Phase A added root's now-removed `safety` require/replace for the same
+  reason (`monitor`, the only root-tree importer of `safety`, moved out in
+  this phase, so that require/replace was dropped from root `go.mod`).
+  Shipped in #114 as `observability/go.mod` (module
+  `github.com/SoundMatt/go-DDS/observability`, first tag
+  `observability/v0.1.0`; root bumped to v0.54.0 for the require/replace
+  change and the package-surface reduction). Proactively fixed
+  `docker/Dockerfile`'s builder stage per the Phase A COPY-order lesson
+  (#110): `observability/go.mod`/`go.sum` are now `COPY`'d and
+  `go mod download`'d before the full build context, and the `monitor`
+  binary is now built with `cd observability && go build ./cmd/monitor`
+  since it lives in a different module. `go.work` updated to add
+  `./observability`. `.github/workflows/ci.yml`: added a `test-observability`
+  matrix leg mirroring `test-safety`/`test-bridge`/`test-tools`.
 - ⬜ **Phase E — `examples/go.mod`** (`examples/*`, `cmd/latmon`), depending
   only on tagged versions of core + whichever peripheral modules each
   example demonstrates. Last, since examples are meant to exercise the

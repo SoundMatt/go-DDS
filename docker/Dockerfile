@@ -4,16 +4,23 @@
 FROM golang:1.26-alpine AS builder
 WORKDIR /src
 COPY go.mod go.sum ./
-# safety/go.mod must be present before `go mod download`: the root go.mod's
-# `replace github.com/SoundMatt/go-DDS/safety => ./safety` directive (added
-# in the Phase A module split, ROADMAP.md "Architecture Initiative" #71)
-# resolves to this local path, and the Go toolchain reads it eagerly.
-COPY safety/go.mod safety/go.sum ./safety/
+# observability/go.mod must be present before `go mod download`: the root
+# go.mod's `replace github.com/SoundMatt/go-DDS/observability =>
+# ./observability` directive (added in the Phase D module split,
+# ROADMAP.md "Architecture Initiative" #71) resolves to this local path,
+# and the Go toolchain reads it eagerly. Phase A hit the same issue for
+# safety/go.mod (see #110) — this is the same fix, applied proactively.
+COPY observability/go.mod observability/go.sum ./observability/
 RUN go mod download
+RUN cd observability && go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -trimpath -o /bin/monitor ./cmd/monitor
-RUN CGO_ENABLED=0 go build -trimpath -o /bin/pub     ./examples/quickstart/pub
-RUN CGO_ENABLED=0 go build -trimpath -o /bin/sub     ./examples/quickstart/sub
+# cmd/monitor moved into the observability/ submodule (ROADMAP.md
+# "Architecture Initiative" #71, Phase D) — it has its own go.mod, so it
+# must be built from within that module rather than as a relative package
+# path off the root module.
+RUN cd observability && CGO_ENABLED=0 go build -trimpath -o /bin/monitor ./cmd/monitor
+RUN CGO_ENABLED=0 go build -trimpath -o /bin/pub ./examples/quickstart/pub
+RUN CGO_ENABLED=0 go build -trimpath -o /bin/sub ./examples/quickstart/sub
 
 # ── monitor image ──────────────────────────────────────────────────────────────
 FROM alpine:3.21 AS monitor

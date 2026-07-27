@@ -244,6 +244,47 @@ jobs:
         working-directory: tools
         run: go test -race -count=1 ./...
 
+  # ── observability submodule (independent go.mod, ROADMAP.md "Architecture
+  # Initiative" #71 Phase D) — builds/tests standalone from ./observability,
+  # using its `replace github.com/SoundMatt/go-DDS => ../` for in-repo
+  # development. Module path is `.../go-DDS/observability`, gathering
+  # monitor, admin, otel, services, record, and cmd/monitor — like tools/
+  # (Phase C, unlike bridge/safety), these packages did not already share a
+  # common directory, so this phase moved them under a new observability/
+  # directory and their import paths changed accordingly (e.g. `.../monitor`
+  # -> `.../observability/monitor`) — see ROADMAP.md Phase D note and
+  # "Module Naming Caveat". Takes its `safety` dependency (monitor imports
+  # safety/tsn) from the tagged safety/v0.1.0 module, not a relative-path
+  # replace, since Phase A already shipped a stable tagged safety module.
+  test-observability:
+    name: Test (observability module, ${{ matrix.os }}, Go ${{ matrix.go }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        go: ["1.25", "1.26"]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ matrix.go }}
+
+      - name: go build (observability module)
+        working-directory: observability
+        run: go build ./...
+
+      - name: go vet (observability module)
+        working-directory: observability
+        run: go vet ./...
+
+      - name: go test (observability module, -race)
+        shell: bash
+        working-directory: observability
+        run: go test -race -count=1 ./...
+
   # ── RELAY conformance gate (spec §12 CLI documents + §11.2 interop) ────────
   # Validates the go-dds CLI against the JSON Schemas embedded in the pinned
   # relay binary (authoritative, unlike hand-rolled JSON asserts), then checks

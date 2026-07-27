@@ -19,7 +19,7 @@ import (
 	"time"
 
 	dds "github.com/SoundMatt/go-DDS"
-	"github.com/SoundMatt/go-DDS/record"
+	"github.com/SoundMatt/go-DDS/observability/record"
 )
 
 // ── FaultPublisher ────────────────────────────────────────────────────────────

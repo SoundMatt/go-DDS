@@ -23,7 +23,7 @@ import (
 
 	dds "github.com/SoundMatt/go-DDS"
 	"github.com/SoundMatt/go-DDS/mock"
-	"github.com/SoundMatt/go-DDS/monitor"
+	"github.com/SoundMatt/go-DDS/observability/monitor"
 	"github.com/SoundMatt/go-DDS/safety"
 	"github.com/SoundMatt/go-DDS/tsn"
 )

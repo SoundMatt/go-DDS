@@ -9,7 +9,7 @@
 // Usage:
 //
 //	import (
-//	    ddsotel "github.com/SoundMatt/go-DDS/otel"
+//	    ddsotel "github.com/SoundMatt/go-DDS/observability/otel"
 //	    "github.com/SoundMatt/go-DDS/rtps"
 //	    "go.opentelemetry.io/otel"
 //	)
