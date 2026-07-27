@@ -14,6 +14,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -142,17 +143,31 @@ func loadPackages(t *testing.T) []goListPackage {
 	return pkgs
 }
 
-// moduleRoot returns the root directory of this repo's Go module.
+// moduleRoot returns the root directory of the core (root) go-DDS module.
+//
+// This deliberately uses `go env GOMOD` rather than `go list -m -f
+// {{.Dir}}`: once a repo-root `go.work` exists (ROADMAP.md "Architecture
+// Initiative" #71, Phase B added one for local multi-module dev), `go list
+// -m` with no module argument lists every module in the workspace — one
+// line per module (core, bridge, safety, ...) — which broke this test by
+// turning the expected single directory into a multi-line string `exec`
+// then failed to `chdir` into. `go env GOMOD` instead reports the go.mod
+// governing the *current* working directory regardless of workspace mode,
+// which is exactly the one archtest itself lives in (the core module).
 func moduleRoot(t *testing.T) string {
 	t.Helper()
-	cmd := exec.CommandContext(t.Context(), "go", "list", "-m", "-f", "{{.Dir}}")
+	cmd := exec.CommandContext(t.Context(), "go", "env", "GOMOD")
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		t.Fatalf("go list -m -f {{.Dir}} failed: %v\nstderr:\n%s", err, stderr.String())
+		t.Fatalf("go env GOMOD failed: %v\nstderr:\n%s", err, stderr.String())
 	}
-	return strings.TrimSpace(stdout.String())
+	gomod := strings.TrimSpace(stdout.String())
+	if gomod == "" {
+		t.Fatal("go env GOMOD returned empty — archtest must run inside a Go module")
+	}
+	return filepath.Dir(gomod)
 }
 
 // displayGroup renders the module root group ("") as "." for readability.

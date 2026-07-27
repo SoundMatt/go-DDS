@@ -1105,10 +1105,19 @@ and `core -> tsn` and `observability -> safety` are both real edges today.
   folded into `safety/go.mod` in this pass — `tsn` has zero go-DDS imports
   today so doing so is a straightforward follow-up, not a blocker, but it
   wasn't done here; treat this bullet as partially complete.
-- ⬜ **Phase B — Extract `bridges/go.mod`** (`bridge/grpc`, `bridge/rest`,
+- ✅ **Phase B — Extract `bridges/go.mod`** (`bridge/grpc`, `bridge/rest`,
   `bridge/wan`). Only depends on core (`mock`); no dependency on `safety`,
   so it doesn't need to wait on Phase A except for repo-hygiene reasons
   (doing them in sequence rather than in parallel keeps each PR reviewable).
+  Shipped as `bridge/go.mod` (module `github.com/SoundMatt/go-DDS/bridge`,
+  first tag `bridge/v0.1.0`) — named after the existing `bridge/` directory
+  rather than the roadmap's provisional "bridges" group name, so
+  `bridge/grpc`/`bridge/rest`/`bridge/wan` import paths stay unchanged per
+  the "Module Naming Caveat" below. Root `go.mod` needed no `require`/
+  `replace` change (unlike Phase A's `safety`): nothing in the root module
+  imports `bridge/...` in production or test code. Added a `go.work` at
+  repo root (`. bridge safety`) for local multi-module dev, per
+  "CI/Testing Implications" — not added in Phase A, added here instead.
 - ⬜ **Phase C — Extract `tools/go.mod`** (`idl`, `cdr`, `xtypes`,
   `cmd/ddstool`, `cmd/go-dds`). `idl` and `cmd/*` only depend on core;
   `xtypes` is currently a leaf with zero fan-in anywhere in the tree, so
