@@ -113,9 +113,10 @@ Re-run this profile at any time:
 
     go test -v -run=TestGCLatencyProfile -count=1 ./safety/
 
-For continuous monitoring, use the latmon command:
+For continuous monitoring, use the latmon command (lives in the
+examples/ submodule, ROADMAP.md "Architecture Initiative" #71 Phase E):
 
-    go run ./cmd/latmon --duration=0 --output=metrics.json
+    cd examples && go run ./cmd/latmon --duration=0 --output=metrics.json
 
 Results should be re-collected on the target hardware platform before
 production release. The measurements above were taken on a development

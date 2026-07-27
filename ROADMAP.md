@@ -1185,10 +1185,38 @@ and `core -> tsn` and `observability -> safety` are both real edges today.
   since it lives in a different module. `go.work` updated to add
   `./observability`. `.github/workflows/ci.yml`: added a `test-observability`
   matrix leg mirroring `test-safety`/`test-bridge`/`test-tools`.
-- ⬜ **Phase E — `examples/go.mod`** (`examples/*`, `cmd/latmon`), depending
+- ✅ **Phase E — `examples/go.mod`** (`examples/*`, `cmd/latmon`), depending
   only on tagged versions of core + whichever peripheral modules each
   example demonstrates. Last, since examples are meant to exercise the
   *released* module boundaries as an implicit integration test of the split.
+  Unlike `tools`/`observability` (Phases C/D), `examples/*` already lived
+  under one directory, so most packages needed no move — only `cmd/latmon`
+  did not already live under `examples/`, so it moved to
+  `examples/cmd/latmon` (its install path changes; as a `package main`
+  binary it has no library import-path consumers to break). Confirmed by
+  grepping production imports that no example needs `safety`, `bridge`, or
+  `tools`: only `examples/otel-tracing` imports a peripheral module
+  (`observability/otel`), so `examples/go.mod` takes exactly one peripheral
+  `require` — `github.com/SoundMatt/go-DDS/observability v0.1.0`, tagged,
+  never a relative-path `replace`, per this phase's whole point (examples
+  exercise the *released* module boundaries). Only `github.com/SoundMatt/
+  go-DDS` (core) gets the in-repo `replace ... => ../` used throughout
+  Phases A-D. Shipped as `examples/go.mod` (module
+  `github.com/SoundMatt/go-DDS/examples`, first tag `examples/v0.1.0`).
+  Root `go.mod` **did** change: `examples/otel-tracing` was the only
+  root-tree importer of `observability`, so root's Phase D `require`/
+  `replace github.com/SoundMatt/go-DDS/observability` and its now-unused
+  transitive `go.opentelemetry.io/otel*` deps all dropped out, shrinking
+  root back down to just `RELAY` + `protobuf` + `x/sys` (root bumped to
+  v0.55.0 for the package-surface reduction). Proactively fixed
+  `docker/Dockerfile`'s builder stage per the Phase A COPY-order lesson
+  (#110): `examples/go.mod`/`go.sum` are now `COPY`'d and `go mod
+  download`'d before the full build context (alongside the existing
+  `observability/` treatment from Phase D), and the `pub`/`sub` quickstart
+  binaries are now built with `cd examples && go build ./quickstart/{pub,sub}`
+  since they live in a different module now. `go.work` updated to add
+  `./examples`. `.github/workflows/ci.yml`: added a `test-examples` matrix
+  leg mirroring `test-safety`/`test-bridge`/`test-tools`/`test-observability`.
 - ⬜ **Phase F — Root cleanup**: move the root Markdown wall (`HARA.md`,
   `SAFETY_PLAN.md`, `SEOOC.md`, `STANDARDS_GAP.md`, etc.) into `docs/` and
   add the per-package maturity matrix + `CHANGELOG.md`/`SUPPORT.md`, per

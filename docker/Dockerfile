@@ -4,23 +4,30 @@
 FROM golang:1.26-alpine AS builder
 WORKDIR /src
 COPY go.mod go.sum ./
-# observability/go.mod must be present before `go mod download`: the root
-# go.mod's `replace github.com/SoundMatt/go-DDS/observability =>
-# ./observability` directive (added in the Phase D module split,
-# ROADMAP.md "Architecture Initiative" #71) resolves to this local path,
-# and the Go toolchain reads it eagerly. Phase A hit the same issue for
-# safety/go.mod (see #110) — this is the same fix, applied proactively.
+# observability/go.mod and examples/go.mod must both be present before their
+# respective `go mod download` runs below: examples/go.mod's `replace
+# github.com/SoundMatt/go-DDS => ../` directive (added in the Phase E module
+# split, ROADMAP.md "Architecture Initiative" #71) resolves to this root
+# go.mod/go.sum (already COPY'd above), and the Go toolchain reads the
+# replace target eagerly. Phase A hit the same issue for safety/go.mod (see
+# #110) and Phase D proactively applied the same fix for observability/
+# go.mod — this is the same fix, applied proactively again for examples/.
 COPY observability/go.mod observability/go.sum ./observability/
+COPY examples/go.mod examples/go.sum ./examples/
 RUN go mod download
 RUN cd observability && go mod download
+RUN cd examples && go mod download
 COPY . .
 # cmd/monitor moved into the observability/ submodule (ROADMAP.md
 # "Architecture Initiative" #71, Phase D) — it has its own go.mod, so it
 # must be built from within that module rather than as a relative package
 # path off the root module.
 RUN cd observability && CGO_ENABLED=0 go build -trimpath -o /bin/monitor ./cmd/monitor
-RUN CGO_ENABLED=0 go build -trimpath -o /bin/pub ./examples/quickstart/pub
-RUN CGO_ENABLED=0 go build -trimpath -o /bin/sub ./examples/quickstart/sub
+# examples/quickstart/{pub,sub} moved into the examples/ submodule
+# (ROADMAP.md "Architecture Initiative" #71, Phase E) — it has its own
+# go.mod, so pub/sub must be built from within that module too.
+RUN cd examples && CGO_ENABLED=0 go build -trimpath -o /bin/pub ./quickstart/pub
+RUN cd examples && CGO_ENABLED=0 go build -trimpath -o /bin/sub ./quickstart/sub
 
 # ── monitor image ──────────────────────────────────────────────────────────────
 FROM alpine:3.21 AS monitor

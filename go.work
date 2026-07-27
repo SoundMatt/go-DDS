@@ -12,6 +12,7 @@ go 1.25.0
 use (
 	.
 	./bridge
+	./examples
 	./observability
 	./safety
 	./tools
