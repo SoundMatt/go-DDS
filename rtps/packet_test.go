@@ -61,8 +61,18 @@ import (
 	"time"
 
 	dds "github.com/SoundMatt/go-DDS"
-	"github.com/SoundMatt/go-DDS/tsn"
 )
+
+// testTSNConfig is a minimal in-package TSNStreamConfig test double. It lets
+// these white-box tests exercise TSN wiring without importing package tsn —
+// package tsn imports rtps (for tsn.WithStreamConfig), so an rtps-internal
+// test file importing tsn back would be an import cycle.
+type testTSNConfig map[string]TSNParams
+
+func (c testTSNConfig) StreamForTopic(topic string) (TSNParams, bool) {
+	p, ok := c[topic]
+	return p, ok
+}
 
 // testPart creates a minimal participant, skipping the test if sockets cannot
 // be bound (common in heavily-locked CI environments).
@@ -2078,14 +2088,7 @@ func TestWithStaticPeers_SameAsPeerLocators(t *testing.T) {
 }
 
 func TestWithTSNConfig_MatchesTopic(t *testing.T) {
-	cfg, err := tsn.ParseConfig([]byte(`{
-		"streams":[
-			{"topic":"tsn/cfg","pcp":5,"dscp":46,"max_frame_size":1500}
-		]
-	}`))
-	if err != nil {
-		t.Fatalf("ParseConfig: %v", err)
-	}
+	cfg := testTSNConfig{"tsn/cfg": {Priority: 5, DSCP: 46, MaxFragPayload: 1452}}
 	p, err := newParticipant(dds.Domain(82), WithNoMulticast(), WithTSNConfig(cfg))
 	if err != nil {
 		t.Skipf("newParticipant: %v", err)
@@ -2105,8 +2108,8 @@ func TestWithTSNConfig_MatchesTopic(t *testing.T) {
 	if w.tsnStream == nil {
 		t.Fatal("tsnStream should be set for topic 'tsn/cfg'")
 	}
-	if w.tsnStream.PCP != 5 {
-		t.Errorf("tsnStream.PCP = %d, want 5", w.tsnStream.PCP)
+	if w.tsnStream.Priority != 5 {
+		t.Errorf("tsnStream.Priority = %d, want 5", w.tsnStream.Priority)
 	}
 	if w.tsnSock == nil {
 		t.Error("tsnSock should be non-nil for TSN publisher")
@@ -2118,12 +2121,7 @@ func TestWithTSNConfig_MatchesTopic(t *testing.T) {
 }
 
 func TestWithTSNConfig_NonMatchingTopic_NoTSN(t *testing.T) {
-	cfg, err := tsn.ParseConfig([]byte(`{
-		"streams":[{"topic":"tsn/other","pcp":3}]
-	}`))
-	if err != nil {
-		t.Fatalf("ParseConfig: %v", err)
-	}
+	cfg := testTSNConfig{"tsn/other": {Priority: 3}}
 	p, err := newParticipant(dds.Domain(81), WithNoMulticast(), WithTSNConfig(cfg))
 	if err != nil {
 		t.Skipf("newParticipant: %v", err)
@@ -2199,13 +2197,11 @@ func TestClockTAINow_ReturnsPlausibleTime(t *testing.T) {
 }
 
 func TestTSNConfig_FragSizePropagated(t *testing.T) {
-	// MaxFrameSize=200 → MaxFragPayload()=152; fragmentSize() should return 152.
-	cfg, err := tsn.ParseConfig([]byte(`{
-		"streams":[{"topic":"frag/tsn","pcp":1,"max_frame_size":200}]
-	}`))
-	if err != nil {
-		t.Fatalf("ParseConfig: %v", err)
-	}
+	// MaxFrameSize=200 → MaxFragPayload=152 (200 - 48 bytes RTPS overhead,
+	// per tsn.Stream.MaxFragPayload's REQ-TSN-001); fragmentSize() should
+	// return 152.
+	const want = 152
+	cfg := testTSNConfig{"frag/tsn": {Priority: 1, MaxFragPayload: want}}
 	p, err := newParticipant(dds.Domain(80), WithNoMulticast(), WithTSNConfig(cfg))
 	if err != nil {
 		t.Skipf("newParticipant: %v", err)
@@ -2224,7 +2220,6 @@ func TestTSNConfig_FragSizePropagated(t *testing.T) {
 	if w.tsnStream == nil {
 		t.Fatal("tsnStream nil")
 	}
-	want := cfg.Streams[0].MaxFragPayload()
 	if w.fragmentSize() != want {
 		t.Errorf("fragmentSize() = %d, want %d (from MaxFrameSize=200)", w.fragmentSize(), want)
 	}
@@ -2235,12 +2230,11 @@ func TestTSNConfig_FragSizePropagated(t *testing.T) {
 // returns nil; on Linux it calls setsockopt(SO_TXTIME) which may fail on VMs
 // without an ETF qdisc — the caller ignores the error either way.
 func TestEnableTxTime_WhenTxOffsetPositive(t *testing.T) {
-	cfg, err := tsn.ParseConfig([]byte(`{
-		"streams":[{"topic":"tsn/txtime","pcp":5,"dscp":46,"tx_offset_us":50,"interval_us":125}]
-	}`))
-	if err != nil {
-		t.Fatalf("ParseConfig: %v", err)
-	}
+	cfg := testTSNConfig{"tsn/txtime": {
+		Priority: 5, DSCP: 46,
+		TxOffset: 50 * time.Microsecond,
+		Interval: 125 * time.Microsecond,
+	}}
 	p, err := newParticipant(dds.Domain(79), WithNoMulticast(), WithTSNConfig(cfg))
 	if err != nil {
 		t.Skipf("newParticipant: %v", err)
@@ -2268,16 +2262,15 @@ func TestEnableTxTime_WhenTxOffsetPositive(t *testing.T) {
 // TestScheduledSend_TriggeredOnWrite exercises the scheduledSend path by
 // injecting a fake remote-reader locator so that matchedReaderLocators returns
 // a non-empty slice, then writing a sample through a TSN publisher with
-// TxOffsetUS > 0.  The production code ignores the send error (nobody is
+// TxOffset > 0.  The production code ignores the send error (nobody is
 // listening at the fake loopback port), so the test just verifies Write
 // returns nil (the local-delivery path is unaffected).
 func TestScheduledSend_TriggeredOnWrite(t *testing.T) {
-	cfg, err := tsn.ParseConfig([]byte(`{
-		"streams":[{"topic":"tsn/sched","pcp":5,"dscp":46,"tx_offset_us":50,"interval_us":125}]
-	}`))
-	if err != nil {
-		t.Fatalf("ParseConfig: %v", err)
-	}
+	cfg := testTSNConfig{"tsn/sched": {
+		Priority: 5, DSCP: 46,
+		TxOffset: 50 * time.Microsecond,
+		Interval: 125 * time.Microsecond,
+	}}
 	p, err := newParticipant(dds.Domain(78), WithNoMulticast(), WithTSNConfig(cfg))
 	if err != nil {
 		t.Skipf("newParticipant: %v", err)
