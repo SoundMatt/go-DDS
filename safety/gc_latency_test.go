@@ -11,7 +11,9 @@
 //
 // The test measures worst-case GC stop-the-world (STW) pause durations and
 // end-to-end message latency while running a sensor-fusion–style pub/sub
-// workload through the mock backend.  Results are written to GC_LATENCY.md.
+// workload through the mock backend.  Results are written to
+// docs/GC_LATENCY.md (ROADMAP.md "Architecture Initiative" #71 Phase F moved
+// it out of the repo root).
 
 package safety_test
 
@@ -474,9 +476,9 @@ func writeGCLatencyReport(t *testing.T, d gcLatResult) {
 	w("production release. The measurements above were taken on a development")
 	w("workstation and are conservative relative to a dedicated ECU core.")
 
-	path := "../GC_LATENCY.md"
+	path := "../docs/GC_LATENCY.md"
 	if err := os.WriteFile(path, []byte(sb.String()), 0o640); err != nil {
-		t.Logf("warning: could not write GC_LATENCY.md: %v", err)
+		t.Logf("warning: could not write docs/GC_LATENCY.md: %v", err)
 		return
 	}
 	t.Logf("Written: %s", path)

@@ -571,6 +571,9 @@ go test -tags cyclone ./cyclone/...
 ## Roadmap
 
 See [ROADMAP.md](ROADMAP.md) for per-milestone goals, sub-items, and success criteria.
+See [CHANGELOG.md](CHANGELOG.md) for the release history and
+[docs/MATURITY.md](docs/MATURITY.md) for per-package maturity (Stable /
+Beta / Experimental / Reference).
 
 **Released — v0.1 – v0.3**
 
@@ -706,11 +709,11 @@ See [ROADMAP.md](ROADMAP.md) for per-milestone goals, sub-items, and success cri
 - [x] go-FuSa v0.19.0 → v0.21.0 compliance: LINT001/ANA007/CYBER017 fixes; cycle detection in IDL generator (v0.14.1–v0.14.3)
 - [x] CI: pinned `gofusa` safety gate (0 errors required to merge) (v0.14.2)
 - [x] Release workflow — auto-regenerates FMEA, safety case, SBOM, provenance on every tag (v0.14.3)
-- [x] `HARA.md` — tabletop ISO 26262-3 HARA; H-01 late delivery → ASIL-B
-- [x] `GC_LATENCY.md` — measured STW pause MAX 146µs, E2E latency MAX 305µs; formal GSN argument
+- [x] `docs/HARA.md` — tabletop ISO 26262-3 HARA; H-01 late delivery → ASIL-B
+- [x] `docs/GC_LATENCY.md` — measured STW pause MAX 146µs, E2E latency MAX 305µs; formal GSN argument
 - [x] `cmd/latmon` — continuous rolling-window latency monitor with JSON output
 - [x] `cert/` — complete certification package: PSAC, SDP, SVP, SCMP, SQAP, LLR, SCR, DCA, TQPs, PRP, DEVIATIONS, RELEASE_LOG
-- [x] `SAFETY_PLAN.md`, `CODING_STANDARD.md`, `STANDARDS_GAP.md` — ISO 26262 / IEC 61508 / DO-178C gap analysis
+- [x] `SAFETY_PLAN.md`, `docs/CODING_STANDARD.md`, `docs/STANDARDS_GAP.md` — ISO 26262 / IEC 61508 / DO-178C gap analysis
 - [x] 238 requirements, all traced + tested; `gofusa check` 0 errors
 
 See [ROADMAP.md](ROADMAP.md) for goals and sub-items.
@@ -734,6 +737,11 @@ The RTPS transport encodes payloads as CDR_LE byte arrays, compatible with the R
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). All commits require a DCO sign-off (`Signed-off-by:`).
+
+## Support
+
+See [SUPPORT.md](SUPPORT.md) for how to get help, report bugs, or report a
+security vulnerability.
 
 ## License
 

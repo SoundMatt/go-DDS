@@ -20,7 +20,7 @@ responsibilities for the development and verification of go-DDS
 - IEC 61508:2010 — Functional Safety of E/E/PE Safety-related Systems (Part 3)
 
 go-DDS is developed as a **Safety Element Out Of Context (SEOOC)** targeting
-ASIL-B (ISO 26262) / SIL 2 (IEC 61508). Refer to `HARA.md` for the hazard
+ASIL-B (ISO 26262) / SIL 2 (IEC 61508). Refer to `docs/HARA.md` for the hazard
 analysis and risk assessment that derives these levels.
 
 **Out of scope:** System-level HARA, hardware fault model (FMEDA), airworthiness
@@ -32,7 +32,7 @@ analysis and risk assessment that derives these levels.
 
 | ID | Document | Location |
 |---|---|---|
-| HARA | Hazard Analysis & Risk Assessment | `HARA.md` |
+| HARA | Hazard Analysis & Risk Assessment | `docs/HARA.md` |
 | SC | Safety Case | `safety-case.md` |
 | SCR | Structural Coverage Report | `cert/SCR.md` |
 | LLR | Low-Level Requirements | `cert/LLR.md` |
@@ -40,7 +40,7 @@ analysis and risk assessment that derives these levels.
 | SDP | Software Development Plan | `cert/SDP.md` |
 | SCMP | Software CM Plan | `cert/SCMP.md` |
 | SQAP | Software QA Plan | `cert/SQAP.md` |
-| CS | Coding Standard | `CODING_STANDARD.md` |
+| CS | Coding Standard | `docs/CODING_STANDARD.md` |
 | DCA | Diagnostic Coverage Analysis | `cert/DCA.md` |
 | REQS | Requirements manifest | `.fusa-reqs.json` |
 | FMEA | Differential FMEA table | `fmea.csv` |
@@ -115,7 +115,7 @@ Each level maps to ISO 26262-6:2018 work products:
 
 ### 5.2 Coding standard
 
-See `CODING_STANDARD.md`. The standard is enforced by:
+See `docs/CODING_STANDARD.md`. The standard is enforced by:
 - `go vet` (built-in static analysis)
 - `golangci-lint` (CI job `lint`)
 - `gofusa check` (CI job `gofusa`)
@@ -192,13 +192,13 @@ A release (version tag) may only be created when ALL of the following are true:
 6. `gofusa trace` — zero orphan tags, all requirements traced+tested
 7. Structural coverage ≥ 80% overall, ≥ 90% for `safety/` and `security/`
 8. Independent reviewer has signed `cert/RELEASE_LOG.md`
-9. `GC_LATENCY.md` is current (re-run `TestGCLatencyProfile` if safety/ or rtps/ changed)
+9. `docs/GC_LATENCY.md` is current (re-run `TestGCLatencyProfile` if safety/ or rtps/ changed)
 
 ---
 
 ## 10. Assumptions of use (AoU)
 
-The following AoUs are placed on the integrating system (see also `HARA.md §5`):
+The following AoUs are placed on the integrating system (see also `docs/HARA.md §5`):
 
 | ID | Assumption |
 |---|---|

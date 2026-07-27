@@ -112,7 +112,7 @@ API parity does not.
 - **v0.14.1** — go-FuSa v0.19.0 compliance: LINT001/ANA007/CYBER017 fixes across `idl/` and `cmd/ddstool`; parseEnum infinite-loop fix (fuzz corpus entry); cycle detection in IDL code generator (self-referential struct `A{A g}`); `idl/parser.go` refactor (`expectTok`/`expect` split)
 - **v0.14.2** — CI: pinned `gofusa@v0.19.0` safety gate job added to `.github/workflows/ci.yml`
 - **v0.14.3** — Release workflow (`.github/workflows/release.yml`) regenerates safety artifacts on every `v*` tag; `.gitignore` excludes `check-report.json`
-- **v0.14.4** — Fix two data races in `gc_latency_test.go` (payload-reuse + close/send); drop IV&V requirement (structural CI independence documented in `SAFETY_PLAN.md §3.1`); close G-61508-02 and G-DO178-09 in `STANDARDS_GAP.md`
+- **v0.14.4** — Fix two data races in `gc_latency_test.go` (payload-reuse + close/send); drop IV&V requirement (structural CI independence documented in `SAFETY_PLAN.md §3.1`); close G-61508-02 and G-DO178-09 in `docs/STANDARDS_GAP.md`
 - **v0.14.5** — Docker builder bumped from golang:1.22 to golang:1.25; `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` for docker/* actions
 - **v0.15.0** — go-FuSa v0.25.1; `otel/` OpenTelemetry adapter (`NewTracer(tp)` bridges `dds.Tracer` to any OTel provider); roadmap ✅ audit (all implemented items marked)
 - **v0.16.0** — `dds.LoaningPublisher` interface with zero-copy loaned-sample API (`mock.NewLoaningPublisher`, `rtps.NewLoaningPublisher`); `testutil/scenario` declarative scenario test runner (Publish, Expect, ExpectNone, Wait, Assert steps); 241 requirements
@@ -367,7 +367,7 @@ Support high-performance embedded and edge deployments.
 ### Resource Controls
 
 - Bounded queues ✅
-- Memory limits ✅ (via Go runtime `GOMEMLIMIT`; documented as AoU-02 in `HARA.md §5`)
+- Memory limits ✅ (via Go runtime `GOMEMLIMIT`; documented as AoU-02 in `docs/HARA.md §5`)
 - Flow control ✅ (`BackPressurePolicy`: `DropNewest`, `DropOldest`, `Block`)
 
 ### Benchmarking
@@ -405,7 +405,7 @@ Support safety-oriented communication architectures.
 
 - Safety metrics ✅ (`safety.Metrics` per-topic violation counters)
 - Safety events ✅
-- Safety diagnostics ✅ (`HARA.md`, `GC_LATENCY.md`, `cert/DCA.md`)
+- Safety diagnostics ✅ (`docs/HARA.md`, `docs/GC_LATENCY.md`, `cert/DCA.md`)
 
 ### Schema Validation (v0.12)
 
@@ -422,8 +422,8 @@ Support safety-oriented communication architectures.
 ### Documentation
 
 - Safety manual ✅
-- Assumptions of use ✅ (`SEOOC.md`)
-- Integration guidance ✅ (`SEOOC.md`)
+- Assumptions of use ✅ (`docs/SEOOC.md`)
+- Integration guidance ✅ (`docs/SEOOC.md`)
 
 Success Criteria:
 Applications can build black-channel safety architectures using go-DDS and observe safety-event rates in real time.
@@ -1217,11 +1217,32 @@ and `core -> tsn` and `observability -> safety` are both real edges today.
   since they live in a different module now. `go.work` updated to add
   `./examples`. `.github/workflows/ci.yml`: added a `test-examples` matrix
   leg mirroring `test-safety`/`test-bridge`/`test-tools`/`test-observability`.
-- ⬜ **Phase F — Root cleanup**: move the root Markdown wall (`HARA.md`,
-  `SAFETY_PLAN.md`, `SEOOC.md`, `STANDARDS_GAP.md`, etc.) into `docs/` and
-  add the per-package maturity matrix + `CHANGELOG.md`/`SUPPORT.md`, per
-  #71's secondary asks. Independent of the module split proper; can run in
-  parallel with any phase above.
+- ✅ **Phase F — Root cleanup**: moved `HARA.md`, `SEOOC.md`,
+  `STANDARDS_GAP.md`, `CODING_STANDARD.md`, and `GC_LATENCY.md` into
+  `docs/`, and added `docs/MATURITY.md` (per-package maturity matrix),
+  `CHANGELOG.md`, and `SUPPORT.md` at the root, per #71's secondary asks.
+  Pure docs/repo-hygiene reorganization — no `go.mod`/import-path changes,
+  independent of the module-split mechanics proper. **Deliberately did
+  NOT move** `SAFETY_PLAN.md`, `SVP.md`, `SCMP.md`, `SQAP.md`, `sas.md`, or
+  the `safety-case.*` files, despite `SAFETY_PLAN.md` being one of the
+  roadmap's own named examples above: go-FuSa v0.30.0 (external tool,
+  per "Other Repos Policy" not something this repo can patch) checks each
+  of these at a hardcoded root-relative path with no configurable
+  fallback (confirmed by reading the tool's source — `iso26262.go`,
+  `iec61508.go`, `do178.go`, `sci.go`, and `sas.go` all `os.Stat` bare
+  filenames like `"SAFETY_PLAN.md"` joined to `projectRoot`, unlike
+  `iec62443.go`'s `SECURITY.md`/`INCIDENT-RESPONSE.md` checks, which do
+  support a `docs/` fallback), and `sas.md`/`safety-case.*` are also
+  auto-regenerated to root on every release tag by
+  `.github/workflows/release.yml`. Moving any of these would have silently
+  corrupted the ISO 26262 / IEC 61508 / DO-178C gap-report evidence those
+  checks produce. `SECURITY.md` and `INCIDENT-RESPONSE.md` also stayed at
+  root, as GitHub community-health-file convention locations rather than
+  "architecture wall" docs — see CHANGELOG.md for the full rationale.
+  Updated cross-references in `README.md`, `SAFETY_PLAN.md`, `SQAP.md`,
+  and `safety/gc_latency_test.go` (which now writes its generated report to
+  `docs/GC_LATENCY.md`, hence a `safety` submodule patch bump alongside
+  root). Shipped in #116 (root v0.55.1, `safety/v0.1.1`).
 
 ### CI/Testing Implications
 

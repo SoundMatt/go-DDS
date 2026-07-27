@@ -5,7 +5,7 @@
 
 Define QA activities that provide assurance the go-DDS software lifecycle is
 executed in accordance with the approved plans (`SAFETY_PLAN.md`, `SVP.md`,
-`SCMP.md`) and the project coding standard (`CODING_STANDARD.md`). All QA gates
+`SCMP.md`) and the project coding standard (`docs/CODING_STANDARD.md`). All QA gates
 are automated and enforced in CI.
 
 ## 2. QA Activities
