@@ -23,9 +23,9 @@ import (
 	"time"
 
 	dds "github.com/SoundMatt/go-DDS"
-	"github.com/SoundMatt/go-DDS/idl"
 	"github.com/SoundMatt/go-DDS/mock"
 	"github.com/SoundMatt/go-DDS/rtps"
+	"github.com/SoundMatt/go-DDS/tools/idl"
 )
 
 func main() {

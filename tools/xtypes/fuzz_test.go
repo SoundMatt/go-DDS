@@ -8,7 +8,7 @@ package xtypes_test
 import (
 	"testing"
 
-	"github.com/SoundMatt/go-DDS/xtypes"
+	"github.com/SoundMatt/go-DDS/tools/xtypes"
 )
 
 // FuzzDynamicDataFromJSON feeds arbitrary JSON blobs into DynamicData.FromJSON

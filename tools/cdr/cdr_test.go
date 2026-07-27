@@ -13,7 +13,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/SoundMatt/go-DDS/cdr"
+	"github.com/SoundMatt/go-DDS/tools/cdr"
 )
 
 func roundtrip(t *testing.T, encode func(*cdr.Encoder), decode func(*cdr.Decoder)) {

@@ -8,7 +8,7 @@ package cdr_test
 import (
 	"testing"
 
-	"github.com/SoundMatt/go-DDS/cdr"
+	"github.com/SoundMatt/go-DDS/tools/cdr"
 )
 
 // FuzzCDRDecode feeds arbitrary bytes into the CDR decoder to check that it

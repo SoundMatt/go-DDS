@@ -34,7 +34,7 @@ func (g *generator) generate() (string, error) {
 	g.line(`	"fmt"`)
 	g.line("")
 	g.line(`	dds "github.com/SoundMatt/go-DDS"`)
-	g.line(`	"github.com/SoundMatt/go-DDS/cdr"`)
+	g.line(`	"github.com/SoundMatt/go-DDS/tools/cdr"`)
 	g.line(`)`)
 	g.line("")
 	g.line(`// _ suppresses unused-import errors in modules with no structs.`)
