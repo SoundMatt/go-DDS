@@ -1084,26 +1084,27 @@ Order is derived from the import graph above, not from #71's listed group
 order — you cannot cut a module boundary through a live production import,
 and `core -> tsn` and `observability -> safety` are both real edges today.
 
-- ⬜ **Phase 0 — Decouple `rtps` from `tsn` (prerequisite, no module split yet).**
-  Replace `rtps.Participant`'s direct `*tsn.StreamConfig`/`*tsn.Stream`
-  fields with a small interface defined in `rtps` (e.g. `TSNStreamConfig`)
-  that `tsn.StreamConfig` satisfies structurally, so `rtps` no longer
-  imports `tsn` at compile time; `WithTSNConfig` accepts the interface.
-  This is the only code change in this entire initiative — everything after
-  Phase 0 is pure module/file reorganization. Add a CI check (a small
-  import-graph lint, in the spirit of the existing `static-analysis` job)
-  that fails if any package under future `core` imports anything outside
-  `{dds root, rtps, mock, shmem, auto, pool, security, config, cyclone}` —
-  this is the guardrail that keeps core a leaf permanently, not just at
-  cut time.
-- ⬜ **Phase A — Extract `safety/go.mod`** (`safety`, `tsn`, `cert/`).
-  Smallest group (1,482 LOC prod), and after Phase 0 it depends on nothing
-  but core — fully self-contained. This also matches RELAY's roadmap
-  cross-language priority tier for DDS parity work (RELAY ROADMAP.md,
-  "Planned — DDS cross-language architecture alignment", Tier 2 —
-  `safety`/`security` right after the Tier 1 `rtps` port), so cutting it
-  first gives cpp-DDS/rust-DDS a stable `safety` module shape to target
-  early rather than last.
+- ✅ **Phase 0 — Decouple `rtps` from `tsn` (prerequisite, no module split yet).**
+  Replaced `rtps.Participant`'s direct `*tsn.StreamConfig`/`*tsn.Stream`
+  fields with `rtps.TSNStreamConfig`, a small interface defined in `rtps`
+  that `tsn` now adapts to via `tsn.WithStreamConfig` — `rtps` no longer
+  imports `tsn` at compile time. Added `archtest/coreleaf_test.go`, a
+  permanent CI-enforced import-graph guardrail (runs as part of
+  `go test ./...`) that fails if any core package imports a periphery
+  package. Shipped in #108 (v0.52.2).
+- ✅ **Phase A — Extract `safety/go.mod`** (`safety` only; `tsn`/`cert/`
+  deferred — see note). Smallest group, and after Phase 0 it depends on
+  nothing but core — fully self-contained. This also matches RELAY's
+  roadmap cross-language priority tier for DDS parity work (RELAY
+  ROADMAP.md, "Planned — DDS cross-language architecture alignment", Tier
+  2 — `safety`/`security` right after the Tier 1 `rtps` port), so cutting
+  it first gives cpp-DDS/rust-DDS a stable `safety` module shape to target
+  early rather than last. Shipped in #109 (root v0.53.0, `safety/v0.1.0`);
+  a Docker-build regression the `replace` directive caused was caught and
+  fixed same-session in #110. **Scope note:** `tsn` and `cert/` were NOT
+  folded into `safety/go.mod` in this pass — `tsn` has zero go-DDS imports
+  today so doing so is a straightforward follow-up, not a blocker, but it
+  wasn't done here; treat this bullet as partially complete.
 - ⬜ **Phase B — Extract `bridges/go.mod`** (`bridge/grpc`, `bridge/rest`,
   `bridge/wan`). Only depends on core (`mock`); no dependency on `safety`,
   so it doesn't need to wait on Phase A except for repo-hygiene reasons
