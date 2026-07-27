@@ -62,13 +62,10 @@ have the right to contribute under the existing license.
 | `admin/` | Participant administration — statistics, topic enumeration, remote control |
 | `auto/` | `NewParticipant` factory that auto-selects transport (shmem → RTPS fallback) |
 | `bridge/grpc/` | gRPC bridge — expose a DDS topic over a gRPC stream for WAN connectivity |
-| `cdr/` | OMG Common Data Representation (CDR) encoder/decoder |
-| `cmd/ddstool/` | CLI: IDL compilation, topic echo, latency probe, pub/sub |
 | `cmd/latmon/` | Latency monitor daemon |
 | `cmd/monitor/` | Real-time web monitor daemon |
 | `config/` | `ParticipantConfig` — YAML/TOML-loadable runtime tuning (heartbeat, SPDP, peer locators) |
 | `cyclone/` | CycloneDDS via CGo (`-tags cyclone`) |
-| `idl/` | IDL parser and Go code generator (`ddstool idl` uses this) |
 | `interop/` | Wire-compatibility tests against CycloneDDS. Requires Docker and `-tags interop`. |
 | `mock/` | In-process pub/sub. Zero dependencies. Use for unit tests. |
 | `monitor/` | Real-time web monitor server (SSE push, no external deps) |
@@ -84,7 +81,7 @@ have the right to contribute under the existing license.
 | `testutil/` | Test helpers: `Eventually`, `Drain`, channel utilities |
 | `testutil/scenario/` | Declarative scenario DSL: `Publish`, `Expect`, `ExpectNone`, `Wait`, `Assert`, `Run` |
 | `tsn/` | TSN stream model and Linux TAPRIO scheduler integration |
-| `xtypes/` | DDS XTypes dynamic topic registry |
+| `tools/` (`go.mod`) | Independent module: `tools/idl` (IDL parser + Go code generator, `ddstool idl` uses this), `tools/cdr` (OMG CDR encoder/decoder), `tools/xtypes` (DDS XTypes dynamic topic registry), `tools/cmd/ddstool`, `tools/cmd/go-dds` |
 
 ## Running tests
 

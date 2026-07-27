@@ -15,7 +15,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/SoundMatt/go-DDS/idl"
+	"github.com/SoundMatt/go-DDS/tools/idl"
 )
 
 const vehicleIDL = `

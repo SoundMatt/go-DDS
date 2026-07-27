@@ -34,9 +34,9 @@ import (
 
 	relay "github.com/SoundMatt/RELAY"
 	dds "github.com/SoundMatt/go-DDS"
-	"github.com/SoundMatt/go-DDS/idl"
 	"github.com/SoundMatt/go-DDS/mock"
 	rtps "github.com/SoundMatt/go-DDS/rtps"
+	"github.com/SoundMatt/go-DDS/tools/idl"
 )
 
 // toolVersion may be overridden at build time via -ldflags "-X main.toolVersion=x.y.z".

@@ -15,7 +15,7 @@ package idl_test
 import (
 	"testing"
 
-	"github.com/SoundMatt/go-DDS/idl"
+	"github.com/SoundMatt/go-DDS/tools/idl"
 )
 
 // FuzzIDLParser ensures ParseString never panics on arbitrary input.

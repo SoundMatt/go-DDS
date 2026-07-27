@@ -108,10 +108,14 @@ jobs:
       - name: FuzzDropOnFullChannel
         run: go test -fuzz=^FuzzDropOnFullChannel$ -fuzztime=10s ./mock/...
 
+      # idl now lives in the tools/ submodule (ROADMAP.md "Architecture
+      # Initiative" #71, Phase C) — run its fuzz targets from there.
       - name: FuzzIDLParser
+        working-directory: tools
         run: go test -fuzz=^FuzzIDLParser$ -fuzztime=10s ./idl
 
       - name: FuzzIDLGenerate
+        working-directory: tools
         run: go test -fuzz=^FuzzIDLGenerate$ -fuzztime=10s ./idl
 
   # ── Pure-Go RTPS/UDP implementation ──────────────────────────────────────
@@ -202,6 +206,44 @@ jobs:
         working-directory: bridge
         run: go test -race -count=1 ./...
 
+  # ── tools submodule (independent go.mod, ROADMAP.md "Architecture
+  # Initiative" #71 Phase C) — builds/tests standalone from ./tools, using
+  # its `replace github.com/SoundMatt/go-DDS => ../` for in-repo development.
+  # Module path is `.../go-DDS/tools`, gathering idl, cdr, xtypes, cmd/ddstool,
+  # and cmd/go-dds — unlike bridge/safety, these packages did not already
+  # share a common directory, so (unlike Phase B) this phase moved them under
+  # a new tools/ directory and their import paths changed accordingly (e.g.
+  # `.../idl` -> `.../tools/idl`) — see ROADMAP.md Phase C note and "Module
+  # Naming Caveat".
+  test-tools:
+    name: Test (tools module, ${{ matrix.os }}, Go ${{ matrix.go }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        go: ["1.25", "1.26"]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ matrix.go }}
+
+      - name: go build (tools module)
+        working-directory: tools
+        run: go build ./...
+
+      - name: go vet (tools module)
+        working-directory: tools
+        run: go vet ./...
+
+      - name: go test (tools module, -race)
+        shell: bash
+        working-directory: tools
+        run: go test -race -count=1 ./...
+
   # ── RELAY conformance gate (spec §12 CLI documents + §11.2 interop) ────────
   # Validates the go-dds CLI against the JSON Schemas embedded in the pinned
   # relay binary (authoritative, unlike hand-rolled JSON asserts), then checks
@@ -221,7 +263,10 @@ jobs:
       - name: Install relay CLI
         run: go install github.com/SoundMatt/RELAY/cmd/relay@v1.11.1
 
+      # cmd/go-dds moved into the tools/ submodule (ROADMAP.md "Architecture
+      # Initiative" #71, Phase C).
       - name: Build go-dds CLI
+        working-directory: tools
         run: go build -o /tmp/go-dds ./cmd/go-dds
 
       - name: relay conform --strict

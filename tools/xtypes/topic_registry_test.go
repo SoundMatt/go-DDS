@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	dds "github.com/SoundMatt/go-DDS"
-	"github.com/SoundMatt/go-DDS/xtypes"
+	"github.com/SoundMatt/go-DDS/tools/xtypes"
 )
 
 type Temperature struct{ Celsius float64 }

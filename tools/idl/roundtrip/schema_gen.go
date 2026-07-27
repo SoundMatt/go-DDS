@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	dds "github.com/SoundMatt/go-DDS"
-	"github.com/SoundMatt/go-DDS/cdr"
+	"github.com/SoundMatt/go-DDS/tools/cdr"
 )
 
 // _ suppresses unused-import errors in modules with no structs.

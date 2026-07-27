@@ -20,7 +20,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/SoundMatt/go-DDS/xtypes"
+	"github.com/SoundMatt/go-DDS/tools/xtypes"
 )
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

@@ -16,7 +16,7 @@ The API is a stable Go interface. Implementations are swappable without changing
 | `cyclone` | [CycloneDDS](https://cyclonedds.io) via CGo. Full wire interop with non-Go participants. | `libcyclonedds-dev` + `-tags cyclone` |
 | `shmem` | Shared-memory transport. Zero UDP overhead for same-host pub/sub. | Nothing |
 | `security` | Pluggable payload security — NullPlugin, HMAC-SHA-256, AES-256-GCM, CertPlugin (X.509/ECDSA), AccessPolicy (topic ACL), ReplayGuard (anti-replay); `HMACDiscoveryPlugin` for SPDP-layer peer authentication. | Nothing |
-| `xtypes` | Dynamic Data / XTypes — TypeDescriptor, TypeIdentifier, DynamicData, TypeRegistry, CheckCompatibility. | Nothing |
+| `tools/xtypes` | Dynamic Data / XTypes — TypeDescriptor, TypeIdentifier, DynamicData, TypeRegistry, CheckCompatibility. | `go get github.com/SoundMatt/go-DDS/tools` |
 | `config` | JSON/YAML participant configuration with validation. | Nothing |
 | `monitor` | Real-time web dashboard. `/health`, `/api/topics`, `/api/diagnostics`, SSE discovery events. | Nothing |
 | `tsn` | TSN stream model, TAPRIO scheduling, stream health tracking. | Nothing |
@@ -27,7 +27,7 @@ The API is a stable Go interface. Implementations are swappable without changing
 | `pool` | Allocation-free byte-slice recycling and fixed-capacity sample ring buffer. | Nothing |
 | `safety` | E2E protection header (CRC-16, sequence counter, freshness) and deterministic queue. | Nothing |
 | `testutil` | Test harness helpers: `NewParticipant`, `AssertSample`, `TopicRecorder`, `BurstPublish`. | Nothing |
-| `cmd/ddstool` | CLI tool: `pub`, `sub`, `discover` subcommands. | Nothing |
+| `tools/cmd/ddstool` | CLI tool: `pub`, `sub`, `discover` subcommands. | `go get github.com/SoundMatt/go-DDS/tools` |
 
 ## Install
 
@@ -364,9 +364,9 @@ rec.WaitFor(10, 2*time.Second)
 The `ddstool` CLI inspects a live domain without writing application code:
 
 ```bash
-go run github.com/SoundMatt/go-DDS/cmd/ddstool pub -topic vehicle/speed -payload '{"kmh":80}' -count 10
-go run github.com/SoundMatt/go-DDS/cmd/ddstool sub -topic vehicle/speed -count 5
-go run github.com/SoundMatt/go-DDS/cmd/ddstool discover -wait 5s
+go run github.com/SoundMatt/go-DDS/tools/cmd/ddstool pub -topic vehicle/speed -payload '{"kmh":80}' -count 10
+go run github.com/SoundMatt/go-DDS/tools/cmd/ddstool sub -topic vehicle/speed -count 5
+go run github.com/SoundMatt/go-DDS/tools/cmd/ddstool discover -wait 5s
 ```
 
 ## RELAY conformance
@@ -382,7 +382,7 @@ The `cmd/go-dds` binary is a RELAY-conformant CLI. It emits the §12 `version`,
 driver, and acts as a `relay crossbar` spoke via streaming `subscribe`/`send`:
 
 ```bash
-go build -o go-dds ./cmd/go-dds
+go build -o go-dds ./tools/cmd/go-dds       # run from the repo root
 ./go-dds capabilities                       # §12.2 capabilities document (JSON)
 
 # convert: canonical dds.Sample (stdin) → relay.Message (stdout)
@@ -426,7 +426,7 @@ fmt.Println(taprioCfg.TCCommand("eth0", 0))
 Inspect and construct DDS samples at runtime without compile-time types:
 
 ```go
-import "github.com/SoundMatt/go-DDS/xtypes"
+import "github.com/SoundMatt/go-DDS/tools/xtypes"
 
 // Describe the type once
 td := xtypes.TypeDescriptor{

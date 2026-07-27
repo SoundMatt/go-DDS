@@ -1119,10 +1119,34 @@ and `core -> tsn` and `observability -> safety` are both real edges today.
   imports `bridge/...` in production or test code. Added a `go.work` at
   repo root (`. bridge safety`) for local multi-module dev, per
   "CI/Testing Implications" — not added in Phase A, added here instead.
-- ⬜ **Phase C — Extract `tools/go.mod`** (`idl`, `cdr`, `xtypes`,
-  `cmd/ddstool`, `cmd/go-dds`). `idl` and `cmd/*` only depend on core;
-  `xtypes` is currently a leaf with zero fan-in anywhere in the tree, so
-  moving it is risk-free.
+- ✅ **Phase C — Extract `tools/go.mod`** (`idl`, `cdr`, `xtypes`,
+  `cmd/ddstool`, `cmd/go-dds`). Unlike `safety` and `bridge` (Phases A/B),
+  these five packages did not already share a common existing directory —
+  `idl`, `cdr`, and `xtypes` were separate top-level directories and
+  `cmd/ddstool`/`cmd/go-dds` were two of four siblings under `cmd/` (the
+  other two, `latmon` and `monitor`, stay in later phases' modules) — so a
+  single Go module covering exactly this group could not be cut in place the
+  way `bridge/go.mod` was. This phase physically moved them under a new
+  `tools/` directory (`tools/idl`, `tools/cdr`, `tools/xtypes`,
+  `tools/cmd/ddstool`, `tools/cmd/go-dds`), which **does** change `idl`'s,
+  `cdr`'s, and `xtypes`'s Go import paths (e.g. `.../idl` -> `.../tools/idl`)
+  — a deliberate, documented deviation from the "no Go import rewrite"
+  default described above in "What Breaks", made because there was no
+  path-preserving alternative that still produced one `tools/go.mod`;
+  `cmd/ddstool`/`cmd/go-dds`'s install paths moved too, but as `package main`
+  binaries they have no library import-path consumers to break. Per
+  ROADMAP.md's own prediction, `xtypes` had zero fan-in so its move was
+  risk-free; `idl`'s only two importers (`cmd/ddstool`, `cmd/go-dds`) moved
+  in the same PR, so nothing outside `tools/` referenced the old paths.
+  Shipped in #113 as `tools/go.mod` (module `github.com/SoundMatt/go-DDS/tools`,
+  first tag `tools/v0.1.0`). Root `go.mod` needed no `require`/`replace`
+  change (like Phase B, unlike Phase A): nothing in the root module imports
+  `idl`/`cdr`/`xtypes` in production or test code, so root keeps its
+  `v0.53.0` tag unchanged. `go.work` updated to add `./tools`.
+  `.github/workflows/ci.yml`: added a `test-tools` matrix leg mirroring
+  `test-safety`/`test-bridge`; `relay-conform`'s `Build go-dds CLI` step and
+  `fuzz-short`'s `FuzzIDLParser`/`FuzzIDLGenerate` steps now run with
+  `working-directory: tools`, per "CI/Testing Implications".
 - ⬜ **Phase D — Extract `observability/go.mod`** (`monitor`, `admin`,
   `otel`, `services`, `record`, `cmd/monitor`). Deliberately last among the
   four peripheral groups because `monitor` imports `safety` and `tsn` in
