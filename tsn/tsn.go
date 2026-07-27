@@ -13,7 +13,7 @@
 // Usage — load from a JSON config file:
 //
 //	cfg, err := tsn.LoadConfig("tsn_streams.json")
-//	p, err := rtps.New(0, rtps.WithTSNConfig(cfg))
+//	p, err := rtps.New(0, tsn.WithStreamConfig(cfg))
 //
 // Config file format (JSON):
 //

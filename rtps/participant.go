@@ -65,7 +65,6 @@ import (
 
 	dds "github.com/SoundMatt/go-DDS"
 	"github.com/SoundMatt/go-DDS/config"
-	"github.com/SoundMatt/go-DDS/tsn"
 )
 
 // ── Per-topic metrics ─────────────────────────────────────────────────────────
@@ -269,8 +268,10 @@ func WithConfig(cfg *config.ParticipantConfig) Option {
 // WithTSNConfig registers a TSN stream configuration with the participant.
 // When a publisher is created for a topic in the config, the participant
 // allocates a dedicated socket for that traffic class, marks it with
-// SO_PRIORITY / IP_TOS, and (on Linux) enables SO_TXTIME if TxOffsetUS > 0.
-func WithTSNConfig(cfg *tsn.StreamConfig) Option {
+// SO_PRIORITY / IP_TOS, and (on Linux) enables SO_TXTIME if TxOffset > 0.
+// Callers using package tsn should use tsn.WithStreamConfig instead of
+// calling this directly; it adapts *tsn.StreamConfig to TSNStreamConfig.
+func WithTSNConfig(cfg TSNStreamConfig) Option {
 	return func(p *participant) { p.tsnConfig = cfg }
 }
 
@@ -296,7 +297,7 @@ type participant struct {
 	heartbeatPeriodOverride time.Duration
 
 	// TSN options.
-	tsnConfig    *tsn.StreamConfig
+	tsnConfig    TSNStreamConfig
 	spdpInterval time.Duration        // 0 = use spdpAnnouncePeriod (2 s)
 	spdpJitter   time.Duration        // 0 = no jitter
 	tsnSocks     map[uint8]*udpSocket // per-PCP traffic-class sockets; keyed by PCP (0–7)
@@ -517,9 +518,14 @@ func (p *participant) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, er
 	}
 	// Wire TSN stream: config match takes priority, TransportPriority QoS
 	// field acts as a fallback PCP selector when no config entry exists.
-	if stream := p.tsnConfig.StreamForTopic(topic); stream != nil {
-		w.tsnStream = stream
-		w.tsnSock = p.tsnSocketForPCP(stream.PCP, stream.DSCP, stream.TxOffsetUS > 0)
+	var stream TSNParams
+	var haveStream bool
+	if p.tsnConfig != nil {
+		stream, haveStream = p.tsnConfig.StreamForTopic(topic)
+	}
+	if haveStream {
+		w.tsnStream = &stream
+		w.tsnSock = p.tsnSocketForPCP(stream.Priority, stream.DSCP, stream.TxOffset > 0)
 	} else if qos.TransportPriority > 0 {
 		pcp := uint8(qos.TransportPriority)
 		if pcp > 7 {
@@ -1157,16 +1163,16 @@ type rtpsWriter struct {
 	deadlineTimer *time.Timer   // non-nil when QoS.Deadline > 0
 	hbPeriod      time.Duration // heartbeat ticker period; set from participant option
 	// TSN fields — nil when not a TSN writer.
-	tsnStream *tsn.Stream // matching stream descriptor
-	tsnSock   *udpSocket  // priority-marked socket (nil = use dataSock)
+	tsnStream *TSNParams // matching stream descriptor
+	tsnSock   *udpSocket // priority-marked socket (nil = use dataSock)
 }
 
 // fragmentSize returns the per-fragment payload cap for this writer.
-// TSN streams use Stream.MaxFragPayload() to enforce the frame-size bound.
+// TSN streams use TSNParams.MaxFragPayload to enforce the frame-size bound.
 // All other writers use the default maxFragmentPayload constant.
 func (w *rtpsWriter) fragmentSize() int {
 	if w.tsnStream != nil {
-		if n := w.tsnStream.MaxFragPayload(); n > 0 {
+		if n := w.tsnStream.MaxFragPayload; n > 0 {
 			return n
 		}
 	}
@@ -1256,11 +1262,11 @@ func (w *rtpsWriter) Write(payload []byte) error {
 	locs := w.p.matchedReaderLocators(w.topic)
 	// Compute scheduled transmit time for TSN streams (nanoseconds since TAI epoch).
 	var txTimeNS uint64
-	if w.tsnStream != nil && w.tsnStream.TxOffsetUS > 0 {
+	if w.tsnStream != nil && w.tsnStream.TxOffset > 0 {
 		if taiNow, err := clockTAINow(); err == nil {
 			// Next interval boundary + TxOffset.
-			interval := w.tsnStream.Interval()
-			offset := w.tsnStream.TxOffset()
+			interval := w.tsnStream.Interval
+			offset := w.tsnStream.TxOffset
 			if interval > 0 {
 				sinceLast := taiNow.UnixNano() % int64(interval)
 				nextBoundary := taiNow.Add(time.Duration(int64(interval)-sinceLast) + offset)
