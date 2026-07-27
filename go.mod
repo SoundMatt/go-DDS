@@ -4,12 +4,18 @@ go 1.25.0
 
 require (
 	github.com/SoundMatt/RELAY v1.11.1
+	github.com/SoundMatt/go-DDS/safety v0.1.0
 	go.opentelemetry.io/otel v1.44.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.44.0
 	go.opentelemetry.io/otel/sdk v1.44.0
 	go.opentelemetry.io/otel/trace v1.44.0
 	google.golang.org/protobuf v1.36.11
 )
+
+// In-repo development: build/test the safety submodule (ROADMAP.md,
+// "Architecture Initiative" #71, Phase A) against its sibling working tree
+// instead of a published tag.
+replace github.com/SoundMatt/go-DDS/safety => ./safety
 
 require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
