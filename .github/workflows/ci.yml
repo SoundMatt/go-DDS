@@ -24,7 +24,7 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
 
-      - name: go build (all packages incl. examples/)
+      - name: go build (core module)
         run: go build ./...
 
       - name: go vet
@@ -283,6 +283,47 @@ jobs:
       - name: go test (observability module, -race)
         shell: bash
         working-directory: observability
+        run: go test -race -count=1 ./...
+
+  # ── examples submodule (independent go.mod, ROADMAP.md "Architecture
+  # Initiative" #71 Phase E) — builds/tests standalone from ./examples,
+  # using its `replace github.com/SoundMatt/go-DDS => ../` for in-repo
+  # development. Module path is `.../go-DDS/examples`, gathering
+  # `examples/*` and `cmd/latmon` — like tools/observability (Phases C/D),
+  # `cmd/latmon` did not already live under `examples/`, so this phase moved
+  # it to `examples/cmd/latmon` and its install path changed accordingly —
+  # see ROADMAP.md Phase E note and "Module Naming Caveat". Deliberately
+  # last among all module legs: examples exist to exercise the *released*
+  # module boundaries, so they take their `observability` dependency (only
+  # `examples/otel-tracing` needs it) from the tagged observability/v0.1.0
+  # module, never a relative-path replace — see ROADMAP.md Target Layout.
+  test-examples:
+    name: Test (examples module, ${{ matrix.os }}, Go ${{ matrix.go }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        go: ["1.25", "1.26"]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ matrix.go }}
+
+      - name: go build (examples module)
+        working-directory: examples
+        run: go build ./...
+
+      - name: go vet (examples module)
+        working-directory: examples
+        run: go vet ./...
+
+      - name: go test (examples module, -race)
+        shell: bash
+        working-directory: examples
         run: go test -race -count=1 ./...
 
   # ── RELAY conformance gate (spec §12 CLI documents + §11.2 interop) ────────

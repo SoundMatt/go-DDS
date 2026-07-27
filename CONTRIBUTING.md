@@ -61,9 +61,9 @@ have the right to contribute under the existing license.
 | `.` | `dds` package — core interfaces (`Participant`, `Publisher`, `Subscriber`, `QoS`, `WaitSet`, `LoaningPublisher`) |
 | `auto/` | `NewParticipant` factory that auto-selects transport (shmem → RTPS fallback) |
 | `bridge/grpc/` | gRPC bridge — expose a DDS topic over a gRPC stream for WAN connectivity |
-| `cmd/latmon/` | Latency monitor daemon |
 | `config/` | `ParticipantConfig` — YAML/TOML-loadable runtime tuning (heartbeat, SPDP, peer locators) |
 | `cyclone/` | CycloneDDS via CGo (`-tags cyclone`) |
+| `examples/` (`go.mod`) | Independent module: `examples/sensor-pipeline`, `examples/command-response`, `examples/secure-topic`, `examples/taprio-stream`, `examples/otel-tracing`, `examples/loaned-samples`, `examples/auto-transport`, `examples/scenario-dsl`, `examples/quickstart/{pub,sub}` — self-contained runnable examples with `go run .`; `examples/cmd/latmon` (continuous rolling-window latency monitor with JSON output) |
 | `interop/` | Wire-compatibility tests against CycloneDDS. Requires Docker and `-tags interop`. |
 | `mock/` | In-process pub/sub. Zero dependencies. Use for unit tests. |
 | `observability/` (`go.mod`) | Independent module: `observability/monitor` (real-time web monitor server, SSE push, no external deps), `observability/admin` (participant administration — statistics, topic enumeration, remote control), `observability/otel` (OpenTelemetry tracing adapter — wraps a `Participant` with OTLP spans), `observability/services` (higher-level service patterns — service server, service client), `observability/record` (fault injection and sample recording/replay for deterministic testing), `observability/cmd/monitor` (real-time web monitor daemon) |
