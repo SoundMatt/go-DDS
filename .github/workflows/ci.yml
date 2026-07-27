@@ -139,7 +139,7 @@ jobs:
   # relay binary (authoritative, unlike hand-rolled JSON asserts), then checks
   # the convert driver is behaviourally interchangeable with the RELAY
   # reference for every DDS golden vector. Pin the relay version so spec bumps
-  # are an explicit upgrade, not a surprise CI break (tracks RELAY v1.10).
+  # are an explicit upgrade, not a surprise CI break (tracks RELAY v1.11).
   relay-conform:
     name: RELAY conform
     runs-on: ubuntu-latest
@@ -151,7 +151,7 @@ jobs:
           go-version: "1.25"
 
       - name: Install relay CLI
-        run: go install github.com/SoundMatt/RELAY/cmd/relay@v1.10.0
+        run: go install github.com/SoundMatt/RELAY/cmd/relay@v1.11.1
 
       - name: Build go-dds CLI
         run: go build -o /tmp/go-dds ./cmd/go-dds

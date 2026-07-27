@@ -280,7 +280,11 @@ func IsolatedBroker() Option {
 // New creates a mock DDS Participant for the given domain. Domain is accepted
 // for API compatibility but has no effect — all mock participants share the
 // same global broker regardless of domain (unless IsolatedBroker is used).
+// Domain is still validated as 0–232 inclusive per spec §17 requirement 11.
 func New(domain dds.Domain, opts ...Option) (dds.Participant, error) {
+	if err := dds.ValidateDomain(domain); err != nil {
+		return nil, err
+	}
 	p := &participant{broker: globalBroker, domain: domain}
 	for _, o := range opts {
 		o(p)

@@ -266,7 +266,7 @@ Make go-DDS the easiest DDS implementation to develop against.
 - Topic inspection ✅ (`ddstool sub`)
 - Publish tool ✅ (`ddstool pub`)
 - Subscribe tool ✅ (`ddstool sub`)
-- Discovery inspection ✅ (`ddstool peers`)
+- Discovery inspection ✅ (`ddstool discover`)
 
 Success Criteria:
 A developer can go from interface definition to running system in minutes.
