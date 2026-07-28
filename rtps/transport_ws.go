@@ -8,6 +8,8 @@ package rtps
 //fusa:req REQ-TRANS-015
 //fusa:req REQ-TRANS-016
 //fusa:req REQ-TRANS-017
+//fusa:req REQ-TRANS-018
+//fusa:req REQ-TRANS-019
 
 // RTPS-over-WebSocket transport (Milestone 16, ROADMAP.md "WebSocket
 // Transport") — the sub-phase that lets a browser tab or Wasm participant
@@ -60,6 +62,33 @@ package rtps
 // server role, and the dial side (connLocked) is always the client role,
 // exactly mirroring how quicSocket's accept/dial sides map onto QUIC's own
 // server/client TLS roles.
+//
+// Two further additions support the "WebAssembly Target" sub-phase
+// (ROADMAP.md Milestone 16), which needs this transport to work as the
+// *only* transport for a peer that can never accept inbound connections:
+//
+//   - Listener-less ("dial-only") sockets: newWSSocket(addr, ...) now
+//     accepts addr == "" and simply skips the net.Listen/acceptLoop step —
+//     s.port stays 0 and s.ln stays nil. participant.go creates a wsSocket
+//     whenever either WithWSAddr or WithWSPeers is supplied (previously
+//     WithWSPeers alone was a no-op — see its doc comment), so a browser or
+//     edge-function participant that can only ever dial out — never bind a
+//     publicly reachable listener — still gets a working WS transport for
+//     outbound SPDP/SEDP/user-data unicast. spdp.go skips advertising a
+//     pidWSLocator when s.port == 0: a dial-only participant has no address
+//     for peers to dial back into, so it would be actively misleading to
+//     claim one.
+//   - A per-GOOS dial backend: every platform except GOOS=js GOARCH=wasm
+//     dials out with a real net.Conn and performs the RFC 6455 handshake
+//     itself (transport_ws_dial.go, unchanged from before this sub-phase).
+//     GOOS=js GOARCH=wasm — a real browser tab — has no such thing: the Go
+//     net package's js/wasm port is "fake networking... intended to allow
+//     tests of other packages to pass" (see $GOROOT/src/net/fd_js.go) and
+//     never reaches a real remote host, so a build targeting an actual
+//     browser dials out via syscall/js against the browser's own, already
+//     RFC-6455-compliant WebSocket object instead (transport_ws_browser.go)
+//     — see wsConnIface, which both backends implement identically from
+//     wsSocket's point of view.
 import (
 	"bufio"
 	"context"
@@ -140,13 +169,32 @@ type wsPacket struct {
 	from string
 }
 
-// wsConn is one WebSocket connection this socket is using, wrapping the
-// underlying net.Conn with the buffered reader frame decoding needs and the
-// role (isClient) that determines masking behaviour on both send and
-// receive. wmu serialises writes — both application sends (wsSocket.send)
-// and control-frame replies this connection's own read loop issues (a Pong
-// reply to an inbound Ping) — so two goroutines can never interleave bytes
-// of two different frames on the wire.
+// wsConnIface abstracts one WebSocket connection to a peer, spanning the
+// two backends this transport can use to obtain one — see this file's doc
+// comment. wsSocket (readLoop, connLocked, dropConn, close) only ever talks
+// to a wsConnIface, never to a concrete backend type, so none of that
+// shared code needs to know or care which backend produced the connection
+// it is holding.
+type wsConnIface interface {
+	// readMessage reads one complete WebSocket message, exactly as
+	// (*wsConn).readMessage does — see that method's doc comment.
+	readMessage() (opcode byte, payload []byte, err error)
+	// writeMessage encodes and sends one RTPS message per framing, exactly
+	// as (*wsConn).writeMessage does — see that method's doc comment.
+	writeMessage(framing wsFraming, data []byte) error
+	// close releases the connection and any resources (goroutines, JS
+	// callbacks) it holds. Idempotent.
+	close() error
+}
+
+// wsConn is the default wsConnIface backend — used on every platform except
+// GOOS=js GOARCH=wasm — wrapping a real net.Conn with the buffered reader
+// frame decoding needs and the role (isClient) that determines masking
+// behaviour on both send and receive. wmu serialises writes — both
+// application sends (wsSocket.send) and control-frame replies this
+// connection's own read loop issues (a Pong reply to an inbound Ping) — so
+// two goroutines can never interleave bytes of two different frames on the
+// wire.
 type wsConn struct {
 	nc       net.Conn
 	br       *bufio.Reader
@@ -154,9 +202,17 @@ type wsConn struct {
 	wmu      sync.Mutex
 }
 
+var _ wsConnIface = (*wsConn)(nil)
+
+// close implements wsConnIface.
+func (c *wsConn) close() error { return c.nc.Close() }
+
 // wsSocket is the WebSocket analogue of tcpSocket: it accepts inbound
 // WebSocket connections on a listen address and dials outbound connections
-// to peers on demand, caching one per peer address for reuse.
+// to peers on demand, caching one per peer address for reuse. addr == ""
+// (see newWSSocket) puts it in dial-only mode: no listener, ln stays nil
+// and port stays 0 — the mode a browser or edge-function participant that
+// can never accept inbound connections uses (see this file's doc comment).
 type wsSocket struct {
 	ln        net.Listener
 	tlsConfig *tls.Config // non-nil = wss:// (TLS-wrapped); nil = plain ws://
@@ -167,20 +223,34 @@ type wsSocket struct {
 	done chan struct{}
 
 	mu    sync.Mutex
-	conns map[string]*wsConn     // peer addr -> cached outbound/inbound connection
+	conns map[string]wsConnIface // peer addr -> cached outbound/inbound connection
 	wmu   map[string]*sync.Mutex // per-peer lock: serialises dials
 }
 
-// newWSSocket starts listening on addr (TLS-wrapped — wss:// — when
-// tlsConfig is non-nil) and returns a socket ready to accept inbound
-// WebSocket connections and dial outbound ones. When tlsConfig is supplied
-// with MinVersion unset, TLS 1.3 is enforced, matching newTCPSocket.
+// newWSSocket returns a socket ready to dial outbound WebSocket
+// connections and, if addr is non-empty, to also accept inbound ones on
+// addr (TLS-wrapped — wss:// — when tlsConfig is non-nil). addr == "" is
+// dial-only mode: no net.Listen call is made at all and s.port stays 0 —
+// see this file's doc comment on the "WebAssembly Target" sub-phase this
+// exists for. When tlsConfig is supplied with MinVersion unset, TLS 1.3 is
+// enforced, matching newTCPSocket.
 func newWSSocket(addr string, tlsConfig *tls.Config, framing wsFraming) (*wsSocket, error) {
 	cfg := tlsConfig
 	if cfg != nil && cfg.MinVersion == 0 {
 		clone := cfg.Clone()
 		clone.MinVersion = tls.VersionTLS13
 		cfg = clone
+	}
+	s := &wsSocket{
+		tlsConfig: cfg,
+		framing:   framing,
+		recv:      make(chan wsPacket, 256),
+		done:      make(chan struct{}),
+		conns:     make(map[string]wsConnIface),
+		wmu:       make(map[string]*sync.Mutex),
+	}
+	if addr == "" {
+		return s, nil
 	}
 	var ln net.Listener
 	var err error
@@ -192,19 +262,9 @@ func newWSSocket(addr string, tlsConfig *tls.Config, framing wsFraming) (*wsSock
 	if err != nil {
 		return nil, fmt.Errorf("rtps: WS listen %s: %w", addr, err)
 	}
-	port := 0
+	s.ln = ln
 	if tcpAddr, ok := ln.Addr().(*net.TCPAddr); ok {
-		port = tcpAddr.Port
-	}
-	s := &wsSocket{
-		ln:        ln,
-		tlsConfig: cfg,
-		port:      port,
-		framing:   framing,
-		recv:      make(chan wsPacket, 256),
-		done:      make(chan struct{}),
-		conns:     make(map[string]*wsConn),
-		wmu:       make(map[string]*sync.Mutex),
+		s.port = tcpAddr.Port
 	}
 	go s.acceptLoop()
 	return s, nil
@@ -289,83 +349,35 @@ func wsAcceptKey(key string) string {
 	return base64.StdEncoding.EncodeToString(h.Sum(nil))
 }
 
-// dial performs the RFC 6455 client-side opening handshake against addr —
-// dialling a fresh TCP/TLS connection, sending an HTTP Upgrade request with
-// a fresh random Sec-WebSocket-Key, and verifying the server's response
-// carries the matching Sec-WebSocket-Accept — bounded by wsDialTimeout,
-// exactly as tcpSocket.connLocked/quicSocket.connLocked bound their own
-// dials via context.WithTimeout.
-func (s *wsSocket) dial(addr string) (*wsConn, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), wsDialTimeout)
-	defer cancel()
+// dial obtains a connection to addr, ready to send/receive RTPS messages —
+// see transport_ws_dial.go (every platform except GOOS=js GOARCH=wasm,
+// which performs the RFC 6455 client-side opening handshake itself over a
+// real net.Conn) and transport_ws_browser.go (GOOS=js GOARCH=wasm, which
+// asks the browser's own WebSocket object to do it) for the two platform
+// backends — see this file's doc comment.
 
-	var nc net.Conn
-	var err error
-	if s.tlsConfig != nil {
-		nc, err = (&tls.Dialer{Config: s.tlsConfig}).DialContext(ctx, "tcp", addr)
-	} else {
-		nc, err = (&net.Dialer{}).DialContext(ctx, "tcp", addr)
+// wsBrowserURL builds the ws:// or wss:// URL a browser's native WebSocket
+// constructor expects from addr (host:port, exactly the form every other
+// WS-transport API in this package — WithWSAddr, WithWSPeers — already
+// uses) and whether TLS was requested. Kept platform-neutral (unlike the
+// rest of transport_ws_browser.go, which needs syscall/js and so only
+// compiles for GOOS=js GOARCH=wasm) purely so it can be unit-tested on
+// every platform without a browser or WASI runtime available.
+func wsBrowserURL(addr string, tlsEnabled bool) string {
+	scheme := "ws"
+	if tlsEnabled {
+		scheme = "wss"
 	}
-	if err != nil {
-		return nil, fmt.Errorf("rtps: WS dial %s: %w", addr, err)
-	}
-	// The handshake round trip itself (request write + response read) is
-	// bounded separately via a connection deadline, since it happens after
-	// DialContext has already returned and ctx's cancellation no longer
-	// applies to nc's I/O.
-	_ = nc.SetDeadline(time.Now().Add(wsDialTimeout))
-
-	keyBytes := make([]byte, 16)
-	if _, keyErr := rand.Read(keyBytes); keyErr != nil {
-		_ = nc.Close()
-		return nil, fmt.Errorf("rtps: WS handshake key %s: %w", addr, keyErr)
-	}
-	secKey := base64.StdEncoding.EncodeToString(keyBytes)
-
-	req := "GET / HTTP/1.1\r\n" +
-		"Host: " + addr + "\r\n" +
-		"Upgrade: websocket\r\n" +
-		"Connection: Upgrade\r\n" +
-		"Sec-WebSocket-Key: " + secKey + "\r\n" +
-		"Sec-WebSocket-Version: 13\r\n\r\n"
-	if _, writeErr := io.WriteString(nc, req); writeErr != nil {
-		_ = nc.Close()
-		return nil, fmt.Errorf("rtps: WS handshake write %s: %w", addr, writeErr)
-	}
-
-	br := bufio.NewReader(nc)
-	resp, err := http.ReadResponse(br, nil)
-	if err != nil {
-		_ = nc.Close()
-		return nil, fmt.Errorf("rtps: WS handshake read %s: %w", addr, err)
-	}
-	// A "101 Switching Protocols" response carries no body by definition
-	// (RFC 7230 §3.3.3); net/http's own ReadResponse already sets Body to
-	// http.NoBody for any 1xx status, so this Close is a documented no-op
-	// that touches neither br nor nc — just satisfies the "always close a
-	// response body" contract explicitly rather than relying on that
-	// internal behaviour silently.
-	_ = resp.Body.Close()
-	if resp.StatusCode != http.StatusSwitchingProtocols {
-		_ = nc.Close()
-		return nil, fmt.Errorf("rtps: WS handshake %s: unexpected status %d", addr, resp.StatusCode)
-	}
-	if got := resp.Header.Get("Sec-WebSocket-Accept"); got != wsAcceptKey(secKey) {
-		_ = nc.Close()
-		return nil, fmt.Errorf("rtps: WS handshake %s: invalid Sec-WebSocket-Accept", addr)
-	}
-	_ = nc.SetDeadline(time.Time{})
-
-	return &wsConn{nc: nc, br: br, isClient: true}, nil
+	return scheme + "://" + addr + "/"
 }
 
 // readLoop decodes WebSocket messages from wc until it errors, closes, or
 // receives a Close frame, pushing each successfully decoded RTPS message
 // onto recv. Mirrors tcpSocket.readConn/quicSocket.readFramedLoop's
 // teardown-on-exit behaviour.
-func (s *wsSocket) readLoop(wc *wsConn, from string) {
+func (s *wsSocket) readLoop(wc wsConnIface, from string) {
 	defer func() {
-		_ = wc.nc.Close()
+		_ = wc.close()
 		s.dropConn(from)
 	}()
 	for {
@@ -626,7 +638,7 @@ func (s *wsSocket) peerLock(addr string) *sync.Mutex {
 // (performing the full RFC 6455 opening handshake) if none is cached.
 // Caller must hold the lock returned by peerLock(addr), which also
 // serialises concurrent dials to the same peer.
-func (s *wsSocket) connLocked(addr string) (*wsConn, error) {
+func (s *wsSocket) connLocked(addr string) (wsConnIface, error) {
 	s.mu.Lock()
 	wc, ok := s.conns[addr]
 	s.mu.Unlock()
@@ -645,6 +657,30 @@ func (s *wsSocket) connLocked(addr string) (*wsConn, error) {
 	return wc, nil
 }
 
+// cachedConnForIP returns the "host:port" key of a cached connection whose
+// host matches ip, or "" if none is cached. This is participant.
+// wsLocatorForIP's fallback for reaching a peer that advertised no
+// pidWSLocator at all — a dial-only participant (ROADMAP.md "WebAssembly
+// Target": a browser tab or edge function with no listener of its own; see
+// newWSSocket and WithWSPeers' doc comment) is only ever reachable this
+// way, over the exact connection it dialled in on, since it has no
+// separately-dialable address for anyone to advertise or connect to in the
+// first place. Safe to call from any goroutine.
+func (s *wsSocket) cachedConnForIP(ip net.IP) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for addr := range s.conns {
+		host, _, err := net.SplitHostPort(addr)
+		if err != nil {
+			continue
+		}
+		if connIP := net.ParseIP(host); connIP != nil && connIP.Equal(ip) {
+			return addr
+		}
+	}
+	return ""
+}
+
 // dropConn closes and evicts the cached connection to addr, if any.
 func (s *wsSocket) dropConn(addr string) {
 	s.mu.Lock()
@@ -654,17 +690,20 @@ func (s *wsSocket) dropConn(addr string) {
 	}
 	s.mu.Unlock()
 	if ok {
-		_ = wc.nc.Close()
+		_ = wc.close()
 	}
 }
 
-// close shuts down the listener and every cached connection.
+// close shuts down the listener (if any — dial-only sockets, see
+// newWSSocket, have none) and every cached connection.
 func (s *wsSocket) close() {
 	close(s.done)
-	_ = s.ln.Close()
+	if s.ln != nil {
+		_ = s.ln.Close()
+	}
 	s.mu.Lock()
 	for _, wc := range s.conns {
-		_ = wc.nc.Close()
+		_ = wc.close()
 	}
 	s.conns = nil
 	s.mu.Unlock()

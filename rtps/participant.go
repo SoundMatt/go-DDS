@@ -299,13 +299,19 @@ func WithQUICPeers(addrs ...string) Option {
 // existing UDP transport, and once a peer's WS locator is learned via SPDP
 // it becomes another unicast option in participant.sendUnicast's
 // transport-priority chain. This is the transport that lets a browser tab
-// or Wasm participant (see js/dds-client) join a DDS domain directly — as a
-// genuine RTPS peer that performs its own SPDP/SEDP discovery over the
-// listener this option binds — without a separate protocol bridge, the
-// Milestone 16 success criterion; see bridge/ws for an additional, optional
-// gateway aimed at simpler non-RTPS JSON pub/sub clients instead. Unlike
+// or Wasm participant (see js/dds-client and, for a genuine RTPS
+// participant rather than js/dds-client's bridge/ws JSON gateway client,
+// examples/wasm-subscriber/) join a DDS domain directly — as a genuine RTPS
+// peer that performs its own SPDP/SEDP discovery over the listener this
+// option binds — without a separate protocol bridge, the Milestone 16
+// success criterion; see bridge/ws for an additional, optional gateway
+// aimed at simpler non-RTPS JSON pub/sub clients instead. Unlike
 // WithQUICAddr, TLS (wss://) is optional rather than mandatory — see
-// WithWSTLSConfig and WithWSPeers.
+// WithWSTLSConfig and WithWSPeers. A participant that can never accept
+// inbound connections at all — a browser tab, or a serverless edge
+// function behind a platform that does not expose an inbound listener,
+// ROADMAP.md "WebAssembly Target" — omits WithWSAddr entirely and relies on
+// WithWSPeers alone; see that option's doc comment.
 func WithWSAddr(addr string) Option {
 	return func(p *participant) { p.wsAddr = addr }
 }
@@ -315,7 +321,10 @@ func WithWSAddr(addr string) Option {
 // external dependency, the same choice WithTCPTLSConfig makes. If
 // cfg.MinVersion is zero, TLS 1.3 is enforced. Has no effect unless
 // WithWSAddr is also supplied; when omitted, the listener speaks plain
-// ws://.
+// ws://. Not consulted at all on GOOS=js GOARCH=wasm (see
+// transport_ws_browser.go) — a browser page's own WebSocket object decides
+// ws:// vs wss:// purely from the URL scheme WithWSPeers' addresses imply,
+// and TLS itself is always handled by the browser, never this process.
 func WithWSTLSConfig(cfg *tls.Config) Option {
 	return func(p *participant) { p.wsTLSConfig = cfg }
 }
@@ -323,8 +332,21 @@ func WithWSTLSConfig(cfg *tls.Config) Option {
 // WithWSPeers adds known peer RTPS-over-WebSocket addresses (host:port)
 // used for SPDP discovery over WebSocket, exactly as WithTCPPeers does for
 // RTPS-over-TCP: every SPDP announcement this participant sends is
-// additionally unicast to each address here. Has no effect unless
-// WithWSAddr is also supplied.
+// additionally unicast to each address here. Unlike WithTCPPeers/
+// WithQUICPeers, this option alone — with no WithWSAddr — is enough to
+// enable the WS transport (ROADMAP.md "WebAssembly Target"): the resulting
+// wsSocket runs in dial-only mode, with no listener and nothing advertised
+// in this participant's own SPDP announcements (see spdp.go), since a
+// participant with no listener has no address for a peer to dial back
+// into. This is the mode a browser tab or an edge/serverless function —
+// neither of which can ever accept an inbound connection — uses to still
+// be a genuine two-way RTPS participant over WebSocket: it dials out to
+// every address here, and every reply, HEARTBEAT, or further SEDP/user-data
+// message from that peer arrives back over the same already-established
+// connection (see wsSocket.dial/connLocked), never requiring a fresh
+// inbound connection to this process. When WithWSAddr is also supplied,
+// this option behaves exactly as it always has: additional statically
+// configured peers alongside the bound listener.
 func WithWSPeers(addrs ...string) Option {
 	return func(p *participant) { p.wsPeers = append(p.wsPeers, addrs...) }
 }
@@ -340,7 +362,7 @@ func WithWSPeers(addrs ...string) Option {
 // inbound messages are always decoded by their actual WebSocket opcode
 // regardless of this setting, so the two framing modes freely interoperate
 // on the wire — see transport_ws.go's doc comment. Has no effect unless
-// WithWSAddr is also supplied.
+// WithWSAddr or WithWSPeers is also supplied.
 func WithWSFraming(jsonFraming bool) Option {
 	return func(p *participant) {
 		if jsonFraming {
@@ -811,10 +833,14 @@ func newParticipant(domain dds.Domain, opts ...Option) (*participant, error) {
 	}
 
 	// Optional RTPS-over-WebSocket transport (Milestone 16, ROADMAP.md
-	// "WebSocket Transport"). Same hard-error policy as TCP/DTLS/QUIC
-	// above: an explicitly requested WS listener that fails to bind is a
-	// caller-visible error.
-	if p.wsAddr != "" {
+	// "WebSocket Transport" and "WebAssembly Target"). Same hard-error
+	// policy as TCP/DTLS/QUIC above: an explicitly requested WS listener
+	// that fails to bind is a caller-visible error. Unlike TCP/DTLS/QUIC,
+	// WithWSPeers alone (no WithWSAddr) also enables this transport — see
+	// WithWSPeers' doc comment — in dial-only mode (newWSSocket("", ...)
+	// skips the listener entirely), so the socket is created whenever
+	// either option was supplied.
+	if p.wsAddr != "" || len(p.wsPeers) > 0 {
 		wsSock, err := newWSSocket(p.wsAddr, p.wsTLSConfig, p.wsFraming)
 		if err != nil {
 			mcastSock.close()
@@ -1755,22 +1781,35 @@ func (p *participant) quicReceiveLoop() {
 // ── RTPS-over-WebSocket transport (Milestone 16) ────────────────────────────────
 
 // wsLocatorForIP returns the known RTPS-over-WebSocket address
-// ("host:port") for the peer reachable at ip, or "" if no SPDP-discovered
-// peer advertised a WS locator for that address. The WebSocket analogue of
-// tcpLocatorForIP/quicLocatorForIP.
+// ("host:port") for the peer reachable at ip: either the address an
+// SPDP-discovered peer advertised in a pidWSLocator, or — when no peer
+// advertised one for ip — a cached connection already open to that IP, if
+// any. That fallback is what makes a dial-only peer (ROADMAP.md
+// "WebAssembly Target": a browser tab or edge function using WithWSPeers
+// with no WithWSAddr, so it has no listener and advertises no locator at
+// all — see WithWSPeers' doc comment and spdp.go's buildParticipantData)
+// reachable in the first place: the connection it dialled in on, cached at
+// accept time by wsSocket.handleAccept exactly like any other, is the only
+// path back to it, since there is no address to freshly dial. Returns ""
+// if neither source has an answer. The WebSocket analogue of
+// tcpLocatorForIP/quicLocatorForIP, plus that one dial-only addition.
 func (p *participant) wsLocatorForIP(ip net.IP) string {
-	if p.spdp == nil {
-		return ""
+	if p.spdp != nil {
+		for _, proxy := range p.spdp.allPeers() {
+			if proxy.wsUnicast == "" {
+				continue
+			}
+			if a := proxy.metatrafficUnicast.udpAddr(); a != nil && a.IP.Equal(ip) {
+				return proxy.wsUnicast
+			}
+			if a := proxy.defaultUnicast.udpAddr(); a != nil && a.IP.Equal(ip) {
+				return proxy.wsUnicast
+			}
+		}
 	}
-	for _, proxy := range p.spdp.allPeers() {
-		if proxy.wsUnicast == "" {
-			continue
-		}
-		if a := proxy.metatrafficUnicast.udpAddr(); a != nil && a.IP.Equal(ip) {
-			return proxy.wsUnicast
-		}
-		if a := proxy.defaultUnicast.udpAddr(); a != nil && a.IP.Equal(ip) {
-			return proxy.wsUnicast
+	if p.wsSock != nil {
+		if addr := p.wsSock.cachedConnForIP(ip); addr != "" {
+			return addr
 		}
 	}
 	return ""
@@ -1780,11 +1819,52 @@ func (p *participant) wsLocatorForIP(ip net.IP) string {
 // transport to the same handlers used for UDP/TCP/DTLS/QUIC. Message
 // routing is transport-agnostic, so this reuses dispatchTCPPacket and
 // tcpFromToUDPAddr directly rather than duplicating them, exactly as
-// quicReceiveLoop/dtlsReceiveLoop do.
+// quicReceiveLoop/dtlsReceiveLoop do — with one WS-specific addition
+// (ROADMAP.md "WebAssembly Target"): TCP/QUIC/DTLS unicast discovery all
+// assume *both* sides know each other's static peer address ahead of time
+// (WithTCPPeers/WithQUICPeers on both ends), so each side's own periodic
+// spdp.sendAnnouncement independently reaches the other. A dial-only WS
+// peer (a browser tab or edge function; WithWSPeers with no WithWSAddr —
+// see that option's doc comment) breaks that assumption in one direction:
+// it can name the address it dials into, but nothing can name an address
+// to dial *it* back on, so its periodic announcement to that one static
+// peer is the only outbound message it can ever send unprompted — and the
+// listening side would otherwise never send anything back, having no
+// static peer address for it either. wsReplyToNewWSPeer closes that gap:
+// the first time a WS-sourced packet introduces a GUID prefix this
+// participant has never seen before, it replies immediately, once, with
+// its own current SPDP announcement over the exact connection that packet
+// arrived on (which wsSocket.send's connLocked already caches and reuses —
+// see wsLocatorForIP's cachedConnForIP fallback for the same idea applied
+// to ongoing SEDP/user-data traffic after this first reply). A peer this
+// participant already knows about triggers no reply here — its own
+// periodic re-announcements keep liveness going exactly as before.
 func (p *participant) wsReceiveLoop() {
 	for pkt := range p.wsSock.recv {
+		p.wsReplyToNewWSPeer(pkt)
 		p.dispatchTCPPacket(pkt.data, tcpFromToUDPAddr(pkt.from))
 	}
+}
+
+// wsReplyToNewWSPeer sends this participant's current SPDP announcement
+// directly back to pkt.from, over the WS connection pkt arrived on, iff
+// pkt's RTPS header names a GUID prefix p.spdp does not already know about
+// — see wsReceiveLoop's doc comment. Must run before dispatchTCPPacket
+// processes pkt (which is what will add the new peer, via
+// spdp.handlePacket -> storePeer), since this checks peerByPrefix's
+// "already known" state as it was *before* this packet.
+func (p *participant) wsReplyToNewWSPeer(pkt wsPacket) {
+	if p.spdp == nil {
+		return
+	}
+	hdr, ok := parseHeader(pkt.data)
+	if !ok || hdr.GuidPrefix == p.guidPrefix {
+		return
+	}
+	if _, known := p.spdp.peerByPrefix(hdr.GuidPrefix); known {
+		return
+	}
+	_ = p.wsSock.send(pkt.from, p.spdp.buildAnnouncementMessage())
 }
 
 // ── RTPS-over-DTLS transport (Milestone 14) ─────────────────────────────────────

@@ -8,6 +8,7 @@ package rtps
 //fusa:req REQ-TRANS-001
 //fusa:req REQ-TRANS-002
 //fusa:req REQ-TRANS-003
+//fusa:req REQ-TRANS-020
 
 import (
 	"fmt"
@@ -71,48 +72,76 @@ func newUnicastSocketV6(port int) (*udpSocket, error) {
 
 // newMulticastReceiveSocket creates a socket that receives on the given
 // multicast group and port. If the OS has no multicast-capable interface
-// (common in containers and macOS VMs) it falls back to a plain unicast bind
-// on the same port. The socket then works for intra-process delivery; SPDP
-// peer discovery across network boundaries is simply disabled in that case.
-// The returned bool reports whether a genuine multicast join succeeded
-// (false when the unicast fallback was used) — participant.go uses this to
-// decide whether UDP multicast is "available" for the RTPS-over-TCP fallback
-// (Milestone 14; see participant.preferTCP).
+// (common in containers and macOS VMs) — including a host that fails to
+// enumerate any interface at all, e.g. net.Interfaces() under a WASI
+// runtime's `wasi:sockets` (ROADMAP.md Milestone 16 "WebAssembly Target":
+// GOOS=wasip1 GOARCH=wasm running under Wasmtime, Fastly Compute, or a
+// similar edge/cloud-function sandbox, none of which expose interface
+// enumeration) — it falls back to a plain unicast bind on the same port.
+// The socket then works for intra-process delivery; SPDP peer discovery
+// across network boundaries is simply disabled in that case (a dial-only
+// WS/TCP/QUIC peer list — see WithWSPeers et al. — still works normally,
+// since that path never depends on multicast). The returned bool reports
+// whether a genuine multicast join succeeded (false whenever either
+// fallback was used) — participant.go uses this to decide whether UDP
+// multicast is "available" for the RTPS-over-TCP fallback (Milestone 14;
+// see participant.preferTCP).
 func newMulticastReceiveSocket(group net.IP, port int) (*udpSocket, bool, error) {
-	iface, err := firstMulticastInterface() // nil iface is OK: OS picks
-	if err != nil {
-		return nil, false, err
+	return newMulticastReceiveSocketWithIface(group, port, firstMulticastInterface)
+}
+
+// newMulticastReceiveSocketWithIface is newMulticastReceiveSocket with its
+// interface-lookup step injected, so a test can simulate "no interface
+// could even be enumerated" (net.Interfaces() itself failing or returning
+// nothing, as under a WASI runtime's `wasi:sockets`) without needing an
+// actual such host.
+func newMulticastReceiveSocketWithIface(group net.IP, port int, findIface func() (*net.Interface, error)) (*udpSocket, bool, error) {
+	iface, ifaceErr := findIface() // nil iface is OK: OS picks
+	if ifaceErr == nil {
+		if conn, err := net.ListenMulticastUDP("udp4", iface, &net.UDPAddr{IP: group, Port: port}); err == nil {
+			return newSocket(conn, port), true, nil
+		}
 	}
-	conn, err := net.ListenMulticastUDP("udp4", iface, &net.UDPAddr{IP: group, Port: port})
-	if err == nil {
-		return newSocket(conn, port), true, nil
-	}
-	// Multicast unavailable — bind unicast as a no-op receiver so the
-	// participant can start. Intra-process pub/sub is unaffected.
+	// Multicast unavailable — either no multicast-capable interface exists
+	// (or could even be enumerated) or the join itself failed — bind
+	// unicast as a no-op receiver so the participant can still start.
+	// Intra-process pub/sub is unaffected.
 	conn2, err2 := net.ListenUDP("udp4", &net.UDPAddr{Port: port})
 	if err2 != nil {
-		return nil, false, fmt.Errorf("rtps: multicast receive %s:%d: %w", group, port, err)
+		if ifaceErr != nil {
+			return nil, false, fmt.Errorf("rtps: multicast receive %s:%d: %w", group, port, ifaceErr)
+		}
+		return nil, false, fmt.Errorf("rtps: multicast receive %s:%d: %w", group, port, err2)
 	}
 	return newSocket(conn2, port), false, nil
 }
 
 // newMulticastReceiveSocketV6 joins an IPv6 multicast group on the given port.
 // Falls back to a plain unicast bind on the same port when no IPv6 multicast
-// interface is available (containers, CI environments). The returned bool
-// reports whether a genuine multicast join succeeded, as with
+// interface is available or none can be enumerated at all (containers, CI
+// environments, WASI sandboxes — see newMulticastReceiveSocket). The
+// returned bool reports whether a genuine multicast join succeeded, as with
 // newMulticastReceiveSocket.
 func newMulticastReceiveSocketV6(group net.IP, port int) (*udpSocket, bool, error) {
-	iface, err := firstIPv6MulticastInterface()
-	if err != nil {
-		return nil, false, err
-	}
-	conn, err := net.ListenMulticastUDP("udp6", iface, &net.UDPAddr{IP: group, Port: port})
-	if err == nil {
-		return newSocket(conn, port), true, nil
+	return newMulticastReceiveSocketV6WithIface(group, port, firstIPv6MulticastInterface)
+}
+
+// newMulticastReceiveSocketV6WithIface is newMulticastReceiveSocketV6 with
+// its interface-lookup step injected — see
+// newMulticastReceiveSocketWithIface.
+func newMulticastReceiveSocketV6WithIface(group net.IP, port int, findIface func() (*net.Interface, error)) (*udpSocket, bool, error) {
+	iface, ifaceErr := findIface()
+	if ifaceErr == nil {
+		if conn, err := net.ListenMulticastUDP("udp6", iface, &net.UDPAddr{IP: group, Port: port}); err == nil {
+			return newSocket(conn, port), true, nil
+		}
 	}
 	conn2, err2 := net.ListenUDP("udp6", &net.UDPAddr{Port: port})
 	if err2 != nil {
-		return nil, false, fmt.Errorf("rtps: IPv6 multicast receive %s:%d: %w", group, port, err)
+		if ifaceErr != nil {
+			return nil, false, fmt.Errorf("rtps: IPv6 multicast receive %s:%d: %w", group, port, ifaceErr)
+		}
+		return nil, false, fmt.Errorf("rtps: IPv6 multicast receive %s:%d: %w", group, port, err2)
 	}
 	return newSocket(conn2, port), false, nil
 }

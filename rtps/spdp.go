@@ -176,17 +176,31 @@ func (s *spdpService) announceLoop() {
 	}
 }
 
-func (s *spdpService) sendAnnouncement() {
-	s.announcesSent.Add(1)
-	p := s.p
+// buildAnnouncementMessage builds this participant's current SPDP
+// announcement — buildParticipantData's PL_CDR_LE-encoded ParticipantProxy
+// wrapped in a DATA submessage and a full RTPS message header — ready to
+// send over any transport. Factored out of sendAnnouncement (which sends
+// this exact message over every enabled transport) so participant.go's WS
+// receive path (ROADMAP.md "WebAssembly Target") can build an identical
+// announcement to reply directly to a newly discovered WS peer without
+// duplicating message construction — see wsReceiveLoop's doc comment for
+// why a direct reply, not just this participant's own periodic broadcast,
+// is needed there.
+func (s *spdpService) buildAnnouncementMessage() []byte {
 	payload := s.buildParticipantData()
 	submsg := marshalDataSubmessage(
 		EntityIdSPDPWriter,
 		EntityIdSPDPReader,
-		SequenceNumber{High: 0, Low: p.nextSeqNum()},
+		SequenceNumber{High: 0, Low: s.p.nextSeqNum()},
 		payload,
 	)
-	msg := wrapInRTPSMessage(p.guidPrefix, submsg)
+	return wrapInRTPSMessage(s.p.guidPrefix, submsg)
+}
+
+func (s *spdpService) sendAnnouncement() {
+	s.announcesSent.Add(1)
+	p := s.p
+	msg := s.buildAnnouncementMessage()
 	dst := &net.UDPAddr{
 		IP:   spdpMulticastAddr,
 		Port: metaMulticastPort(int(p.domain)),
@@ -283,10 +297,15 @@ func (s *spdpService) buildParticipantData() []byte {
 	}
 
 	// RTPS-over-WebSocket listen locator (Milestone 16, "WebSocket
-	// Transport"), when the WebSocket transport is enabled. Peers —
-	// including a browser or Wasm participant — use this to reach us over
-	// WebSocket.
-	if p.wsSock != nil {
+	// Transport"), when the WebSocket transport is enabled and has a real
+	// listener bound. Peers — including a browser or Wasm participant —
+	// use this to reach us over WebSocket. A dial-only wsSock (Milestone
+	// 16 "WebAssembly Target" — WithWSPeers with no WithWSAddr; see
+	// WithWSPeers' doc comment) has port == 0 and advertises nothing here:
+	// it has no address for a peer to dial back into, so claiming one via
+	// a bogus port-0 locator would be actively misleading rather than
+	// merely unhelpful.
+	if p.wsSock != nil && p.wsSock.port != 0 {
 		wsLocator := locatorFromWS(net.IPv4zero, p.wsSock.port)
 		enc.addLocator(pidWSLocator, wsLocator)
 	}
