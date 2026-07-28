@@ -1641,6 +1641,30 @@
       "asil": "ASIL-B"
     },
     {
+      "id": "REQ-TRANS-004",
+      "title": "RTPS-over-TCP length-prefixed framing",
+      "text": "The RTPS-over-TCP transport shall frame every message with a 4-byte big-endian length prefix, and shall reject and drop the connection for any received length prefix of zero or exceeding maxTCPFrameSize, so that a corrupt or hostile peer cannot force unbounded memory allocation.",
+      "standard": "iso26262",
+      "level": "ASIL-B",
+      "asil": "ASIL-B"
+    },
+    {
+      "id": "REQ-TRANS-005",
+      "title": "RTPS-over-TCP TLS 1.3 enforcement",
+      "text": "When a *tls.Config is supplied to the RTPS-over-TCP transport via WithTCPTLSConfig and its MinVersion is unset, the transport shall enforce TLS 1.3 as the minimum negotiated version.",
+      "standard": "iso26262",
+      "level": "ASIL-B",
+      "asil": "ASIL-B"
+    },
+    {
+      "id": "REQ-TRANS-006",
+      "title": "Automatic UDP-to-TCP unicast fallback",
+      "text": "When the RTPS-over-TCP transport is configured and UDP multicast is unavailable, unicast sends to a peer whose RTPS-over-TCP locator is known (learned via SPDP) shall prefer the TCP transport, falling back to UDP only if the TCP send itself fails.",
+      "standard": "iso26262",
+      "level": "ASIL-B",
+      "asil": "ASIL-B"
+    },
+    {
       "id": "REQ-SEOOC-001",
       "title": "AoU: Participant.Close before process exit",
       "text": "Assumption of Use: The integrating application shall call Participant.Close() before process termination to ensure all internal goroutines exit and resources are released. Failure to close may result in goroutine leaks and incomplete delivery of in-flight samples.",

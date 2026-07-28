@@ -50,6 +50,11 @@ const (
 	// pidEndpointToken is a vendor-specific PID used to carry the SEDP endpoint
 	// authentication tag produced by an EndpointPlugin.
 	pidEndpointToken = uint16(0x8002)
+	// pidTCPLocator is a vendor-specific PID (Milestone 14) carrying the
+	// sending participant's RTPS-over-TCP listen locator (LocatorKindTCPv4),
+	// when the RTPS-over-TCP transport is enabled via WithTCPAddr. Peers that
+	// don't understand it skip it like any other unrecognised PL_CDR parameter.
+	pidTCPLocator = uint16(0x8003)
 )
 
 // plCDREncoder builds a PL_CDR_LE encoded parameter list.

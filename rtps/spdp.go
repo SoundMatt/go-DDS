@@ -52,6 +52,10 @@ type participantProxy struct {
 	builtinEndpoints   uint32
 	leaseDuration      time.Duration // from pidParticipantLeaseDuration; 0 → use defaultLeaseDuration
 	lastSeen           time.Time     // updated on each received SPDP announcement
+	// tcpUnicast is this peer's RTPS-over-TCP listen address ("host:port"),
+	// decoded from pidTCPLocator. Empty when the peer didn't advertise one
+	// (TCP transport disabled, or an older go-DDS version). Milestone 14.
+	tcpUnicast string
 }
 
 // spdpService manages discovery announcements and the known-peers table.
@@ -137,6 +141,17 @@ func (s *spdpService) sendAnnouncement() {
 		Port: metaMulticastPort(int(p.domain)),
 	}
 	_ = p.metaSock.send(dst, msg)
+
+	// Discovery over TCP (Milestone 14): additionally unicast the identical
+	// announcement to every statically configured TCP peer. This is how a
+	// participant is discovered across a network boundary UDP multicast (or
+	// UDP at all) cannot cross — e.g. a firewall or cloud NAT that only
+	// permits outbound TCP.
+	if p.tcpSock != nil {
+		for _, addr := range p.tcpPeers {
+			_ = p.tcpSock.send(addr, msg)
+		}
+	}
 }
 
 // buildParticipantData returns PL_CDR_LE-encoded ParticipantProxy data.
@@ -166,6 +181,13 @@ func (s *spdpService) buildParticipantData() []byte {
 	// Default unicast locator (where user DATA should be sent).
 	userLocator := locatorFromUDP(&net.UDPAddr{IP: net.IPv4zero}, p.dataSock.port)
 	enc.addLocator(pidDefaultUnicastLocator, userLocator)
+
+	// RTPS-over-TCP listen locator (Milestone 14), when the TCP transport is
+	// enabled. Peers use this to reach us over TCP as a UDP fallback.
+	if p.tcpSock != nil {
+		tcpLocator := locatorFromTCP(net.IPv4zero, p.tcpSock.port)
+		enc.addLocator(pidTCPLocator, tcpLocator)
+	}
 
 	// Participant lease duration: 10 seconds (uint32 sec + uint32 frac = 8 bytes).
 	duration := make([]byte, 8)
@@ -372,6 +394,18 @@ func parseParticipantData(prefix GuidPrefix, payload []byte, from *net.UDPAddr) 
 		case pidParticipantGUID:
 			if g, ok := decodeGUID(p.value); ok {
 				proxy.guid = g
+			}
+		case pidTCPLocator:
+			if l, ok := unmarshalLocator(p.value); ok && l.Kind == LocatorKindTCPv4 {
+				if l.Address == ([16]byte{}) {
+					ip4 := from.IP.To4()
+					if ip4 != nil {
+						copy(l.Address[12:], ip4)
+					}
+				}
+				if hp, ok2 := l.tcpHostPort(); ok2 {
+					proxy.tcpUnicast = hp
+				}
 			}
 		}
 	}
