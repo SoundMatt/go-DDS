@@ -671,11 +671,29 @@ func matchSlices(pSegs, tSegs []string) bool {
 
 // newMockGUID returns a pseudo-random 16-byte GUID backed by the current time.
 // Not cryptographically random; sufficient for in-process participant identity.
+// mockGUIDCounter is a process-wide monotonic counter mixed into every mock
+// GUID (see newMockGUID) so that two entities created within the same clock
+// tick still get distinct identities. Relying on time.Now().UnixNano() alone
+// is not safe: some platforms' clocks (observed on Windows CI runners) have
+// coarser effective resolution than a nanosecond, so two GUIDs generated in
+// quick succession — e.g. two publishers created back-to-back, as Ownership
+// QoS registration does — could otherwise collide.
+var mockGUIDCounter atomic.Uint64
+
+// newMockGUID returns a GUID unique within this process: the high 8 bytes are
+// a monotonic counter (collision-proof regardless of clock resolution), the
+// low 8 bytes are the current time for rough chronological ordering when
+// inspecting samples. Not cryptographically random; sufficient for in-process
+// participant/endpoint identity.
 func newMockGUID() dds.GUID {
 	var g dds.GUID
+	n := mockGUIDCounter.Add(1)
+	for i := 0; i < 8; i++ {
+		g[i] = byte(n >> (i * 8))
+	}
 	ns := time.Now().UnixNano()
 	for i := 0; i < 8; i++ {
-		g[i] = byte(ns >> (i * 8))
+		g[8+i] = byte(ns >> (i * 8))
 	}
 	return g
 }
