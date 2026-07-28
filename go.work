@@ -13,6 +13,7 @@ use (
 	.
 	./bridge
 	./examples
+	./k8s/operator
 	./observability
 	./safety
 	./tools

@@ -326,6 +326,42 @@ jobs:
         working-directory: examples
         run: go test -race -count=1 ./...
 
+  # ── k8s/operator submodule (independent go.mod, ROADMAP.md Milestone 15
+  # "Kubernetes Operator") — builds/tests standalone from ./k8s/operator.
+  # Unlike bridge/tools/observability/examples/safety, this module does not
+  # depend on the root github.com/SoundMatt/go-DDS package at all (it only
+  # talks to the Kubernetes API via k8s.io/api, k8s.io/apimachinery, and
+  # k8s.io/client-go), so it carries no `replace` directive back to the
+  # repo root — see k8s/operator/README.md.
+  test-k8s-operator:
+    name: Test (k8s/operator module, ${{ matrix.os }}, Go ${{ matrix.go }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        go: ["1.25", "1.26"]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ matrix.go }}
+
+      - name: go build (k8s/operator module)
+        working-directory: k8s/operator
+        run: go build ./...
+
+      - name: go vet (k8s/operator module)
+        working-directory: k8s/operator
+        run: go vet ./...
+
+      - name: go test (k8s/operator module, -race)
+        shell: bash
+        working-directory: k8s/operator
+        run: go test -race -count=1 ./...
+
   # ── RELAY conformance gate (spec §12 CLI documents + §11.2 interop) ────────
   # Validates the go-dds CLI against the JSON Schemas embedded in the pinned
   # relay binary (authoritative, unlike hand-rolled JSON asserts), then checks

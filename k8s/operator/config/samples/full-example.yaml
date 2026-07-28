@@ -1,0 +1,60 @@
+# Example: a namespace whose DDS domain (3) is isolated to itself via a
+# generated NetworkPolicy, one DDSParticipant, and a Deployment whose pods
+# are annotated for injection. See README.md for the full walkthrough.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: telemetry
+  labels:
+    dds.soundmatt.io/domain: prod
+---
+apiVersion: dds.soundmatt.io/v1alpha1
+kind: DDSDomain
+metadata:
+  name: prod
+  namespace: telemetry
+spec:
+  domainID: 3
+  isolateNamespace: true
+  allowedNamespaces:
+    - monitoring
+---
+apiVersion: dds.soundmatt.io/v1alpha1
+kind: DDSParticipant
+metadata:
+  name: sensor-pub
+  namespace: telemetry
+spec:
+  # domain omitted -> falls back to DDSDomain "prod"'s domainID (3), since
+  # the "telemetry" namespace is bound to it via the label above.
+  qosProfile: reliable-transient-local
+  transport:
+    kind: tcp
+    port: 7412
+  peers:
+    - "10.0.4.11:7400"
+    - "10.0.4.12:7400"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sensor-publisher
+  namespace: telemetry
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sensor-publisher
+  template:
+    metadata:
+      labels:
+        app: sensor-publisher
+      annotations:
+        dds.soundmatt.io/participant: sensor-pub
+    spec:
+      containers:
+        - name: app
+          image: example.com/sensor-publisher:latest
+          # go-dds-operator injects DDS_DOMAIN_ID, DDS_QOS_PROFILE,
+          # DDS_TRANSPORT, DDS_TRANSPORT_PORT, and DDS_PEERS here at
+          # admission time.

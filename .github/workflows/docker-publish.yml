@@ -22,7 +22,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [monitor, pub, sub]
+        # "operator" publishes ghcr.io/<owner>/go-dds-operator, matching the
+        # other targets' go-dds-<target> naming — see the Helm chart's
+        # default values.yaml image.repository.
+        target: [monitor, pub, sub, operator]
 
     steps:
       - uses: actions/checkout@v5

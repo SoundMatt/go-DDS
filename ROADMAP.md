@@ -859,12 +859,72 @@ histogram bucket placement including `+Inf` overflow, the dedicated
 `WithPrometheus` server (separate address, `/metrics`-only, shut down by
 `Close`), and its listen-error path.
 
-### Kubernetes Operator
+### Kubernetes Operator ✅
 
-- CRD `DDSParticipant` — declarative participant config (domain, QoS profile, transport)
-- Operator discovers participants in annotated pods and injects domain/peer config via env
-- `DDSDomain` CRD: domain-per-namespace isolation with network policy generation
-- Helm chart for operator deployment
+- CRD `DDSParticipant` — declarative participant config (domain, QoS profile, transport) ✅
+- Operator discovers participants in annotated pods and injects domain/peer config via env ✅
+- `DDSDomain` CRD: domain-per-namespace isolation with network policy generation ✅
+- Helm chart for operator deployment ✅
+
+**Shipped** (`k8s/operator/`, its own Go module —
+`github.com/SoundMatt/go-DDS/k8s/operator` — same "independent go.mod"
+convention as `bridge`/`tools`/`observability`/`examples`/`safety`, but with
+no `replace` back to the root module: it only talks to the Kubernetes API,
+never the root `github.com/SoundMatt/go-DDS` package). Both CRDs
+(`config/crd/*.yaml`) are read via the dynamic client as
+`unstructured.Unstructured` and converted to/from plain Go structs
+(`api/v1alpha1`) with `runtime.DefaultUnstructuredConverter` rather than
+through a `k8s.io/code-generator`-generated typed clientset — the same
+"pure Go first" reasoning as the hand-rolled Prometheus exposition above:
+no generated glue, buildable with nothing but `go build`.
+- **Injection is a mutating admission webhook** (`internal/webhook`), not a
+  controller that edits running pods (Kubernetes doesn't allow mutating a
+  running container's env anyway): a pod annotated
+  `dds.soundmatt.io/participant: <name>` gets `DDS_DOMAIN_ID`,
+  `DDS_QOS_PROFILE`, `DDS_TRANSPORT`, `DDS_TRANSPORT_PORT`, and `DDS_PEERS`
+  patched into its matched containers (`dds.soundmatt.io/inject-containers`,
+  default all) at admission time by `internal/inject`'s pure
+  spec-to-JSON-Patch computation. Explicit container env always wins over
+  injection, and a `DDSParticipant.spec.domain` always wins over its
+  namespace's `DDSDomain.spec.domainID` (the CRD is a namespace-wide
+  default, not an override).
+- **Fails open.** A pod referencing a not-yet-cached or nonexistent
+  `DDSParticipant` is still admitted, with a warning rather than a denial —
+  see `internal/webhook`'s package doc: an operator hiccup must never be
+  able to block unrelated workloads from scheduling. The Helm chart's
+  default `webhook.failurePolicy: Ignore` reinforces this Kubernetes-side
+  too.
+- **`DDSDomain` reconciliation** (`internal/controller.DomainReconciler`)
+  renders an isolated domain's NetworkPolicy from the RTPS well-known UDP
+  port formulas (DDSI-RTPS §9.6.1.1) via `internal/netpolicy`, scoped to the
+  domain's own namespace plus `spec.allowedNamespaces`, kept in sync
+  (create/update/delete) via a work-queue-driven informer event loop.
+- **Helm chart** (`deploy/helm/go-dds-operator/`) installs both CRDs, RBAC,
+  the operator Deployment/Service, and a `MutatingWebhookConfiguration`
+  whose TLS certificate is self-signed at install/upgrade time via Helm's
+  `genCA`/`genSignedCert` — zero extra tooling (no cert-manager dependency)
+  to satisfy this milestone's "zero custom tooling" success criterion;
+  `values.yaml`'s `tls.selfSigned: false` plus `tls.certManagerCertificateName`
+  switches to a cert-manager-issued certificate for production use.
+- A fourth Docker image (`operator`, `docker/Dockerfile`) is now published
+  as `ghcr.io/soundmatt/go-dds-operator` alongside `monitor`/`pub`/`sub`,
+  matching the Helm chart's default `image.repository`.
+
+Proven by unit tests across every package with no live cluster required:
+`internal/inject` and `internal/netpolicy` are pure functions tested
+directly; `internal/webhook` is tested via `httptest` against real
+`admission/v1` `AdmissionReview` JSON (including the fail-open paths);
+`internal/cache` and `internal/controller` are tested against a real
+`client-go` informer wired to `k8s.io/client-go/dynamic/fake` and
+`k8s.io/client-go/kubernetes/fake` — the same fake-clientset pattern
+client-go itself uses, proving the informer-to-cache and
+DDSDomain-to-NetworkPolicy reconcile paths end-to-end without a live
+`kube-apiserver` (out of scope for this repo's CI, same reasoning as the
+existing `interop/` package's build-tag-gated live-peer tests). The Helm
+chart is proven with `helm lint` and `helm template` across the
+`installCRDs`/`tls.selfSigned` value combinations, including asserting the
+generated webhook Secret's `ca.crt` matches the
+`MutatingWebhookConfiguration`'s `caBundle` byte-for-byte.
 
 ### NAT Traversal / Cloud Gateway
 

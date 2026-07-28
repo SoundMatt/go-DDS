@@ -1,0 +1,42 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "go-dds-operator.fullname" . }}
+  labels:
+    {{- include "go-dds-operator.labels" . | nindent 4 }}
+rules:
+  # DDSParticipant / DDSDomain custom resources — watched via the dynamic
+  # client and read by the webhook's caches.
+  - apiGroups: ["dds.soundmatt.io"]
+    resources: ["ddsparticipants", "ddsdomains"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["dds.soundmatt.io"]
+    resources: ["ddsparticipants/status", "ddsdomains/status"]
+    verbs: ["get", "update", "patch"]
+  # Namespaces — read-only, to resolve the dds.soundmatt.io/domain label.
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "watch"]
+  # NetworkPolicies — generated and kept in sync for isolated DDSDomains.
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Events, for operator-visible reconcile diagnostics.
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "go-dds-operator.fullname" . }}
+  labels:
+    {{- include "go-dds-operator.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "go-dds-operator.fullname" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "go-dds-operator.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}

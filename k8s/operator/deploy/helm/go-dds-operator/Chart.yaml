@@ -1,0 +1,20 @@
+apiVersion: v2
+name: go-dds-operator
+description: >-
+  go-DDS Kubernetes operator — DDSParticipant/DDSDomain CRDs, a mutating
+  admission webhook that injects DDS_* environment variables into annotated
+  pods, and a controller that renders domain-per-namespace NetworkPolicies.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/SoundMatt/go-DDS
+sources:
+  - https://github.com/SoundMatt/go-DDS/tree/main/k8s/operator
+keywords:
+  - dds
+  - rtps
+  - kubernetes-operator
+  - go-dds
+maintainers:
+  - name: SoundMatt
+    url: https://github.com/SoundMatt
