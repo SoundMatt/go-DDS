@@ -221,6 +221,39 @@ func WithPeerLocators(addrs ...string) Option {
 	return func(p *participant) { p.peerLocators = append(p.peerLocators, addrs...) }
 }
 
+// WithDTLSAddr enables the RTPS-over-DTLS transport (Milestone 14, "DTLS
+// (Encrypted UDP)") and binds a DTLS 1.2 listener at addr (host:port, e.g.
+// ":7600"). Like RTPS-over-TCP it runs alongside the existing plaintext UDP
+// transport rather than replacing it. Has no effect unless WithDTLS is also
+// supplied — a DTLS listener requires certificate material. See WithDTLS and
+// WithDTLSPeers.
+func WithDTLSAddr(addr string) Option {
+	return func(p *participant) { p.dtlsAddr = addr }
+}
+
+// WithDTLS secures the RTPS-over-DTLS transport (see WithDTLSAddr) with
+// certificate-based peer authentication, satisfying OMG DDS Security spec
+// §9.5 "Secure Transport". cfg is a standard *tls.Config — the same type
+// WithTCPTLSConfig accepts — so a single identity built once (e.g. via
+// security.CertPlugin's TLSCertificate/CAPool) configures both transports;
+// internally it is translated to drive github.com/pion/dtls/v3, since
+// crypto/tls implements TLS only and has no DTLS support (see
+// transport_dtls.go for why DTLS 1.2, not 1.3). If cfg.ClientAuth is unset
+// and cfg.ClientCAs is set, mutual certificate authentication is enforced by
+// default — see dtlsConfigFromTLS. Has no effect unless WithDTLSAddr is also
+// supplied.
+func WithDTLS(cfg *tls.Config) Option {
+	return func(p *participant) { p.dtlsTLSConfig = cfg }
+}
+
+// WithDTLSPeers adds known peer RTPS-over-DTLS addresses (host:port). Unicast
+// sends to a destination IP matching one of these addresses are encrypted
+// over DTLS instead of sent as plaintext UDP. Has no effect unless
+// WithDTLSAddr and WithDTLS are also supplied.
+func WithDTLSPeers(addrs ...string) Option {
+	return func(p *participant) { p.dtlsPeers = append(p.dtlsPeers, addrs...) }
+}
+
 // WithDeadlineCallback sets a function that is called when a publisher has not
 // written for longer than its QoS.Deadline period.
 func WithDeadlineCallback(fn func(topic string)) Option {
@@ -349,6 +382,13 @@ type participant struct {
 	tcpTLSConfig *tls.Config
 	tcpPeers     []string
 	tcpSock      *tcpSocket
+
+	// RTPS-over-DTLS transport (Milestone 14, "DTLS (Encrypted UDP)").
+	// dtlsAddr == "" disables it.
+	dtlsAddr      string
+	dtlsTLSConfig *tls.Config
+	dtlsPeers     []string
+	dtlsSock      *dtlsSocket
 
 	// udpMulticastAvailable reports whether SPDP multicast bound a genuine
 	// multicast-capable interface at startup (as opposed to the unicast
@@ -524,6 +564,27 @@ func newParticipant(domain dds.Domain, opts ...Option) (*participant, error) {
 		p.tcpSock = tcpSock
 	}
 
+	// Optional RTPS-over-DTLS transport (Milestone 14, "DTLS (Encrypted
+	// UDP)"). Same hard-error policy as RTPS-over-TCP above: an explicitly
+	// requested DTLS listener that fails to bind is a caller-visible error,
+	// not a soft degrade.
+	if p.dtlsAddr != "" {
+		dtlsSock, err := newDTLSSocket(p.dtlsAddr, p.dtlsTLSConfig)
+		if err != nil {
+			mcastSock.close()
+			metaSock.close()
+			dataSock.close()
+			if p.dataMcastSock != nil {
+				p.dataMcastSock.close()
+			}
+			if p.tcpSock != nil {
+				p.tcpSock.close()
+			}
+			return nil, fmt.Errorf("rtps: DTLS transport: %w", err)
+		}
+		p.dtlsSock = dtlsSock
+	}
+
 	p.log.info("rtps participant starting domain=%d prefix=%x", domain, guidPrefix)
 
 	p.spdp = newSPDPService(p)
@@ -534,6 +595,9 @@ func newParticipant(domain dds.Domain, opts ...Option) (*participant, error) {
 	go p.dataReceiveLoop()
 	if p.tcpSock != nil {
 		go p.tcpReceiveLoop()
+	}
+	if p.dtlsSock != nil {
+		go p.dtlsReceiveLoop()
 	}
 
 	if p.cancelCtx != nil {
@@ -778,6 +842,9 @@ func (p *participant) Close() error {
 	}
 	if p.tcpSock != nil {
 		p.tcpSock.close()
+	}
+	if p.dtlsSock != nil {
+		p.dtlsSock.close()
 	}
 	// Close any TSN traffic-class sockets.
 	p.tsnMu.Lock()
@@ -1040,22 +1107,36 @@ func (p *participant) handleAckNack(an AckNack, from *net.UDPAddr) {
 
 // ── RTPS-over-TCP transport (Milestone 14) ──────────────────────────────────────
 
-// sendUnicast sends a unicast RTPS message to dst via sock. When UDP is
-// considered unreachable (see preferTCP) and a TCP locator is known for
-// dst's host — learned via SPDP, see participantProxy.tcpUnicast — it
-// prefers RTPS-over-TCP instead, falling back to UDP only if the TCP send
-// itself fails. This is the automatic UDP→TCP fallback described in
-// ROADMAP.md Milestone 14.
+// sendUnicast sends a unicast RTPS message to dst via sock. If dst matches a
+// configured RTPS-over-DTLS peer (see WithDTLSPeers), it is always encrypted
+// over DTLS instead — DTLS is an explicit confidentiality/authentication
+// choice, not a reachability fallback, so it takes priority whenever
+// configured for that peer, regardless of UDP multicast availability.
+// Otherwise, when UDP is considered unreachable (see preferTCP) and a TCP
+// locator is known for dst's host — learned via SPDP, see
+// participantProxy.tcpUnicast — it prefers RTPS-over-TCP instead. Either
+// falls back to plain UDP if its own send fails (DTLS/TCP peer offline,
+// connection reset, ...). This is the automatic UDP→TCP fallback and the
+// DTLS encryption layering described in ROADMAP.md Milestone 14.
 //
 // TSN traffic-class sockets are always sent as plain UDP: their entire
 // purpose is priority-marked, low-latency delivery on a specific socket, so
-// they are excluded from the fallback by construction — only sock == dataSock
-// or sock == metaSock are eligible.
+// they are excluded from both the DTLS and TCP paths by construction — only
+// sock == dataSock or sock == metaSock are eligible.
 func (p *participant) sendUnicast(sock *udpSocket, dst *net.UDPAddr, msg []byte) {
 	if dst == nil {
 		return
 	}
-	if p.preferTCP() && (sock == p.dataSock || sock == p.metaSock) {
+	eligible := sock == p.dataSock || sock == p.metaSock
+	if eligible && p.dtlsSock != nil {
+		if dtlsAddr := p.dtlsLocatorForIP(dst.IP); dtlsAddr != "" {
+			if err := p.dtlsSock.send(dtlsAddr, msg); err == nil {
+				return
+			}
+			// DTLS send failed; fall through to TCP/UDP as a last resort.
+		}
+	}
+	if eligible && p.preferTCP() {
 		if tcpAddr := p.tcpLocatorForIP(dst.IP); tcpAddr != "" {
 			if err := p.tcpSock.send(tcpAddr, msg); err == nil {
 				return
@@ -1166,6 +1247,38 @@ func (p *participant) dispatchTCPPacket(data []byte, from *net.UDPAddr) {
 		}
 		return nil
 	})
+}
+
+// ── RTPS-over-DTLS transport (Milestone 14) ─────────────────────────────────────
+
+// dtlsLocatorForIP returns the configured RTPS-over-DTLS address
+// ("host:port", see WithDTLSPeers) for the peer reachable at ip, or "" if
+// none is configured for that address. Unlike tcpLocatorForIP, this is a
+// static caller-supplied mapping rather than one learned via SPDP: the DTLS
+// transport (unlike TCP) is not a NAT/firewall-traversal fallback, so it has
+// no discovery-time locator advertisement to learn from.
+func (p *participant) dtlsLocatorForIP(ip net.IP) string {
+	for _, addr := range p.dtlsPeers {
+		host, _, err := net.SplitHostPort(addr)
+		if err != nil {
+			continue
+		}
+		if peerIP := net.ParseIP(host); peerIP != nil && peerIP.Equal(ip) {
+			return addr
+		}
+	}
+	return ""
+}
+
+// dtlsReceiveLoop dispatches messages arriving over the RTPS-over-DTLS
+// transport to the same handlers used for UDP and RTPS-over-TCP: SPDP, SEDP,
+// or user DATA/HEARTBEAT/ACKNACK. Message routing is transport-agnostic, so
+// this reuses dispatchTCPPacket and tcpFromToUDPAddr directly rather than
+// duplicating them.
+func (p *participant) dtlsReceiveLoop() {
+	for pkt := range p.dtlsSock.recv {
+		p.dispatchTCPPacket(pkt.data, tcpFromToUDPAddr(pkt.from))
+	}
 }
 
 // ── Dispatch ──────────────────────────────────────────────────────────────────

@@ -698,15 +698,50 @@ pre-Milestone-14 UDP-only behaviour. Proven end-to-end by
 participants in different RTPS domains (so UDP multicast SPDP cannot
 possibly cross between them) and forces the UDP-unreachable fallback, and
 they still discover each other and exchange a reliable sample purely over
-TCP. DTLS and QoS Enforcement — Active Policy remain open for a future PR;
-Milestone 14 is not yet complete.
+TCP.
 
-### DTLS (Encrypted UDP)
+### DTLS (Encrypted UDP) ✅
 
-- DTLS 1.3 transport wrapping existing UDP sockets (`rtps/transport_dtls.go`)
-- Certificate-based peer authentication (reuses `security.CertPlugin` identity)
-- Satisfies OMG DDS Security spec §9.5 "Secure Transport" requirement
-- `WithDTLS(tlsCfg)` participant option; compatible with existing shmem and mock backends
+- DTLS transport wrapping existing UDP sockets (`rtps/transport_dtls.go`) ✅
+- Certificate-based peer authentication (reuses `security.CertPlugin` identity) ✅
+- Satisfies OMG DDS Security spec §9.5 "Secure Transport" requirement ✅
+- `WithDTLS(tlsCfg)` participant option; compatible with existing shmem and mock backends ✅
+
+**Shipped** in #118 (root v0.57.0). `rtps/transport_dtls.go` adds a
+`dtlsSocket` (listener + per-peer connection cache), the DTLS analogue of
+`tcpSocket`: since DTLS, like UDP, is datagram- rather than stream-oriented,
+no length-prefix framing is needed — one RTPS message maps 1:1 to one DTLS
+record. **Scoping note on the version**: Go's standard library `crypto/tls`
+implements TLS only — it has no DTLS support at all — and DTLS 1.3 (RFC 9147)
+has no production-ready implementation anywhere in the Go ecosystem as of
+this writing, including `github.com/pion/dtls`, the most mature Go DTLS
+library, whose v3 README still lists DTLS 1.3 under "Planned Features" and
+keeps it off the tagged `v3` release line. This transport therefore uses DTLS
+1.2 (RFC 6347) via `github.com/pion/dtls/v3` — the one exception to go-DDS's
+"stdlib only" transport policy from the TCP/TLS sub-phase above, adopted
+because no stdlib (or any tagged, production-ready) alternative exists; it
+will move to DTLS 1.3 when a stable implementation ships. `WithDTLS(cfg
+*tls.Config)` still takes the same stdlib type `WithTCPTLSConfig` does —
+`dtlsServerOptions`/`dtlsClientOptions` translate it into pion/dtls's
+recommended functional-options API internally — so a single identity
+configures both transports; new `CertPlugin.TLSCertificate()` /
+`CertPlugin.CAPool()` accessors (`security/cert.go`) export that identity as
+stdlib `tls.Certificate` / `*x509.CertPool` for exactly this purpose.
+`WithDTLSAddr(addr)` binds the listener and `WithDTLSPeers(addrs...)` names
+peer addresses that must be encrypted; `sendUnicast` — the same shared
+unicast-send path TCP hooked into — checks DTLS first (an explicit
+confidentiality choice, so it always wins when configured for a peer,
+independent of UDP multicast availability), then the TCP fallback, then
+plain UDP. Server-side mutual certificate authentication is enforced by
+default whenever `ClientCAs` is set and `ClientAuth` is left unset. Fully
+additive: with no `WithDTLSAddr`, `dtlsSock` is always nil and every send
+path is unchanged. Proven end-to-end by `TestDTLS_TwoParticipants_SameHost`
+(two real participants, SPDP discovery over ordinary UDP multicast, every
+SEDP/DATA send between them encrypted over DTLS and confirmed via a live
+`dtlsSocket` connection) alongside `dtlsSocket`-level unit tests covering
+send/receive, oversized-record rejection, mutual-auth enforcement, and
+dial-handshake timeout. QoS Enforcement — Active Policy remains open for a
+future PR; Milestone 14 is not yet complete.
 
 ### QoS Enforcement — Active Policy
 
