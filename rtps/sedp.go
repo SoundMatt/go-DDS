@@ -89,7 +89,17 @@ func (c *contentFilterSpec) eval(payload []byte) bool {
 
 // sedpService manages endpoint discovery and matching.
 type sedpService struct {
-	p  *participant
+	p *participant
+	// mu guards every field below. Lock order (go-DDS#130): whenever both
+	// p.mu and mu must be held, p.mu is always acquired first — see
+	// newPublisherLocked/newSubscriberLocked, which hold p.mu across the
+	// call into registerWriter/registerReader. Consequently, no method on
+	// sedpService may call into the participant (anything that acquires
+	// p.mu — e.g. participant.readerByEID, participant.addWriterLocator)
+	// while still holding mu; release mu first (see onRemoteWriter for the
+	// pattern: snapshot what's needed under mu, unlock, then call the
+	// participant). Violating this reintroduces the AB-BA deadlock fixed by
+	// go-DDS#130.
 	mu sync.RWMutex
 	// Local endpoints registered by this participant.
 	localWriters map[EntityId]*endpointInfo
@@ -434,30 +444,59 @@ func (s *sedpService) handleEndpointAnnounce(remotePrefix GuidPrefix, payload []
 }
 
 func (s *sedpService) onRemoteWriter(info *endpointInfo, dataLocator Locator) {
+	// Lock order (go-DDS#130): every other call path that needs both locks
+	// acquires participant.mu *then* sedp.mu — see newPublisherLocked/
+	// newSubscriberLocked, which hold p.mu across the call into
+	// registerWriter/registerReader below. To avoid the reverse order (and
+	// the AB-BA deadlock it caused: this goroutine blocked on p.mu while
+	// holding s.mu, exactly as another goroutine held p.mu and blocked on
+	// s.mu), this function must never call into the participant (which
+	// takes p.mu — see readerByEID/addWriterLocator) while still holding
+	// s.mu. So: do all sedp-local map work under s.mu, snapshot whatever
+	// participant-side identifiers are needed, release s.mu, then make the
+	// participant calls with no sedp lock held at all.
 	s.mu.Lock()
 	s.remoteWriters[info.guid] = info
 	// Ownership QoS (Milestone 14): a remote ExclusiveOwnership writer
 	// competes for "active writer" on this topic exactly like a local one.
+	// ownershipStateFor is backed by a sync.Map (participant.ownership),
+	// not participant.mu, so this is safe to call while s.mu is held.
 	if info.ownershipExclusive {
 		s.p.ownershipStateFor(info.topicName).register(info.guid, info.ownershipStrength)
 	}
 	// Match against local readers for this topic whose Partition QoS
-	// intersects the writer's (Milestone 14; see partitionsMatch).
+	// intersects the writer's (Milestone 14; see partitionsMatch). Only the
+	// matched EIDs are collected here; the participant-side notification
+	// happens after s.mu is released, below.
+	var matchedEIDs []EntityId
 	for _, lr := range s.localReaders {
 		if lr.topicName == info.topicName && partitionsMatch(lr.partitions, info.partitions) {
 			s.endpointMatches.Add(1)
-			// Notify the reader so it can accept DATA from this writer.
-			s.p.readerByEID(lr.guid.Entity, func(r *rtpsReader) {
-				r.addSourceGUID(info.guid)
-				if info.livelinessLease > 0 {
-					r.registerWriterLease(info.guid, info.livelinessLease)
-				}
-				// Register the writer's data-delivery address on the participant.
-				s.p.addWriterLocator(info.guid, dataLocator)
-			})
+			matchedEIDs = append(matchedEIDs, lr.guid.Entity)
 		}
 	}
 	s.mu.Unlock()
+
+	// Notify each matched reader so it can accept DATA from this writer.
+	// readerByEID acquires participant.mu itself, and s.mu is no longer
+	// held at this point, so this can never race the p.mu -> s.mu order
+	// used elsewhere.
+	for _, eid := range matchedEIDs {
+		s.p.readerByEID(eid, func(r *rtpsReader) {
+			r.addSourceGUID(info.guid)
+			if info.livelinessLease > 0 {
+				r.registerWriterLease(info.guid, info.livelinessLease)
+			}
+		})
+	}
+	// Register the writer's data-delivery address on the participant, once,
+	// iff at least one local reader matched — same condition the old
+	// per-match call inside the loop enforced (the write is idempotent, so
+	// calling it once after the loop instead of once per match is behavior-
+	// preserving).
+	if len(matchedEIDs) > 0 {
+		s.p.addWriterLocator(info.guid, dataLocator)
+	}
 }
 
 // onRemoteReader stores a remote subscription and its delivery locator so that
