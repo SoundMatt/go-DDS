@@ -216,7 +216,7 @@ func (s *sedpService) sendTo(msg []byte, peer *participantProxy) {
 	if dst == nil {
 		return
 	}
-	s.p.sendUnicast(s.p.metaSock, dst, msg)
+	s.p.sendUnicast(s.p.metaSock, dst, peer.guid.Prefix, msg)
 }
 
 func (s *sedpService) receiveLoop() {

@@ -579,6 +579,28 @@ func CloseWithDrain(ctx context.Context, p Participant) error {
 	return p.Close()
 }
 
+// ── PublicAddresser ──────────────────────────────────────────────────────────
+
+// PublicAddresser is optionally implemented by Participants that support
+// STUN-based public-address discovery (Milestone 15, "NAT Traversal / Cloud
+// Gateway" — e.g. the rtps package's WithSTUNServer). If a Participant does
+// not implement PublicAddresser, or discovery failed or was never
+// requested, PublicAddr returns "".
+type PublicAddresser interface {
+	// PublicAddr returns this participant's server-reflexive ("host:port")
+	// address as discovered via STUN, or "" if none was discovered.
+	PublicAddr() string
+}
+
+// PublicAddr returns p's STUN-discovered public address, or "" if p does not
+// implement [PublicAddresser] or no address was discovered.
+func PublicAddr(p Participant) string {
+	if a, ok := p.(PublicAddresser); ok {
+		return a.PublicAddr()
+	}
+	return ""
+}
+
 // ── Interfaces ────────────────────────────────────────────────────────────────
 
 //fusa:req REQ-PART-001
