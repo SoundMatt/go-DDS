@@ -6,13 +6,19 @@
 // Package monitor provides a real-time web dashboard for a DDS participant.
 // It embeds a single-page HTML UI (Server-Sent Events) and exposes an HTTP
 // server that streams DDS samples and participant metrics to any browser.
+// It also serves GET /metrics in Prometheus text exposition format, for
+// standard Kubernetes/cloud scraping alongside the SSE dashboard.
 //
 // Usage:
 //
 //	p, _ := rtps.New(dds.Domain(0))
 //	mon, _ := monitor.New(p, monitor.Options{Addr: ":8080"})
 //	defer mon.Close()
-//	// browse http://localhost:8080
+//	// browse http://localhost:8080, or scrape http://localhost:8080/metrics
+//
+//	// Optional: also expose metrics on a dedicated port for cluster
+//	// scraping, independent of the dashboard port.
+//	mon, _ = mon.WithPrometheus(":9090")
 package monitor
 
 //fusa:req REQ-MON-001
@@ -85,6 +91,14 @@ type Monitor struct {
 
 	tsnMu       sync.RWMutex
 	tsnTrackers map[string]*tsn.HealthTracker
+
+	// Prometheus (ROADMAP.md, Milestone 15 "Cloud-Native Runtime"). prom is
+	// always non-nil; promServer/promLn are only set once WithPrometheus is
+	// called. See prometheus.go.
+	prom       *promMetrics
+	promMu     sync.RWMutex
+	promServer *http.Server
+	promLn     net.Listener
 }
 
 // New creates a Monitor wrapping p and starts the HTTP server.
@@ -102,6 +116,7 @@ func New(p dds.Participant, opts Options) (*Monitor, error) {
 		cancel:  cancel,
 		ctx:     ctx,
 		clients: make(map[chan string]struct{}),
+		prom:    newPromMetrics(),
 	}
 	if mp, ok := p.(dds.MetricsProvider); ok {
 		m.mp = mp
@@ -123,6 +138,7 @@ func New(p dds.Participant, opts Options) (*Monitor, error) {
 	mux.HandleFunc("/api/topics", m.handleAPITopics)
 	mux.HandleFunc("/api/diagnostics", m.handleAPIDiagnostics)
 	mux.HandleFunc("/api/tsn", m.handleAPITSN)
+	mux.HandleFunc("/metrics", m.handleMetrics)
 	m.server = &http.Server{Handler: mux}
 
 	go m.server.Serve(ln) //nolint:errcheck // background goroutine; error surfaced via server.Shutdown in Close
@@ -208,9 +224,10 @@ func (m *Monitor) RegisterTSNHealth(name string, ht *tsn.HealthTracker) {
 	m.tsnMu.Unlock()
 }
 
-// Close stops the HTTP server and all background goroutines.
+// Close stops the HTTP server(s) and all background goroutines.
 func (m *Monitor) Close() error {
 	m.cancel()
+	m.closePrometheus()
 	return m.server.Shutdown(context.Background())
 }
 
