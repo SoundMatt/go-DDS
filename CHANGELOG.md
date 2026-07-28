@@ -130,6 +130,33 @@ breaking changes may occur between `v0.x` minor releases. Each submodule's
   Wasm-compiled go-DDS build dialling `WithWSAddr` directly, the sibling
   "WebAssembly Target" sub-phase.
 
+### Added (root, `examples`)
+
+- WebAssembly Target (ROADMAP.md, Milestone 16 "QUIC + WebSocket
+  Transports", "WebAssembly Target" — completes Milestone 16): `mock` and
+  `rtps/transport_ws.go` build and run under `GOOS=wasip1 GOARCH=wasm` (a
+  new `wasm-build` CI job proves it across every module); a new
+  `rtps/transport_ws_browser.go` (`GOOS=js GOARCH=wasm`) dials out via
+  `syscall/js` against the browser's own `WebSocket` object instead of a
+  real `net.Conn`, since the stdlib's js/wasm `net` port never reaches an
+  actual remote host. `WithWSPeers` alone (no `WithWSAddr`) now enables the
+  RTPS-over-WebSocket transport in a new listener-less ("dial-only") mode
+  — the shape a browser tab or serverless edge function needs, since
+  neither can ever accept an inbound connection — with replies and further
+  traffic routed back over the already-open connection
+  (`wsSocket.cachedConnForIP`) and a one-time reply-to-new-peer
+  (`participant.wsReplyToNewWSPeer`) closing the one-sided discovery gap a
+  listener-less peer would otherwise create. `examples/wasm-subscriber/`
+  demonstrates the browser half end to end (a real RTPS participant in a
+  browser tab, not `bridge/ws`'s JSON gateway); `docs/WASM_DEPLOYMENT.md` is
+  the Fastly/Cloudflare Workers deployment guide for the cloud-function
+  half, including a real bug found and fixed while proving `rtps.New`
+  starts under Wasmtime with `wasi:sockets` enabled:
+  `newMulticastReceiveSocket`/`V6` now fall back to a plain unicast bind,
+  rather than failing outright, when no network interface can even be
+  enumerated (as under a WASI runtime), not just when enumeration succeeds
+  but the multicast join itself fails.
+
 ## [root v0.55.1] / [safety v0.1.1] — Architecture Initiative Phase F — Root cleanup
 
 Docs/repo-hygiene reorganization only — no Go import path, API, or `go.mod`

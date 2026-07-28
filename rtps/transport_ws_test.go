@@ -15,6 +15,8 @@ package rtps
 //fusa:test REQ-TRANS-015
 //fusa:test REQ-TRANS-016
 //fusa:test REQ-TRANS-017
+//fusa:test REQ-TRANS-018
+//fusa:test REQ-TRANS-019
 
 import (
 	"bufio"
@@ -583,5 +585,178 @@ func TestWS_Disabled_ByDefault(t *testing.T) {
 	}
 	if got := p.wsLocatorForIP(net.ParseIP("127.0.0.1")); got != "" {
 		t.Errorf("wsLocatorForIP: got %q, want empty when WS disabled", got)
+	}
+}
+
+// ── WebAssembly Target (Milestone 16, ROADMAP.md "WebAssembly Target") ─────
+//
+// The platform-specific dial backends themselves — transport_ws_dial.go
+// (net.Conn + RFC 6455 handshake) and transport_ws_browser.go
+// (syscall/js + the browser's own WebSocket object) — are mutually
+// exclusive by build tag, so exactly one of them is ever compiled into any
+// given test binary; only transport_ws_dial.go's is reachable from this
+// GOOS. What every platform *does* share, and what these tests cover, is
+// the platform-neutral machinery the "WebAssembly Target" sub-phase added
+// to transport_ws.go/participant.go/spdp.go: listener-less ("dial-only")
+// wsSocket construction, WithWSPeers alone (no WithWSAddr) enabling the
+// transport, dial-only participants exchanging real RTPS traffic, and the
+// URL builder transport_ws_browser.go's dial calls.
+
+func TestWSBrowserURL(t *testing.T) {
+	cases := []struct {
+		addr string
+		tls  bool
+		want string
+	}{
+		{"example.com:7800", false, "ws://example.com:7800/"},
+		{"example.com:7800", true, "wss://example.com:7800/"},
+		{"127.0.0.1:0", false, "ws://127.0.0.1:0/"},
+	}
+	for _, c := range cases {
+		if got := wsBrowserURL(c.addr, c.tls); got != c.want {
+			t.Errorf("wsBrowserURL(%q, %v): got %q, want %q", c.addr, c.tls, got, c.want)
+		}
+	}
+}
+
+// TestWSSocket_DialOnly_NoListener confirms newWSSocket("", ...) — the
+// dial-only mode a browser or edge-function participant that can never
+// accept an inbound connection uses — binds no listener at all (port stays
+// 0, ln stays nil) yet can still dial out to, and exchange messages with, a
+// normal listening wsSocket.
+func TestWSSocket_DialOnly_NoListener(t *testing.T) {
+	client, err := newWSSocket("", nil, wsFramingBinary)
+	if err != nil {
+		t.Fatalf("newWSSocket(\"\", ...): %v", err)
+	}
+	t.Cleanup(client.close)
+
+	if client.ln != nil {
+		t.Error("dial-only socket: ln should be nil")
+	}
+	if client.port != 0 {
+		t.Errorf("dial-only socket: port = %d, want 0", client.port)
+	}
+
+	server := newTestWSSocket(t, nil, wsFramingBinary)
+	addr := fmt.Sprintf("127.0.0.1:%d", server.port)
+
+	want := []byte("rtps-over-ws: dial-only client hello")
+	if err := client.send(addr, want); err != nil {
+		t.Fatalf("send: %v", err)
+	}
+	pkt := recvWSPacket(t, server)
+	if !bytes.Equal(pkt.data, want) {
+		t.Errorf("payload: got %q, want %q", pkt.data, want)
+	}
+}
+
+// TestWSSocket_DialOnly_CloseIsSafe confirms close() on a dial-only socket
+// (nil listener) does not panic, both before and after it has dialled any
+// connection.
+func TestWSSocket_DialOnly_CloseIsSafe(t *testing.T) {
+	s, err := newWSSocket("", nil, wsFramingBinary)
+	if err != nil {
+		t.Fatalf("newWSSocket(\"\", ...): %v", err)
+	}
+	s.close() // must not panic despite s.ln == nil
+}
+
+// TestWS_WithWSPeersAlone_EnablesDialOnlyTransport confirms WithWSPeers
+// with no WithWSAddr — impossible before this sub-phase, see WithWSPeers'
+// doc comment — creates a working, listener-less wsSock rather than the
+// previous no-op.
+func TestWS_WithWSPeersAlone_EnablesDialOnlyTransport(t *testing.T) {
+	p, err := newParticipant(dds.Domain(103),
+		WithWSPeers("127.0.0.1:1"), // never dialled by this test; just needs to be present
+	)
+	if err != nil {
+		t.Skipf("newParticipant: %v — WS/TCP loopback unavailable", err)
+	}
+	defer func() { _ = p.Close() }()
+
+	if p.wsSock == nil {
+		t.Fatal("wsSock is nil: WithWSPeers alone should enable the WS transport")
+	}
+	if p.wsSock.ln != nil {
+		t.Error("dial-only participant: wsSock.ln should be nil")
+	}
+	if p.wsSock.port != 0 {
+		t.Errorf("dial-only participant: wsSock.port = %d, want 0", p.wsSock.port)
+	}
+}
+
+// TestWS_DialOnlyParticipant_DiscoveryAndDelivery is
+// TestWS_CrossDomain_DiscoveryAndDelivery's "browser tab" scenario: p2
+// (standing in for a browser or edge-function participant, ROADMAP.md
+// "WebAssembly Target") never binds a WS listener — WithWSPeers only, no
+// WithWSAddr — yet still completes SPDP/SEDP discovery and reliable
+// delivery purely over WebSocket with a normal, listening go-DDS peer,
+// exactly the "genuine RTPS participant... without a protocol bridge"
+// Milestone 16's success criterion names. p2's replies to p1 flow back over
+// the same connection p2 dialled out on (see wsSocket.connLocked), never
+// requiring p1 to dial back into p2 — which would be impossible, since p2
+// advertises no WS locator at all (spdp.go skips it for port == 0).
+func TestWS_DialOnlyParticipant_DiscoveryAndDelivery(t *testing.T) {
+	const p1Addr = "127.0.0.1:17813"
+
+	p1, err := newParticipant(dds.Domain(104),
+		WithWSAddr(p1Addr),
+		WithSPDPInterval(150*time.Millisecond),
+		WithNoMulticast(),
+		withForcedUDPUnavailable(),
+	)
+	if err != nil {
+		t.Skipf("newParticipant(p1): %v — WS/TCP loopback unavailable", err)
+	}
+	t.Cleanup(func() { _ = p1.Close() })
+
+	// p2 is dial-only: no WithWSAddr, so no listener and no advertised WS
+	// locator — the browser/edge-function shape this sub-phase adds.
+	p2, err := newParticipant(dds.Domain(105),
+		WithWSPeers(p1Addr),
+		WithSPDPInterval(150*time.Millisecond),
+		WithNoMulticast(),
+		withForcedUDPUnavailable(),
+	)
+	if err != nil {
+		t.Skipf("newParticipant(p2): %v — WS/TCP loopback unavailable", err)
+	}
+	t.Cleanup(func() { _ = p2.Close() })
+
+	sub, err := p1.NewSubscriber("ws/dial-only/reliable", dds.ReliableQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	pub, err := p2.NewPublisher("ws/dial-only/reliable", dds.ReliableQoS)
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	defer pub.Close()
+
+	// p2 never learns p1's locator via a listener of its own — only by
+	// dialling out — so give SPDP-over-WS + SEDP-over-WS extra time.
+	time.Sleep(1 * time.Second)
+
+	want := []byte(`{"transport":"rtps-over-ws","peer":"dial-only"}`)
+	if err := pub.Write(want); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	select {
+	case s := <-sub.C():
+		if !bytes.Equal(s.Payload, want) {
+			t.Errorf("payload: got %q, want %q", s.Payload, want)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout: sample not delivered from dial-only WS participant")
+	}
+
+	p2.wsSock.mu.Lock()
+	p2Conns := len(p2.wsSock.conns)
+	p2.wsSock.mu.Unlock()
+	if p2Conns == 0 {
+		t.Error("expected p2 (dial-only) to have at least one cached WS connection to p1")
 	}
 }

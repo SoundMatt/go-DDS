@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>go-DDS wasm-subscriber</title>
+<style>
+  body { font-family: system-ui, -apple-system, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; }
+  code { background: #f0f0f0; padding: 0.1rem 0.3rem; border-radius: 3px; }
+  #status { font-weight: 600; }
+  #samples { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85rem; padding-left: 1.25rem; max-height: 20rem; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 0.75rem 0.75rem 0.75rem 2rem; }
+  #samples li { margin: 0.15rem 0; }
+</style>
+</head>
+<body>
+<h1>go-DDS wasm-subscriber</h1>
+<p>
+  A browser tab running a genuine RTPS participant &mdash; compiled from Go
+  to WebAssembly &mdash; joined to a DDS domain over the
+  RTPS-over-WebSocket transport (<code>rtps.WithWSPeers</code>), with no
+  protocol bridge in between. See
+  <a href="https://github.com/SoundMatt/go-DDS/tree/main/examples/wasm-subscriber">README.md</a>
+  for how to build and run this.
+</p>
+<p>Status: <span id="status">loading…</span></p>
+<h2>Samples received</h2>
+<ul id="samples"></ul>
+
+<script src="wasm_exec.js"></script>
+<script>
+  if (!WebAssembly || !window.Go) {
+    document.getElementById("status").textContent = "error: wasm_exec.js missing or not loaded — run build.sh first";
+  } else {
+    const go = new Go();
+    WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject)
+      .then((result) => go.run(result.instance))
+      .catch((err) => {
+        document.getElementById("status").textContent = "load failed: " + err;
+        console.error(err);
+      });
+  }
+</script>
+</body>
+</html>

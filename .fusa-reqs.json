@@ -2361,6 +2361,30 @@
       "asil": "ASIL-B"
     },
     {
+      "id": "REQ-TRANS-018",
+      "title": "RTPS-over-WebSocket listener-less (dial-only) sockets",
+      "text": "newWSSocket shall accept an empty listen address and, in that case, shall not attempt to bind a listener at all (the resulting socket's port shall be 0), while still being able to dial outbound WebSocket connections to peers and exchange RTPS messages over them; WithWSPeers supplied without WithWSAddr shall enable the RTPS-over-WebSocket transport in this dial-only mode rather than being a no-op, and a dial-only socket shall not advertise a pidWSLocator in this participant's own SPDP announcements.",
+      "standard": "iso26262",
+      "level": "ASIL-B",
+      "asil": "ASIL-B"
+    },
+    {
+      "id": "REQ-TRANS-019",
+      "title": "RTPS-over-WebSocket browser (GOOS=js GOARCH=wasm) dial backend",
+      "text": "On GOOS=js GOARCH=wasm, the RTPS-over-WebSocket transport's outbound dial shall use the browser's native WebSocket object (via syscall/js) rather than a real net.Conn, shall support both the binary and JSON/base64-CDR framing modes identically to the default backend, and shall release all registered JS callbacks when the connection is closed.",
+      "standard": "iso26262",
+      "level": "ASIL-B",
+      "asil": "ASIL-B"
+    },
+    {
+      "id": "REQ-TRANS-020",
+      "title": "SPDP multicast socket fallback when no interface can be enumerated",
+      "text": "newMulticastReceiveSocket and newMulticastReceiveSocketV6 shall fall back to a plain unicast bind on the requested port, rather than failing, when no multicast-capable network interface can even be enumerated (e.g. net.Interfaces() erroring or returning none, as under a WASI runtime's wasi:sockets), exactly as they already do when interface enumeration succeeds but the multicast join itself fails.",
+      "standard": "iso26262",
+      "level": "ASIL-B",
+      "asil": "ASIL-B"
+    },
+    {
       "id": "REQ-BRIDGE-015",
       "title": "WebSocket bridge HTTP upgrade and authentication",
       "text": "The WebSocket gateway (bridge/ws) shall perform the RFC 6455 opening handshake only after validating a configured AuthToken (when set) against the request's Authorization header, rejecting an unauthenticated or malformed upgrade request with 401 Unauthorized before hijacking the connection.",

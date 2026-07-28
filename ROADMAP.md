@@ -1197,11 +1197,104 @@ genuine RTPS participant. Verified end-to-end against a real `bridge/ws`
 Go server from Node (in addition to its own in-memory-fake-WebSocket unit
 suite), including the query-parameter auth path.
 
-### WebAssembly Target
+### WebAssembly Target ✅
 
-- `GOOS=wasip1 GOARCH=wasm` build support for mock and WebSocket transports
-- `examples/wasm-subscriber/` — in-browser DDS subscriber compiled with `tinygo` or standard `go build`
-- Fastly/Cloudflare Workers deployment guide
+- `GOOS=wasip1 GOARCH=wasm` build support for mock and WebSocket transports ✅
+- `examples/wasm-subscriber/` — in-browser DDS subscriber compiled with `tinygo` or standard `go build` ✅
+- Fastly/Cloudflare Workers deployment guide ✅
+
+**Shipped**. Two independent gaps stood between "the WS transport builds
+for Wasm" (already true — `mock` and `rtps/transport_ws.go` are pure Go
+with no CGo, so they always compiled for both `GOOS=wasip1 GOARCH=wasm` and
+`GOOS=js GOARCH=wasm`) and this milestone's actual success criterion — a
+browser tab or cloud function acting as a *genuine RTPS participant*, not
+merely a binary that happens to compile:
+
+1. **A browser can never accept an inbound connection.** Every other
+   optional transport (TCP/DTLS/QUIC/WS) required `WithWSAddr`-style binding
+   a listener before `WithWSPeers`-style static peers had any effect —
+   fine for a normal server, impossible for a sandboxed browser tab or a
+   serverless function invoked per-request. `newWSSocket` now accepts an
+   empty listen address and, in that case, skips `net.Listen`/`acceptLoop`
+   entirely (`ln` stays nil, `port` stays 0) while still dialling outbound
+   and exchanging RTPS messages normally; `WithWSPeers` alone (no
+   `WithWSAddr`) now enables the transport in this dial-only mode rather
+   than being a no-op (see that option's updated doc comment in
+   `rtps/participant.go`). A dial-only participant advertises no
+   `pidWSLocator` at all (spdp.go skips it for `port == 0` — there is no
+   address for a peer to dial back into), so `wsLocatorForIP` gained a
+   fallback to `wsSocket.cachedConnForIP`: replies and further SEDP/
+   user-data traffic route back over the exact connection the dial-only
+   peer already established, never requiring a fresh inbound dial. And
+   because TCP/QUIC/DTLS discovery assumes *both* sides know each other's
+   static peer address ahead of time — impossible for the listening side,
+   which has no way to name a browser tab's address — `wsReceiveLoop`
+   gained `wsReplyToNewWSPeer`: the first time a WS-sourced packet
+   introduces a GUID prefix this participant has never seen before, it
+   replies immediately, once, with its own current SPDP announcement
+   (`spdpService.buildAnnouncementMessage`, factored out of
+   `sendAnnouncement`) over that same connection — closing the one-sided
+   discovery gap a listener-less peer would otherwise create. Proven by
+   `TestWS_DialOnlyParticipant_DiscoveryAndDelivery`: a dial-only
+   participant (`WithWSPeers`, no `WithWSAddr` — the browser/edge-function
+   shape) completes SPDP/SEDP discovery and reliable delivery against a
+   normal listening peer, alongside dedicated tests for listener-less
+   socket construction/close-safety and `WithWSPeers`-alone participant
+   creation.
+2. **`GOOS=js GOARCH=wasm` (the actual browser target) has no real
+   networking at all.** The stdlib's own `net` package there is, in its
+   words, "fake networking for js/wasm... intended to allow tests of other
+   packages to pass" (`$GOROOT/src/net/fd_js.go`) — genuinely useful for
+   letting other packages' tests build and pass, but no path to a real
+   remote host, because a browser sandbox does not expose raw TCP sockets
+   to any script running inside it. `transport_ws_dial.go` (build-tag
+   `!(js && wasm)`) keeps the original `net.Conn` + RFC 6455 handshake dial
+   exactly as shipped for "WebSocket Transport" above — unchanged, still
+   what every other platform (including `wasip1`) uses — while
+   `transport_ws_browser.go` (build-tag `js && wasm`) adds a second dial
+   backend that asks the browser's own, already RFC-6455-compliant
+   `WebSocket` object to do it via `syscall/js`, wrapped in a `wsConnIface`
+   (`readMessage`/`writeMessage`/`close`) both backends implement
+   identically from `wsSocket`'s point of view — no other transport code
+   needed to change at all.
+
+`examples/wasm-subscriber/` demonstrates the browser half end to end:
+`main.go` (build-tag `js && wasm`) calls `rtps.New` with `WithWSPeers`
+directly — a genuine RTPS participant, not `bridge/ws`'s separate JSON
+gateway client (`js/dds-client`, see that package's README for the explicit
+scope boundary) — reads its target/domain/topic from the page's query
+string, and renders received samples into the DOM; `server/` is an
+ordinary native go-DDS participant with a WS listener bound, publishing
+samples for the demo; `build.sh` builds `main.wasm` and copies the matching
+`wasm_exec.js` glue out of the local Go toolchain (never vendored, since
+its content is tied to the exact Go version). TinyGo is documented as an
+alternative build path (`-target wasm`) per the ROADMAP bullet, honestly
+flagged as unverified by this repo's own CI, which only exercises the
+standard `go build` path (see the new `wasm-build` CI job).
+
+For the "cloud function" half, `docs/WASM_DEPLOYMENT.md` is the Fastly/
+Cloudflare Workers deployment guide. Its central, load-bearing finding: a
+real `rtps.New` participant using `WithWSPeers` was proven, locally during
+this sub-phase's development, to start up correctly under
+[Wasmtime](https://wasmtime.dev) with `wasi:sockets` enabled — which
+surfaced and fixed a genuine pre-existing bug (`REQ-TRANS-020`):
+`newMulticastReceiveSocket`/`newMulticastReceiveSocketV6` treated a failure
+to even *enumerate* a network interface (`net.Interfaces()` returning
+nothing, exactly what a WASI runtime does) as fatal, rather than falling
+back to a plain unicast bind the way they already did when enumeration
+succeeded but the multicast join itself failed — despite their own doc
+comments already promising that fallback unconditionally. Without that fix,
+`rtps.New` could never succeed under a WASI sandbox at all, regardless of
+transport. The guide is deliberately honest about what this sub-phase does
+and does not independently verify beyond that: which specific WASI/
+networking integration a given edge platform's *current* SDK version
+exposes to a Wasm module (a plain local Wasmtime CLI invocation did not
+bridge the guest's sockets through to the host's real network in this
+repo's own testing, despite flags suggesting it should) is platform- and
+version-specific integration work this repo cannot pre-solve generically —
+the same honesty this milestone's own QUIC Transport sub-phase already
+applied to an evolving external spec (see its FastDDS interoperability
+scoping note above).
 
 Success Criteria:
 A browser tab and a cloud function can join a DDS domain alongside embedded devices without a protocol bridge.

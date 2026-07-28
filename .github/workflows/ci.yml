@@ -362,6 +362,54 @@ jobs:
         working-directory: k8s/operator
         run: go test -race -count=1 ./...
 
+  # ── WebAssembly Target build gate (ROADMAP.md Milestone 16, "WebAssembly
+  # Target") ──────────────────────────────────────────────────────────────
+  # Proves the two Wasm build targets this sub-phase adds compile cleanly:
+  #   - GOOS=wasip1 GOARCH=wasm — the "cloud function" target (Fastly
+  #     Compute, Cloudflare Workers, Wasmtime; see docs/WASM_DEPLOYMENT.md)
+  #     — across every module, since none of them need GOOS-specific code
+  #     to support it (mock/rtps use only the standard net/tls packages,
+  #     which wasip1 backs with real WASI socket syscalls).
+  #   - GOOS=js GOARCH=wasm — the browser target
+  #     (examples/wasm-subscriber/) — built explicitly via its own build.sh
+  #     wrapper (not just `go build`) so the wasm_exec.js-copying step is
+  #     exercised too, not just the compile.
+  # `go vet` runs for wasip1 as well (js/wasm's net package is real-enough
+  # that vet's static checks are still meaningful there); it does not run
+  # against GOOS=js for the whole repo since only examples/wasm-subscriber
+  # targets it, and that package is vetted on its own right after building.
+  wasm-build:
+    name: Wasm build (wasip1 + js/wasm browser target)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.25"
+
+      - name: go build (wasip1, root module)
+        run: GOOS=wasip1 GOARCH=wasm go build ./...
+
+      - name: go vet (wasip1, root module)
+        run: GOOS=wasip1 GOARCH=wasm go vet ./...
+
+      - name: go build (wasip1, bridge/tools/observability/safety/examples modules)
+        run: |
+          set -e
+          for mod in bridge tools observability safety examples; do
+            echo "== $mod (wasip1) =="
+            (cd "$mod" && GOOS=wasip1 GOARCH=wasm go build ./...)
+          done
+
+      - name: Build wasm-subscriber (js/wasm browser target, via build.sh)
+        working-directory: examples
+        run: ./wasm-subscriber/build.sh
+
+      - name: go vet (js/wasm, wasm-subscriber)
+        working-directory: examples
+        run: GOOS=js GOARCH=wasm go vet ./wasm-subscriber/...
+
   # ── RELAY conformance gate (spec §12 CLI documents + §11.2 interop) ────────
   # Validates the go-dds CLI against the JSON Schemas embedded in the pinned
   # relay binary (authoritative, unlike hand-rolled JSON asserts), then checks
