@@ -55,6 +55,32 @@ const (
 	// when the RTPS-over-TCP transport is enabled via WithTCPAddr. Peers that
 	// don't understand it skip it like any other unrecognised PL_CDR parameter.
 	pidTCPLocator = uint16(0x8003)
+
+	// The following vendor-specific PIDs (Milestone 14, "QoS Enforcement —
+	// Active Policy") carry the subset of QoS state that must cross the wire
+	// for a remote peer to actively enforce Partition, Ownership, and
+	// Liveliness. They live in the vendor-extension range for the same reason
+	// pidTCPLocator does: unlike pidReliability/pidDurability above (defined
+	// but not yet wired to any encoder — reserved for a future PR), these are
+	// go-DDS-specific wire representations, not a claim of exact OMG PID
+	// values. Peers that don't understand a PID skip it like any other
+	// unrecognised PL_CDR parameter, so this is fully backward compatible.
+	//
+	// pidPartition carries one Partition QoS name per occurrence (a SEDP
+	// EndpointData may contain zero or more of these); present on both
+	// publication and subscription announcements.
+	pidPartition = uint16(0x8004)
+	// pidOwnership is present (with a non-zero value) only when the writer's
+	// Ownership QoS is ExclusiveOwnership. Absence means SharedOwnership.
+	pidOwnership = uint16(0x8005)
+	// pidOwnershipStrength carries the writer's OwnershipStrength as a
+	// little-endian uint32. Only meaningful alongside pidOwnership.
+	pidOwnershipStrength = uint16(0x8006)
+	// pidLivelinessLeaseDuration carries a writer's QoS.LivelinessLeaseDuration
+	// as a little-endian int64 count of nanoseconds (time.Duration's native
+	// representation). Present only on publication announcements, and only
+	// when the writer set a non-zero lease.
+	pidLivelinessLeaseDuration = uint16(0x8007)
 )
 
 // plCDREncoder builds a PL_CDR_LE encoded parameter list.
@@ -87,6 +113,14 @@ func (e *plCDREncoder) addParam(pid uint16, value []byte) {
 func (e *plCDREncoder) addUint32(pid uint16, v uint32) {
 	b := make([]byte, 4)
 	binary.LittleEndian.PutUint32(b, v)
+	e.addParam(pid, b)
+}
+
+// addInt64 appends an 8-byte little-endian int64 parameter (used to carry a
+// time.Duration's nanosecond count — see pidLivelinessLeaseDuration).
+func (e *plCDREncoder) addInt64(pid uint16, v int64) {
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, uint64(v))
 	e.addParam(pid, b)
 }
 
@@ -195,4 +229,20 @@ func decodeGUID(b []byte) (GUID, bool) {
 	copy(g.Prefix[:], b[0:12])
 	copy(g.Entity[:], b[12:16])
 	return g, true
+}
+
+// decodeUint32 reads a 4-byte little-endian uint32 from a parameter value.
+func decodeUint32(b []byte) (uint32, bool) {
+	if len(b) < 4 {
+		return 0, false
+	}
+	return binary.LittleEndian.Uint32(b), true
+}
+
+// decodeInt64 reads an 8-byte little-endian int64 from a parameter value.
+func decodeInt64(b []byte) (int64, bool) {
+	if len(b) < 8 {
+		return 0, false
+	}
+	return int64(binary.LittleEndian.Uint64(b)), true
 }
