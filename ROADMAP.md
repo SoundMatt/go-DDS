@@ -676,7 +676,7 @@ Make go-DDS reachable across any network boundary — firewalls, NAT, cloud, and
 - Automatic fallback: prefer UDP multicast, fall back to TCP unicast when UDP unreachable ✅
 - Discovery over TCP — SPDP unicast to known peers via TCP ✅
 
-**Shipped** in PLACEHOLDER_PR (root v0.56.0). `rtps/transport_tcp.go`
+**Shipped** in #117 (root v0.56.0). `rtps/transport_tcp.go`
 adds a `tcpSocket` (listener + per-peer connection cache) that frames every
 RTPS message — the exact bytes `wrapInRTPSMessage` already produces for UDP —
 with a 4-byte big-endian length prefix, TLS-1.3-wrapped via `crypto/tls` when
