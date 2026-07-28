@@ -143,7 +143,7 @@ history expansion on `%`, `!`, and `(`.
 | fuzz-short     | ubuntu, 10 s per target |
 | lint           | golangci-lint |
 | static-analysis | deadcode + gocyclo (informational, non-blocking) |
-| gofusa         | go-FuSa v0.30.0 full lifecycle (§20): check + 100% trace (traced AND tested) + cyber + vuln + qualify |
+| gofusa         | go-FuSa v0.36.0 full lifecycle (§20): check + 100% trace (traced AND tested) + cyber + vuln + qualify |
 | relay-conform  | RELAY v1.11 conform --strict + interop --protocol DDS --strict |
 | dco            | DCO sign-off check |
 | test-interop   | Docker probe-and-skip |

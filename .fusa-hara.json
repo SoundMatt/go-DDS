@@ -5,13 +5,37 @@
   "operationalSituations": [
     {
       "id": "OS-001",
-      "description": "Normal operation"
+      "description": "Normal operation — continuous sensor data flow at rated Hz in an ADAS sensor-fusion ECU (see docs/HARA.md §1)"
+    },
+    {
+      "id": "OS-002",
+      "description": "Degraded operation — one sensor stream stopped while others continue (see docs/HARA.md §1)"
+    },
+    {
+      "id": "OS-003",
+      "description": "Shutdown — participant/publisher/subscriber close sequence (see docs/HARA.md §1)"
     }
   ],
   "hazards": [
     {
-      "id": "H-001",
-      "description": "Example hazard — replace with project-specific hazard",
+      "id": "H-01",
+      "description": "Late delivery of sensor data causes the fusion algorithm to use stale values (message not delivered within deadline due to GC pause, channel full, or topic mismatch)",
+      "situations": [
+        "OS-001"
+      ],
+      "risk": {
+        "severity": "S2",
+        "exposure": "E4",
+        "controllability": "C2",
+        "asil": "ASIL-B"
+      },
+      "safetyGoals": [
+        "SG-01"
+      ]
+    },
+    {
+      "id": "H-02",
+      "description": "Corrupt sensor payload is used in fusion without detection (silent bit corruption during in-process copy; missing CRC/HMAC in the security layer)",
       "situations": [
         "OS-001"
       ],
@@ -19,22 +43,158 @@
         "severity": "S2",
         "exposure": "E3",
         "controllability": "C2",
-        "asil": "ASIL-B"
+        "asil": "ASIL-A"
       },
       "safetyGoals": [
-        "SG-001"
+        "SG-02"
+      ]
+    },
+    {
+      "id": "H-03",
+      "description": "Loss of a complete sensor stream without notification (publisher closed or crashed; subscriber channel drained with no liveliness event issued)",
+      "situations": [
+        "OS-002"
+      ],
+      "risk": {
+        "severity": "S2",
+        "exposure": "E2",
+        "controllability": "C2",
+        "asil": "ASIL-A"
+      },
+      "safetyGoals": [
+        "SG-03"
+      ]
+    },
+    {
+      "id": "H-04",
+      "description": "Wrong topic routing — data from sensor A is delivered to the handler for sensor B (topic wildcard match error; SEDP routing table corruption)",
+      "situations": [
+        "OS-001"
+      ],
+      "risk": {
+        "severity": "S1",
+        "exposure": "E4",
+        "controllability": "C1",
+        "asil": "QM"
+      },
+      "safetyGoals": [
+        "SG-04"
+      ]
+    },
+    {
+      "id": "H-05",
+      "description": "Overflow of the subscriber channel causes head-of-line blocking (slow consumer; back-pressure policy drops or blocks the publisher goroutine)",
+      "situations": [
+        "OS-001"
+      ],
+      "risk": {
+        "severity": "S2",
+        "exposure": "E3",
+        "controllability": "C2",
+        "asil": "ASIL-A"
+      },
+      "safetyGoals": [
+        "SG-05"
+      ]
+    },
+    {
+      "id": "H-06",
+      "description": "Memory exhaustion destabilises the ECU (unbounded history or sequence backlog under Reliable QoS)",
+      "situations": [
+        "OS-001"
+      ],
+      "risk": {
+        "severity": "S2",
+        "exposure": "E2",
+        "controllability": "C3",
+        "asil": "ASIL-A"
+      },
+      "safetyGoals": [
+        "SG-06"
       ]
     }
   ],
   "safetyGoals": [
     {
-      "id": "SG-001",
-      "description": "Example safety goal — replace with project-specific goal",
+      "id": "SG-01",
+      "description": "go-DDS shall deliver Reliable and BestEffort samples within the configured deadline budget with sufficient margin to avoid stale-perception hazards in the fusing application",
       "hazards": [
-        "H-001"
+        "H-01"
       ],
       "asil": "ASIL-B",
-      "safeState": "safe state description"
+      "safeState": "Application-level: integrator asserts an ADAS inhibit / fallback state when a registered DeadlineQoS callback fires (AoU-03, docs/HARA.md §5)",
+      "fssrRefs": [
+        "REQ-SUB-006",
+        "REQ-MOCK-004"
+      ]
+    },
+    {
+      "id": "SG-02",
+      "description": "go-DDS shall provide cryptographic integrity verification for sample payloads so that corrupted or tampered data can be detected before use by the fusion algorithm",
+      "hazards": [
+        "H-02"
+      ],
+      "asil": "ASIL-A",
+      "safeState": "Application-level: consumer rejects samples that fail HMAC/AES-GCM authentication or E2E CRC verification and falls back to the last known-good sample or a safe default",
+      "fssrRefs": [
+        "REQ-SEC-001",
+        "REQ-SEC-002",
+        "REQ-SAFETY-005"
+      ]
+    },
+    {
+      "id": "SG-03",
+      "description": "go-DDS shall notify the application when a publisher stops writing within its configured deadline period so a frozen or lost sensor stream is not silently consumed",
+      "hazards": [
+        "H-03"
+      ],
+      "asil": "ASIL-A",
+      "safeState": "Application-level: integrator registers a DeadlineQoS missed-deadline callback and asserts a defined safe state on trigger (AoU-03, docs/HARA.md §5)",
+      "fssrRefs": [
+        "REQ-SUB-006",
+        "REQ-MOCK-004"
+      ]
+    },
+    {
+      "id": "SG-04",
+      "description": "go-DDS topic matching shall be deterministic and verifiable by integration tests so that data from one sensor topic cannot be silently delivered to a handler for a different topic",
+      "hazards": [
+        "H-04"
+      ],
+      "asil": "QM",
+      "safeState": "Application-level: consumer validates payload type/length on receipt; integration tests verify each publisher/subscriber pairing (CONTRIBUTING.md §Test modes)",
+      "fssrRefs": [
+        "REQ-DISC-006",
+        "REQ-DISC-010"
+      ]
+    },
+    {
+      "id": "SG-05",
+      "description": "go-DDS shall provide a bounded-latency delivery path that decouples publisher from subscriber so a slow consumer cannot indefinitely block or unboundedly delay sample delivery",
+      "hazards": [
+        "H-05"
+      ],
+      "asil": "ASIL-A",
+      "safeState": "safety.DeterministicQueue provides an allocation-free, bounded-latency ring buffer for the final delivery hop; publisher goroutine is never blocked by a slow subscriber",
+      "fssrRefs": [
+        "REQ-SAFETY-010",
+        "REQ-SAFETY-011",
+        "REQ-SAFETY-012",
+        "REQ-SEOOC-007"
+      ]
+    },
+    {
+      "id": "SG-06",
+      "description": "go-DDS shall bound the in-flight history backlog per writer under Reliable QoS so that a persistent ACKNACK loss cannot exhaust ECU memory",
+      "hazards": [
+        "H-06"
+      ],
+      "asil": "ASIL-A",
+      "safeState": "Application-level: integrator sets a finite ResourceLimitsQoS.MaxSamples on all Reliable QoS publishers (AoU-04, docs/HARA.md §5); History depth enforcement evicts the oldest sample before storing a new one",
+      "fssrRefs": [
+        "REQ-QOS-004",
+        "REQ-REL-009"
+      ]
     }
   ]
 }
