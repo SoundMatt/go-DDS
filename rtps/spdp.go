@@ -56,6 +56,10 @@ type participantProxy struct {
 	// decoded from pidTCPLocator. Empty when the peer didn't advertise one
 	// (TCP transport disabled, or an older go-DDS version). Milestone 14.
 	tcpUnicast string
+	// quicUnicast is this peer's RTPS-over-QUIC listen address ("host:port"),
+	// decoded from pidQUICLocator (Milestone 16, "QUIC Transport"). Empty
+	// when the peer didn't advertise one, exactly like tcpUnicast.
+	quicUnicast string
 	// relayID is this peer's RTPS-over-Relay registration ID (Milestone 15,
 	// "NAT Traversal / Cloud Gateway"). Populated either by decoding
 	// pidRelayID from an SPDP announcement, or directly by
@@ -195,6 +199,18 @@ func (s *spdpService) sendAnnouncement() {
 		}
 	}
 
+	// Discovery over QUIC (Milestone 16, "QUIC Transport"): additionally
+	// unicast the identical announcement to every statically configured
+	// QUIC peer, over the reliable stream (ROADMAP.md "Reliable streams for
+	// SEDP/SPDP discovery") — exactly the RTPS-over-TCP pattern above, one
+	// more independent transport a firewalled or NAT'd peer can be
+	// discovered over.
+	if p.quicSock != nil {
+		for _, addr := range p.quicPeers {
+			_ = p.quicSock.send(addr, msg, true)
+		}
+	}
+
 	// Discovery over Relay (Milestone 15, "NAT Traversal / Cloud Gateway"):
 	// additionally send the identical announcement, over the relay, to
 	// every statically configured relay peer ID (see WithRelayPeers). This
@@ -241,6 +257,13 @@ func (s *spdpService) buildParticipantData() []byte {
 	if p.tcpSock != nil {
 		tcpLocator := locatorFromTCP(net.IPv4zero, p.tcpSock.port)
 		enc.addLocator(pidTCPLocator, tcpLocator)
+	}
+
+	// RTPS-over-QUIC listen locator (Milestone 16, "QUIC Transport"), when
+	// the QUIC transport is enabled. Peers use this to reach us over QUIC.
+	if p.quicSock != nil {
+		quicLocator := locatorFromQUIC(net.IPv4zero, p.quicSock.port)
+		enc.addLocator(pidQUICLocator, quicLocator)
 	}
 
 	// Relay registration ID (Milestone 15, "NAT Traversal / Cloud Gateway"),
@@ -479,6 +502,18 @@ func parseParticipantData(prefix GuidPrefix, payload []byte, from *net.UDPAddr) 
 				}
 				if hp, ok2 := l.tcpHostPort(); ok2 {
 					proxy.tcpUnicast = hp
+				}
+			}
+		case pidQUICLocator:
+			if l, ok := unmarshalLocator(p.value); ok && l.Kind == LocatorKindQUICv4 {
+				if l.Address == ([16]byte{}) {
+					ip4 := from.IP.To4()
+					if ip4 != nil {
+						copy(l.Address[12:], ip4)
+					}
+				}
+				if hp, ok2 := l.quicHostPort(); ok2 {
+					proxy.quicUnicast = hp
 				}
 			}
 		case pidRelayID:

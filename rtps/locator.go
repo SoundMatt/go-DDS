@@ -33,6 +33,11 @@ const (
 	// parameter lists are self-describing (§9.4.2.11) and require no changes
 	// on peers that don't support TCP.
 	LocatorKindTCPv4 = 4
+	// LocatorKindQUICv4 identifies a go-DDS RTPS-over-QUIC unicast locator
+	// (Milestone 16, ROADMAP.md "QUIC Transport"). Like LocatorKindTCPv4, this
+	// is a go-DDS vendor extension only ever carried inside the
+	// vendor-specific pidQUICLocator parameter.
+	LocatorKindQUICv4 = 5
 )
 
 // locatorFromUDP builds a Locator from a net.UDPAddr.
@@ -100,6 +105,28 @@ func locatorFromTCP(ip net.IP, port int) Locator {
 // tcpSocket.send. Returns ("", false) for locators of any other kind.
 func (l Locator) tcpHostPort() (string, bool) {
 	if l.Kind != LocatorKindTCPv4 {
+		return "", false
+	}
+	ip := net.IP(append([]byte(nil), l.Address[12:16]...))
+	return net.JoinHostPort(ip.String(), strconv.Itoa(int(l.Port))), true
+}
+
+// locatorFromQUIC builds a QUICv4 Locator from an IP and port, the QUIC
+// analogue of locatorFromTCP.
+func locatorFromQUIC(ip net.IP, port int) Locator {
+	l := Locator{Kind: LocatorKindQUICv4, Port: uint32(port)}
+	ip4 := ip.To4()
+	if ip4 == nil {
+		ip4 = net.IPv4zero.To4()
+	}
+	copy(l.Address[12:], ip4)
+	return l
+}
+
+// quicHostPort converts a QUICv4 Locator to a "host:port" string suitable
+// for quicSocket.send. Returns ("", false) for locators of any other kind.
+func (l Locator) quicHostPort() (string, bool) {
+	if l.Kind != LocatorKindQUICv4 {
 		return "", false
 	}
 	ip := net.IP(append([]byte(nil), l.Address[12:16]...))

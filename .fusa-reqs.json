@@ -2311,6 +2311,30 @@
       "standard": "iso26262",
       "level": "ASIL-A",
       "asil": "ASIL-A"
+    },
+    {
+      "id": "REQ-TRANS-012",
+      "title": "RTPS-over-QUIC length-prefixed stream framing",
+      "text": "The RTPS-over-QUIC transport's reliable control stream shall frame every message with a 4-byte big-endian length prefix, and shall close the QUIC connection for any received length prefix of zero or exceeding maxQUICFrameSize, so that a corrupt or hostile peer cannot force unbounded memory allocation.",
+      "standard": "iso26262",
+      "level": "ASIL-B",
+      "asil": "ASIL-B"
+    },
+    {
+      "id": "REQ-TRANS-013",
+      "title": "RTPS-over-QUIC datagram-to-stream fallback for oversized best-effort data",
+      "text": "When sending a best-effort (non-reliable) message over the RTPS-over-QUIC transport, the transport shall attempt an unreliable QUIC datagram first and, if the payload exceeds the negotiated maximum datagram size, fall back to the reliable framed stream rather than dropping the message.",
+      "standard": "iso26262",
+      "level": "ASIL-B",
+      "asil": "ASIL-B"
+    },
+    {
+      "id": "REQ-TRANS-014",
+      "title": "RTPS-over-QUIC 0-RTT client session resumption default",
+      "text": "When a *tls.Config supplied to the RTPS-over-QUIC transport via WithQUIC has no ClientSessionCache set, the transport's client configuration shall install an in-memory LRU session cache so that a subsequent dial to a previously-contacted peer can attempt 0-RTT resumption.",
+      "standard": "iso26262",
+      "level": "ASIL-B",
+      "asil": "ASIL-B"
     }
   ]
 }
