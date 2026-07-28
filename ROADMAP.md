@@ -980,11 +980,80 @@ other transport configured, plus a dedicated regression test proving a
 relay-only matched reader still receives samples even when UDP multicast is
 otherwise available).
 
-### Content-Filtered Topics
+### Content-Filtered Topics ✅
 
-- `NewFilteredSubscriber(topic, expr, params)` — server-side SQL-like predicate (`x > 42 AND status = 'active'`)
-- Filter evaluated at publisher before transmission — reduces network load
-- Compatible with existing wildcard subscriptions
+- `NewFilteredSubscriber(topic, expr, params)` — server-side SQL-like predicate (`x > 42 AND status = 'active'`) ✅
+- Filter evaluated at publisher before transmission — reduces network load ✅
+- Compatible with existing wildcard subscriptions ✅
+
+**Shipped** (new `cfilter/` package, plus `dds.NewFilteredSubscriber` and a
+`mock`/`rtps`/`shmem` implementation each). `cfilter.Parse(expr, params)`
+compiles a small DDS-SQL-like predicate grammar — comparisons (`=`, `<>`,
+`!=`, `>`, `>=`, `<`, `<=`) combined with `AND`/`OR`/`NOT` and parentheses,
+plus `%0`, `%1`, ... parameter placeholders — into a `cfilter.Expr` that
+evaluates against a sample's Payload decoded as a JSON object; a decode
+failure, an absent field, or a type-mismatched comparison all fail closed
+(evaluate false) rather than erroring, since content filtering is a
+network-load optimisation, never a correctness requirement. `cfilter` has no
+dependency on `dds` or any transport backend, so `mock`, `rtps`, and `shmem`
+all import and share the exact same predicate implementation — the same
+"identical semantics across backends" convention the wildcard matcher and
+Milestone 14's QoS enforcement already established — proven by parallel
+`content_filter_test.go` suites in all three packages plus `cfilter`'s own
+~96%-covered unit tests.
+- **`dds.ContentFilteredSubscriberFactory`** is a new optional interface
+  (the same `Drainer`/`PublicAddresser`/`DiscoveryMetricsProvider` pattern
+  already used throughout `dds.go`) with one method,
+  `NewFilteredSubscriber(topic, expr string, params []string, qos QoS, opts ...SubscriberOption) (Subscriber, error)`;
+  `dds.NewFilteredSubscriber(p, ...)` type-asserts it and returns
+  `ErrContentFilterUnsupported` otherwise. `topic` may itself be an
+  MQTT-style `+`/`#` wildcard pattern exactly as `NewSubscriber` accepts,
+  composing directly with Milestone 11's wildcard subscriptions.
+- **mock and shmem** compile `expr` once at subscribe time and store the
+  predicate on the subscription; each backend's central `broker.publish`
+  (the same synchronous call `Publisher.Write` already funnels through)
+  checks it immediately before enqueuing to the subscriber's channel —
+  exactly where `WithFilter`'s existing `func(Sample) bool` is already
+  checked, so the two compose (both must pass) rather than replace one
+  another. shmem additionally threads the predicate into `shmListener` for
+  cross-process delivery, since a cross-process shmem reader reads its
+  payload directly from the shared-memory file rather than through the
+  local broker.
+- **rtps is the transport where "reduces network load" is a literal,
+  measurable claim**: a `NewFilteredSubscriber` reader's predicate text and
+  parameters are carried over SEDP on two new vendor PL_CDR parameters
+  (`pidContentFilterExpr`, `pidContentFilterParam`, mirroring
+  `pidPartition`'s repeated-string encoding) on the subscription
+  announcement. A matched remote writer compiles the received expression
+  and, in `rtpsWriter.Write`, evaluates it against the plaintext payload
+  before ever building or sending a DATA submessage to that reader's
+  locator — a non-matching sample is never serialized, fragmented, or put
+  on the wire for that reader. Because RTPS multicast reaches every
+  subscriber on the segment unconditionally, a content-filtered matched
+  reader forces the writer onto the per-reader unicast path exactly like an
+  existing relay-only reader already does (`matchedReaderLocators`); two
+  local readers in the same remote participant process necessarily share
+  one data locator (it's per-participant, not per-reader), so
+  `matchedReaderLocators` OR-merges every reader's predicate at a shared
+  locator — the locator is sent to whenever *any* reader there wants the
+  sample — and the remote participant's own `dispatchToReaders` re-checks
+  each individual reader's predicate to finish sorting delivery locally,
+  so an unfiltered reader is never starved by a filtered peer sharing its
+  locator. A same-process (local) reader is filtered in `dispatchToReaders`
+  the same way `WithFilter` already is, since the network path never runs
+  for local delivery.
+
+Proven by `cfilter`'s own unit tests (grammar coverage, fail-closed
+semantics, parameter binding) and parallel `content_filter_test.go` suites
+in `mock/`, `rtps/`, and `shmem/`: match/reject, invalid-expression and
+empty-topic errors, parameter binding, and wildcard-topic compatibility in
+all three, plus `dds.ContentFilteredSubscriberFactory` type-assertion
+checks. `rtps/content_filter_test.go` additionally runs real two-participant
+cross-process scenarios (gated like the existing
+`TestRTPS_TwoParticipants_SameHost`) proving a non-matching sample is never
+delivered end-to-end over real UDP, and that a plain (unfiltered)
+subscriber sharing a writer with a filtered one is never affected by the
+other's predicate.
 
 Success Criteria:
 A go-DDS deployment on Kubernetes is observable via standard Prometheus/Grafana and reachable from any cloud region without a VPN.

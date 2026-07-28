@@ -2247,6 +2247,70 @@
       "standard": "iso21434",
       "level": "CAL-3",
       "asil": "CAL-3"
+    },
+    {
+      "id": "REQ-CFILT-001",
+      "title": "Content-filter predicate parsing",
+      "text": "cfilter.Parse shall compile a DDS-SQL-like predicate expression (comparisons combined with AND/OR/NOT and parentheses) into an evaluatable Expr, returning an error for any syntactically invalid expression.",
+      "standard": "iso26262",
+      "level": "ASIL-A",
+      "asil": "ASIL-A"
+    },
+    {
+      "id": "REQ-CFILT-002",
+      "title": "Content-filter numeric and string comparison operators",
+      "text": "cfilter's compiled predicate shall support the comparison operators =, <>, !=, >, >=, <, and <= over both numeric and string operands, applying the operator numerically when both operands are numbers and lexicographically when both are strings.",
+      "standard": "iso26262",
+      "level": "ASIL-A",
+      "asil": "ASIL-A"
+    },
+    {
+      "id": "REQ-CFILT-003",
+      "title": "Content-filter boolean combinators",
+      "text": "cfilter's compiled predicate shall support combining comparisons with AND, OR, and NOT, with parentheses overriding default precedence, matching standard boolean short-circuit semantics.",
+      "standard": "iso26262",
+      "level": "ASIL-A",
+      "asil": "ASIL-A"
+    },
+    {
+      "id": "REQ-CFILT-004",
+      "title": "Content-filter parameter placeholder binding",
+      "text": "cfilter.Parse shall bind %0, %1, ... placeholders in expr to the corresponding entries of the params slice, and shall return an error if expr references a placeholder index outside params.",
+      "standard": "iso26262",
+      "level": "ASIL-A",
+      "asil": "ASIL-A"
+    },
+    {
+      "id": "REQ-CFILT-005",
+      "title": "Content-filter fail-closed evaluation",
+      "text": "Expr.Eval shall evaluate to false, rather than error or panic, when the sample Payload is not valid JSON, is not a JSON object, or a comparison references a field absent from the object or of an incompatible type.",
+      "standard": "iso26262",
+      "level": "ASIL-A",
+      "asil": "ASIL-A"
+    },
+    {
+      "id": "REQ-CFILT-006",
+      "title": "NewFilteredSubscriber cross-backend semantic parity",
+      "text": "NewFilteredSubscriber shall deliver identical filtering semantics (a compiled cfilter.Expr evaluated against each sample's Payload) across the mock, rtps, and shmem Participant implementations for the same expr and params.",
+      "standard": "iso26262",
+      "level": "ASIL-A",
+      "asil": "ASIL-A"
+    },
+    {
+      "id": "REQ-CFILT-007",
+      "title": "Publisher-side content filtering reduces network transmission",
+      "text": "In the rtps backend, a matched writer shall evaluate a remote reader's content-filter predicate before transmitting DATA to that reader's locator, and shall not transmit DATA for a sample the predicate rejects; multicast delivery shall be disabled in favour of per-reader unicast whenever any matched reader on the topic has a content filter registered.",
+      "standard": "iso26262",
+      "level": "ASIL-A",
+      "asil": "ASIL-A"
+    },
+    {
+      "id": "REQ-CFILT-008",
+      "title": "Content filter compatibility with wildcard topic subscriptions",
+      "text": "NewFilteredSubscriber shall accept an MQTT-style +/# wildcard topic pattern exactly as NewSubscriber does, applying the content-filter predicate to every sample delivered under the wildcard match.",
+      "standard": "iso26262",
+      "level": "ASIL-A",
+      "asil": "ASIL-A"
     }
   ]
 }

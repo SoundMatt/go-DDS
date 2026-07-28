@@ -52,6 +52,9 @@ package rtps
 //fusa:req REQ-SEOOC-010
 //fusa:req REQ-LLR-004
 //fusa:req REQ-LLR-005
+//fusa:req REQ-CFILT-006
+//fusa:req REQ-CFILT-007
+//fusa:req REQ-CFILT-008
 
 import (
 	"context"
@@ -65,6 +68,7 @@ import (
 	"time"
 
 	dds "github.com/SoundMatt/go-DDS"
+	"github.com/SoundMatt/go-DDS/cfilter"
 	"github.com/SoundMatt/go-DDS/config"
 )
 
@@ -838,6 +842,41 @@ func (p *participant) NewSubscriber(topic string, qos dds.QoS, opts ...dds.Subsc
 	if p.accessControl != nil && !p.accessControl.CanRead(topic) {
 		return nil, fmt.Errorf("rtps: subscribe %q: %w", topic, dds.ErrAccessDenied)
 	}
+	return p.newSubscriberLocked(topic, qos, opts, nil)
+}
+
+// NewFilteredSubscriber implements dds.ContentFilteredSubscriberFactory
+// (Milestone 15, "Content-Filtered Topics"): expr is compiled once via
+// cfilter.Parse, then both stored on the new reader (for same-process
+// dispatch — see participant.dispatchToReaders) and announced over SEDP
+// (see sedpService.registerReader / buildEndpointData) so every matched
+// remote writer evaluates it before transmitting DATA to this reader at
+// all, satisfying the "evaluated at the publisher, before transmission"
+// contract documented on dds.ContentFilteredSubscriberFactory — unlike
+// dds.WithFilter, whose func(Sample) bool never leaves this process.
+func (p *participant) NewFilteredSubscriber(topic, expr string, params []string, qos dds.QoS, opts ...dds.SubscriberOption) (dds.Subscriber, error) {
+	if topic == "" {
+		return nil, fmt.Errorf("rtps: %w", dds.ErrTopicEmpty)
+	}
+	e, err := cfilter.Parse(expr, params)
+	if err != nil {
+		return nil, fmt.Errorf("rtps: %w", err)
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.closed {
+		return nil, fmt.Errorf("rtps: %w", dds.ErrClosed)
+	}
+	if p.accessControl != nil && !p.accessControl.CanRead(topic) {
+		return nil, fmt.Errorf("rtps: subscribe %q: %w", topic, dds.ErrAccessDenied)
+	}
+	cf := &contentFilterSpec{expr: e, text: expr, params: params}
+	return p.newSubscriberLocked(topic, qos, opts, cf)
+}
+
+// newSubscriberLocked is the shared implementation behind NewSubscriber and
+// NewFilteredSubscriber. Caller must hold p.mu.
+func (p *participant) newSubscriberLocked(topic string, qos dds.QoS, opts []dds.SubscriberOption, cf *contentFilterSpec) (dds.Subscriber, error) {
 	cfg := dds.ApplySubscriberOpts(opts)
 	depth := cfg.ChanDepth(64)
 	n := atomic.AddUint32(&p.entityCounter, 1)
@@ -880,13 +919,13 @@ func (p *participant) NewSubscriber(topic string, qos dds.QoS, opts ...dds.Subsc
 	}
 	p.log.debug("new subscriber topic=%s depth=%d backpressure=%d", topic, depth, cfg.BackPressure)
 	p.readers[eid] = r
-	p.sedp.registerReader(eid, topic, qos, r)
+	p.sedp.registerReader(eid, topic, qos, r, cf)
 	// TransientLocal: deliver the last published sample to the new subscriber.
 	// Also check disk-backed persistent history if no in-memory sample exists.
 	if qos.Durability == dds.TransientLocal {
 		if v, ok := p.lastSample.Load(topic); ok {
 			if last, ok2 := v.(*dds.Sample); ok2 {
-				if cfg.Filter == nil || cfg.Filter(*last) {
+				if (cfg.Filter == nil || cfg.Filter(*last)) && cf.eval(last.Payload) {
 					select {
 					case r.ch <- *last:
 					default:
@@ -897,7 +936,7 @@ func (p *participant) NewSubscriber(topic string, qos dds.QoS, opts ...dds.Subsc
 			if payload, err := persistLoad(p.persistDir, topic); err == nil && payload != nil {
 				sample := dds.Sample{Topic: topic, Payload: payload}
 				p.lastSample.Store(topic, &sample)
-				if cfg.Filter == nil || cfg.Filter(sample) {
+				if (cfg.Filter == nil || cfg.Filter(sample)) && cf.eval(sample.Payload) {
 					select {
 					case r.ch <- sample:
 					default:
@@ -1630,6 +1669,15 @@ func (p *participant) dispatchToReaders(source GUID, topicFilter string, payload
 		if r.filter != nil && !r.filter(sample) {
 			continue
 		}
+		// Content-Filtered Topics (Milestone 15): for a same-process writer
+		// this is the only place r's predicate is checked (the network-side
+		// Write path below never runs); for a remote writer this is a
+		// redundant-but-harmless safety net — matchedReaderLocators already
+		// kept the remote writer from transmitting DATA here at all when the
+		// predicate doesn't match, see rtpsWriter.Write.
+		if !r.contentFilter.eval(sample.Payload) {
+			continue
+		}
 		p.deliverToReader(r, sample)
 	}
 }
@@ -1760,20 +1808,49 @@ func (p *participant) addWriterLocator(g GUID, l Locator) {
 type readerLocator struct {
 	Loc    Locator
 	Prefix GuidPrefix
+	// ContentFilters holds every matched reader's compiled predicate that
+	// shares this Locator (Milestone 15, "Content-Filtered Topics"): a
+	// remote participant's data-unicast Locator is per-participant, not
+	// per-reader (see sedpService.buildEndpointData), so two local readers
+	// in the same remote process on the same topic — one filtered, one
+	// not — can share one Locator entry. A nil/empty slice means "send
+	// unconditionally": at least one reader at this Locator has no content
+	// filter, or none of the matched readers do. A non-empty slice means
+	// "send only if ANY of these predicates match the sample" — the OR
+	// semantics needed so the writer never withholds a sample any matched
+	// reader actually wants; the remote participant's own dispatchToReaders
+	// re-checks each individual reader's predicate to finish the job.
+	ContentFilters []*contentFilterSpec
+}
+
+// matches reports whether payload should be sent to this locator: true when
+// ContentFilters is empty (unconditional) or when any one of its predicates
+// evaluates true for payload.
+func (rl readerLocator) matches(payload []byte) bool {
+	if len(rl.ContentFilters) == 0 {
+		return true
+	}
+	for _, cf := range rl.ContentFilters {
+		if cf.eval(payload) {
+			return true
+		}
+	}
+	return false
 }
 
 // matchedReaderLocators returns the data-unicast locators (each paired with
-// its owning participant's GuidPrefix) for all remote participants that have
-// an active subscription to topicName whose Partition QoS intersects
-// partitions (Milestone 14, "QoS Enforcement — Active Policy"; see
-// partitionsMatch). Locators are deduplicated so a participant with
-// multiple readers on the same topic receives only one copy of each DATA
-// packet.
+// its owning participant's GuidPrefix and any content filters registered on
+// readers sharing that locator — see readerLocator) for all remote
+// participants that have an active subscription to topicName whose
+// Partition QoS intersects partitions (Milestone 14, "QoS Enforcement —
+// Active Policy"; see partitionsMatch). Locators are deduplicated so a
+// participant with multiple readers on the same topic receives only one
+// copy of each DATA packet.
 func (p *participant) matchedReaderLocators(topicName string, partitions []string) []readerLocator {
 	p.sedp.mu.RLock()
 	defer p.sedp.mu.RUnlock()
 	var locators []readerLocator
-	seen := make(map[Locator]bool)
+	index := make(map[Locator]int) // Locator → index into locators
 	for guid, ri := range p.sedp.remoteReaders {
 		if ri.topicName != topicName {
 			continue
@@ -1785,10 +1862,20 @@ func (p *participant) matchedReaderLocators(topicName string, partitions []strin
 		if !ok || loc.Kind == LocatorKindInvalid {
 			continue
 		}
-		if !seen[loc] {
-			seen[loc] = true
-			locators = append(locators, readerLocator{Loc: loc, Prefix: guid.Prefix})
+		if idx, exists := index[loc]; exists {
+			if ri.contentFilter == nil {
+				locators[idx].ContentFilters = nil // OR-merge: any unfiltered reader here makes the locator unconditional
+			} else if locators[idx].ContentFilters != nil {
+				locators[idx].ContentFilters = append(locators[idx].ContentFilters, ri.contentFilter)
+			}
+			continue
 		}
+		index[loc] = len(locators)
+		var cfs []*contentFilterSpec
+		if ri.contentFilter != nil {
+			cfs = []*contentFilterSpec{ri.contentFilter}
+		}
+		locators = append(locators, readerLocator{Loc: loc, Prefix: guid.Prefix, ContentFilters: cfs})
 	}
 	return locators
 }
@@ -1934,11 +2021,17 @@ func (w *rtpsWriter) Write(payload []byte) error {
 	// transport (Milestone 15, "NAT Traversal / Cloud Gateway"), so any
 	// relay-only matched reader forces the per-reader unicast/relay path
 	// below even when multicast is otherwise available and would normally
-	// be preferred as a single-send optimisation.
+	// be preferred as a single-send optimisation. A content-filtered
+	// matched reader (Milestone 15, "Content-Filtered Topics") forces the
+	// same fallback for the same underlying reason: multicast reaches every
+	// subscriber on the segment unconditionally, so it is incompatible with
+	// per-reader predicate evaluation — the whole point of this feature is
+	// to withhold DATA from readers whose predicate doesn't match, which is
+	// only possible over unicast.
 	useMulticast := len(locs) > 0 && w.p.dataMcastSock != nil && w.tsnSock == nil
-	if useMulticast && w.p.relaySock != nil {
+	if useMulticast {
 		for _, lm := range locs {
-			if w.p.relayIDForPrefix(lm.Prefix) != "" {
+			if (w.p.relaySock != nil && w.p.relayIDForPrefix(lm.Prefix) != "") || len(lm.ContentFilters) > 0 {
 				useMulticast = false
 				break
 			}
@@ -1953,6 +2046,15 @@ func (w *rtpsWriter) Write(payload []byte) error {
 		}
 	} else {
 		for _, lm := range locs {
+			// Content-Filtered Topics (Milestone 15): withhold DATA from a
+			// locator whose every reader's predicate rejects payload — the
+			// network-load reduction this sub-phase exists for. Evaluated
+			// against the original plaintext payload, not wirePayload/msgs,
+			// matching what NewFilteredSubscriber's predicate was written
+			// against.
+			if !lm.matches(payload) {
+				continue
+			}
 			dst := lm.Loc.udpAddr()
 			if dst == nil {
 				continue
@@ -2098,16 +2200,22 @@ func (w *rtpsWriter) Close() error {
 // ── Reader ────────────────────────────────────────────────────────────────────
 
 type rtpsReader struct {
-	p             *participant
-	topic         string
-	eid           EntityId
-	ch            chan dds.Sample
-	mu            sync.RWMutex
-	sources       map[GUID]struct{}     // SEDP-matched remote writer GUIDs
-	trackers      map[GUID]*recvTracker // reliability trackers, one per remote writer
-	reliable      bool
-	filter        func(dds.Sample) bool // nil = no filter
-	backPressure  dds.BackPressurePolicy
+	p            *participant
+	topic        string
+	eid          EntityId
+	ch           chan dds.Sample
+	mu           sync.RWMutex
+	sources      map[GUID]struct{}     // SEDP-matched remote writer GUIDs
+	trackers     map[GUID]*recvTracker // reliability trackers, one per remote writer
+	reliable     bool
+	filter       func(dds.Sample) bool // nil = no filter
+	backPressure dds.BackPressurePolicy
+	// contentFilter is r's compiled predicate from NewFilteredSubscriber
+	// (Milestone 15, "Content-Filtered Topics"); nil for a plain
+	// NewSubscriber. Checked in dispatchToReaders for same-process delivery;
+	// also announced over SEDP (see sedpService.registerReader) so a matched
+	// remote writer filters before transmitting DATA at all.
+	contentFilter *contentFilterSpec
 	unsubOnce     sync.Once   // guards deregistration from the participant
 	closeOnce     sync.Once   // guards channel close
 	closed        bool        // true once Close has closed ch; guarded by mu

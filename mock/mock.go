@@ -37,6 +37,8 @@ package mock
 //fusa:req REQ-MOCK-003
 //fusa:req REQ-MOCK-004
 //fusa:req REQ-MOCK-005
+//fusa:req REQ-CFILT-006
+//fusa:req REQ-CFILT-008
 
 import (
 	"context"
@@ -48,6 +50,7 @@ import (
 	"time"
 
 	dds "github.com/SoundMatt/go-DDS"
+	"github.com/SoundMatt/go-DDS/cfilter"
 )
 
 // WithContext returns an Option that closes the participant when ctx is done.
@@ -79,6 +82,14 @@ type subscription struct {
 	filter        func(dds.Sample) bool
 	backPressure  dds.BackPressurePolicy
 	resetDeadline func() // nil if no deadline; called on each successful delivery
+
+	// contentFilter is the compiled predicate for a subscriber created via
+	// NewFilteredSubscriber (Milestone 15, "Content-Filtered Topics"); nil
+	// for a plain NewSubscriber. Checked in broker.publish — i.e. at the
+	// publisher, before delivery — the same funnel that already applies
+	// filter above, so the two content-filtering mechanisms compose (both
+	// must pass) rather than replace one another.
+	contentFilter *cfilter.Expr
 
 	// Milestone 14 "QoS Enforcement — Active Policy" fields.
 	partitions    []string              // qos.Partition
@@ -126,12 +137,17 @@ func (b *broker) topicCounterFor(topic string) *mockTopicCounter {
 
 const defaultChanDepth = 64
 
-func (b *broker) subscribe(topic string, qos dds.QoS, cfg dds.SubscriberConfig, resetDeadline func()) chan dds.Sample {
+// subscribe registers a new subscription and returns its delivery channel.
+// cf is the compiled content-filter predicate from NewFilteredSubscriber
+// (Milestone 15, "Content-Filtered Topics"), or nil for a plain
+// NewSubscriber.
+func (b *broker) subscribe(topic string, qos dds.QoS, cfg dds.SubscriberConfig, resetDeadline func(), cf *cfilter.Expr) chan dds.Sample {
 	depth := cfg.ChanDepth(defaultChanDepth)
 	ch := make(chan dds.Sample, depth)
 	sub := subscription{
 		ch:            ch,
 		filter:        cfg.Filter,
+		contentFilter: cf,
 		backPressure:  cfg.BackPressure,
 		resetDeadline: resetDeadline,
 		partitions:    qos.Partition,
@@ -148,7 +164,7 @@ func (b *broker) subscribe(topic string, qos dds.QoS, cfg dds.SubscriberConfig, 
 	}
 	b.mu.Unlock()
 	if last != nil {
-		if cfg.Filter == nil || cfg.Filter(*last) {
+		if (cfg.Filter == nil || cfg.Filter(*last)) && (cf == nil || cf.Eval(last.Payload)) {
 			select {
 			case ch <- *last:
 			default:
@@ -217,6 +233,13 @@ func (b *broker) publish(topic string, payload []byte, qos dds.QoS, seqNum uint6
 			continue
 		}
 		if sub.filter != nil && !sub.filter(sample) {
+			continue
+		}
+		// Content-Filtered Topics (Milestone 15): a NewFilteredSubscriber's
+		// predicate is checked here, in the publisher's own Write call —
+		// before delivery — so it composes with the QoS/wildcard/filter
+		// checks above rather than replacing any of them.
+		if sub.contentFilter != nil && !sub.contentFilter.Eval(sample.Payload) {
 			continue
 		}
 		// Time-Based Filter QoS (Milestone 14): drop samples from this writer
@@ -422,6 +445,35 @@ func (p *participant) NewSubscriber(topic string, qos dds.QoS, opts ...dds.Subsc
 	if p.closed {
 		return nil, fmt.Errorf("mock: %w", dds.ErrClosed)
 	}
+	return p.newSubscriberLocked(topic, qos, opts, nil)
+}
+
+// NewFilteredSubscriber implements dds.ContentFilteredSubscriberFactory
+// (Milestone 15, "Content-Filtered Topics"): expr is compiled once via
+// cfilter.Parse and evaluated inside broker.publish, the same funnel
+// Publisher.Write calls into — i.e. at the publisher, before delivery —
+// rather than after the sample has already reached this subscriber's
+// channel, matching the contract documented on
+// dds.ContentFilteredSubscriberFactory.
+func (p *participant) NewFilteredSubscriber(topic, expr string, params []string, qos dds.QoS, opts ...dds.SubscriberOption) (dds.Subscriber, error) {
+	if topic == "" {
+		return nil, fmt.Errorf("mock: %w", dds.ErrTopicEmpty)
+	}
+	cf, err := cfilter.Parse(expr, params)
+	if err != nil {
+		return nil, fmt.Errorf("mock: %w", err)
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.closed {
+		return nil, fmt.Errorf("mock: %w", dds.ErrClosed)
+	}
+	return p.newSubscriberLocked(topic, qos, opts, cf)
+}
+
+// newSubscriberLocked is the shared implementation behind NewSubscriber and
+// NewFilteredSubscriber. Caller must hold p.mu.
+func (p *participant) newSubscriberLocked(topic string, qos dds.QoS, opts []dds.SubscriberOption, cf *cfilter.Expr) (dds.Subscriber, error) {
 	cfg := dds.ApplySubscriberOpts(opts)
 	p.logf("new subscriber topic=%s depth=%d backpressure=%d", topic, cfg.ChanDepth(defaultChanDepth), cfg.BackPressure)
 	sub := &subscriber{broker: p.broker, topic: topic}
@@ -439,7 +491,7 @@ func (p *participant) NewSubscriber(topic string, qos dds.QoS, opts ...dds.Subsc
 		resetDeadline = func() { tp.Load().Reset(dur) }
 	}
 
-	sub.ch = p.broker.subscribe(topic, qos, cfg, resetDeadline)
+	sub.ch = p.broker.subscribe(topic, qos, cfg, resetDeadline, cf)
 
 	// Liveliness QoS (Milestone 14): register for loss notifications on
 	// whichever writers (present or future) publish this topic with a

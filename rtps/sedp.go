@@ -17,6 +17,8 @@ package rtps
 //fusa:req REQ-DISC-010
 //fusa:req REQ-DISC-013
 //fusa:req REQ-DISC-014
+//fusa:req REQ-CFILT-006
+//fusa:req REQ-CFILT-007
 
 import (
 	"net"
@@ -25,6 +27,7 @@ import (
 	"time"
 
 	dds "github.com/SoundMatt/go-DDS"
+	"github.com/SoundMatt/go-DDS/cfilter"
 )
 
 // endpointInfo describes a local or remote DDS endpoint.
@@ -42,6 +45,35 @@ type endpointInfo struct {
 	ownershipExclusive bool          // qos.Ownership == dds.ExclusiveOwnership
 	ownershipStrength  int32         // qos.OwnershipStrength
 	livelinessLease    time.Duration // qos.LivelinessLeaseDuration
+
+	// Reader-only field (isWriter == false); nil for a plain subscription.
+	// Milestone 15 "Content-Filtered Topics": carried over the wire by
+	// buildEndpointData/handleEndpointAnnounce (pidContentFilterExpr /
+	// pidContentFilterParam) so a matched remote writer can evaluate it
+	// before transmitting DATA to this reader (see
+	// participant.matchedReaderLocators).
+	contentFilter *contentFilterSpec
+}
+
+// contentFilterSpec bundles a compiled content-filter predicate (Milestone
+// 15, "Content-Filtered Topics") with the raw expression text and %N
+// parameter bindings needed to re-encode it for a SEDP subscription
+// announcement (see buildEndpointData). A nil *contentFilterSpec — or a nil
+// receiver, since eval is nil-safe — means "no content filter": every
+// sample matches.
+type contentFilterSpec struct {
+	expr   *cfilter.Expr
+	text   string
+	params []string
+}
+
+// eval reports whether payload satisfies c's predicate. A nil c (or a nil
+// c.expr) always matches, so call sites never need their own nil check.
+func (c *contentFilterSpec) eval(payload []byte) bool {
+	if c == nil || c.expr == nil {
+		return true
+	}
+	return c.expr.Eval(payload)
 }
 
 // sedpService manages endpoint discovery and matching.
@@ -101,13 +133,19 @@ func (s *sedpService) registerWriter(eid EntityId, topicName string, qos dds.QoS
 // registerReader records a local reader, announces it, and links any already-
 // discovered remote writers with a matching topic whose Partition QoS
 // intersects qos.Partition (Milestone 14, "QoS Enforcement — Active Policy";
-// see partitionsMatch).
-func (s *sedpService) registerReader(eid EntityId, topicName string, qos dds.QoS, r *rtpsReader) {
+// see partitionsMatch). cf is r's compiled content-filter predicate from
+// NewFilteredSubscriber (Milestone 15, "Content-Filtered Topics"), or nil for
+// a plain NewSubscriber; it is both stored on r (for local, same-process
+// dispatch — see participant.dispatchToReaders) and announced to remote
+// peers so a matched remote writer can filter before transmitting.
+func (s *sedpService) registerReader(eid EntityId, topicName string, qos dds.QoS, r *rtpsReader, cf *contentFilterSpec) {
+	r.contentFilter = cf
 	info := &endpointInfo{
-		guid:       GUID{Prefix: s.p.guidPrefix, Entity: eid},
-		topicName:  topicName,
-		isWriter:   false,
-		partitions: qos.Partition,
+		guid:          GUID{Prefix: s.p.guidPrefix, Entity: eid},
+		topicName:     topicName,
+		isWriter:      false,
+		partitions:    qos.Partition,
+		contentFilter: cf,
 	}
 	s.mu.Lock()
 	s.localReaders[eid] = info
@@ -184,6 +222,14 @@ func (s *sedpService) buildEndpointData(info *endpointInfo) []byte {
 	// both writers and readers; Ownership/Liveliness only matter on writers.
 	for _, part := range info.partitions {
 		enc.addString(pidPartition, part)
+	}
+	// Milestone 15 "Content-Filtered Topics": only meaningful on a reader
+	// (subscription) announcement.
+	if info.contentFilter != nil {
+		enc.addString(pidContentFilterExpr, info.contentFilter.text)
+		for _, param := range info.contentFilter.params {
+			enc.addString(pidContentFilterParam, param)
+		}
 	}
 	if info.isWriter {
 		if info.ownershipExclusive {
@@ -270,6 +316,8 @@ func (s *sedpService) handleEndpointAnnounce(remotePrefix GuidPrefix, payload []
 
 	var dataLocator Locator
 	var endpointTag []byte
+	var cfExpr string
+	var cfParams []string
 	for {
 		p, ok := dec.next()
 		if !ok {
@@ -313,10 +361,32 @@ func (s *sedpService) handleEndpointAnnounce(remotePrefix GuidPrefix, payload []
 			if v, ok := decodeInt64(p.value); ok {
 				info.livelinessLease = time.Duration(v)
 			}
+		case pidContentFilterExpr:
+			if e, ok := decodeString(p.value); ok {
+				cfExpr = e
+			}
+		case pidContentFilterParam:
+			if v, ok := decodeString(p.value); ok {
+				cfParams = append(cfParams, v)
+			}
 		}
 	}
 	if info.topicName == "" {
 		return
+	}
+	// Milestone 15 "Content-Filtered Topics": compile the remote reader's
+	// predicate so a matched local writer can evaluate it (see
+	// participant.matchedReaderLocators). A parse failure — e.g. a future,
+	// incompatible grammar extension from a newer peer — fails open (no
+	// filter applied, info.contentFilter stays nil) rather than dropping the
+	// subscription: over-delivering to a reader is always safe, silently
+	// losing samples it actually wanted is not.
+	if cfExpr != "" {
+		if e, err := cfilter.Parse(cfExpr, cfParams); err == nil {
+			info.contentFilter = &contentFilterSpec{expr: e, text: cfExpr, params: cfParams}
+		} else {
+			s.p.log.debug("sedp: content filter %q from %x failed to parse, ignoring: %v", cfExpr, remotePrefix, err)
+		}
 	}
 
 	// Reject the announcement if the local participant enforces endpoint security
