@@ -21,6 +21,22 @@ breaking changes may occur between `v0.x` minor releases. Each submodule's
 
 ## [Unreleased]
 
+### Added (`observability`)
+
+- Prometheus metrics endpoint (ROADMAP.md, Milestone 15 "Cloud-Native
+  Runtime", "Prometheus Metrics"): `GET /metrics` on the monitor's existing
+  HTTP server, in Prometheus text exposition format. Gauges
+  (`dds_active_topics`, `dds_matched_readers`, `dds_matched_writers`,
+  `dds_participant_count`), counters
+  (`dds_samples_{published,received,dropped}_total`,
+  `dds_bytes_{out,in}_total`, `dds_cdr_{encode,decode}_errors_total`), and
+  histograms (`dds_latency_seconds`, `dds_queue_depth`). New
+  `Monitor.WithPrometheus(addr)` starts a dedicated second server for the
+  same endpoint on its own address; new `Monitor.SetMatched`,
+  `IncCDREncodeError`, `IncCDRDecodeError`, `ObserveLatency`, and
+  `ObserveQueueDepth` feed the metrics with no existing provider interface
+  behind them yet.
+
 ## [root v0.55.1] / [safety v0.1.1] — Architecture Initiative Phase F — Root cleanup
 
 Docs/repo-hygiene reorganization only — no Go import path, API, or `go.mod`

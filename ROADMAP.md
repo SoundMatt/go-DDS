@@ -166,7 +166,7 @@ API parity does not.
 - Zenoh federation
 - OPC UA bridge
 - SOME/IP bridge
-- Prometheus metrics endpoint
+- Prometheus metrics endpoint ✅ (`observability/monitor` — `/metrics`, `monitor.WithPrometheus(addr)`)
 - Kubernetes operator
 
 ### Platform
@@ -806,13 +806,58 @@ Enforcement — Active Policy (this release) are all shipped.
 Goal:
 First-class Kubernetes and cloud observability — deployable as a standard cloud service with zero custom tooling.
 
-### Prometheus Metrics
+### Prometheus Metrics ✅
 
-- `/metrics` HTTP endpoint on the monitor (Prometheus text format)
-- Gauges: active topics, matched readers/writers, participant count
-- Counters: samples published/received/dropped, bytes in/out, CDR encode/decode errors
-- Histograms: end-to-end latency percentiles (p50/p95/p99), queue depth over time
-- `monitor.WithPrometheus(addr)` option; compatible with existing SSE dashboard
+- `/metrics` HTTP endpoint on the monitor (Prometheus text format) ✅
+- Gauges: active topics, matched readers/writers, participant count ✅
+- Counters: samples published/received/dropped, bytes in/out, CDR encode/decode errors ✅
+- Histograms: end-to-end latency percentiles (p50/p95/p99), queue depth over time ✅
+- `monitor.WithPrometheus(addr)` option; compatible with existing SSE dashboard ✅
+
+**Shipped** (`observability/monitor/prometheus.go`). Hand-rolled Prometheus
+text exposition — no `github.com/prometheus/client_golang` dependency — per
+the "Pure Go first" guiding principle; the exposition format itself is a
+handful of `# HELP`/`# TYPE`/value lines per metric. `GET /metrics` is
+registered on the monitor's existing `http.ServeMux` alongside `/`, `/events`,
+`/health`, and the `/api/*` routes, so it's live with zero extra
+configuration; `mon.WithPrometheus(addr)` additionally starts a second,
+dedicated `http.Server` serving only `/metrics` on its own address (`Close`
+shuts both down) — the common Kubernetes convention of scraping metrics off
+a port separate from the application's primary port.
+- **Gauges/counters derived live from existing providers** — `dds_active_topics`
+  (`len(TopicMetricsProvider.TopicMetrics())`), `dds_participant_count`
+  (`DiscoveryMetricsProvider.DiscoveryMetrics().PeersKnown + 1`), and
+  `dds_samples_{published,received,dropped}_total` /
+  `dds_bytes_{out,in}_total` (`MetricsProvider.Metrics()`) reuse the exact
+  same three optional interfaces `New` already type-asserts for the SSE
+  dashboard — one source of truth, two exposition formats, "compatible with
+  existing SSE dashboard" by construction rather than by convention.
+- **No existing provider produces matched-endpoint counts, CDR error counts,
+  or latency/queue-depth samples** — nothing in `dds`, `mock`, `rtps`,
+  `shmem`, or `cdr` tracks these today. Rather than an invasive
+  instrumentation pass across every transport backend in this sub-phase,
+  `dds_matched_readers`/`dds_matched_writers`/
+  `dds_cdr_{encode,decode}_errors_total`/`dds_latency_seconds`/
+  `dds_queue_depth` are exposed as `Monitor` hook methods (`SetMatched`,
+  `IncCDREncodeError`, `IncCDRDecodeError`, `ObserveLatency`,
+  `ObserveQueueDepth`) that default to zero until called — the same
+  post-`New()` registration pattern `RegisterSafetyMetrics` and
+  `RegisterTSNHealth` already use. Wiring these into the transport/codec
+  layers themselves is left as future instrumentation work.
+- **Histograms are real Prometheus cumulative histograms**
+  (`promHistogram` — bucketed counts + `_sum` + `_count`), not
+  client-side-computed percentiles: `histogram_quantile()` on the
+  Prometheus/Grafana side computes p50/p95/p99 from the exposed buckets, per
+  standard Prometheus practice, so go-DDS itself never computes a
+  percentile.
+
+Proven by `observability/monitor/prometheus_test.go` — full-body
+`/metrics` content assertions (all gauge/counter/histogram series present
+with correct `# TYPE`), the nil-provider zero-value path, `SetMatched`/
+`IncCDR*`/`Observe*` hook values round-tripping through the exposed text,
+histogram bucket placement including `+Inf` overflow, the dedicated
+`WithPrometheus` server (separate address, `/metrics`-only, shut down by
+`Close`), and its listen-error path.
 
 ### Kubernetes Operator
 

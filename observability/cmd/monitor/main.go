@@ -11,10 +11,14 @@
 //
 // Environment variables:
 //
-//	DDS_DOMAIN     DDS domain ID (default: 0)
-//	MONITOR_ADDR   HTTP listen address (default: :8080)
-//	DDS_PEERS      Comma-separated static peer addresses for bridge networking
-//	               (e.g. "pub:7400,sub:7400"). When set, multicast is disabled.
+//	DDS_DOMAIN         DDS domain ID (default: 0)
+//	MONITOR_ADDR       HTTP listen address (default: :8080)
+//	DDS_PEERS          Comma-separated static peer addresses for bridge networking
+//	                    (e.g. "pub:7400,sub:7400"). When set, multicast is disabled.
+//	PROMETHEUS_ADDR    Optional dedicated HTTP listen address for Prometheus
+//	                    text-format metrics (e.g. ":9090"). GET /metrics is
+//	                    always served on MONITOR_ADDR too; set this to also
+//	                    expose it on a separate port for cluster scraping.
 package main
 
 import (
@@ -66,6 +70,13 @@ func main() {
 	defer func() { _ = mon.Close() }()
 
 	log.Printf("go-DDS monitor listening on %s (domain %d)", addr, domain)
+
+	if promAddr := os.Getenv("PROMETHEUS_ADDR"); promAddr != "" {
+		if _, promErr := mon.WithPrometheus(promAddr); promErr != nil {
+			log.Fatalf("monitor.WithPrometheus: %v", promErr)
+		}
+		log.Printf("Prometheus metrics also listening on %s", promAddr)
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
