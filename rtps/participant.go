@@ -258,6 +258,41 @@ func WithDTLSPeers(addrs ...string) Option {
 	return func(p *participant) { p.dtlsPeers = append(p.dtlsPeers, addrs...) }
 }
 
+// WithQUICAddr enables the RTPS-over-QUIC transport (Milestone 16, ROADMAP.md
+// "QUIC Transport") and binds a QUIC listener at addr (host:port, e.g.
+// ":7700"). Like RTPS-over-TCP it runs alongside the existing UDP transport
+// and, once a peer's QUIC locator is learned via SPDP, is preferred for
+// unicast SEDP/user-data sends to that peer over both plain UDP and the TCP
+// fallback (see participant.sendUnicast) — QUIC's per-message congestion
+// control and multi-stream design make it the better choice for the
+// "congestion-sensitive cloud paths" this milestone's goal names, not just a
+// firewall-traversal fallback the way TCP is. Has no effect unless WithQUIC
+// is also supplied — a QUIC listener requires certificate material, since
+// QUIC mandates TLS 1.3. See WithQUIC and WithQUICPeers.
+func WithQUICAddr(addr string) Option {
+	return func(p *participant) { p.quicAddr = addr }
+}
+
+// WithQUIC secures the RTPS-over-QUIC transport (see WithQUICAddr) with a
+// standard *tls.Config — the same type WithTCPTLSConfig/WithDTLS accept, so
+// a single identity built once configures every transport. Any of
+// NextProtos (ALPN), MinVersion, or (client-side) ClientSessionCache left
+// unset are filled in with go-DDS defaults — see transport_quic.go's
+// quicTLSConfig for the 0-RTT session-cache rationale. Has no effect unless
+// WithQUICAddr is also supplied.
+func WithQUIC(cfg *tls.Config) Option {
+	return func(p *participant) { p.quicTLSConfig = cfg }
+}
+
+// WithQUICPeers adds known peer RTPS-over-QUIC addresses (host:port) used
+// for SPDP discovery over QUIC, exactly as WithTCPPeers does for
+// RTPS-over-TCP: every SPDP announcement this participant sends is
+// additionally unicast, over QUIC's reliable stream, to each address here.
+// Has no effect unless WithQUICAddr and WithQUIC are also supplied.
+func WithQUICPeers(addrs ...string) Option {
+	return func(p *participant) { p.quicPeers = append(p.quicPeers, addrs...) }
+}
+
 // WithRelayAddr enables the RTPS-over-Relay transport (Milestone 15, "NAT
 // Traversal / Cloud Gateway") and dials a TURN-style relay server at addr
 // ("host:port") at participant creation time, registering this
@@ -456,6 +491,13 @@ type participant struct {
 	dtlsTLSConfig *tls.Config
 	dtlsPeers     []string
 	dtlsSock      *dtlsSocket
+
+	// RTPS-over-QUIC transport (Milestone 16, ROADMAP.md "QUIC Transport").
+	// quicAddr == "" disables it.
+	quicAddr      string
+	quicTLSConfig *tls.Config
+	quicPeers     []string
+	quicSock      *quicSocket
 
 	// RTPS-over-Relay transport (Milestone 15, "NAT Traversal / Cloud
 	// Gateway"). relayAddr == "" disables it. See transport_relay.go.
@@ -679,6 +721,29 @@ func newParticipant(domain dds.Domain, opts ...Option) (*participant, error) {
 		p.dtlsSock = dtlsSock
 	}
 
+	// Optional RTPS-over-QUIC transport (Milestone 16, ROADMAP.md "QUIC
+	// Transport"). Same hard-error policy as TCP/DTLS above: an explicitly
+	// requested QUIC listener that fails to bind is a caller-visible error.
+	if p.quicAddr != "" {
+		quicSock, err := newQUICSocket(p.quicAddr, p.quicTLSConfig)
+		if err != nil {
+			mcastSock.close()
+			metaSock.close()
+			dataSock.close()
+			if p.dataMcastSock != nil {
+				p.dataMcastSock.close()
+			}
+			if p.tcpSock != nil {
+				p.tcpSock.close()
+			}
+			if p.dtlsSock != nil {
+				p.dtlsSock.close()
+			}
+			return nil, fmt.Errorf("rtps: QUIC transport: %w", err)
+		}
+		p.quicSock = quicSock
+	}
+
 	// Optional RTPS-over-Relay transport (Milestone 15, "NAT Traversal /
 	// Cloud Gateway"). Same hard-error policy as TCP/DTLS above: an
 	// explicitly requested relay server that cannot be reached (or that
@@ -697,6 +762,9 @@ func newParticipant(domain dds.Domain, opts ...Option) (*participant, error) {
 			}
 			if p.dtlsSock != nil {
 				p.dtlsSock.close()
+			}
+			if p.quicSock != nil {
+				p.quicSock.close()
 			}
 			return nil, fmt.Errorf("rtps: relay transport: %w", err)
 		}
@@ -727,6 +795,9 @@ func newParticipant(domain dds.Domain, opts ...Option) (*participant, error) {
 	}
 	if p.dtlsSock != nil {
 		go p.dtlsReceiveLoop()
+	}
+	if p.quicSock != nil {
+		go p.quicReceiveLoop()
 	}
 	if p.relaySock != nil {
 		go p.relayReceiveLoop()
@@ -1059,6 +1130,9 @@ func (p *participant) Close() error {
 	if p.dtlsSock != nil {
 		p.dtlsSock.close()
 	}
+	if p.quicSock != nil {
+		p.quicSock.close()
+	}
 	if p.relaySock != nil {
 		p.relaySock.close()
 	}
@@ -1226,7 +1300,7 @@ func (p *participant) notifyReliableReaders(writerGUID GUID, seqNum SequenceNumb
 			Count:          tracker.nextAckCount(),
 		}
 		msg := wrapInRTPSMessage(p.guidPrefix, marshalAckNack(an))
-		p.sendUnicast(p.dataSock, writerAddr, writerGUID.Prefix, msg)
+		p.sendUnicast(p.dataSock, writerAddr, writerGUID.Prefix, msg, true)
 	}
 }
 
@@ -1272,7 +1346,7 @@ func (p *participant) handleHeartbeat(writerGUID GUID, hb Heartbeat, from *net.U
 			Count:          tracker.nextAckCount(),
 		}
 		msg := wrapInRTPSMessage(p.guidPrefix, marshalAckNack(an))
-		p.sendUnicast(p.dataSock, from, writerGUID.Prefix, msg)
+		p.sendUnicast(p.dataSock, from, writerGUID.Prefix, msg, true)
 	}
 }
 
@@ -1303,7 +1377,7 @@ func (p *participant) handleAckNack(an AckNack, from *net.UDPAddr) {
 		}
 		for _, lm := range p.matchedReaderLocators(w.topic, w.partitions) {
 			if dst := lm.Loc.udpAddr(); dst != nil {
-				p.sendUnicast(p.dataSock, dst, lm.Prefix, msg)
+				p.sendUnicast(p.dataSock, dst, lm.Prefix, msg, true)
 			}
 		}
 	}
@@ -1333,12 +1407,12 @@ func (p *participant) handleAckNack(an AckNack, from *net.UDPAddr) {
 			// redundant copy. The loop just below sends the identical GAP
 			// again to every matched reader on the topic, this time with a
 			// known Prefix, so a relay-only peer still receives it there.
-			p.sendUnicast(p.dataSock, from, GuidPrefix{}, gapMsg)
+			p.sendUnicast(p.dataSock, from, GuidPrefix{}, gapMsg, true)
 		}
 		// Also send to all matched readers so any reader on this topic can advance.
 		for _, lm := range p.matchedReaderLocators(w.topic, w.partitions) {
 			if dst := lm.Loc.udpAddr(); dst != nil {
-				p.sendUnicast(p.dataSock, dst, lm.Prefix, gapMsg)
+				p.sendUnicast(p.dataSock, dst, lm.Prefix, gapMsg, true)
 			}
 		}
 	}
@@ -1353,17 +1427,24 @@ func (p *participant) handleAckNack(an AckNack, from *net.UDPAddr) {
 // WithDTLSPeers), it is always encrypted over DTLS instead — DTLS is an
 // explicit confidentiality/authentication choice, not a reachability
 // fallback, so it takes priority whenever configured for that peer,
-// regardless of UDP multicast availability. Otherwise, when UDP is
+// regardless of UDP multicast availability. Otherwise, when a QUIC locator
+// is known for dst's host — learned via SPDP, see participantProxy.
+// quicUnicast — RTPS-over-QUIC is preferred next (Milestone 16; unlike TCP
+// below, this is not gated on UDP multicast being unavailable — see
+// WithQUICAddr's doc comment for why). reliable selects which of QUIC's two
+// channels carries msg — see transport_quic.go's doc comment — and is
+// otherwise ignored by the DTLS/TCP/relay/UDP paths, which have no
+// reliable/best-effort distinction of their own. Otherwise, when UDP is
 // considered unreachable (see preferTCP) and a TCP locator is known for
-// dst's host — learned via SPDP, see participantProxy.tcpUnicast — it
-// prefers RTPS-over-TCP instead. Failing (or skipping) both of those, and
-// when prefix identifies a peer that advertised a relay ID (Milestone 15,
-// "NAT Traversal / Cloud Gateway" — see participantProxy.relayID), the
-// message is forwarded through the relay. Any of these falls back to plain
-// UDP if its own send fails (DTLS/TCP peer offline, connection reset, relay
-// unreachable, ...). This is the automatic UDP→TCP fallback and the DTLS
-// encryption layering described in ROADMAP.md Milestone 14, plus the relay
-// fallback added by Milestone 15.
+// dst's host, it prefers RTPS-over-TCP instead. Failing (or skipping) all of
+// those, and when prefix identifies a peer that advertised a relay ID
+// (Milestone 15, "NAT Traversal / Cloud Gateway" — see participantProxy.
+// relayID), the message is forwarded through the relay. Any of these falls
+// back to plain UDP if its own send fails (DTLS/QUIC/TCP peer offline,
+// connection reset, relay unreachable, ...). This is the automatic UDP→TCP
+// fallback and the DTLS encryption layering described in ROADMAP.md
+// Milestone 14, plus the relay fallback added by Milestone 15 and the QUIC
+// preference added by Milestone 16.
 //
 // prefix may be the zero GuidPrefix when the caller does not know (or does
 // not need) the destination's identity — e.g. a redundant broadcast-style
@@ -1373,9 +1454,9 @@ func (p *participant) handleAckNack(an AckNack, from *net.UDPAddr) {
 //
 // TSN traffic-class sockets are always sent as plain UDP: their entire
 // purpose is priority-marked, low-latency delivery on a specific socket, so
-// they are excluded from both the DTLS and TCP paths by construction — only
+// they are excluded from the DTLS/QUIC/TCP paths by construction — only
 // sock == dataSock or sock == metaSock are eligible.
-func (p *participant) sendUnicast(sock *udpSocket, dst *net.UDPAddr, prefix GuidPrefix, msg []byte) {
+func (p *participant) sendUnicast(sock *udpSocket, dst *net.UDPAddr, prefix GuidPrefix, msg []byte, reliable bool) {
 	if dst == nil {
 		return
 	}
@@ -1385,7 +1466,15 @@ func (p *participant) sendUnicast(sock *udpSocket, dst *net.UDPAddr, prefix Guid
 			if err := p.dtlsSock.send(dtlsAddr, msg); err == nil {
 				return
 			}
-			// DTLS send failed; fall through to TCP/relay/UDP as a last resort.
+			// DTLS send failed; fall through to QUIC/TCP/relay/UDP as a last resort.
+		}
+	}
+	if eligible && p.quicSock != nil {
+		if quicAddr := p.quicLocatorForIP(dst.IP); quicAddr != "" {
+			if err := p.quicSock.send(quicAddr, msg, reliable); err == nil {
+				return
+			}
+			// QUIC send failed; fall through to TCP/relay/UDP as a last resort.
 		}
 	}
 	if eligible && p.preferTCP() {
@@ -1510,6 +1599,41 @@ func (p *participant) dispatchTCPPacket(data []byte, from *net.UDPAddr) {
 		}
 		return nil
 	})
+}
+
+// ── RTPS-over-QUIC transport (Milestone 16) ─────────────────────────────────────
+
+// quicLocatorForIP returns the known RTPS-over-QUIC address ("host:port")
+// for the peer reachable at ip, or "" if no SPDP-discovered peer advertised
+// a QUIC locator for that address. The QUIC analogue of tcpLocatorForIP.
+func (p *participant) quicLocatorForIP(ip net.IP) string {
+	if p.spdp == nil {
+		return ""
+	}
+	for _, proxy := range p.spdp.allPeers() {
+		if proxy.quicUnicast == "" {
+			continue
+		}
+		if a := proxy.metatrafficUnicast.udpAddr(); a != nil && a.IP.Equal(ip) {
+			return proxy.quicUnicast
+		}
+		if a := proxy.defaultUnicast.udpAddr(); a != nil && a.IP.Equal(ip) {
+			return proxy.quicUnicast
+		}
+	}
+	return ""
+}
+
+// quicReceiveLoop dispatches messages arriving over the RTPS-over-QUIC
+// transport — from either its reliable control stream or its unreliable
+// datagram channel, transport_quic.go's quicSocket.recv merges both — to the
+// same handlers used for UDP/TCP/DTLS. Message routing is transport-
+// agnostic, so this reuses dispatchTCPPacket and tcpFromToUDPAddr directly
+// rather than duplicating them, exactly as dtlsReceiveLoop does.
+func (p *participant) quicReceiveLoop() {
+	for pkt := range p.quicSock.recv {
+		p.dispatchTCPPacket(pkt.data, tcpFromToUDPAddr(pkt.from))
+	}
 }
 
 // ── RTPS-over-DTLS transport (Milestone 14) ─────────────────────────────────────
@@ -2063,7 +2187,7 @@ func (w *rtpsWriter) Write(payload []byte) error {
 				if txTimeNS > 0 {
 					_ = scheduledSend(sock.conn, dst, msg, txTimeNS)
 				} else {
-					w.p.sendUnicast(sock, dst, lm.Prefix, msg)
+					w.p.sendUnicast(sock, dst, lm.Prefix, msg, w.reliable)
 				}
 			}
 		}
@@ -2095,7 +2219,7 @@ func (w *rtpsWriter) sendHeartbeatLocked() {
 	sock := w.sendSock()
 	for _, lm := range w.p.matchedReaderLocators(w.topic, w.partitions) {
 		if dst := lm.Loc.udpAddr(); dst != nil {
-			w.p.sendUnicast(sock, dst, lm.Prefix, msg)
+			w.p.sendUnicast(sock, dst, lm.Prefix, msg, true)
 		}
 	}
 }

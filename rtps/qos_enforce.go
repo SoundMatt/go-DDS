@@ -226,7 +226,7 @@ func (w *rtpsWriter) assertLiveliness() {
 	sock := w.sendSock()
 	for _, lm := range w.p.matchedReaderLocators(w.topic, w.partitions) {
 		if dst := lm.Loc.udpAddr(); dst != nil {
-			w.p.sendUnicast(sock, dst, lm.Prefix, msg)
+			w.p.sendUnicast(sock, dst, lm.Prefix, msg, true)
 		}
 	}
 

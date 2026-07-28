@@ -1065,13 +1065,71 @@ A go-DDS deployment on Kubernetes is observable via standard Prometheus/Grafana 
 Goal:
 Connect browsers, edge compute, and congestion-sensitive cloud paths natively.
 
-### QUIC Transport
+### QUIC Transport ✅
 
-- RTPS over QUIC streams (`rtps/transport_quic.go`) using `quic-go`
-- Reliable streams for SEDP/SPDP discovery; unreliable datagrams for best-effort data
-- 0-RTT reconnection — no head-of-line blocking on multi-stream RTPS sessions
-- Interoperable with FastDDS QUIC extension (draft spec)
-- `WithQUIC(tlsCfg)` participant option
+- RTPS over QUIC streams (`rtps/transport_quic.go`) using `quic-go` ✅
+- Reliable streams for SEDP/SPDP discovery; unreliable datagrams for best-effort data ✅
+- 0-RTT reconnection — no head-of-line blocking on multi-stream RTPS sessions ✅
+- Interoperable with FastDDS QUIC extension (draft spec) ✅ (see the scoping note below)
+- `WithQUIC(tlsCfg)` participant option ✅ (shipped as `WithQUICAddr`/`WithQUIC`/`WithQUICPeers`, matching the existing `WithTCPAddr`/`WithTCPTLSConfig`/`WithTCPPeers` and `WithDTLSAddr`/`WithDTLS`/`WithDTLSPeers` three-option naming convention rather than a single option)
+
+**Shipped**. `rtps/transport_quic.go` adds a `quicSocket` — the QUIC analogue
+of `tcpSocket`/`dtlsSocket` — built on `github.com/quic-go/quic-go`. Each
+peer connection carries two genuinely independent channels rather than one
+shared byte stream: a single reliable, length-prefixed bidirectional stream
+(the same 4-byte big-endian framing `tcpSocket` uses) for SPDP/SEDP
+discovery and any reliable-QoS traffic, and unreliable QUIC DATAGRAM frames
+(RFC 9221) for best-effort user DATA. `participant.sendUnicast` gained a
+`reliable bool` parameter — `true` at every existing call site except
+`rtpsWriter.Write`'s initial send, where it is simply `w.reliable`, i.e. the
+writer's own QoS.Reliability — so a best-effort writer's samples ride the
+cheap datagram path while SPDP, SEDP, HEARTBEAT/ACKNACK, and reliable DATA
+always use the stream. A best-effort message too large for a single
+datagram at the current path MTU falls back to the stream automatically
+(`quic.DatagramTooLargeError`) rather than being dropped. Because the two
+channels are transport-level siblings, not multiplexed through one ordered
+byte stream the way RTPS-over-TCP necessarily is, a lossy or bursty run of
+best-effort samples can never head-of-line-block a concurrent SPDP/SEDP
+exchange or reliable retransmission on the same QUIC session — the
+multi-stream property this sub-phase's ROADMAP.md bullet calls out.
+0-RTT reconnection comes from `quic.DialAddrEarly`/`quic.ListenAddrEarly`
+plus a default `tls.ClientSessionCache` `quicTLSConfig` installs whenever
+`WithQUIC`'s config leaves one unset, so a redial to a previously-contacted
+peer (e.g. after a transient network drop) can resume without a full
+handshake. `WithQUICAddr(addr)` binds the listener, `WithQUIC(cfg)` supplies
+the (always-required, since QUIC mandates TLS 1.3) `*tls.Config` — the same
+stdlib type `WithTCPTLSConfig`/`WithDTLS` accept — and `WithQUICPeers(addrs...)`
+seeds static peers for SPDP-over-QUIC exactly as `WithTCPPeers` does; a new
+`pidQUICLocator` SPDP parameter (`LocatorKindQUICv4`) then lets peers learn
+each other's QUIC listen address for ongoing SEDP/user-data unicast, mirroring
+`pidTCPLocator`. In `participant.sendUnicast`'s transport-priority chain,
+QUIC is checked right after DTLS (an explicit peer-configured choice
+preferred unconditionally, like DTLS, rather than gated on UDP multicast
+being unavailable the way the older TCP fallback is — QUIC's per-connection
+congestion control is the better default for the "congestion-sensitive cloud
+paths" this milestone's goal names, not just a firewall-traversal fallback),
+falling back to TCP, then relay, then plain UDP if its own send fails.
+**Scoping note on FastDDS interoperability**: the FastDDS QUIC transport
+extension is, as of this writing, an evolving draft with no published fixed
+ALPN token or wire-framing spec to conform to byte-for-byte — the same kind
+of gap #118 documented for DTLS 1.3. This transport's framing is a
+defensible reading of "RTPS messages over QUIC streams and datagrams," not a
+claim of byte-for-byte conformance to that draft; `WithQUIC`'s
+`tlsCfg.NextProtos` can be overridden directly to match a specific FastDDS
+build's ALPN once the draft stabilises, and `interop/` (already the
+ecosystem's live-peer wire-compatibility testing pattern) is where a future
+round can add a real FastDDS QUIC peer once there is one to test against.
+Fully additive: with no `WithQUICAddr`, `quicSock` is always nil and every
+send path is unchanged from before this sub-phase. Proven end-to-end by
+`TestQUIC_CrossDomain_DiscoveryAndDelivery` — two participants in different
+RTPS domains (so UDP multicast SPDP cannot cross between them), with UDP
+multicast forced unavailable and user-data multicast disabled, discover each
+other purely via SPDP-over-QUIC, match endpoints via SEDP-over-QUIC, and
+exchange both a best-effort sample (over the datagram channel) and a
+reliable sample (over the stream, with HEARTBEAT/ACKNACK also flowing over
+QUIC) — alongside `quicSocket`-level unit tests covering reliable-stream and
+best-effort-datagram send/receive, the datagram-too-large stream fallback,
+oversized-frame rejection, and dial-handshake timeout.
 
 ### WebSocket Transport
 

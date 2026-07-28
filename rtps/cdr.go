@@ -104,6 +104,12 @@ const (
 	// (in order) for the predicate in pidContentFilterExpr, mirroring
 	// pidPartition's repeated-string encoding.
 	pidContentFilterParam = uint16(0x800A)
+	// pidQUICLocator is a vendor-specific PID (Milestone 16, "QUIC
+	// Transport") carrying the sending participant's RTPS-over-QUIC listen
+	// locator (LocatorKindQUICv4), when the RTPS-over-QUIC transport is
+	// enabled via WithQUICAddr. Same self-describing-parameter-list
+	// backward compatibility as pidTCPLocator.
+	pidQUICLocator = uint16(0x800B)
 )
 
 // plCDREncoder builds a PL_CDR_LE encoded parameter list.
