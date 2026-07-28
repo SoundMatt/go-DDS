@@ -1372,6 +1372,32 @@ func (p *participant) handleDataPacket(data []byte, from *net.UDPAddr) {
 	if !ok {
 		return
 	}
+	if hdr.GuidPrefix == p.guidPrefix {
+		// Our own DATA/HEARTBEAT/ACKNACK, looped back via multicast (every
+		// participant joins the same user-data multicast group its own
+		// writers send to, so a writer with at least one remote-matched
+		// reader on its topic can and does receive its own transmission
+		// back) — mirrors the identical self-origin guard already applied
+		// to SPDP (see spdp.go's handlePacket) and SEDP (see sedp.go's
+		// handlePacket), and to this same DATA/HEARTBEAT/ACKNACK traffic
+		// when it arrives over the TCP transport (dispatchTCPPacket, above).
+		//
+		// This one was missing, and it mattered: rtpsWriter.Write already
+		// delivers every sample in-process via a direct, topic-filtered
+		// dispatchToReaders call (topicFilter == w.topic) before any wire
+		// send happens. If the self-looped wire copy reached here too, it
+		// would be re-dispatched with topicFilter == "" (below), which
+		// defers entirely to rtpsReader.acceptsSource — and acceptsSource's
+		// own-participant-prefix bypass (needed for that in-process call,
+		// where the topic has already been checked) accepts a same-prefix
+		// source unconditionally, with no topic check at all. Reprocessing
+		// a self-looped packet here therefore fanned it out to every reader
+		// on this participant regardless of topic, not just readers
+		// genuinely matched to the writer that sent it — e.g. a reliable
+		// ros_discovery_info sample looping back and landing in an
+		// unrelated /chatter subscriber's channel.
+		return
+	}
 	// pendingTS carries the most-recently parsed INFO_TS timestamp within this
 	// message so it can be attached to the following DATA submessage.
 	var pendingTS time.Time
