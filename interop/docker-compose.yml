@@ -38,3 +38,36 @@ services:
       - DDS_DOMAIN=0
     command: ddsperf -D 0 pub T:interop/go-dds-pong Qos:r:1k:e:1 z:16 n:10
     profiles: [pub]
+
+  # ── ROS 2 peers (Milestone 17, "ROS 2 / rmw Compatibility") ────────────────
+  #
+  # Official `ros:<distro>` images already provide `demo_nodes_cpp`, whose
+  # `talker`/`listener` nodes are the standard, widely-used ROS 2 wire-compat
+  # smoke test: `talker` publishes std_msgs/String on the fully-qualified
+  # topic "/chatter" (DDS wire name "rt/chatter", type name
+  # "std_msgs::msg::dds_::String_" — exactly what ros2.ToDDSTopicName /
+  # ros2.TypeSupportName produce) once a second, and every conformant rmw
+  # (rmw_fastrtps_cpp or rmw_cyclonedds_cpp, whichever the image defaults to)
+  # also publishes the rmw_dds_common "ros_discovery_info" graph sample this
+  # package's Participant.Nodes()/Topics() decode. See ros2_test.go.
+  #
+  #   docker compose -f interop/docker-compose.yml --profile jazzy up -d
+  #   go test -tags interop -v -timeout 60s -run ROS2Jazzy ./interop/...
+  #   docker compose -f interop/docker-compose.yml --profile jazzy down
+  ros2-jazzy-talker:
+    image: ros:jazzy
+    network_mode: host
+    environment:
+      - ROS_DOMAIN_ID=${INTEROP_ROS2_DOMAIN:-70}
+    command: ros2 run demo_nodes_cpp talker
+    restart: unless-stopped
+    profiles: [jazzy]
+
+  ros2-rolling-talker:
+    image: ros:rolling
+    network_mode: host
+    environment:
+      - ROS_DOMAIN_ID=${INTEROP_ROS2_DOMAIN:-71}
+    command: ros2 run demo_nodes_cpp talker
+    restart: unless-stopped
+    profiles: [rolling]

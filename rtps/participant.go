@@ -940,6 +940,20 @@ func newParticipant(domain dds.Domain, opts ...Option) (*participant, error) {
 }
 
 func (p *participant) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, error) {
+	return p.newPublisherLocked(topic, defaultTypeName, qos)
+}
+
+// NewPublisherWithType implements dds.TypedEndpointFactory (Milestone 17,
+// "ROS 2 / rmw Compatibility"): identical to NewPublisher, except the SEDP
+// announcement carries typeName instead of the default "CDR_BLOB" sentinel
+// — needed to match publications/subscriptions by type name against other
+// DDS vendors' participants (e.g. a ROS 2 rmw), which do not treat every
+// endpoint as type-compatible with every other.
+func (p *participant) NewPublisherWithType(topic, typeName string, qos dds.QoS) (dds.Publisher, error) {
+	return p.newPublisherLocked(topic, typeName, qos)
+}
+
+func (p *participant) newPublisherLocked(topic, typeName string, qos dds.QoS) (dds.Publisher, error) {
 	if topic == "" {
 		return nil, fmt.Errorf("rtps: %w", dds.ErrTopicEmpty)
 	}
@@ -1021,8 +1035,8 @@ func (p *participant) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, er
 		w.tsnSock = p.tsnSocketForPCP(pcp, 0, false)
 	}
 	p.writers[eid] = w
-	p.sedp.registerWriter(eid, topic, qos)
-	p.log.debug("new publisher topic=%s reliable=%v tsn=%v", topic, w.reliable, w.tsnSock != nil)
+	p.sedp.registerWriter(eid, topic, typeName, qos)
+	p.log.debug("new publisher topic=%s reliable=%v tsn=%v type=%s", topic, w.reliable, w.tsnSock != nil, typeName)
 	return w, nil
 }
 
@@ -1038,7 +1052,26 @@ func (p *participant) NewSubscriber(topic string, qos dds.QoS, opts ...dds.Subsc
 	if p.accessControl != nil && !p.accessControl.CanRead(topic) {
 		return nil, fmt.Errorf("rtps: subscribe %q: %w", topic, dds.ErrAccessDenied)
 	}
-	return p.newSubscriberLocked(topic, qos, opts, nil)
+	return p.newSubscriberLocked(topic, defaultTypeName, qos, opts, nil)
+}
+
+// NewSubscriberWithType implements dds.TypedEndpointFactory (Milestone 17,
+// "ROS 2 / rmw Compatibility"): identical to NewSubscriber, except the SEDP
+// announcement carries typeName instead of the default "CDR_BLOB" sentinel.
+// See NewPublisherWithType for why this matters for cross-vendor interop.
+func (p *participant) NewSubscriberWithType(topic, typeName string, qos dds.QoS, opts ...dds.SubscriberOption) (dds.Subscriber, error) {
+	if topic == "" {
+		return nil, fmt.Errorf("rtps: %w", dds.ErrTopicEmpty)
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.closed {
+		return nil, fmt.Errorf("rtps: %w", dds.ErrClosed)
+	}
+	if p.accessControl != nil && !p.accessControl.CanRead(topic) {
+		return nil, fmt.Errorf("rtps: subscribe %q: %w", topic, dds.ErrAccessDenied)
+	}
+	return p.newSubscriberLocked(topic, typeName, qos, opts, nil)
 }
 
 // NewFilteredSubscriber implements dds.ContentFilteredSubscriberFactory
@@ -1067,12 +1100,12 @@ func (p *participant) NewFilteredSubscriber(topic, expr string, params []string,
 		return nil, fmt.Errorf("rtps: subscribe %q: %w", topic, dds.ErrAccessDenied)
 	}
 	cf := &contentFilterSpec{expr: e, text: expr, params: params}
-	return p.newSubscriberLocked(topic, qos, opts, cf)
+	return p.newSubscriberLocked(topic, defaultTypeName, qos, opts, cf)
 }
 
-// newSubscriberLocked is the shared implementation behind NewSubscriber and
-// NewFilteredSubscriber. Caller must hold p.mu.
-func (p *participant) newSubscriberLocked(topic string, qos dds.QoS, opts []dds.SubscriberOption, cf *contentFilterSpec) (dds.Subscriber, error) {
+// newSubscriberLocked is the shared implementation behind NewSubscriber,
+// NewSubscriberWithType, and NewFilteredSubscriber. Caller must hold p.mu.
+func (p *participant) newSubscriberLocked(topic, typeName string, qos dds.QoS, opts []dds.SubscriberOption, cf *contentFilterSpec) (dds.Subscriber, error) {
 	cfg := dds.ApplySubscriberOpts(opts)
 	depth := cfg.ChanDepth(64)
 	n := atomic.AddUint32(&p.entityCounter, 1)
@@ -1115,7 +1148,7 @@ func (p *participant) newSubscriberLocked(topic string, qos dds.QoS, opts []dds.
 	}
 	p.log.debug("new subscriber topic=%s depth=%d backpressure=%d", topic, depth, cfg.BackPressure)
 	p.readers[eid] = r
-	p.sedp.registerReader(eid, topic, qos, r, cf)
+	p.sedp.registerReader(eid, topic, typeName, qos, r, cf)
 	// TransientLocal: deliver the last published sample to the new subscriber.
 	// Also check disk-backed persistent history if no in-memory sample exists.
 	if qos.Durability == dds.TransientLocal {

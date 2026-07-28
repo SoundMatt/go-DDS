@@ -110,6 +110,13 @@ var ErrLivelinessLost = fmt.Errorf("dds: writer liveliness lost: %w", relay.ErrT
 // the "capability not available on this backend" pattern used elsewhere.
 var ErrContentFilterUnsupported = fmt.Errorf("dds: participant does not support content-filtered subscribers: %w", ErrNotConnected)
 
+// ErrTypeNameUnsupported is returned by NewPublisherWithType/NewSubscriberWithType
+// when p does not implement TypedEndpointFactory (Milestone 17, "ROS 2 / rmw
+// Compatibility"). Wraps ErrNotConnected per spec §5.2, matching the
+// "capability not available on this backend" pattern ErrContentFilterUnsupported
+// already established.
+var ErrTypeNameUnsupported = fmt.Errorf("dds: participant does not support typed endpoints: %w", ErrNotConnected)
+
 // ── Domain ────────────────────────────────────────────────────────────────────
 
 //fusa:req REQ-PART-001
@@ -642,6 +649,51 @@ func NewFilteredSubscriber(p Participant, topic, expr string, params []string, q
 		return nil, ErrContentFilterUnsupported
 	}
 	return f.NewFilteredSubscriber(topic, expr, params, qos, opts...)
+}
+
+// ── TypedEndpointFactory ─────────────────────────────────────────────────────
+
+// TypedEndpointFactory is optionally implemented by Participants that can
+// carry a real DDS type name across discovery (Milestone 17, "ROS 2 / rmw
+// Compatibility"; rtps implements it) instead of the opaque "CDR_BLOB"
+// sentinel NewPublisher/NewSubscriber otherwise advertise. Other DDS
+// vendors — including every ROS 2 rmw implementation (FastDDS,
+// CycloneDDS) — match publications to subscriptions in part on type name,
+// so a participant that wants a real ROS 2 node to see it as a compatible
+// publisher/subscriber for a given message type must announce that type's
+// name, not "CDR_BLOB". See the ros2 package, which uses this to announce
+// ROS 2's "pkg::msg::dds_::Type_" type-name convention.
+type TypedEndpointFactory interface {
+	// NewPublisherWithType behaves like Participant.NewPublisher, except the
+	// SEDP/discovery announcement carries typeName instead of the default
+	// opaque sentinel.
+	NewPublisherWithType(topic, typeName string, qos QoS) (Publisher, error)
+	// NewSubscriberWithType behaves like Participant.NewSubscriber, except
+	// the SEDP/discovery announcement carries typeName instead of the
+	// default opaque sentinel.
+	NewSubscriberWithType(topic, typeName string, qos QoS, opts ...SubscriberOption) (Subscriber, error)
+}
+
+// NewPublisherWithType creates a publisher on p that announces typeName as
+// its DDS type name (Milestone 17, "ROS 2 / rmw Compatibility"). It returns
+// ErrTypeNameUnsupported if p does not implement [TypedEndpointFactory].
+func NewPublisherWithType(p Participant, topic, typeName string, qos QoS) (Publisher, error) {
+	f, ok := p.(TypedEndpointFactory)
+	if !ok {
+		return nil, ErrTypeNameUnsupported
+	}
+	return f.NewPublisherWithType(topic, typeName, qos)
+}
+
+// NewSubscriberWithType creates a subscriber on p that announces typeName as
+// its DDS type name (Milestone 17, "ROS 2 / rmw Compatibility"). It returns
+// ErrTypeNameUnsupported if p does not implement [TypedEndpointFactory].
+func NewSubscriberWithType(p Participant, topic, typeName string, qos QoS, opts ...SubscriberOption) (Subscriber, error) {
+	f, ok := p.(TypedEndpointFactory)
+	if !ok {
+		return nil, ErrTypeNameUnsupported
+	}
+	return f.NewSubscriberWithType(topic, typeName, qos, opts...)
 }
 
 // ── Interfaces ────────────────────────────────────────────────────────────────

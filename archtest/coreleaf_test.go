@@ -34,6 +34,10 @@ var coreGroups = []string{"", "rtps", "mock", "shmem", "auto", "pool", "security
 var peripheryGroups = []string{
 	"tsn", "safety", "bridge", "idl", "cdr", "xtypes",
 	"otel", "monitor", "admin", "services", "record", "cmd/ddstool",
+	// ros2 (Milestone 17, "ROS 2 / rmw Compatibility") wraps rtps the same
+	// way bridge/ wraps core transports: it depends on core, core must
+	// never depend on it.
+	"ros2",
 }
 
 // goListPackage is the subset of `go list -json` output this test needs.

@@ -30,10 +30,21 @@ import (
 	"github.com/SoundMatt/go-DDS/cfilter"
 )
 
+// defaultTypeName is the opaque DDS type name go-DDS advertises over SEDP
+// when the caller (NewPublisher/NewSubscriber) has no real type name to
+// carry — go-DDS's core API is payload-agnostic ([]byte in, []byte out), so
+// most endpoints have no natural type name of their own. Milestone 17
+// ("ROS 2 / rmw Compatibility") introduced NewPublisherWithType /
+// NewSubscriberWithType (see dds.TypedEndpointFactory) as the escape hatch
+// for callers — like the ros2 package — that do need real type-name
+// interop with other DDS vendors.
+const defaultTypeName = "CDR_BLOB"
+
 // endpointInfo describes a local or remote DDS endpoint.
 type endpointInfo struct {
 	guid      GUID
 	topicName string
+	typeName  string // pidTypeName; defaultTypeName unless set via *WithType
 	isWriter  bool
 
 	// Milestone 14 "QoS Enforcement — Active Policy" fields, carried over the
@@ -113,11 +124,16 @@ func (s *sedpService) close() {
 	close(s.stop)
 }
 
-// registerWriter records a local writer and announces it to all known peers.
-func (s *sedpService) registerWriter(eid EntityId, topicName string, qos dds.QoS) {
+// registerWriter records a local writer and announces it to all known
+// peers. typeName is the DDS type name carried over SEDP — defaultTypeName
+// ("CDR_BLOB") for a plain NewPublisher, or a real type name for
+// NewPublisherWithType (Milestone 17, "ROS 2 / rmw Compatibility" — see
+// dds.TypedEndpointFactory).
+func (s *sedpService) registerWriter(eid EntityId, topicName, typeName string, qos dds.QoS) {
 	info := &endpointInfo{
 		guid:               GUID{Prefix: s.p.guidPrefix, Entity: eid},
 		topicName:          topicName,
+		typeName:           typeName,
 		isWriter:           true,
 		partitions:         qos.Partition,
 		ownershipExclusive: qos.Ownership == dds.ExclusiveOwnership,
@@ -138,11 +154,16 @@ func (s *sedpService) registerWriter(eid EntityId, topicName string, qos dds.QoS
 // a plain NewSubscriber; it is both stored on r (for local, same-process
 // dispatch — see participant.dispatchToReaders) and announced to remote
 // peers so a matched remote writer can filter before transmitting.
-func (s *sedpService) registerReader(eid EntityId, topicName string, qos dds.QoS, r *rtpsReader, cf *contentFilterSpec) {
+// typeName is the DDS type name carried over SEDP — defaultTypeName
+// ("CDR_BLOB") for a plain NewSubscriber, or a real type name for
+// NewSubscriberWithType (Milestone 17, "ROS 2 / rmw Compatibility" — see
+// dds.TypedEndpointFactory).
+func (s *sedpService) registerReader(eid EntityId, topicName, typeName string, qos dds.QoS, r *rtpsReader, cf *contentFilterSpec) {
 	r.contentFilter = cf
 	info := &endpointInfo{
 		guid:          GUID{Prefix: s.p.guidPrefix, Entity: eid},
 		topicName:     topicName,
+		typeName:      typeName,
 		isWriter:      false,
 		partitions:    qos.Partition,
 		contentFilter: cf,
@@ -215,7 +236,11 @@ func (s *sedpService) buildEndpointData(info *endpointInfo) []byte {
 	enc := newPLCDREncoder()
 	enc.addGUID(pidEndpointGUID, info.guid)
 	enc.addString(pidTopicName, info.topicName)
-	enc.addString(pidTypeName, "CDR_BLOB") // opaque type for raw byte payloads
+	typeName := info.typeName
+	if typeName == "" {
+		typeName = defaultTypeName
+	}
+	enc.addString(pidTypeName, typeName)
 	userLocator := locatorFromUDP(&net.UDPAddr{IP: net.IPv4zero}, s.p.dataSock.port)
 	enc.addLocator(pidDefaultUnicastLocator, userLocator)
 	// Milestone 14 "QoS Enforcement — Active Policy": Partition applies to
@@ -331,6 +356,10 @@ func (s *sedpService) handleEndpointAnnounce(remotePrefix GuidPrefix, payload []
 		case pidTopicName:
 			if t, ok := decodeString(p.value); ok {
 				info.topicName = t
+			}
+		case pidTypeName:
+			if t, ok := decodeString(p.value); ok {
+				info.typeName = t
 			}
 		case pidDefaultUnicastLocator:
 			if l, ok := unmarshalLocator(p.value); ok {

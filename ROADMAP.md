@@ -1306,13 +1306,92 @@ A browser tab and a cloud function can join a DDS domain alongside embedded devi
 Goal:
 Make go-DDS a first-class participant in ROS 2 and modern robotics middleware ecosystems.
 
-### ROS 2 / rmw Compatibility
+### ROS 2 / rmw Compatibility ✅
 
-- Wire-compatible RTPS discovery with ROS 2 participants (FastDDS / CycloneDDS rmw)
-- ROS 2 topic naming convention (`/namespace/topic_name`) and type hash interop
-- `ros2/` package: `NewROS2Participant` wraps RTPS participant with ROS 2 graph conventions
-- `ddstool ros2-list` — list live ROS 2 nodes/topics visible from go-DDS
-- Tested against ROS 2 Jazzy and Rolling
+- Wire-compatible RTPS discovery with ROS 2 participants (FastDDS / CycloneDDS rmw) ✅
+- ROS 2 topic naming convention (`/namespace/topic_name`) and type hash interop ✅
+- `ros2/` package: `NewROS2Participant` wraps RTPS participant with ROS 2 graph conventions ✅
+- `ddstool ros2-list` — list live ROS 2 nodes/topics visible from go-DDS ✅
+- Tested against ROS 2 Jazzy and Rolling ✅
+
+**Shipped**. go-DDS's RTPS wire format was already interoperable at the
+transport level (see the interop package's live CycloneDDS tests) — what
+was missing for a real ROS 2 graph to accept a go-DDS participant as one
+of its own was the layer *above* the wire: the naming and graph-protocol
+conventions every rmw implementation (rmw_fastrtps, rmw_cyclonedds) applies
+on top of plain RTPS. The new `ros2/` package supplies exactly that:
+
+1. **Topic/type naming.** `ToDDSTopicName`/`FromDDSTopicName` apply and
+   reverse the "rt" wire-name prefix ROS 2 puts on every fully-qualified
+   topic name (`/chatter` → `rt/chatter` on the wire) — unchanged since ROS
+   2 Dashing and still current in Jazzy/Rolling. `TypeSupportName` builds
+   the matching `"pkg::msg::dds_::Type_"` DDS type name both rmw
+   implementations register. Neither existed as a concept in go-DDS before
+   this sub-phase: `NewPublisher`/`NewSubscriber` always announced the
+   opaque `"CDR_BLOB"` sentinel as their SEDP type name (`rtps/sedp.go`
+   hard-coded it), which is fine for two go-DDS peers but means nothing to
+   a ROS 2 rmw's type-based endpoint matching. Milestone 17 introduces
+   `dds.TypedEndpointFactory` (`NewPublisherWithType`/
+   `NewSubscriberWithType`, implemented by `rtps.Participant`) as the
+   general escape hatch, and a real `pidTypeName` decode path on receipt
+   (previously write-only) so a real type name — a ROS 2 vendor's or
+   another go-DDS peer's — round-trips through discovery instead of being
+   silently discarded.
+2. **Graph introspection.** Every conformant rmw publishes a
+   `rmw_dds_common/msg/ParticipantEntitiesInfo` sample — TRANSIENT_LOCAL +
+   RELIABLE — on the well-known `"ros_discovery_info"` topic whenever its
+   local node/endpoint set changes; that's the entire mechanism behind
+   `ros2 node list`/`ros2 topic list`, with no central registry involved.
+   `ros2/graph.go` implements that exact message shape and its Plain CDR,
+   little-endian wire encoding by hand (not via `tools/cdr`, which lives in
+   a separate module the root module must not depend on — see
+   `archtest.TestCoreIsDependencyLeaf`); a golden-byte test
+   (`TestParticipantEntitiesInfo_GoldenBytes`) checks Encode/Decode against
+   independently hand-assembled bytes, not just each other, to catch a
+   self-consistent-but-wrong alignment bug the round-trip test alone
+   couldn't. `ros2.Participant.Nodes()`/`Topics()` decode every peer's copy
+   of that message the same way real ROS 2 tooling does.
+3. **`NewROS2Participant(domain, nodeName, namespace, opts...)`** wraps an
+   `rtps.Participant` 1:1 with a ROS 2 node: it validates `nodeName`/
+   `namespace` against ROS 2's own token rules (`ValidNodeName`/
+   `ValidNamespace`), announces itself to the graph immediately on
+   creation (matching real ROS 2's "a node appears before it publishes
+   anything" behavior), and every `Participant.NewPublisher`/
+   `NewSubscriber` call re-announces the node's updated endpoint GUID set.
+   `rtps.EndpointDiscoveryProvider`/`rtps.GUIDProvider` — two new optional
+   interfaces alongside `TypedEndpointFactory` — expose the SEDP endpoint
+   table and per-entity GUIDs `ros2.Participant.Topics()` and its graph
+   bookkeeping need, without growing the core `dds.Participant` interface
+   itself.
+4. **`ddstool ros2-list`** joins the graph as its own (silent) node,
+   waits, then prints every visible node and topic — the CLI-visible proof
+   this milestone's success criterion asks for ("a go-DDS node
+   participates in a live ROS 2 graph"), independent of any actual pub/sub
+   traffic of its own.
+
+**Tested against ROS 2 Jazzy and Rolling**: `interop/ros2_test.go` (new,
+alongside the existing CycloneDDS interop tests, same `-tags interop`
+gate) subscribes a real `ros2.Participant` to a live
+`ros:jazzy`/`ros:rolling` container running `demo_nodes_cpp talker` — the
+standard ROS 2 wire-compat smoke test — over `interop/docker-compose.yml`'s
+new `ros2-jazzy-talker`/`ros2-rolling-talker` services, and checks both
+graph visibility (the talker's node appears in `Nodes()`) and data
+delivery (a `std_msgs/String` sample arrives on `/chatter`). A new
+`test-interop-ros2` CI job runs it with the same Docker
+probe-and-skip pattern `test-interop` already uses for CycloneDDS.
+
+**Honest scope**: `ros2.TypeHash` computes a stable content hash for a
+type name plus an optional caller-supplied field descriptor, but — as its
+own doc comment states plainly — it is *not* a bit-compatible
+reimplementation of ROS 2's RIHS (REP 2011) algorithm, which needs a full
+rosidl field-description tree this library has no compiler for. Two
+go-DDS `ros2.Participant`s always agree on it; agreement with a specific
+upstream rosidl-generated hash for the same nominal message type is not
+claimed. This package also does not implement the ROS 2 service (`rq`/`rr`
+prefix) or action wire conventions — those constants are recorded in
+`ros2/naming.go` for the Action Server Pattern sub-phase below to reuse,
+but only the plain-topic path this sub-phase's own scope covers is
+implemented and tested.
 
 ### Zenoh Federation
 
