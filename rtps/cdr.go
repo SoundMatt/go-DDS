@@ -110,6 +110,12 @@ const (
 	// enabled via WithQUICAddr. Same self-describing-parameter-list
 	// backward compatibility as pidTCPLocator.
 	pidQUICLocator = uint16(0x800B)
+	// pidWSLocator is a vendor-specific PID (Milestone 16, "WebSocket
+	// Transport") carrying the sending participant's RTPS-over-WebSocket
+	// listen locator (LocatorKindWSv4), when the RTPS-over-WebSocket
+	// transport is enabled via WithWSAddr. Same self-describing-
+	// parameter-list backward compatibility as pidTCPLocator/pidQUICLocator.
+	pidWSLocator = uint16(0x800C)
 )
 
 // plCDREncoder builds a PL_CDR_LE encoded parameter list.

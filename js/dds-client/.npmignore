@@ -1,0 +1,7 @@
+# Compiled test output — tests build alongside src/*.ts (see tsconfig.json)
+# so `npm test` can run them from dist/, but they have no reason to ship in
+# the published package.
+dist/*.test.js
+dist/*.test.js.map
+dist/*.test.d.ts
+dist/*.test.d.ts.map

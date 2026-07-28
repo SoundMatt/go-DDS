@@ -293,6 +293,64 @@ func WithQUICPeers(addrs ...string) Option {
 	return func(p *participant) { p.quicPeers = append(p.quicPeers, addrs...) }
 }
 
+// WithWSAddr enables the RTPS-over-WebSocket transport (Milestone 16,
+// ROADMAP.md "WebSocket Transport") and binds a WebSocket listener at addr
+// (host:port, e.g. ":7800"). Like RTPS-over-TCP it runs alongside the
+// existing UDP transport, and once a peer's WS locator is learned via SPDP
+// it becomes another unicast option in participant.sendUnicast's
+// transport-priority chain. This is the transport that lets a browser tab
+// or Wasm participant (see js/dds-client) join a DDS domain directly — as a
+// genuine RTPS peer that performs its own SPDP/SEDP discovery over the
+// listener this option binds — without a separate protocol bridge, the
+// Milestone 16 success criterion; see bridge/ws for an additional, optional
+// gateway aimed at simpler non-RTPS JSON pub/sub clients instead. Unlike
+// WithQUICAddr, TLS (wss://) is optional rather than mandatory — see
+// WithWSTLSConfig and WithWSPeers.
+func WithWSAddr(addr string) Option {
+	return func(p *participant) { p.wsAddr = addr }
+}
+
+// WithWSTLSConfig wraps the RTPS-over-WebSocket transport (see WithWSAddr)
+// in TLS 1.3 (wss://), using only crypto/tls from the standard library — no
+// external dependency, the same choice WithTCPTLSConfig makes. If
+// cfg.MinVersion is zero, TLS 1.3 is enforced. Has no effect unless
+// WithWSAddr is also supplied; when omitted, the listener speaks plain
+// ws://.
+func WithWSTLSConfig(cfg *tls.Config) Option {
+	return func(p *participant) { p.wsTLSConfig = cfg }
+}
+
+// WithWSPeers adds known peer RTPS-over-WebSocket addresses (host:port)
+// used for SPDP discovery over WebSocket, exactly as WithTCPPeers does for
+// RTPS-over-TCP: every SPDP announcement this participant sends is
+// additionally unicast to each address here. Has no effect unless
+// WithWSAddr is also supplied.
+func WithWSPeers(addrs ...string) Option {
+	return func(p *participant) { p.wsPeers = append(p.wsPeers, addrs...) }
+}
+
+// WithWSFraming selects how the RTPS-over-WebSocket transport (see
+// WithWSAddr) encodes outbound messages onto the wire: binary WebSocket
+// frames carrying raw RTPS bytes (the default, jsonFraming=false — the
+// efficient go-DDS-to-go-DDS path) or JSON text frames carrying
+// base64-encoded CDR (jsonFraming=true, ROADMAP.md's "JSON and binary
+// (base64-CDR) framing modes" — the convenient path for a JavaScript
+// environment that would rather not handle binary WebSocket frames; see
+// js/dds-client). This only controls what this participant *sends*;
+// inbound messages are always decoded by their actual WebSocket opcode
+// regardless of this setting, so the two framing modes freely interoperate
+// on the wire — see transport_ws.go's doc comment. Has no effect unless
+// WithWSAddr is also supplied.
+func WithWSFraming(jsonFraming bool) Option {
+	return func(p *participant) {
+		if jsonFraming {
+			p.wsFraming = wsFramingJSON
+		} else {
+			p.wsFraming = wsFramingBinary
+		}
+	}
+}
+
 // WithRelayAddr enables the RTPS-over-Relay transport (Milestone 15, "NAT
 // Traversal / Cloud Gateway") and dials a TURN-style relay server at addr
 // ("host:port") at participant creation time, registering this
@@ -498,6 +556,14 @@ type participant struct {
 	quicTLSConfig *tls.Config
 	quicPeers     []string
 	quicSock      *quicSocket
+
+	// RTPS-over-WebSocket transport (Milestone 16, ROADMAP.md "WebSocket
+	// Transport"). wsAddr == "" disables it.
+	wsAddr      string
+	wsTLSConfig *tls.Config
+	wsPeers     []string
+	wsFraming   wsFraming
+	wsSock      *wsSocket
 
 	// RTPS-over-Relay transport (Milestone 15, "NAT Traversal / Cloud
 	// Gateway"). relayAddr == "" disables it. See transport_relay.go.
@@ -744,6 +810,33 @@ func newParticipant(domain dds.Domain, opts ...Option) (*participant, error) {
 		p.quicSock = quicSock
 	}
 
+	// Optional RTPS-over-WebSocket transport (Milestone 16, ROADMAP.md
+	// "WebSocket Transport"). Same hard-error policy as TCP/DTLS/QUIC
+	// above: an explicitly requested WS listener that fails to bind is a
+	// caller-visible error.
+	if p.wsAddr != "" {
+		wsSock, err := newWSSocket(p.wsAddr, p.wsTLSConfig, p.wsFraming)
+		if err != nil {
+			mcastSock.close()
+			metaSock.close()
+			dataSock.close()
+			if p.dataMcastSock != nil {
+				p.dataMcastSock.close()
+			}
+			if p.tcpSock != nil {
+				p.tcpSock.close()
+			}
+			if p.dtlsSock != nil {
+				p.dtlsSock.close()
+			}
+			if p.quicSock != nil {
+				p.quicSock.close()
+			}
+			return nil, fmt.Errorf("rtps: WS transport: %w", err)
+		}
+		p.wsSock = wsSock
+	}
+
 	// Optional RTPS-over-Relay transport (Milestone 15, "NAT Traversal /
 	// Cloud Gateway"). Same hard-error policy as TCP/DTLS above: an
 	// explicitly requested relay server that cannot be reached (or that
@@ -765,6 +858,9 @@ func newParticipant(domain dds.Domain, opts ...Option) (*participant, error) {
 			}
 			if p.quicSock != nil {
 				p.quicSock.close()
+			}
+			if p.wsSock != nil {
+				p.wsSock.close()
 			}
 			return nil, fmt.Errorf("rtps: relay transport: %w", err)
 		}
@@ -798,6 +894,9 @@ func newParticipant(domain dds.Domain, opts ...Option) (*participant, error) {
 	}
 	if p.quicSock != nil {
 		go p.quicReceiveLoop()
+	}
+	if p.wsSock != nil {
+		go p.wsReceiveLoop()
 	}
 	if p.relaySock != nil {
 		go p.relayReceiveLoop()
@@ -1133,6 +1232,9 @@ func (p *participant) Close() error {
 	if p.quicSock != nil {
 		p.quicSock.close()
 	}
+	if p.wsSock != nil {
+		p.wsSock.close()
+	}
 	if p.relaySock != nil {
 		p.relaySock.close()
 	}
@@ -1433,18 +1535,24 @@ func (p *participant) handleAckNack(an AckNack, from *net.UDPAddr) {
 // below, this is not gated on UDP multicast being unavailable — see
 // WithQUICAddr's doc comment for why). reliable selects which of QUIC's two
 // channels carries msg — see transport_quic.go's doc comment — and is
-// otherwise ignored by the DTLS/TCP/relay/UDP paths, which have no
-// reliable/best-effort distinction of their own. Otherwise, when UDP is
+// otherwise ignored by the DTLS/WS/TCP/relay/UDP paths, which have no
+// reliable/best-effort distinction of their own. Next, when a WS locator is
+// known for dst's host — learned via SPDP, see participantProxy.wsUnicast —
+// RTPS-over-WebSocket is preferred (Milestone 16, "WebSocket Transport";
+// same unconditional-when-configured priority as QUIC, for the same reason:
+// a browser or Wasm peer's WS locator is not a firewall-traversal fallback
+// to gate on UDP multicast availability, it is often the *only* transport
+// that peer has). Otherwise, when UDP is
 // considered unreachable (see preferTCP) and a TCP locator is known for
 // dst's host, it prefers RTPS-over-TCP instead. Failing (or skipping) all of
 // those, and when prefix identifies a peer that advertised a relay ID
 // (Milestone 15, "NAT Traversal / Cloud Gateway" — see participantProxy.
 // relayID), the message is forwarded through the relay. Any of these falls
-// back to plain UDP if its own send fails (DTLS/QUIC/TCP peer offline,
+// back to plain UDP if its own send fails (DTLS/QUIC/WS/TCP peer offline,
 // connection reset, relay unreachable, ...). This is the automatic UDP→TCP
 // fallback and the DTLS encryption layering described in ROADMAP.md
-// Milestone 14, plus the relay fallback added by Milestone 15 and the QUIC
-// preference added by Milestone 16.
+// Milestone 14, plus the relay fallback added by Milestone 15 and the
+// QUIC/WS preference added by Milestone 16.
 //
 // prefix may be the zero GuidPrefix when the caller does not know (or does
 // not need) the destination's identity — e.g. a redundant broadcast-style
@@ -1454,7 +1562,7 @@ func (p *participant) handleAckNack(an AckNack, from *net.UDPAddr) {
 //
 // TSN traffic-class sockets are always sent as plain UDP: their entire
 // purpose is priority-marked, low-latency delivery on a specific socket, so
-// they are excluded from the DTLS/QUIC/TCP paths by construction — only
+// they are excluded from the DTLS/QUIC/WS/TCP paths by construction — only
 // sock == dataSock or sock == metaSock are eligible.
 func (p *participant) sendUnicast(sock *udpSocket, dst *net.UDPAddr, prefix GuidPrefix, msg []byte, reliable bool) {
 	if dst == nil {
@@ -1466,7 +1574,7 @@ func (p *participant) sendUnicast(sock *udpSocket, dst *net.UDPAddr, prefix Guid
 			if err := p.dtlsSock.send(dtlsAddr, msg); err == nil {
 				return
 			}
-			// DTLS send failed; fall through to QUIC/TCP/relay/UDP as a last resort.
+			// DTLS send failed; fall through to QUIC/WS/TCP/relay/UDP as a last resort.
 		}
 	}
 	if eligible && p.quicSock != nil {
@@ -1474,7 +1582,15 @@ func (p *participant) sendUnicast(sock *udpSocket, dst *net.UDPAddr, prefix Guid
 			if err := p.quicSock.send(quicAddr, msg, reliable); err == nil {
 				return
 			}
-			// QUIC send failed; fall through to TCP/relay/UDP as a last resort.
+			// QUIC send failed; fall through to WS/TCP/relay/UDP as a last resort.
+		}
+	}
+	if eligible && p.wsSock != nil {
+		if wsAddr := p.wsLocatorForIP(dst.IP); wsAddr != "" {
+			if err := p.wsSock.send(wsAddr, msg); err == nil {
+				return
+			}
+			// WS send failed; fall through to TCP/relay/UDP as a last resort.
 		}
 	}
 	if eligible && p.preferTCP() {
@@ -1632,6 +1748,41 @@ func (p *participant) quicLocatorForIP(ip net.IP) string {
 // rather than duplicating them, exactly as dtlsReceiveLoop does.
 func (p *participant) quicReceiveLoop() {
 	for pkt := range p.quicSock.recv {
+		p.dispatchTCPPacket(pkt.data, tcpFromToUDPAddr(pkt.from))
+	}
+}
+
+// ── RTPS-over-WebSocket transport (Milestone 16) ────────────────────────────────
+
+// wsLocatorForIP returns the known RTPS-over-WebSocket address
+// ("host:port") for the peer reachable at ip, or "" if no SPDP-discovered
+// peer advertised a WS locator for that address. The WebSocket analogue of
+// tcpLocatorForIP/quicLocatorForIP.
+func (p *participant) wsLocatorForIP(ip net.IP) string {
+	if p.spdp == nil {
+		return ""
+	}
+	for _, proxy := range p.spdp.allPeers() {
+		if proxy.wsUnicast == "" {
+			continue
+		}
+		if a := proxy.metatrafficUnicast.udpAddr(); a != nil && a.IP.Equal(ip) {
+			return proxy.wsUnicast
+		}
+		if a := proxy.defaultUnicast.udpAddr(); a != nil && a.IP.Equal(ip) {
+			return proxy.wsUnicast
+		}
+	}
+	return ""
+}
+
+// wsReceiveLoop dispatches messages arriving over the RTPS-over-WebSocket
+// transport to the same handlers used for UDP/TCP/DTLS/QUIC. Message
+// routing is transport-agnostic, so this reuses dispatchTCPPacket and
+// tcpFromToUDPAddr directly rather than duplicating them, exactly as
+// quicReceiveLoop/dtlsReceiveLoop do.
+func (p *participant) wsReceiveLoop() {
+	for pkt := range p.wsSock.recv {
 		p.dispatchTCPPacket(pkt.data, tcpFromToUDPAddr(pkt.from))
 	}
 }

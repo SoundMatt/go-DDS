@@ -38,6 +38,11 @@ const (
 	// is a go-DDS vendor extension only ever carried inside the
 	// vendor-specific pidQUICLocator parameter.
 	LocatorKindQUICv4 = 5
+	// LocatorKindWSv4 identifies a go-DDS RTPS-over-WebSocket unicast
+	// locator (Milestone 16, ROADMAP.md "WebSocket Transport"). Like
+	// LocatorKindTCPv4/LocatorKindQUICv4, this is a go-DDS vendor extension
+	// only ever carried inside the vendor-specific pidWSLocator parameter.
+	LocatorKindWSv4 = 6
 )
 
 // locatorFromUDP builds a Locator from a net.UDPAddr.
@@ -127,6 +132,28 @@ func locatorFromQUIC(ip net.IP, port int) Locator {
 // for quicSocket.send. Returns ("", false) for locators of any other kind.
 func (l Locator) quicHostPort() (string, bool) {
 	if l.Kind != LocatorKindQUICv4 {
+		return "", false
+	}
+	ip := net.IP(append([]byte(nil), l.Address[12:16]...))
+	return net.JoinHostPort(ip.String(), strconv.Itoa(int(l.Port))), true
+}
+
+// locatorFromWS builds a WSv4 Locator from an IP and port, the WebSocket
+// analogue of locatorFromTCP/locatorFromQUIC.
+func locatorFromWS(ip net.IP, port int) Locator {
+	l := Locator{Kind: LocatorKindWSv4, Port: uint32(port)}
+	ip4 := ip.To4()
+	if ip4 == nil {
+		ip4 = net.IPv4zero.To4()
+	}
+	copy(l.Address[12:], ip4)
+	return l
+}
+
+// wsHostPort converts a WSv4 Locator to a "host:port" string suitable for
+// wsSocket.send. Returns ("", false) for locators of any other kind.
+func (l Locator) wsHostPort() (string, bool) {
+	if l.Kind != LocatorKindWSv4 {
 		return "", false
 	}
 	ip := net.IP(append([]byte(nil), l.Address[12:16]...))
