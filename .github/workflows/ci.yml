@@ -521,13 +521,67 @@ jobs:
 
       - name: go test (interop, -tags interop)
         if: steps.probe.outputs.available == 'true'
-        run: go test -tags interop -v -timeout 60s ./interop/...
+        run: go test -tags interop -v -timeout 60s -run '^TestInterop_(GoPublisher|CyclonePublisher|BidirectionalEcho)' ./interop/...
         env:
           INTEROP_TIMEOUT: "15s"
 
       - name: Stop CycloneDDS peer
         if: steps.probe.outputs.available == 'true'
         run: docker compose -f interop/docker-compose.yml down
+
+  # ── ROS 2 interop (Milestone 17, "ROS 2 / rmw Compatibility") ─────────────
+  # Same probe-and-skip pattern as test-interop above, against live ROS 2
+  # Jazzy and Rolling `demo_nodes_cpp talker` peers instead of CycloneDDS —
+  # see interop/ros2_test.go and interop/docker-compose.yml's ros2-*-talker
+  # services. The job is skipped (per distro) if that distro's image is
+  # unavailable in the runner's registry.
+  test-interop-ros2:
+    name: RTPS interop (ROS 2, ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.25"
+
+      - name: Probe Docker and ROS 2 images
+        id: probe
+        run: |
+          jazzy=false
+          rolling=false
+          if docker pull ros:jazzy 2>/dev/null; then jazzy=true; else echo "::notice::ros:jazzy image not available — skipping Jazzy interop test"; fi
+          if docker pull ros:rolling 2>/dev/null; then rolling=true; else echo "::notice::ros:rolling image not available — skipping Rolling interop test"; fi
+          echo "jazzy=$jazzy" >> "$GITHUB_OUTPUT"
+          echo "rolling=$rolling" >> "$GITHUB_OUTPUT"
+
+      - name: Start ROS 2 Jazzy talker
+        if: steps.probe.outputs.jazzy == 'true'
+        run: docker compose -f interop/docker-compose.yml --profile jazzy up -d
+
+      - name: go test (ROS 2 Jazzy, -tags interop)
+        if: steps.probe.outputs.jazzy == 'true'
+        run: go test -tags interop -v -timeout 60s -run ROS2Jazzy ./interop/...
+        env:
+          INTEROP_TIMEOUT: "15s"
+
+      - name: Stop ROS 2 Jazzy talker
+        if: steps.probe.outputs.jazzy == 'true'
+        run: docker compose -f interop/docker-compose.yml --profile jazzy down
+
+      - name: Start ROS 2 Rolling talker
+        if: steps.probe.outputs.rolling == 'true'
+        run: docker compose -f interop/docker-compose.yml --profile rolling up -d
+
+      - name: go test (ROS 2 Rolling, -tags interop)
+        if: steps.probe.outputs.rolling == 'true'
+        run: go test -tags interop -v -timeout 60s -run ROS2Rolling ./interop/...
+        env:
+          INTEROP_TIMEOUT: "15s"
+
+      - name: Stop ROS 2 Rolling talker
+        if: steps.probe.outputs.rolling == 'true'
+        run: docker compose -f interop/docker-compose.yml --profile rolling down
 
   # ── go generate (placeholder, expands when IDL toolchain is added) ────────
   generate:

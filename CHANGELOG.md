@@ -21,6 +21,26 @@ breaking changes may occur between `v0.x` minor releases. Each submodule's
 
 ## [Unreleased]
 
+### Added (root, `tools`)
+
+- ROS 2 / rmw Compatibility (ROADMAP.md, Milestone 17 "Robotics
+  Integration", first sub-phase): new `ros2` package —
+  `NewROS2Participant` wraps an `rtps.Participant` with ROS 2's topic/type
+  naming (`ToDDSTopicName`/`TypeSupportName`, matching the "rt"-prefixed,
+  `"pkg::msg::dds_::Type_"` conventions rmw_fastrtps/rmw_cyclonedds use)
+  and its `rmw_dds_common` "ros_discovery_info" graph protocol
+  (`Participant.Nodes()`/`Topics()`), so a go-DDS process shows up in a
+  real ROS 2 graph without a bridge process. New `dds.TypedEndpointFactory`
+  (`NewPublisherWithType`/`NewSubscriberWithType`, implemented by `rtps`)
+  lets a caller announce a real DDS type name over SEDP instead of the
+  default `"CDR_BLOB"` sentinel; new `rtps.EndpointDiscoveryProvider`/
+  `rtps.GUIDProvider` expose the discovered-endpoint table and per-entity
+  GUIDs the `ros2` package needs. New `ddstool ros2-list` CLI subcommand
+  lists live ROS 2 nodes/topics visible from go-DDS. New
+  `interop/ros2_test.go` (`-tags interop`) and a `test-interop-ros2` CI job
+  prove it against live `ros:jazzy`/`ros:rolling` `demo_nodes_cpp talker`
+  containers, alongside the existing CycloneDDS interop tests.
+
 ### Added (`observability`)
 
 - Prometheus metrics endpoint (ROADMAP.md, Milestone 15 "Cloud-Native
