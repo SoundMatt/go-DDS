@@ -635,7 +635,7 @@ jobs:
         run: go run github.com/fzipp/gocyclo/cmd/gocyclo@v0.6.0 -over 15 -top 20 ./... || true
 
   # ── go-FuSa full lifecycle (RELAY §20 continuous conformance) ──────────────
-  # Pinned to v0.30.0. RELAY spec §20 makes conformance continuously proven:
+  # Pinned to v0.36.0. RELAY spec §20 makes conformance continuously proven:
   # this job runs the FULL go-FuSa lifecycle and gates on every stage —
   # static analysis (check), 100% requirement traceability (traced AND tested),
   # cybersecurity analysis (cyber), dependency vulnerability scan (vuln), and
@@ -643,7 +643,7 @@ jobs:
   # the build. To upgrade: install the new version locally, run the same
   # commands, fix all findings, then bump the @version pin below.
   gofusa:
-    name: go-FuSa lifecycle §20 (v0.30.0)
+    name: go-FuSa lifecycle §20 (v0.36.0)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -651,7 +651,7 @@ jobs:
         with:
           go-version: "1.25"
       - name: Install go-FuSa
-        run: go install github.com/SoundMatt/go-FuSa/cmd/gofusa@v0.30.0
+        run: go install github.com/SoundMatt/go-FuSa/cmd/gofusa@v0.36.0
       - name: gofusa check (0 errors required)
         run: gofusa check ./...
       - name: Verify required safety artifacts are present
