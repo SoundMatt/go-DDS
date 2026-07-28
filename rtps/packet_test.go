@@ -99,11 +99,27 @@ func TestHandleDataPacket_DispatchesToSubscriber(t *testing.T) {
 	}
 	defer sub.Close()
 
+	r, ok := sub.(*rtpsReader)
+	if !ok {
+		t.Fatal("subscriber is not *rtpsReader")
+	}
+
 	want := []byte("wire-delivery")
 	wrapped := cdrWrapPayload(want)
 	eid := entityIdForWriter(500)
+	remotePrefix := newGuidPrefix()
+	// A genuinely remote sender: handleDataPacket now drops any packet whose
+	// header GuidPrefix matches this participant's own (see
+	// TestHandleDataPacket_OwnPrefix_Ignored), so this test must simulate a
+	// different participant, not itself, to exercise the ordinary wire-
+	// delivery dispatch path. That means acceptsSource needs this writer's
+	// GUID in the reader's SEDP-matched allow-list — precisely what real
+	// SEDP matching (sedpService.onRemoteWriter) would have done before any
+	// DATA arrived; simulate that directly, as TestSEDP_HandlePacket_
+	// ValidRemote_PubWriter and others do.
+	r.addSourceGUID(GUID{Prefix: remotePrefix, Entity: eid})
 	submsg := marshalDataSubmessage(eid, EntityIdUnknown, SequenceNumber{Low: 1}, wrapped)
-	msg := wrapInRTPSMessage(p.guidPrefix, submsg)
+	msg := wrapInRTPSMessage(remotePrefix, submsg)
 
 	p.handleDataPacket(msg, loopbackAddr)
 
@@ -114,6 +130,44 @@ func TestHandleDataPacket_DispatchesToSubscriber(t *testing.T) {
 		}
 	case <-time.After(time.Second):
 		t.Fatal("timeout: handleDataPacket did not dispatch to subscriber")
+	}
+}
+
+// TestHandleDataPacket_OwnPrefix_Ignored proves handleDataPacket drops any
+// packet whose header GuidPrefix equals this participant's own, mirroring
+// the identical self-origin guards already covered by
+// TestSPDP_HandlePacket_OwnPrefix_Ignored and
+// TestSEDP_HandlePacket_OwnPrefix_Ignored. Without this guard, a self-looped
+// multicast DATA packet (e.g. a reliable writer's own transmission arriving
+// back on the multicast socket it shares with every other participant) was
+// re-dispatched with topic filtering disabled, and rtpsReader.acceptsSource's
+// own-participant-prefix bypass then fanned it out to every local reader
+// regardless of topic — delivering a sample published on one topic into a
+// subscriber's channel for a completely unrelated topic.
+func TestHandleDataPacket_OwnPrefix_Ignored(t *testing.T) {
+	p := testPart(t)
+
+	// A subscriber on a topic the "self-sent" packet below has nothing to do
+	// with — proves the packet isn't merely filtered by topic downstream,
+	// but never processed at all once its GuidPrefix is recognized as our own.
+	sub, err := p.NewSubscriber("hdp/unrelated", dds.DefaultQoS)
+	if err != nil {
+		t.Fatalf("NewSubscriber: %v", err)
+	}
+	defer sub.Close()
+
+	wrapped := cdrWrapPayload([]byte("looped-back"))
+	eid := entityIdForWriter(501)
+	submsg := marshalDataSubmessage(eid, EntityIdUnknown, SequenceNumber{Low: 1}, wrapped)
+	msg := wrapInRTPSMessage(p.guidPrefix, submsg)
+
+	p.handleDataPacket(msg, loopbackAddr)
+
+	select {
+	case s := <-sub.C():
+		t.Errorf("handleDataPacket delivered a self-originated packet: %+v", s)
+	case <-time.After(200 * time.Millisecond):
+		// Expected: nothing delivered.
 	}
 }
 

@@ -21,6 +21,45 @@ breaking changes may occur between `v0.x` minor releases. Each submodule's
 
 ## [Unreleased]
 
+### Fixed (root)
+
+- Cross-topic sample delivery: a self-looped multicast DATA packet (a
+  writer's own transmission, received back on the multicast socket it
+  shares with every other participant on the segment — normal once that
+  writer has at least one remote-matched reader) was reprocessed by
+  `participant.handleDataPacket` with topic filtering disabled
+  (`dispatchToReaders`'s `topicFilter == ""` path, which defers entirely to
+  `rtpsReader.acceptsSource`). `acceptsSource`'s own-participant-prefix
+  bypass — needed for `rtpsWriter.Write`'s in-process delivery call, where
+  the topic has already been filtered — accepts a same-prefix source
+  unconditionally with no topic check, so the self-looped copy fanned out
+  to *every* reader on that participant regardless of topic, not just ones
+  actually matched to the writer that sent it. Concretely: `ros2`'s
+  internal `ros_discovery_info` graph writer could deliver a
+  `ParticipantEntitiesInfo` sample into an unrelated application
+  subscriber's channel (surfaced by an intermittent CI failure in
+  `ros2.TestTwoNodes_SeeEachOtherInGraph`, reproduced reliably under CPU
+  load in a Linux container after the fixed test-timing flake in #128 was
+  ruled out). `handleDataPacket` now drops any packet whose header
+  GuidPrefix matches the participant's own, mirroring the identical
+  self-origin guard SPDP (`spdpService.handlePacket`), SEDP
+  (`sedpService.handlePacket`), and the TCP transport
+  (`dispatchTCPPacket`) already had — this was the one DATA/HEARTBEAT/
+  ACKNACK receive path missing it. General fix: affects any
+  `rtps.Participant` (not just `ros2`) with two or more topics and at
+  least one writer whose packets reach the shared multicast group.
+
+  Separately (found while stress-reproducing the above, not fixed here):
+  sustained participant creation concurrent with incoming SEDP endpoint
+  announcements under heavy load surfaced what looks like a genuine
+  `participant.mu` / `sedpService.mu` lock-order inversion —
+  `sedpService.onRemoteWriter` holds `sedp.mu` across a call into
+  `participant.readerByEID` (which needs `participant.mu`), while
+  `newPublisherLocked`/`newSubscriberLocked` hold `participant.mu` across a
+  call into `sedpService.registerWriter`/`registerReader` (which needs
+  `sedp.mu`) — the reverse order. Flagged for follow-up investigation; out
+  of scope for this fix.
+
 ### Added (root, `tools`)
 
 - ROS 2 / rmw Compatibility (ROADMAP.md, Milestone 17 "Robotics
