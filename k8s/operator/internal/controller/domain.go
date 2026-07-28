@@ -150,8 +150,8 @@ func (r *DomainReconciler) applyPolicy(ctx context.Context, desired *networkingv
 
 	existing, err := client.Get(ctx, desired.Name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
-		if _, err := client.Create(ctx, desired, metav1.CreateOptions{}); err != nil {
-			return fmt.Errorf("controller: creating NetworkPolicy %s/%s: %w", desired.Namespace, desired.Name, err)
+		if _, createErr := client.Create(ctx, desired, metav1.CreateOptions{}); createErr != nil {
+			return fmt.Errorf("controller: creating NetworkPolicy %s/%s: %w", desired.Namespace, desired.Name, createErr)
 		}
 		return nil
 	}

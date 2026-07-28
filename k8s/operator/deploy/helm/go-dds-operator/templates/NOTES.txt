@@ -1,0 +1,39 @@
+go-dds-operator is installed.
+
+1. Declare a participant:
+
+   apiVersion: dds.soundmatt.io/v1alpha1
+   kind: DDSParticipant
+   metadata:
+     name: sensor-pub
+     namespace: {{ .Release.Namespace }}
+   spec:
+     domain: 3
+     qosProfile: reliable-transient-local
+     transport:
+       kind: tcp
+
+2. Annotate a pod (or its Deployment/StatefulSet template) to have it
+   injected with DDS_DOMAIN_ID, DDS_QOS_PROFILE, DDS_TRANSPORT, and
+   DDS_PEERS:
+
+   metadata:
+     annotations:
+       dds.soundmatt.io/participant: sensor-pub
+
+3. Optionally isolate a namespace's DDS traffic with a DDSDomain and bind
+   the namespace to it:
+
+   apiVersion: dds.soundmatt.io/v1alpha1
+   kind: DDSDomain
+   metadata:
+     name: prod
+     namespace: {{ .Release.Namespace }}
+   spec:
+     domainID: 3
+     isolateNamespace: true
+
+   kubectl label namespace {{ .Release.Namespace }} dds.soundmatt.io/domain=prod
+
+See https://github.com/SoundMatt/go-DDS/tree/main/k8s/operator for full
+documentation.

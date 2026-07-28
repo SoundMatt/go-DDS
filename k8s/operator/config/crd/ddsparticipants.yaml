@@ -1,0 +1,82 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: ddsparticipants.dds.soundmatt.io
+spec:
+  group: dds.soundmatt.io
+  scope: Namespaced
+  names:
+    kind: DDSParticipant
+    listKind: DDSParticipantList
+    plural: ddsparticipants
+    singular: ddsparticipant
+    shortNames:
+      - ddsp
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Domain
+          type: integer
+          jsonPath: .spec.domain
+        - name: Transport
+          type: string
+          jsonPath: .spec.transport.kind
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: >-
+            DDSParticipant declares the go-DDS participant configuration a
+            pod annotated with dds.soundmatt.io/participant=<name> (in the
+            same namespace) should be configured with. The go-dds-operator
+            admission webhook resolves the annotation against this object
+            and injects DDS_* environment variables into the pod's matched
+            containers at admission time. See go-DDS ROADMAP.md, Milestone
+            15, "Kubernetes Operator".
+          required: [spec]
+          properties:
+            spec:
+              type: object
+              required: [domain]
+              properties:
+                domain:
+                  type: integer
+                  minimum: 0
+                  maximum: 232
+                  description: RTPS domain ID (DDSI-RTPS §9.6.2.3).
+                qosProfile:
+                  type: string
+                  description: >-
+                    Opaque QoS profile name understood by the application;
+                    passed through verbatim as DDS_QOS_PROFILE.
+                transport:
+                  type: object
+                  properties:
+                    kind:
+                      type: string
+                      enum: [udp, tcp, dtls, shmem]
+                      description: go-DDS wire transport.
+                    port:
+                      type: integer
+                      minimum: 1
+                      maximum: 65535
+                      description: Overrides the transport's default port.
+                peers:
+                  type: array
+                  items:
+                    type: string
+                  description: >-
+                    Static peer list (host:port entries) for discovery
+                    without multicast; joined into DDS_PEERS.
+            status:
+              type: object
+              properties:
+                observedGeneration:
+                  type: integer
+                  format: int64

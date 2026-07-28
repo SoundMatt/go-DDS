@@ -5,9 +5,9 @@ All notable changes to go-DDS are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 go-DDS is a multi-module repository (ROADMAP.md, "Architecture Initiative —
 Multi-Module Repository Split", #71): the root module tags as `vX.Y.Z`, and
-each submodule (`bridge`, `tools`, `observability`, `safety`, `examples`)
-tags independently as `<module>/vX.Y.Z`. Entries below note which module(s)
-a change applies to.
+each submodule (`bridge`, `tools`, `observability`, `safety`, `examples`,
+`k8s/operator`) tags independently as `<module>/vX.Y.Z`. Entries below note
+which module(s) a change applies to.
 
 This file starts tracking from the Architecture Initiative's Phase F
 ("Root cleanup") release onward. For the full release history before that
@@ -36,6 +36,24 @@ breaking changes may occur between `v0.x` minor releases. Each submodule's
   `IncCDREncodeError`, `IncCDRDecodeError`, `ObserveLatency`, and
   `ObserveQueueDepth` feed the metrics with no existing provider interface
   behind them yet.
+
+### Added (`k8s/operator`, new module)
+
+- go-DDS Kubernetes operator (ROADMAP.md, Milestone 15 "Cloud-Native
+  Runtime", "Kubernetes Operator"): a new independent Go module,
+  `github.com/SoundMatt/go-DDS/k8s/operator`, with two CRDs
+  (`dds.soundmatt.io/v1alpha1`) — `DDSParticipant` (declarative participant
+  config: domain, QoS profile, transport, static peers) and `DDSDomain`
+  (domain-per-namespace isolation) — plus a mutating admission webhook that
+  injects `DDS_DOMAIN_ID`/`DDS_QOS_PROFILE`/`DDS_TRANSPORT`/
+  `DDS_TRANSPORT_PORT`/`DDS_PEERS` env vars into pods annotated
+  `dds.soundmatt.io/participant: <name>`, a controller that renders
+  `DDSDomain` objects with `spec.isolateNamespace: true` into a
+  `NetworkPolicy` scoping that domain's RTPS UDP ports to the namespace,
+  and a Helm chart (`deploy/helm/go-dds-operator/`) with self-signed
+  webhook TLS by default. A fourth Docker image, `operator`
+  (`ghcr.io/soundmatt/go-dds-operator`), joins `monitor`/`pub`/`sub` in
+  `docker/Dockerfile` and `.github/workflows/docker-publish.yml`.
 
 ## [root v0.55.1] / [safety v0.1.1] — Architecture Initiative Phase F — Root cleanup
 

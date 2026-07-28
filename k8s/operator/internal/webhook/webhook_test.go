@@ -2,6 +2,7 @@ package webhook
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -59,7 +60,7 @@ func postReview(t *testing.T, m *Mutator, review *admissionv1.AdmissionReview) *
 	if err != nil {
 		t.Fatalf("marshal review: %v", err)
 	}
-	req := httptest.NewRequest(http.MethodPost, "/mutate-pods", bytes.NewReader(body))
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/mutate-pods", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
 	m.ServeHTTP(rec, req)
 
@@ -163,7 +164,7 @@ func TestServeHTTP_DomainFallbackViaNamespace(t *testing.T) {
 
 func TestServeHTTP_RejectsMalformedBody(t *testing.T) {
 	m := &Mutator{Participants: fakeParticipants{}}
-	req := httptest.NewRequest(http.MethodPost, "/mutate-pods", bytes.NewReader([]byte("not json")))
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/mutate-pods", bytes.NewReader([]byte("not json")))
 	rec := httptest.NewRecorder()
 	m.ServeHTTP(rec, req)
 	if rec.Code != http.StatusBadRequest {
@@ -175,7 +176,7 @@ func TestServeHTTP_RejectsMissingRequest(t *testing.T) {
 	m := &Mutator{Participants: fakeParticipants{}}
 	review := admissionv1.AdmissionReview{TypeMeta: metav1.TypeMeta{Kind: "AdmissionReview"}}
 	body, _ := json.Marshal(review)
-	req := httptest.NewRequest(http.MethodPost, "/mutate-pods", bytes.NewReader(body))
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/mutate-pods", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
 	m.ServeHTTP(rec, req)
 	if rec.Code != http.StatusBadRequest {
@@ -185,7 +186,7 @@ func TestServeHTTP_RejectsMissingRequest(t *testing.T) {
 
 func TestServeHTTP_RejectsNonPost(t *testing.T) {
 	m := &Mutator{Participants: fakeParticipants{}}
-	req := httptest.NewRequest(http.MethodGet, "/mutate-pods", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/mutate-pods", nil)
 	rec := httptest.NewRecorder()
 	m.ServeHTTP(rec, req)
 	if rec.Code != http.StatusMethodNotAllowed {

@@ -78,14 +78,14 @@ func run(kubeconfig, webhookAddr, healthAddr, certFile, keyFile string, workers 
 	domains := cache.NewDomains()
 	namespaceDomains := cache.NewNamespaceDomains()
 
-	if _, err := participantInformer.AddEventHandler(participants.EventHandler()); err != nil {
-		return fmt.Errorf("registering DDSParticipant event handler: %w", err)
+	if _, handlerErr := participantInformer.AddEventHandler(participants.EventHandler()); handlerErr != nil {
+		return fmt.Errorf("registering DDSParticipant event handler: %w", handlerErr)
 	}
-	if _, err := domainInformer.AddEventHandler(domains.EventHandler()); err != nil {
-		return fmt.Errorf("registering DDSDomain event handler: %w", err)
+	if _, handlerErr := domainInformer.AddEventHandler(domains.EventHandler()); handlerErr != nil {
+		return fmt.Errorf("registering DDSDomain event handler: %w", handlerErr)
 	}
-	if _, err := namespaceInformer.AddEventHandler(namespaceDomains.EventHandler()); err != nil {
-		return fmt.Errorf("registering Namespace event handler: %w", err)
+	if _, handlerErr := namespaceInformer.AddEventHandler(namespaceDomains.EventHandler()); handlerErr != nil {
+		return fmt.Errorf("registering Namespace event handler: %w", handlerErr)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -103,8 +103,8 @@ func run(kubeconfig, webhookAddr, healthAddr, certFile, keyFile string, workers 
 
 	reconciler := &controller.DomainReconciler{Client: typedClient, Informer: domainInformer, Log: log}
 	go func() {
-		if err := reconciler.Run(ctx, workers); err != nil {
-			log.Error("DDSDomain reconciler stopped", "error", err)
+		if runErr := reconciler.Run(ctx, workers); runErr != nil {
+			log.Error("DDSDomain reconciler stopped", "error", runErr)
 		}
 	}()
 

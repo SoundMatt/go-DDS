@@ -29,6 +29,19 @@ RUN cd observability && CGO_ENABLED=0 go build -trimpath -o /bin/monitor ./cmd/m
 RUN cd examples && CGO_ENABLED=0 go build -trimpath -o /bin/pub ./quickstart/pub
 RUN cd examples && CGO_ENABLED=0 go build -trimpath -o /bin/sub ./quickstart/sub
 
+# ── k8s/operator builder ─────────────────────────────────────────────────────
+# Separate stage: k8s/operator is its own go.mod with no `replace` back to
+# the root module (ROADMAP.md, Milestone 15, "Kubernetes Operator" — it
+# only talks to the Kubernetes API, not the root github.com/SoundMatt/go-DDS
+# package), so it doesn't need the root go.mod/go.sum this file's main
+# builder stage copies first.
+FROM golang:1.26-alpine AS operator-builder
+WORKDIR /src/k8s/operator
+COPY k8s/operator/go.mod k8s/operator/go.sum ./
+RUN go mod download
+COPY k8s/operator/ .
+RUN CGO_ENABLED=0 go build -trimpath -o /bin/go-dds-operator ./cmd/operator
+
 # ── monitor image ──────────────────────────────────────────────────────────────
 FROM alpine:3.21 AS monitor
 RUN apk add --no-cache ca-certificates
@@ -57,3 +70,14 @@ LABEL org.opencontainers.image.title="go-DDS subscriber" \
       org.opencontainers.image.source="https://github.com/SoundMatt/go-DDS" \
       org.opencontainers.image.licenses="MPL-2.0"
 ENTRYPOINT ["sub"]
+
+# ── operator image ─────────────────────────────────────────────────────────────
+FROM alpine:3.21 AS operator
+RUN apk add --no-cache ca-certificates
+COPY --from=operator-builder /bin/go-dds-operator /usr/local/bin/go-dds-operator
+LABEL org.opencontainers.image.title="go-DDS Kubernetes operator" \
+      org.opencontainers.image.source="https://github.com/SoundMatt/go-DDS" \
+      org.opencontainers.image.licenses="MPL-2.0"
+USER 65532:65532
+EXPOSE 9443 8081
+ENTRYPOINT ["go-dds-operator"]

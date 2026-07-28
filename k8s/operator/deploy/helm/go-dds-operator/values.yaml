@@ -1,0 +1,69 @@
+# Default values for go-dds-operator.
+
+image:
+  repository: ghcr.io/soundmatt/go-dds-operator
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+# Ports the operator's own container listens on.
+webhook:
+  port: 9443
+  # failurePolicy controls what happens if the webhook is unreachable when
+  # a pod is admitted. "Ignore" (the default) fails open — an operator
+  # outage must never be able to block unrelated workloads from scheduling.
+  # Set to "Fail" only if DDS config injection is a hard requirement for
+  # your workloads.
+  failurePolicy: Ignore
+  namespaceSelector: {}
+
+health:
+  port: 8081
+
+service:
+  type: ClusterIP
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+# CRDs are installed as part of this chart (templates/crds/*.yaml). Set to
+# false if your cluster manages CRD lifecycle separately (e.g. applied once
+# out-of-band so `helm uninstall` never deletes them and takes every
+# DDSParticipant/DDSDomain object — and the NetworkPolicies/env injection
+# depending on them — with it).
+installCRDs: true
+
+# Certificate for the mutating webhook's TLS listener. selfSigned (the
+# default) has Helm generate a cert covering
+# <fullname>-webhook.<namespace>.svc at install/upgrade time — zero extra
+# tooling, matching Milestone 15's "zero custom tooling" success criterion,
+# at the cost of a new cert (and a brief webhook restart) on every `helm
+# upgrade`. Set to false and populate certSecretName with a
+# cert-manager-issued (or otherwise externally managed) Secret for
+# production deployments that need a stable, rotated certificate.
+tls:
+  selfSigned: true
+  certSecretName: ""
+  # certManagerCertificateName, when tls.selfSigned is false and cert-manager
+  # is installed, annotates the MutatingWebhookConfiguration with
+  # cert-manager.io/inject-ca-from so the CA injector fills in caBundle for
+  # you — set it to "<namespace>/<Certificate name>".
+  certManagerCertificateName: ""
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+podAnnotations: {}
+podLabels: {}
