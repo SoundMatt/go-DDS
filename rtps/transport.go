@@ -74,41 +74,47 @@ func newUnicastSocketV6(port int) (*udpSocket, error) {
 // (common in containers and macOS VMs) it falls back to a plain unicast bind
 // on the same port. The socket then works for intra-process delivery; SPDP
 // peer discovery across network boundaries is simply disabled in that case.
-func newMulticastReceiveSocket(group net.IP, port int) (*udpSocket, error) {
+// The returned bool reports whether a genuine multicast join succeeded
+// (false when the unicast fallback was used) — participant.go uses this to
+// decide whether UDP multicast is "available" for the RTPS-over-TCP fallback
+// (Milestone 14; see participant.preferTCP).
+func newMulticastReceiveSocket(group net.IP, port int) (*udpSocket, bool, error) {
 	iface, err := firstMulticastInterface() // nil iface is OK: OS picks
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	conn, err := net.ListenMulticastUDP("udp4", iface, &net.UDPAddr{IP: group, Port: port})
 	if err == nil {
-		return newSocket(conn, port), nil
+		return newSocket(conn, port), true, nil
 	}
 	// Multicast unavailable — bind unicast as a no-op receiver so the
 	// participant can start. Intra-process pub/sub is unaffected.
 	conn2, err2 := net.ListenUDP("udp4", &net.UDPAddr{Port: port})
 	if err2 != nil {
-		return nil, fmt.Errorf("rtps: multicast receive %s:%d: %w", group, port, err)
+		return nil, false, fmt.Errorf("rtps: multicast receive %s:%d: %w", group, port, err)
 	}
-	return newSocket(conn2, port), nil
+	return newSocket(conn2, port), false, nil
 }
 
 // newMulticastReceiveSocketV6 joins an IPv6 multicast group on the given port.
 // Falls back to a plain unicast bind on the same port when no IPv6 multicast
-// interface is available (containers, CI environments).
-func newMulticastReceiveSocketV6(group net.IP, port int) (*udpSocket, error) {
+// interface is available (containers, CI environments). The returned bool
+// reports whether a genuine multicast join succeeded, as with
+// newMulticastReceiveSocket.
+func newMulticastReceiveSocketV6(group net.IP, port int) (*udpSocket, bool, error) {
 	iface, err := firstIPv6MulticastInterface()
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	conn, err := net.ListenMulticastUDP("udp6", iface, &net.UDPAddr{IP: group, Port: port})
 	if err == nil {
-		return newSocket(conn, port), nil
+		return newSocket(conn, port), true, nil
 	}
 	conn2, err2 := net.ListenUDP("udp6", &net.UDPAddr{Port: port})
 	if err2 != nil {
-		return nil, fmt.Errorf("rtps: IPv6 multicast receive %s:%d: %w", group, port, err)
+		return nil, false, fmt.Errorf("rtps: IPv6 multicast receive %s:%d: %w", group, port, err)
 	}
-	return newSocket(conn2, port), nil
+	return newSocket(conn2, port), false, nil
 }
 
 // firstIPv6MulticastInterface returns the first UP, non-loopback IPv6

@@ -55,6 +55,7 @@ package rtps
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log/slog"
 	"net"
@@ -183,6 +184,35 @@ func WithIPv6() Option {
 // join or send to 239.255.0.1; use WithPeerLocators to supply peers manually.
 func WithNoMulticast() Option {
 	return func(p *participant) { p.noMulticast = true }
+}
+
+// WithTCPAddr enables the RTPS-over-TCP transport (Milestone 14) and binds a
+// TCP listener at addr (host:port, e.g. ":7500"). It runs alongside the
+// existing UDP transport rather than replacing it: the participant accepts
+// inbound RTPS-over-TCP connections and, when UDP multicast is unreachable
+// (the common case inside containers and behind restrictive firewalls),
+// prefers TCP unicast for outbound traffic to any peer whose TCP locator it
+// has learned — see WithTCPPeers and WithTCPTLSConfig.
+func WithTCPAddr(addr string) Option {
+	return func(p *participant) { p.tcpAddr = addr }
+}
+
+// WithTCPTLSConfig wraps the RTPS-over-TCP transport (see WithTCPAddr) in
+// TLS 1.3, using only crypto/tls from the standard library — no external
+// dependency. If cfg.MinVersion is zero, TLS 1.3 is enforced. Has no effect
+// unless WithTCPAddr is also supplied.
+func WithTCPTLSConfig(cfg *tls.Config) Option {
+	return func(p *participant) { p.tcpTLSConfig = cfg }
+}
+
+// WithTCPPeers adds known peer TCP addresses (host:port) used for SPDP
+// discovery over TCP. Every SPDP announcement this participant sends is
+// additionally unicast to each address here, alongside the normal UDP
+// multicast announcement — this is how a participant on the far side of a
+// UDP-blocking firewall is still discovered. Has no effect unless
+// WithTCPAddr is also supplied.
+func WithTCPPeers(addrs ...string) Option {
+	return func(p *participant) { p.tcpPeers = append(p.tcpPeers, addrs...) }
 }
 
 // WithPeerLocators adds static peer unicast addresses for unicast-only
@@ -314,6 +344,20 @@ type participant struct {
 	metaSockV6  *udpSocket // SEDP IPv6 meta unicast
 	dataSockV6  *udpSocket // User data IPv6 unicast
 
+	// RTPS-over-TCP transport (Milestone 14). tcpAddr == "" disables it.
+	tcpAddr      string
+	tcpTLSConfig *tls.Config
+	tcpPeers     []string
+	tcpSock      *tcpSocket
+
+	// udpMulticastAvailable reports whether SPDP multicast bound a genuine
+	// multicast-capable interface at startup (as opposed to the unicast
+	// fallback newMulticastReceiveSocket silently takes when none exists —
+	// common in containers and restrictive network namespaces). When false
+	// and the TCP transport is configured, unicast sends prefer TCP over UDP;
+	// see preferTCP and sendUnicast.
+	udpMulticastAvailable bool
+
 	// Discovery services.
 	spdp *spdpService
 	sedp *sedpService
@@ -414,7 +458,7 @@ func newParticipant(domain dds.Domain, opts ...Option) (*participant, error) {
 	}
 	_ = participantIdx
 
-	mcastSock, err := newMulticastReceiveSocket(spdpMulticastAddr, metaMulticastPort(d))
+	mcastSock, mcastOK, err := newMulticastReceiveSocket(spdpMulticastAddr, metaMulticastPort(d))
 	if err != nil {
 		metaSock.close()
 		dataSock.close()
@@ -422,14 +466,15 @@ func newParticipant(domain dds.Domain, opts ...Option) (*participant, error) {
 	}
 
 	p := &participant{
-		domain:         domain,
-		guidPrefix:     guidPrefix,
-		mcastSock:      mcastSock,
-		metaSock:       metaSock,
-		dataSock:       dataSock,
-		writers:        make(map[EntityId]*rtpsWriter),
-		readers:        make(map[EntityId]*rtpsReader),
-		writerLocators: make(map[GUID]Locator),
+		domain:                domain,
+		guidPrefix:            guidPrefix,
+		mcastSock:             mcastSock,
+		metaSock:              metaSock,
+		dataSock:              dataSock,
+		writers:               make(map[EntityId]*rtpsWriter),
+		readers:               make(map[EntityId]*rtpsReader),
+		writerLocators:        make(map[GUID]Locator),
+		udpMulticastAvailable: mcastOK,
 	}
 	for _, o := range opts {
 		o(p)
@@ -438,7 +483,7 @@ func newParticipant(domain dds.Domain, opts ...Option) (*participant, error) {
 	// Optional IPv6 sockets. Failures are soft: if the OS has no IPv6 support
 	// the participant continues with IPv4 only.
 	if p.ipv6 {
-		if mcastV6, err := newMulticastReceiveSocketV6(spdpMulticastAddrV6, metaMulticastPort(d)); err == nil {
+		if mcastV6, _, err := newMulticastReceiveSocketV6(spdpMulticastAddrV6, metaMulticastPort(d)); err == nil {
 			p.mcastSockV6 = mcastV6
 		}
 		if metaV6, err := newUnicastSocketV6(metaUnicastPort(d, participantIdx)); err == nil {
@@ -456,10 +501,27 @@ func newParticipant(domain dds.Domain, opts ...Option) (*participant, error) {
 
 	// Optional user-data multicast socket (for one-packet-per-write delivery).
 	if !p.noMulticast {
-		if dmSock, err2 := newMulticastReceiveSocket(userDataMulticastAddr, userMulticastPort(d)); err2 == nil {
+		if dmSock, _, err2 := newMulticastReceiveSocket(userDataMulticastAddr, userMulticastPort(d)); err2 == nil {
 			p.dataMcastSock = dmSock
 		}
 		// Failure is soft: fall back to unicast-only delivery.
+	}
+
+	// Optional RTPS-over-TCP transport (Milestone 14). Unlike the soft
+	// best-effort fallbacks above, an explicitly requested TCP listener that
+	// fails to bind is a hard error: the caller asked for it by address.
+	if p.tcpAddr != "" {
+		tcpSock, err := newTCPSocket(p.tcpAddr, p.tcpTLSConfig)
+		if err != nil {
+			mcastSock.close()
+			metaSock.close()
+			dataSock.close()
+			if p.dataMcastSock != nil {
+				p.dataMcastSock.close()
+			}
+			return nil, fmt.Errorf("rtps: TCP transport: %w", err)
+		}
+		p.tcpSock = tcpSock
 	}
 
 	p.log.info("rtps participant starting domain=%d prefix=%x", domain, guidPrefix)
@@ -470,6 +532,9 @@ func newParticipant(domain dds.Domain, opts ...Option) (*participant, error) {
 	p.sedp.start()
 
 	go p.dataReceiveLoop()
+	if p.tcpSock != nil {
+		go p.tcpReceiveLoop()
+	}
 
 	if p.cancelCtx != nil {
 		done := p.cancelCtx.Done()
@@ -711,6 +776,9 @@ func (p *participant) Close() error {
 	if p.dataSockV6 != nil {
 		p.dataSockV6.close()
 	}
+	if p.tcpSock != nil {
+		p.tcpSock.close()
+	}
 	// Close any TSN traffic-class sockets.
 	p.tsnMu.Lock()
 	for _, sock := range p.tsnSocks {
@@ -869,7 +937,7 @@ func (p *participant) notifyReliableReaders(writerGUID GUID, seqNum SequenceNumb
 			Count:          tracker.nextAckCount(),
 		}
 		msg := wrapInRTPSMessage(p.guidPrefix, marshalAckNack(an))
-		_ = p.dataSock.send(writerAddr, msg)
+		p.sendUnicast(p.dataSock, writerAddr, msg)
 	}
 }
 
@@ -905,7 +973,7 @@ func (p *participant) handleHeartbeat(writerGUID GUID, hb Heartbeat, from *net.U
 			Count:          tracker.nextAckCount(),
 		}
 		msg := wrapInRTPSMessage(p.guidPrefix, marshalAckNack(an))
-		_ = p.dataSock.send(from, msg)
+		p.sendUnicast(p.dataSock, from, msg)
 	}
 }
 
@@ -936,7 +1004,7 @@ func (p *participant) handleAckNack(an AckNack, from *net.UDPAddr) {
 		}
 		for _, loc := range p.matchedReaderLocators(w.topic) {
 			if dst := loc.udpAddr(); dst != nil {
-				_ = p.dataSock.send(dst, msg)
+				p.sendUnicast(p.dataSock, dst, msg)
 			}
 		}
 	}
@@ -959,15 +1027,145 @@ func (p *participant) handleAckNack(an AckNack, from *net.UDPAddr) {
 		gapMsg := wrapInRTPSMessage(p.guidPrefix, marshalGAP(g))
 		// Send directly to the requesting reader if we know its address.
 		if from != nil {
-			_ = p.dataSock.send(from, gapMsg)
+			p.sendUnicast(p.dataSock, from, gapMsg)
 		}
 		// Also send to all matched readers so any reader on this topic can advance.
 		for _, loc := range p.matchedReaderLocators(w.topic) {
 			if dst := loc.udpAddr(); dst != nil {
-				_ = p.dataSock.send(dst, gapMsg)
+				p.sendUnicast(p.dataSock, dst, gapMsg)
 			}
 		}
 	}
+}
+
+// ── RTPS-over-TCP transport (Milestone 14) ──────────────────────────────────────
+
+// sendUnicast sends a unicast RTPS message to dst via sock. When UDP is
+// considered unreachable (see preferTCP) and a TCP locator is known for
+// dst's host — learned via SPDP, see participantProxy.tcpUnicast — it
+// prefers RTPS-over-TCP instead, falling back to UDP only if the TCP send
+// itself fails. This is the automatic UDP→TCP fallback described in
+// ROADMAP.md Milestone 14.
+//
+// TSN traffic-class sockets are always sent as plain UDP: their entire
+// purpose is priority-marked, low-latency delivery on a specific socket, so
+// they are excluded from the fallback by construction — only sock == dataSock
+// or sock == metaSock are eligible.
+func (p *participant) sendUnicast(sock *udpSocket, dst *net.UDPAddr, msg []byte) {
+	if dst == nil {
+		return
+	}
+	if p.preferTCP() && (sock == p.dataSock || sock == p.metaSock) {
+		if tcpAddr := p.tcpLocatorForIP(dst.IP); tcpAddr != "" {
+			if err := p.tcpSock.send(tcpAddr, msg); err == nil {
+				return
+			}
+			// TCP send failed (peer offline, reset connection, ...); fall
+			// through and try UDP as a last resort.
+		}
+	}
+	if sock != nil {
+		_ = sock.send(dst, msg)
+	}
+}
+
+// preferTCP reports whether this participant should prefer RTPS-over-TCP for
+// unicast sends: the TCP transport must be configured (WithTCPAddr), and UDP
+// multicast must be unavailable — i.e. newMulticastReceiveSocket fell back to
+// a plain unicast bind at startup because no multicast-capable interface
+// exists (common in containers and restrictive network namespaces, and the
+// same condition the UDP transport already detects and silently degrades
+// for at the socket layer).
+func (p *participant) preferTCP() bool {
+	return p.tcpSock != nil && !p.udpMulticastAvailable
+}
+
+// tcpLocatorForIP returns the known RTPS-over-TCP address ("host:port") for
+// the peer reachable at ip, or "" if no SPDP-discovered peer advertised a TCP
+// locator for that address.
+func (p *participant) tcpLocatorForIP(ip net.IP) string {
+	if p.spdp == nil {
+		return ""
+	}
+	for _, proxy := range p.spdp.allPeers() {
+		if proxy.tcpUnicast == "" {
+			continue
+		}
+		if a := proxy.metatrafficUnicast.udpAddr(); a != nil && a.IP.Equal(ip) {
+			return proxy.tcpUnicast
+		}
+		if a := proxy.defaultUnicast.udpAddr(); a != nil && a.IP.Equal(ip) {
+			return proxy.tcpUnicast
+		}
+	}
+	return ""
+}
+
+// tcpReceiveLoop dispatches messages arriving over the RTPS-over-TCP
+// transport to the same handlers used for UDP: SPDP, SEDP, or user
+// DATA/HEARTBEAT/ACKNACK. A TCP connection carries every kind of RTPS
+// traffic (unlike UDP's dedicated meta/data/multicast sockets), so the
+// message's own content decides where it goes — see dispatchTCPPacket.
+func (p *participant) tcpReceiveLoop() {
+	for pkt := range p.tcpSock.recv {
+		p.dispatchTCPPacket(pkt.data, tcpFromToUDPAddr(pkt.from))
+	}
+}
+
+// tcpFromToUDPAddr adapts a TCP peer's "host:port" address into a
+// *net.UDPAddr so it can be threaded through the existing UDP-shaped
+// handlers, which only ever use the IP (e.g. to fill in a zero locator
+// address, or via tcpLocatorForIP to look the peer back up). The TCP source
+// port — an ephemeral client port for dialled connections — has no meaning
+// as a UDP port and is intentionally not carried over. Always returns a
+// non-nil pointer so callers never need a nil check.
+func tcpFromToUDPAddr(hostport string) *net.UDPAddr {
+	host, _, err := net.SplitHostPort(hostport)
+	if err != nil {
+		host = hostport
+	}
+	return &net.UDPAddr{IP: net.ParseIP(host)}
+}
+
+// dispatchTCPPacket routes a TCP-received message to the correct discovery
+// or data handler by inspecting the well-known writer EntityId carried in
+// its first DATA submessage. HEARTBEAT/ACKNACK submessages — which only ever
+// appear in the user-data protocol, never in SPDP or SEDP — route straight
+// to handleDataPacket.
+func (p *participant) dispatchTCPPacket(data []byte, from *net.UDPAddr) {
+	hdr, ok := parseHeader(data)
+	if !ok {
+		return
+	}
+	if hdr.GuidPrefix == p.guidPrefix {
+		return // our own announcement, looped back via a peer's TCP relay
+	}
+	routed := false
+	_ = parseSubmessages(data[20:], func(id, _ byte, body []byte) error {
+		if routed {
+			return nil
+		}
+		switch id {
+		case submsgDATA:
+			ds, ok := parseDataSubmessage(flagEndianness|flagData, body)
+			if !ok {
+				return nil
+			}
+			routed = true
+			switch ds.WriterEntityId {
+			case EntityIdSPDPWriter:
+				p.spdp.handlePacket(data, from)
+			case EntityIdSEDPPubWriter, EntityIdSEDPSubWriter:
+				p.sedp.handlePacket(data, from)
+			default:
+				p.handleDataPacket(data, from)
+			}
+		case submsgHEARTBEAT, submsgACKNACK:
+			routed = true
+			p.handleDataPacket(data, from)
+		}
+		return nil
+	})
 }
 
 // ── Dispatch ──────────────────────────────────────────────────────────────────
@@ -1017,7 +1215,20 @@ func (p *participant) dispatchToReaders(source GUID, topicFilter string, payload
 }
 
 // deliverToReader sends sample to r according to r.backPressure.
+//
+// dispatchToReaders snapshots the reader list under p.mu, then calls this
+// function without holding that lock — so by the time we get here, r may
+// already be in the process of closing (Close() removes r from p.readers
+// via Unsubscribe(), but a dispatch that already captured the pre-removal
+// snapshot can still land here concurrently). r.mu is held for the whole
+// send so that Close() — which takes the same lock to flip r.closed before
+// it closes r.ch — can never race a send against the channel close.
 func (p *participant) deliverToReader(r *rtpsReader, sample dds.Sample) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if r.closed {
+		return
+	}
 	byteLen := uint64(len(sample.Payload))
 	tc := p.topicCounterFor(r.topic)
 	delivered := false
@@ -1291,7 +1502,7 @@ func (w *rtpsWriter) Write(payload []byte) error {
 				if txTimeNS > 0 {
 					_ = scheduledSend(sock.conn, dst, msg, txTimeNS)
 				} else {
-					_ = sock.send(dst, msg)
+					w.p.sendUnicast(sock, dst, msg)
 				}
 			}
 		}
@@ -1323,7 +1534,7 @@ func (w *rtpsWriter) sendHeartbeatLocked() {
 	sock := w.sendSock()
 	for _, loc := range w.p.matchedReaderLocators(w.topic) {
 		if dst := loc.udpAddr(); dst != nil {
-			_ = sock.send(dst, msg)
+			w.p.sendUnicast(sock, dst, msg)
 		}
 	}
 }
@@ -1429,6 +1640,7 @@ type rtpsReader struct {
 	backPressure  dds.BackPressurePolicy
 	unsubOnce     sync.Once   // guards deregistration from the participant
 	closeOnce     sync.Once   // guards channel close
+	closed        bool        // true once Close has closed ch; guarded by mu
 	resetDeadline func()      // nil if no deadline configured
 	deadlineTimer *time.Timer // non-nil when QoS.Deadline > 0 and callback set
 }
@@ -1505,6 +1717,15 @@ func (r *rtpsReader) Close() error {
 		if r.deadlineTimer != nil {
 			r.deadlineTimer.Stop()
 		}
+		// Flip closed before closing the channel, both under mu: this is the
+		// same lock deliverToReader holds for the duration of its send, so a
+		// dispatch already in flight (racing Unsubscribe's removal from
+		// p.readers) either completes its send before we get here, or sees
+		// closed==true and returns without touching r.ch at all. Either way
+		// close(r.ch) below can never race a concurrent send.
+		r.mu.Lock()
+		r.closed = true
+		r.mu.Unlock()
 		close(r.ch)
 	})
 	return nil

@@ -12,6 +12,7 @@ package rtps
 import (
 	"encoding/binary"
 	"net"
+	"strconv"
 )
 
 // Locator_t: 24-byte transport endpoint address (RTPS 2.3 §9.3.2).
@@ -25,6 +26,13 @@ const (
 	LocatorKindInvalid = -1
 	LocatorKindUDPv4   = 1
 	LocatorKindUDPv6   = 2
+	// LocatorKindTCPv4 identifies a go-DDS TCP/TLS unicast locator
+	// (Milestone 14, RTPS-over-TCP). This is a go-DDS vendor extension: it is
+	// only ever carried inside the vendor-specific pidTCPLocator parameter, so
+	// a peer that doesn't recognise it simply skips the parameter — PL_CDR
+	// parameter lists are self-describing (§9.4.2.11) and require no changes
+	// on peers that don't support TCP.
+	LocatorKindTCPv4 = 4
 )
 
 // locatorFromUDP builds a Locator from a net.UDPAddr.
@@ -72,6 +80,30 @@ func (l Locator) udpAddr() *net.UDPAddr {
 	default:
 		return nil
 	}
+}
+
+// locatorFromTCP builds a TCPv4 Locator from an IP and port. Like
+// locatorFromUDP, a zero/unset ip encodes as 0.0.0.0; the receiving peer
+// fills in the sender's observed address in that case (see
+// parseParticipantData).
+func locatorFromTCP(ip net.IP, port int) Locator {
+	l := Locator{Kind: LocatorKindTCPv4, Port: uint32(port)}
+	ip4 := ip.To4()
+	if ip4 == nil {
+		ip4 = net.IPv4zero.To4()
+	}
+	copy(l.Address[12:], ip4)
+	return l
+}
+
+// tcpHostPort converts a TCPv4 Locator to a "host:port" string suitable for
+// tcpSocket.send. Returns ("", false) for locators of any other kind.
+func (l Locator) tcpHostPort() (string, bool) {
+	if l.Kind != LocatorKindTCPv4 {
+		return "", false
+	}
+	ip := net.IP(append([]byte(nil), l.Address[12:16]...))
+	return net.JoinHostPort(ip.String(), strconv.Itoa(int(l.Port))), true
 }
 
 // marshalLocator serialises a Locator into 24 little-endian bytes.

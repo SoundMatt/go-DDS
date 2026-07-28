@@ -158,7 +158,7 @@ API parity does not.
 
 - MQTT bridge — removed in v0.52.0; cross-protocol bridging is now handled by `relay crossbar` (RELAY router). For DDS↔MQTT, run a go-dds spoke and an MQTT spoke under the crossbar.
 - TSN stream model ✅
-- TCP/TLS transport
+- TCP/TLS transport ✅
 - DTLS transport
 - QUIC transport
 - WebSocket transport
@@ -668,13 +668,38 @@ A developer can see DDS samples flowing in a browser within two minutes of cloni
 Goal:
 Make go-DDS reachable across any network boundary — firewalls, NAT, cloud, and secure channels.
 
-### TCP/TLS (RTPS over TCP)
+### TCP/TLS (RTPS over TCP) ✅
 
-- RTPS framing over TCP (`rtps/transport_tcp.go`) — length-prefixed submessage stream
-- TLS 1.3 wrapping via `crypto/tls` — zero external deps
-- Participant option `WithTCPAddr(addr)` alongside existing UDP
-- Automatic fallback: prefer UDP multicast, fall back to TCP unicast when UDP unreachable
-- Discovery over TCP — SPDP unicast to known peers via TCP
+- RTPS framing over TCP (`rtps/transport_tcp.go`) — length-prefixed submessage stream ✅
+- TLS 1.3 wrapping via `crypto/tls` — zero external deps ✅
+- Participant option `WithTCPAddr(addr)` alongside existing UDP ✅
+- Automatic fallback: prefer UDP multicast, fall back to TCP unicast when UDP unreachable ✅
+- Discovery over TCP — SPDP unicast to known peers via TCP ✅
+
+**Shipped** in PLACEHOLDER_PR (root v0.56.0). `rtps/transport_tcp.go`
+adds a `tcpSocket` (listener + per-peer connection cache) that frames every
+RTPS message — the exact bytes `wrapInRTPSMessage` already produces for UDP —
+with a 4-byte big-endian length prefix, TLS-1.3-wrapped via `crypto/tls` when
+`WithTCPTLSConfig` is supplied (enforced when the caller's `MinVersion` is
+unset). `WithTCPAddr(addr)` binds the listener; `WithTCPPeers(addrs...)`
+gives SPDP a set of known TCP peers so `sendAnnouncement` unicasts every
+announcement to them over TCP in addition to the normal UDP multicast send —
+this is how a participant behind a UDP-blocking firewall is still
+discovered. A single new SPDP parameter (`pidTCPLocator`, a `LocatorKindTCPv4`
+locator) lets peers learn each other's TCP listen address; `sendUnicast`, now
+the shared unicast-send path for SEDP, ACKNACK/HEARTBEAT, and writer DATA,
+prefers that TCP locator over UDP whenever `newMulticastReceiveSocket`
+detected no real multicast-capable interface at startup — the same
+already-existing signal the UDP transport itself degrades on — falling back
+to UDP only if the TCP send fails. Fully additive: with no `WithTCPAddr`,
+`preferTCP()` is always false and every send path is byte-for-byte the
+pre-Milestone-14 UDP-only behaviour. Proven end-to-end by
+`TestTCP_CrossDomain_DiscoveryAndReliableDelivery`, which puts two
+participants in different RTPS domains (so UDP multicast SPDP cannot
+possibly cross between them) and forces the UDP-unreachable fallback, and
+they still discover each other and exchange a reliable sample purely over
+TCP. DTLS and QoS Enforcement — Active Policy remain open for a future PR;
+Milestone 14 is not yet complete.
 
 ### DTLS (Encrypted UDP)
 
