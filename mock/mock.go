@@ -79,6 +79,11 @@ type subscription struct {
 	filter        func(dds.Sample) bool
 	backPressure  dds.BackPressurePolicy
 	resetDeadline func() // nil if no deadline; called on each successful delivery
+
+	// Milestone 14 "QoS Enforcement — Active Policy" fields.
+	partitions    []string              // qos.Partition
+	minSeparation time.Duration         // qos.MinSeparation (Time-Based Filter)
+	tbf           *timeBasedFilterState // non-nil iff minSeparation > 0
 }
 
 // broker is the central in-memory routing hub.
@@ -96,6 +101,11 @@ type broker struct {
 
 	// Per-topic metrics: topic string → *mockTopicCounter (sync.Map, no lock needed).
 	topicMetrics sync.Map
+
+	// Milestone 14 "QoS Enforcement — Active Policy" state.
+	ownership             sync.Map  // topic string → *mockOwnershipState
+	topicLiveliness       sync.Map  // topic string → *topicLiveliness
+	livelinessMonitorOnce sync.Once // guards starting the shared monitor goroutine
 }
 
 // topicCounterFor returns (creating on first access) the per-topic counter for topic.
@@ -119,7 +129,17 @@ const defaultChanDepth = 64
 func (b *broker) subscribe(topic string, qos dds.QoS, cfg dds.SubscriberConfig, resetDeadline func()) chan dds.Sample {
 	depth := cfg.ChanDepth(defaultChanDepth)
 	ch := make(chan dds.Sample, depth)
-	sub := subscription{ch: ch, filter: cfg.Filter, backPressure: cfg.BackPressure, resetDeadline: resetDeadline}
+	sub := subscription{
+		ch:            ch,
+		filter:        cfg.Filter,
+		backPressure:  cfg.BackPressure,
+		resetDeadline: resetDeadline,
+		partitions:    qos.Partition,
+		minSeparation: qos.MinSeparation,
+	}
+	if qos.MinSeparation > 0 {
+		sub.tbf = &timeBasedFilterState{}
+	}
 	b.mu.Lock()
 	b.subs[topic] = append(b.subs[topic], sub)
 	var last *dds.Sample
@@ -163,6 +183,12 @@ func (b *broker) publish(topic string, payload []byte, qos dds.QoS, seqNum uint6
 	ptc.writes.Add(1)
 	ptc.bytesW.Add(uint64(len(payload)))
 
+	// Liveliness QoS (Milestone 14): this Write proves the writer is alive,
+	// regardless of whether its own livelinessLoop ticker has fired yet.
+	if qos.LivelinessLeaseDuration > 0 {
+		b.livelinessStateFor(topic).touch(writerGUID)
+	}
+
 	b.mu.Lock()
 	if qos.Durability == dds.TransientLocal {
 		b.lastSample[topic] = &sample
@@ -176,8 +202,28 @@ func (b *broker) publish(topic string, payload []byte, qos dds.QoS, seqNum uint6
 	}
 	b.mu.Unlock()
 
+	// Ownership QoS (Milestone 14): when an ExclusiveOwnership writer has
+	// registered for this topic, only the current active writer's samples are
+	// delivered to any subscriber — lower-strength writers are silenced.
+	if !b.ownershipAllows(topic, writerGUID) {
+		return
+	}
+
+	now := time.Now()
 	for _, sub := range subs {
+		// Partition QoS (Milestone 14): publisher and subscriber only match
+		// when their Partition sets intersect (see partitionsMatch).
+		if !partitionsMatch(qos.Partition, sub.partitions) {
+			continue
+		}
 		if sub.filter != nil && !sub.filter(sample) {
+			continue
+		}
+		// Time-Based Filter QoS (Milestone 14): drop samples from this writer
+		// arriving faster than sub.minSeparation.
+		if sub.tbf != nil && !sub.tbf.passes(writerGUID, now, sub.minSeparation) {
+			b.drops.Add(1)
+			ptc.drops.Add(1)
 			continue
 		}
 		b.deliver(sub, sample, uint64(len(payload)))
@@ -343,6 +389,27 @@ func (p *participant) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, er
 			p.deadlineCb(topic)
 		})
 	}
+	// Ownership QoS (Milestone 14): register this writer in the topic-level
+	// arbitration state so it competes for "active writer" status. A no-op
+	// for the default SharedOwnership.
+	if qos.Ownership == dds.ExclusiveOwnership {
+		pub.ownershipRegistered = true
+		p.broker.ownershipStateFor(topic).register(pub.guid, qos.OwnershipStrength)
+	}
+	// Liveliness QoS (Milestone 14): AutomaticLiveliness (the default) asserts
+	// on a schedule via livelinessLoop; ManualByTopicLiveliness relies solely
+	// on real Write calls touching the lease (see broker.publish above), so no
+	// ticker is started and a writer that stops publishing is correctly
+	// declared lost.
+	if qos.LivelinessLeaseDuration > 0 {
+		p.broker.startLivelinessMonitor()
+		p.broker.livelinessStateFor(topic).registerWriter(pub.guid, qos.LivelinessLeaseDuration)
+		pub.livelinessRegistered = true
+		if qos.Liveliness == dds.AutomaticLiveliness {
+			pub.livelinessDone = make(chan struct{})
+			go pub.livelinessLoop(pub.livelinessDone)
+		}
+	}
 	return pub, nil
 }
 
@@ -373,6 +440,14 @@ func (p *participant) NewSubscriber(topic string, qos dds.QoS, opts ...dds.Subsc
 	}
 
 	sub.ch = p.broker.subscribe(topic, qos, cfg, resetDeadline)
+
+	// Liveliness QoS (Milestone 14): register for loss notifications on
+	// whichever writers (present or future) publish this topic with a
+	// LivelinessLeaseDuration set.
+	if cfg.LivelinessLostCallback != nil {
+		p.broker.startLivelinessMonitor()
+		p.broker.livelinessStateFor(topic).addCallback(sub, cfg.LivelinessLostCallback)
+	}
 	return sub, nil
 }
 
@@ -461,6 +536,11 @@ type publisher struct {
 	closed        bool
 	seqNum        atomic.Uint64
 	guid          dds.GUID
+
+	// Milestone 14 "QoS Enforcement — Active Policy" fields.
+	ownershipRegistered  bool          // true when registered into a mockOwnershipState (qos.Ownership == ExclusiveOwnership)
+	livelinessRegistered bool          // true when registered into a topicLiveliness (qos.LivelinessLeaseDuration > 0), regardless of Liveliness kind
+	livelinessDone       chan struct{} // non-nil (and closed on Close) only for AutomaticLiveliness — see livelinessLoop
 }
 
 func (pub *publisher) Write(payload []byte) error {
@@ -501,6 +581,16 @@ func (pub *publisher) Close() error {
 		pub.deadlineTimer.Stop()
 		pub.deadlineTimer = nil
 	}
+	if pub.livelinessDone != nil {
+		close(pub.livelinessDone)
+		pub.livelinessDone = nil
+	}
+	if pub.livelinessRegistered {
+		pub.broker.livelinessStateFor(pub.topic).unregisterWriter(pub.guid)
+	}
+	if pub.ownershipRegistered {
+		pub.broker.ownershipStateFor(pub.topic).unregister(pub.guid)
+	}
 	pub.closed = true
 	return nil
 }
@@ -539,6 +629,9 @@ func (sub *subscriber) Unsubscribe() {
 			sub.deadlineTimer.Stop()
 		}
 		sub.broker.removeSubscription(sub.topic, sub.ch)
+		// Liveliness QoS (Milestone 14): stop delivering loss notifications to
+		// a subscriber that no longer receives samples.
+		sub.broker.livelinessStateFor(sub.topic).removeCallback(sub)
 	})
 }
 
@@ -578,11 +671,29 @@ func matchSlices(pSegs, tSegs []string) bool {
 
 // newMockGUID returns a pseudo-random 16-byte GUID backed by the current time.
 // Not cryptographically random; sufficient for in-process participant identity.
+// mockGUIDCounter is a process-wide monotonic counter mixed into every mock
+// GUID (see newMockGUID) so that two entities created within the same clock
+// tick still get distinct identities. Relying on time.Now().UnixNano() alone
+// is not safe: some platforms' clocks (observed on Windows CI runners) have
+// coarser effective resolution than a nanosecond, so two GUIDs generated in
+// quick succession — e.g. two publishers created back-to-back, as Ownership
+// QoS registration does — could otherwise collide.
+var mockGUIDCounter atomic.Uint64
+
+// newMockGUID returns a GUID unique within this process: the high 8 bytes are
+// a monotonic counter (collision-proof regardless of clock resolution), the
+// low 8 bytes are the current time for rough chronological ordering when
+// inspecting samples. Not cryptographically random; sufficient for in-process
+// participant/endpoint identity.
 func newMockGUID() dds.GUID {
 	var g dds.GUID
+	n := mockGUIDCounter.Add(1)
+	for i := 0; i < 8; i++ {
+		g[i] = byte(n >> (i * 8))
+	}
 	ns := time.Now().UnixNano()
 	for i := 0; i < 8; i++ {
-		g[i] = byte(ns >> (i * 8))
+		g[8+i] = byte(ns >> (i * 8))
 	}
 	return g
 }

@@ -22,6 +22,9 @@ import (
 	"net"
 	"sync"
 	"sync/atomic"
+	"time"
+
+	dds "github.com/SoundMatt/go-DDS"
 )
 
 // endpointInfo describes a local or remote DDS endpoint.
@@ -29,6 +32,16 @@ type endpointInfo struct {
 	guid      GUID
 	topicName string
 	isWriter  bool
+
+	// Milestone 14 "QoS Enforcement — Active Policy" fields, carried over the
+	// wire by buildEndpointData/handleEndpointAnnounce for remote endpoints,
+	// and populated directly from qos for local endpoints.
+	partitions []string // qos.Partition; set for both writers and readers
+
+	// Writer-only fields (isWriter == true); zero value for readers.
+	ownershipExclusive bool          // qos.Ownership == dds.ExclusiveOwnership
+	ownershipStrength  int32         // qos.OwnershipStrength
+	livelinessLease    time.Duration // qos.LivelinessLeaseDuration
 }
 
 // sedpService manages endpoint discovery and matching.
@@ -69,11 +82,15 @@ func (s *sedpService) close() {
 }
 
 // registerWriter records a local writer and announces it to all known peers.
-func (s *sedpService) registerWriter(eid EntityId, topicName string) {
+func (s *sedpService) registerWriter(eid EntityId, topicName string, qos dds.QoS) {
 	info := &endpointInfo{
-		guid:      GUID{Prefix: s.p.guidPrefix, Entity: eid},
-		topicName: topicName,
-		isWriter:  true,
+		guid:               GUID{Prefix: s.p.guidPrefix, Entity: eid},
+		topicName:          topicName,
+		isWriter:           true,
+		partitions:         qos.Partition,
+		ownershipExclusive: qos.Ownership == dds.ExclusiveOwnership,
+		ownershipStrength:  qos.OwnershipStrength,
+		livelinessLease:    qos.LivelinessLeaseDuration,
 	}
 	s.mu.Lock()
 	s.localWriters[eid] = info
@@ -82,19 +99,25 @@ func (s *sedpService) registerWriter(eid EntityId, topicName string) {
 }
 
 // registerReader records a local reader, announces it, and links any already-
-// discovered remote writers with a matching topic.
-func (s *sedpService) registerReader(eid EntityId, topicName string, r *rtpsReader) {
+// discovered remote writers with a matching topic whose Partition QoS
+// intersects qos.Partition (Milestone 14, "QoS Enforcement — Active Policy";
+// see partitionsMatch).
+func (s *sedpService) registerReader(eid EntityId, topicName string, qos dds.QoS, r *rtpsReader) {
 	info := &endpointInfo{
-		guid:      GUID{Prefix: s.p.guidPrefix, Entity: eid},
-		topicName: topicName,
-		isWriter:  false,
+		guid:       GUID{Prefix: s.p.guidPrefix, Entity: eid},
+		topicName:  topicName,
+		isWriter:   false,
+		partitions: qos.Partition,
 	}
 	s.mu.Lock()
 	s.localReaders[eid] = info
 	// Match against already-discovered remote writers.
 	for _, rw := range s.remoteWriters {
-		if rw.topicName == topicName {
+		if rw.topicName == topicName && partitionsMatch(rw.partitions, qos.Partition) {
 			r.addSourceGUID(rw.guid)
+			if rw.livelinessLease > 0 {
+				r.registerWriterLease(rw.guid, rw.livelinessLease)
+			}
 		}
 	}
 	s.mu.Unlock()
@@ -157,6 +180,20 @@ func (s *sedpService) buildEndpointData(info *endpointInfo) []byte {
 	enc.addString(pidTypeName, "CDR_BLOB") // opaque type for raw byte payloads
 	userLocator := locatorFromUDP(&net.UDPAddr{IP: net.IPv4zero}, s.p.dataSock.port)
 	enc.addLocator(pidDefaultUnicastLocator, userLocator)
+	// Milestone 14 "QoS Enforcement — Active Policy": Partition applies to
+	// both writers and readers; Ownership/Liveliness only matter on writers.
+	for _, part := range info.partitions {
+		enc.addString(pidPartition, part)
+	}
+	if info.isWriter {
+		if info.ownershipExclusive {
+			enc.addUint32(pidOwnership, 1)
+			enc.addUint32(pidOwnershipStrength, uint32(info.ownershipStrength))
+		}
+		if info.livelinessLease > 0 {
+			enc.addInt64(pidLivelinessLeaseDuration, int64(info.livelinessLease))
+		}
+	}
 	if ep, ok := s.p.discoveryPlugin.(EndpointPlugin); ok {
 		tag := ep.SignEndpoint(s.p.guidPrefix[:], info.topicName)
 		enc.addBytes(pidEndpointToken, tag)
@@ -260,6 +297,22 @@ func (s *sedpService) handleEndpointAnnounce(remotePrefix GuidPrefix, payload []
 		case pidEndpointToken:
 			endpointTag = make([]byte, len(p.value))
 			copy(endpointTag, p.value)
+		case pidPartition:
+			if part, ok := decodeString(p.value); ok {
+				info.partitions = append(info.partitions, part)
+			}
+		case pidOwnership:
+			if v, ok := decodeUint32(p.value); ok && v != 0 {
+				info.ownershipExclusive = true
+			}
+		case pidOwnershipStrength:
+			if v, ok := decodeUint32(p.value); ok {
+				info.ownershipStrength = int32(v)
+			}
+		case pidLivelinessLeaseDuration:
+			if v, ok := decodeInt64(p.value); ok {
+				info.livelinessLease = time.Duration(v)
+			}
 		}
 	}
 	if info.topicName == "" {
@@ -284,13 +337,22 @@ func (s *sedpService) handleEndpointAnnounce(remotePrefix GuidPrefix, payload []
 func (s *sedpService) onRemoteWriter(info *endpointInfo, dataLocator Locator) {
 	s.mu.Lock()
 	s.remoteWriters[info.guid] = info
-	// Match against local readers for this topic.
+	// Ownership QoS (Milestone 14): a remote ExclusiveOwnership writer
+	// competes for "active writer" on this topic exactly like a local one.
+	if info.ownershipExclusive {
+		s.p.ownershipStateFor(info.topicName).register(info.guid, info.ownershipStrength)
+	}
+	// Match against local readers for this topic whose Partition QoS
+	// intersects the writer's (Milestone 14; see partitionsMatch).
 	for _, lr := range s.localReaders {
-		if lr.topicName == info.topicName {
+		if lr.topicName == info.topicName && partitionsMatch(lr.partitions, info.partitions) {
 			s.endpointMatches.Add(1)
 			// Notify the reader so it can accept DATA from this writer.
 			s.p.readerByEID(lr.guid.Entity, func(r *rtpsReader) {
 				r.addSourceGUID(info.guid)
+				if info.livelinessLease > 0 {
+					r.registerWriterLease(info.guid, info.livelinessLease)
+				}
 				// Register the writer's data-delivery address on the participant.
 				s.p.addWriterLocator(info.guid, dataLocator)
 			})
@@ -312,8 +374,13 @@ func (s *sedpService) onRemoteReader(info *endpointInfo, dataLocator Locator) {
 // tables. Called by the SPDP eviction loop when a participant's lease expires.
 func (s *sedpService) onPeerEvicted(prefix GuidPrefix) {
 	s.mu.Lock()
-	for guid := range s.remoteWriters {
+	for guid, info := range s.remoteWriters {
 		if guid.Prefix == prefix {
+			// Ownership QoS (Milestone 14): step the evicted writer down from
+			// arbitration so a surviving lower-strength writer can take over.
+			if info.ownershipExclusive {
+				s.p.ownershipStateFor(info.topicName).unregister(guid)
+			}
 			delete(s.remoteWriters, guid)
 		}
 	}

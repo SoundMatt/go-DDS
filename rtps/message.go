@@ -61,6 +61,18 @@ const (
 	flagData       = byte(0x04) // D: serialised payload present
 )
 
+// flag bits for HEARTBEAT submessage (§9.4.5.5).
+const (
+	// hbFlagLiveliness is the spec's "L" flag: set when a HEARTBEAT is sent
+	// purely to assert liveliness (Milestone 14, "QoS Enforcement — Active
+	// Policy"), as opposed to advertising the writer's retransmission
+	// history. Readers must not feed a liveliness-only HEARTBEAT into their
+	// reliability tracker (no ACKNACK should be generated from it) — only
+	// touch the writer's last-seen-alive timestamp. See
+	// rtpsWriter.assertLiveliness and participant.handleHeartbeat.
+	hbFlagLiveliness = byte(0x04)
+)
+
 // marshalHeader writes the 20-byte RTPS Header into buf.
 func marshalHeader(h Header) []byte {
 	b := make([]byte, 20)
@@ -172,6 +184,10 @@ type Heartbeat struct {
 	FirstSN        SequenceNumber // lowest SN still in the writer's history
 	LastSN         SequenceNumber // highest SN sent so far
 	Count          int32          // monotonically increasing per writer
+	// Liveliness marks this HEARTBEAT as a pure liveliness assertion (the "L"
+	// flag, §9.4.5.5) rather than a retransmission-history advertisement. The
+	// zero value (false) reproduces the pre-Milestone-14 wire format exactly.
+	Liveliness bool
 }
 
 // marshalHeartbeat builds a HEARTBEAT submessage.
@@ -188,6 +204,9 @@ func marshalHeartbeat(hb Heartbeat) []byte {
 	hdr := make([]byte, 4)
 	hdr[0] = submsgHEARTBEAT
 	hdr[1] = flagEndianness
+	if hb.Liveliness {
+		hdr[1] |= hbFlagLiveliness
+	}
 	binary.LittleEndian.PutUint16(hdr[2:], uint16(len(body)))
 	return append(hdr, body...)
 }

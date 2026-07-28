@@ -96,6 +96,14 @@ var ErrResourceLimits = fmt.Errorf("dds: resource limit exceeded: %w", ErrPayloa
 // per spec §5.4.
 var ErrLoanBuffer = fmt.Errorf("dds: loan buffer unavailable or invalid: %w", ErrClosed)
 
+// ErrLivelinessLost is delivered to a subscriber's LivelinessLostCallback (see
+// WithLivelinessLost) when a matched writer configured with
+// QoS.LivelinessLeaseDuration stops asserting liveliness within its lease
+// period (Milestone 14, "QoS Enforcement — Active Policy"). Wraps
+// relay.ErrTimeout per spec §5.3, matching ErrDeadlineMissed's pattern for a
+// liveness-timeout condition.
+var ErrLivelinessLost = fmt.Errorf("dds: writer liveliness lost: %w", relay.ErrTimeout)
+
 // ── Domain ────────────────────────────────────────────────────────────────────
 
 //fusa:req REQ-PART-001
@@ -177,7 +185,79 @@ type QoS struct {
 	// MaxSampleSize is the maximum Write payload size in bytes. Write returns
 	// ErrPayloadTooLarge if the payload exceeds this limit. 0 = unlimited.
 	MaxSampleSize int `json:"max_sample_size"`
+
+	// Milestone 14 "QoS Enforcement — Active Policy" extensions.
+
+	// Liveliness selects how a writer's liveliness is asserted. The default,
+	// AutomaticLiveliness, is always satisfied while the owning participant is
+	// running (matching pre-v1.0 behaviour); it has no additional effect
+	// unless LivelinessLeaseDuration is also set.
+	Liveliness LivelinessKind `json:"liveliness"`
+	// LivelinessLeaseDuration is the maximum interval between liveliness
+	// assertions from a writer before matched subscribers consider it dead and
+	// invoke their LivelinessLostCallback (see WithLivelinessLost) with
+	// ErrLivelinessLost. 0 disables active liveliness enforcement — the
+	// writer's samples and heartbeats still update the passive
+	// participant-level lease tracked by WithLivelinessCallback, but no
+	// per-writer timeout is enforced.
+	LivelinessLeaseDuration time.Duration `json:"liveliness_lease_duration"`
+
+	// Ownership selects whether multiple writers may publish the same topic
+	// concurrently (SharedOwnership, the default) or whether only the
+	// highest-OwnershipStrength writer's samples are delivered
+	// (ExclusiveOwnership).
+	Ownership OwnershipKind `json:"ownership"`
+	// OwnershipStrength ranks writers when Ownership is ExclusiveOwnership;
+	// higher wins. Ties are broken deterministically by GUID so all
+	// subscribers converge on the same active writer. Ignored when Ownership
+	// is SharedOwnership.
+	OwnershipStrength int32 `json:"ownership_strength"`
+
+	// Partition scopes topic matching to a logical namespace within a domain:
+	// a publisher and subscriber on the same topic only match when their
+	// Partition sets intersect. An empty (or nil) Partition is the default
+	// partition — matches only other endpoints that also use the default
+	// partition, not arbitrary named partitions (standard DDS semantics).
+	Partition []string `json:"partition,omitempty"`
+
+	// MinSeparation is the Time-Based Filter QoS: the subscriber drops any
+	// sample from a given writer that arrives less than MinSeparation after
+	// the previous delivered sample from that same writer. 0 disables
+	// filtering (every sample is delivered, subject to other QoS). Applies at
+	// the subscriber; has no effect when set on a publisher.
+	MinSeparation time.Duration `json:"min_separation"`
 }
+
+// LivelinessKind controls how a writer's liveliness is asserted (DDS
+// LIVELINESS QoS policy).
+type LivelinessKind int
+
+const (
+	// AutomaticLiveliness ties liveliness to the writer's owning participant:
+	// as long as the process is running, the writer is considered alive. This
+	// is the default and matches pre-v1.0 behaviour.
+	AutomaticLiveliness LivelinessKind = iota
+	// ManualByTopicLiveliness requires the application to publish (or the
+	// implementation to send periodic liveliness assertions on its behalf, as
+	// go-DDS's rtps and mock backends do) within LivelinessLeaseDuration, or
+	// matched subscribers consider the writer dead.
+	ManualByTopicLiveliness
+)
+
+// OwnershipKind controls whether multiple writers may concurrently publish a
+// topic (DDS OWNERSHIP QoS policy).
+type OwnershipKind int
+
+const (
+	// SharedOwnership allows every matched writer's samples to be delivered
+	// concurrently. This is the default and matches pre-v1.0 behaviour.
+	SharedOwnership OwnershipKind = iota
+	// ExclusiveOwnership allows only the matched writer with the highest
+	// OwnershipStrength to have its samples delivered; all other writers on
+	// the topic are silenced until the active writer is closed, evicted, or
+	// loses liveliness.
+	ExclusiveOwnership
+)
 
 // DefaultQoS is BestEffort + Volatile with implementation-default history.
 var DefaultQoS = QoS{
@@ -312,6 +392,12 @@ type SubscriberConfig struct {
 	ChannelDepth           int                // 0 = implementation default (64)
 	BackPressure           BackPressurePolicy // default: DropNewest
 	DeadlineMissedCallback func()             // called when subscriber deadline expires; nil = disabled
+	// LivelinessLostCallback is called with the writer's GUID when a matched
+	// writer configured with QoS.LivelinessLeaseDuration stops asserting
+	// liveliness within its lease period. nil = disabled (default): no
+	// per-writer liveliness monitoring is performed. See WithLivelinessLost
+	// and ErrLivelinessLost.
+	LivelinessLostCallback func(GUID)
 }
 
 // SubscriberOption configures a subscriber at creation time.
@@ -341,6 +427,15 @@ func WithBackPressure(policy BackPressurePolicy) SubscriberOption {
 // Has no effect when QoS.Deadline == 0 on the subscriber.
 func WithDeadlineMissed(fn func()) SubscriberOption {
 	return func(c *SubscriberConfig) { c.DeadlineMissedCallback = fn }
+}
+
+// WithLivelinessLost registers fn to be called with a matched writer's GUID
+// when that writer stops asserting liveliness within its
+// QoS.LivelinessLeaseDuration (Milestone 14, "QoS Enforcement — Active
+// Policy"). fn must be non-nil. Has no effect for writers that do not set
+// LivelinessLeaseDuration. See ErrLivelinessLost.
+func WithLivelinessLost(fn func(GUID)) SubscriberOption {
+	return func(c *SubscriberConfig) { c.LivelinessLostCallback = fn }
 }
 
 // ApplySubscriberOpts merges a slice of SubscriberOption into a SubscriberConfig.

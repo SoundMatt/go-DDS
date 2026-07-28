@@ -740,18 +740,64 @@ path is unchanged. Proven end-to-end by `TestDTLS_TwoParticipants_SameHost`
 SEDP/DATA send between them encrypted over DTLS and confirmed via a live
 `dtlsSocket` connection) alongside `dtlsSocket`-level unit tests covering
 send/receive, oversized-record rejection, mutual-auth enforcement, and
-dial-handshake timeout. QoS Enforcement — Active Policy remains open for a
-future PR; Milestone 14 is not yet complete.
+dial-handshake timeout.
 
-### QoS Enforcement — Active Policy
+### QoS Enforcement — Active Policy ✅
 
-- **Liveliness**: publishers assert liveness on a heartbeat schedule; subscribers raise `ErrLivelinessLost` when a writer goes silent
-- **Ownership**: `OwnershipStrength` selects the active writer; lower-strength writers are silenced until primary fails
-- **Partition**: logical namespace isolation within a domain — topics only matched when partitions intersect
-- **Time-Based Filter**: `MinSeparation` QoS drops samples arriving faster than the configured rate at the subscriber
+- **Liveliness**: publishers assert liveness on a heartbeat schedule; subscribers raise `ErrLivelinessLost` when a writer goes silent ✅
+- **Ownership**: `OwnershipStrength` selects the active writer; lower-strength writers are silenced until primary fails ✅
+- **Partition**: logical namespace isolation within a domain — topics only matched when partitions intersect ✅
+- **Time-Based Filter**: `MinSeparation` QoS drops samples arriving faster than the configured rate at the subscriber ✅
+
+**Shipped** (root v0.58.0). Adds four new `dds.QoS` fields —
+`Liveliness`/`LivelinessLeaseDuration`, `Ownership`/`OwnershipStrength`,
+`Partition`, and `MinSeparation` — plus `dds.ErrLivelinessLost` and the
+`dds.WithLivelinessLost` subscriber option, implemented identically (down to
+shared helper names) in both the `rtps` and `mock` backends so application
+code portable between them behaves the same way:
+- **Liveliness**: `AutomaticLiveliness` (the default) drives a writer-owned
+  ticker (`rtpsWriter.livelinessLoop` / `publisher.livelinessLoop`) that
+  asserts on a schedule — in `rtps` via a dedicated liveliness-only HEARTBEAT
+  carrying the RTPS spec's "L" flag (`hbFlagLiveliness`, `message.go`), kept
+  strictly separate from the reliable retransmission HEARTBEAT so it never
+  perturbs `reliable.go`'s tracker. `ManualByTopicLiveliness` starts no
+  ticker — only real `Write` traffic touches the lease — so a writer that
+  stops publishing is correctly declared lost. Subscribers register via
+  `WithLivelinessLost`; a per-writer lease monitor
+  (`rtpsReader`/broker `topicLiveliness`) polls and fires the callback with
+  `dds.ErrLivelinessLost` semantics, edge-triggered per silence episode.
+- **Ownership**: an `ownershipState` (`rtps`) / `mockOwnershipState` (`mock`)
+  arbitrates per topic among `ExclusiveOwnership` writers by
+  `OwnershipStrength`, ties broken deterministically by GUID. Only the active
+  writer's samples reach subscribers; closing it, an SPDP peer eviction, or
+  (in `rtps`) a liveliness loss all trigger recomputation, so a lower-strength
+  writer transparently takes over.
+- **Partition**: `partitionsMatch` implements the standard DDS rule — sets
+  must intersect, with the empty set treated as the single default partition
+  `""` so two unset-`Partition` endpoints still match each other but never a
+  named one. Enforced for same-process pairs (`dispatchToReaders` / the mock
+  broker's `publish`) and, in `rtps`, propagated over SEDP via new
+  vendor-extension `PL_CDR` parameters (`pidPartition` and friends,
+  `cdr.go`/`sedp.go`) so a remote writer/reader pair matches identically to a
+  local one.
+- **Time-Based Filter**: `MinSeparation` is enforced per (reader, writer)
+  pair at delivery time (`rtpsReader.passesTimeBasedFilter` /
+  `timeBasedFilterState`), so one fast writer's rate limit never starves
+  delivery from another matched writer on the same topic.
+
+Fully additive: every new `QoS` field's zero value reproduces pre-v0.58
+behaviour exactly (`SharedOwnership`, no partition filtering,
+`AutomaticLiveliness` with no lease, `MinSeparation` disabled). Proven by
+`rtps/qos_enforce_test.go` and `mock/qos_enforce_test.go` — same-topic
+partition gating, ownership failover on `Close`, automatic-vs-manual
+liveliness (stays alive under an active ticker; fires when a manual writer
+goes silent), and time-based-filter drop/pass behaviour, for both backends.
 
 Success Criteria:
 go-DDS participants connect through corporate firewalls and across cloud VPCs without VPN or custom infrastructure.
+
+Milestone 14 is now complete: TCP/TLS (#117), DTLS (#118), and QoS
+Enforcement — Active Policy (this release) are all shipped.
 
 ---
 

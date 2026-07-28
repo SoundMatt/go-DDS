@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -53,7 +54,10 @@ type Options struct {
 }
 
 func (o Options) qos() dds.QoS {
-	if o.QoS == (dds.QoS{}) {
+	// dds.QoS gained a []string field (Partition) in Milestone 14 "QoS
+	// Enforcement — Active Policy", making it non-comparable with ==;
+	// reflect.DeepEqual is the equivalent zero-value check.
+	if reflect.DeepEqual(o.QoS, dds.QoS{}) {
 		return dds.DefaultQoS
 	}
 	return o.QoS

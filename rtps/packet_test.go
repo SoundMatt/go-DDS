@@ -711,7 +711,7 @@ func TestHandleAckNack_EvictedHistory_SendsGAP(t *testing.T) {
 
 func TestMatchedReaderLocators_EmptyReturnsNone(t *testing.T) {
 	p := testPart(t)
-	locs := p.matchedReaderLocators("some/topic")
+	locs := p.matchedReaderLocators("some/topic", nil)
 	if len(locs) != 0 {
 		t.Errorf("expected 0 locators for unknown topic, got %d", len(locs))
 	}
@@ -734,11 +734,11 @@ func TestMatchedReaderLocators_TopicFiltered(t *testing.T) {
 	p.sedp.mu.Unlock()
 
 	// Query for "topic/a" → should return the locator.
-	if got := p.matchedReaderLocators("topic/a"); len(got) != 1 {
+	if got := p.matchedReaderLocators("topic/a", nil); len(got) != 1 {
 		t.Errorf("topic/a: expected 1 locator, got %d", len(got))
 	}
 	// Query for "topic/b" → should return nothing.
-	if got := p.matchedReaderLocators("topic/b"); len(got) != 0 {
+	if got := p.matchedReaderLocators("topic/b", nil); len(got) != 0 {
 		t.Errorf("topic/b: expected 0 locators, got %d", len(got))
 	}
 }
@@ -758,7 +758,7 @@ func TestMatchedReaderLocators_DeduplicatesSharedLocator(t *testing.T) {
 		p.sedp.mu.Unlock()
 	}
 
-	locs := p.matchedReaderLocators("dup/topic")
+	locs := p.matchedReaderLocators("dup/topic", nil)
 	if len(locs) != 1 {
 		t.Errorf("expected 1 deduplicated locator, got %d", len(locs))
 	}

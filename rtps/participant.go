@@ -432,6 +432,12 @@ type participant struct {
 
 	// Per-topic metrics: topic string → *topicCounter (sync.Map, no lock needed).
 	topicMetrics sync.Map
+
+	// ownership holds per-topic Ownership QoS arbitration state (Milestone 14,
+	// "QoS Enforcement — Active Policy"): topic string → *ownershipState.
+	// A sync.Map because most topics never use ExclusiveOwnership and the
+	// common case (ownershipAllows) must stay a cheap read.
+	ownership sync.Map
 }
 
 // effectiveHeartbeatPeriod returns the heartbeat period configured by
@@ -626,12 +632,13 @@ func (p *participant) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, er
 	n := atomic.AddUint32(&p.entityCounter, 1)
 	eid := entityIdForWriter(n)
 	w := &rtpsWriter{
-		p:        p,
-		topic:    topic,
-		eid:      eid,
-		qos:      qos,
-		reliable: qos.Reliability == dds.Reliable,
-		hbPeriod: p.effectiveHeartbeatPeriod(),
+		p:          p,
+		topic:      topic,
+		eid:        eid,
+		qos:        qos,
+		reliable:   qos.Reliability == dds.Reliable,
+		hbPeriod:   p.effectiveHeartbeatPeriod(),
+		partitions: qos.Partition,
 	}
 	if w.reliable {
 		w.history = newSendHistory()
@@ -644,6 +651,35 @@ func (p *participant) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, er
 	}
 	if qos.Deadline > 0 && p.deadlineCb != nil {
 		w.deadlineTimer = time.AfterFunc(qos.Deadline, func() { p.deadlineCb(topic) })
+	}
+	// Ownership QoS (Milestone 14): register this writer in the topic-level
+	// arbitration state so it competes for "active writer" status. A no-op
+	// (state never created) for the default SharedOwnership.
+	if qos.Ownership == dds.ExclusiveOwnership {
+		w.ownershipRegistered = true
+		p.ownershipStateFor(topic).register(GUID{Prefix: p.guidPrefix, Entity: eid}, qos.OwnershipStrength)
+	}
+	// Liveliness QoS (Milestone 14): AutomaticLiveliness (the default) asserts
+	// on a schedule via livelinessLoop, so the writer stays "alive" as long as
+	// the process runs, with no application involvement. ManualByTopicLiveliness
+	// asserts only through real traffic — dispatchToReaders already touches
+	// every accepting reader's liveliness clock on each delivered DATA sample
+	// (see participant.dispatchToReaders), so no ticker is started here; a
+	// writer that stops calling Write is correctly declared lost. Either way,
+	// back-fill the lease into any already-existing local reader on this
+	// topic+partition — mirrors what SEDP's onNewPeer does for remote peers,
+	// since same-process pub/sub never round-trips through SEDP.
+	if qos.LivelinessLeaseDuration > 0 {
+		if qos.Liveliness == dds.AutomaticLiveliness {
+			w.livelinessDone = make(chan struct{})
+			go w.livelinessLoop(w.livelinessDone)
+		}
+		writerGUID := GUID{Prefix: p.guidPrefix, Entity: eid}
+		for _, r := range p.readers {
+			if r.topic == topic && partitionsMatch(qos.Partition, r.partitions) {
+				r.registerWriterLease(writerGUID, qos.LivelinessLeaseDuration)
+			}
+		}
 	}
 	// Wire TSN stream: config match takes priority, TransportPriority QoS
 	// field acts as a fallback PCP selector when no config entry exists.
@@ -663,7 +699,7 @@ func (p *participant) NewPublisher(topic string, qos dds.QoS) (dds.Publisher, er
 		w.tsnSock = p.tsnSocketForPCP(pcp, 0, false)
 	}
 	p.writers[eid] = w
-	p.sedp.registerWriter(eid, topic)
+	p.sedp.registerWriter(eid, topic, qos)
 	p.log.debug("new publisher topic=%s reliable=%v tsn=%v", topic, w.reliable, w.tsnSock != nil)
 	return w, nil
 }
@@ -685,13 +721,29 @@ func (p *participant) NewSubscriber(topic string, qos dds.QoS, opts ...dds.Subsc
 	n := atomic.AddUint32(&p.entityCounter, 1)
 	eid := entityIdForReader(n)
 	r := &rtpsReader{
-		p:            p,
-		topic:        topic,
-		eid:          eid,
-		ch:           make(chan dds.Sample, depth),
-		reliable:     qos.Reliability == dds.Reliable,
-		filter:       cfg.Filter,
-		backPressure: cfg.BackPressure,
+		p:             p,
+		topic:         topic,
+		eid:           eid,
+		ch:            make(chan dds.Sample, depth),
+		reliable:      qos.Reliability == dds.Reliable,
+		filter:        cfg.Filter,
+		backPressure:  cfg.BackPressure,
+		partitions:    qos.Partition,
+		minSeparation: qos.MinSeparation,
+	}
+	// Liveliness QoS (Milestone 14): if this subscriber wants loss
+	// notifications, start its lease monitor and back-fill leases from any
+	// already-existing local writer on this topic+partition — mirrors what
+	// SEDP's onRemoteWriter does for remote peers.
+	if cfg.LivelinessLostCallback != nil {
+		r.livelinessLostCb = cfg.LivelinessLostCallback
+		r.monitorDone = make(chan struct{})
+		go r.livelinessMonitorLoop(r.monitorDone)
+		for _, w := range p.writers {
+			if w.topic == topic && w.qos.LivelinessLeaseDuration > 0 && partitionsMatch(w.qos.Partition, qos.Partition) {
+				r.registerWriterLease(GUID{Prefix: p.guidPrefix, Entity: w.eid}, w.qos.LivelinessLeaseDuration)
+			}
+		}
 	}
 	if qos.Deadline > 0 && cfg.DeadlineMissedCallback != nil {
 		fn := cfg.DeadlineMissedCallback
@@ -706,7 +758,7 @@ func (p *participant) NewSubscriber(topic string, qos dds.QoS, opts ...dds.Subsc
 	}
 	p.log.debug("new subscriber topic=%s depth=%d backpressure=%d", topic, depth, cfg.BackPressure)
 	p.readers[eid] = r
-	p.sedp.registerReader(eid, topic, r)
+	p.sedp.registerReader(eid, topic, qos, r)
 	// TransientLocal: deliver the last published sample to the new subscriber.
 	// Also check disk-backed persistent history if no in-memory sample exists.
 	if qos.Durability == dds.TransientLocal {
@@ -924,7 +976,7 @@ func (p *participant) handleDataPacket(data []byte, from *net.UDPAddr) {
 	// pendingTS carries the most-recently parsed INFO_TS timestamp within this
 	// message so it can be attached to the following DATA submessage.
 	var pendingTS time.Time
-	_ = parseSubmessages(data[20:], func(id, _ byte, body []byte) error {
+	_ = parseSubmessages(data[20:], func(id, flags byte, body []byte) error {
 		switch id {
 		case submsgINFO_TS:
 			if ts, ok2 := parseInfoTS(body); ok2 {
@@ -953,13 +1005,19 @@ func (p *participant) handleDataPacket(data []byte, from *net.UDPAddr) {
 			}
 			sourceGUID := GUID{Prefix: hdr.GuidPrefix, Entity: ds.WriterEntityId}
 			p.notifyReliableReaders(sourceGUID, ds.SeqNum, from)
-			p.dispatchToReaders(sourceGUID, "", rawPayload, pendingTS, uint64(ds.SeqNum.Low))
+			// writerPartitions is nil: this is always a genuinely remote
+			// writer (sourceGUID.Prefix comes from the wire header), so the
+			// same-process partition check in dispatchToReaders never
+			// triggers — remote partition matching already happened at SEDP
+			// match time (see sedp.go).
+			p.dispatchToReaders(sourceGUID, "", rawPayload, pendingTS, uint64(ds.SeqNum.Low), nil)
 
 		case submsgHEARTBEAT:
 			hb, ok := parseHeartbeat(body)
 			if !ok {
 				return nil
 			}
+			hb.Liveliness = flags&hbFlagLiveliness != 0
 			writerGUID := GUID{Prefix: hdr.GuidPrefix, Entity: hb.WriterEntityId}
 			p.handleHeartbeat(writerGUID, hb, from)
 
@@ -1008,7 +1066,13 @@ func (p *participant) notifyReliableReaders(writerGUID GUID, seqNum SequenceNumb
 	}
 }
 
-// handleHeartbeat responds with ACKNACK if we have gaps for this writer.
+// handleHeartbeat responds with ACKNACK if we have gaps for this writer, and
+// (Milestone 14) touches every matched reader's liveliness clock for
+// writerGUID regardless of reliability. A liveliness-only HEARTBEAT
+// (hb.Liveliness — the "L" flag) never touches the reliability tracker: it
+// carries no meaningful FirstSN/LastSN, so feeding it in would risk spurious
+// ACKNACK traffic or, for a best-effort writer's empty history, an incorrect
+// initExpected anchor.
 func (p *participant) handleHeartbeat(writerGUID GUID, hb Heartbeat, from *net.UDPAddr) {
 	p.mu.Lock()
 	readers := make([]*rtpsReader, 0, len(p.readers))
@@ -1018,7 +1082,11 @@ func (p *participant) handleHeartbeat(writerGUID GUID, hb Heartbeat, from *net.U
 	p.mu.Unlock()
 
 	for _, r := range readers {
-		if !r.reliable || !r.acceptsSource(writerGUID) {
+		if !r.acceptsSource(writerGUID) {
+			continue
+		}
+		r.touchLiveliness(writerGUID)
+		if hb.Liveliness || !r.reliable {
 			continue
 		}
 		tracker := r.trackerFor(writerGUID)
@@ -1069,7 +1137,7 @@ func (p *participant) handleAckNack(an AckNack, from *net.UDPAddr) {
 		if msg == nil {
 			continue
 		}
-		for _, loc := range p.matchedReaderLocators(w.topic) {
+		for _, loc := range p.matchedReaderLocators(w.topic, w.partitions) {
 			if dst := loc.udpAddr(); dst != nil {
 				p.sendUnicast(p.dataSock, dst, msg)
 			}
@@ -1097,7 +1165,7 @@ func (p *participant) handleAckNack(an AckNack, from *net.UDPAddr) {
 			p.sendUnicast(p.dataSock, from, gapMsg)
 		}
 		// Also send to all matched readers so any reader on this topic can advance.
-		for _, loc := range p.matchedReaderLocators(w.topic) {
+		for _, loc := range p.matchedReaderLocators(w.topic, w.partitions) {
 			if dst := loc.udpAddr(); dst != nil {
 				p.sendUnicast(p.dataSock, dst, gapMsg)
 			}
@@ -1288,7 +1356,17 @@ func (p *participant) dtlsReceiveLoop() {
 // (used for UDP paths where the topic is resolved via SEDP source GUID).
 // ts is the source timestamp from INFO_TS (zero if not present).
 // seqNum is the writer's sequence number for this sample (0 = not set).
-func (p *participant) dispatchToReaders(source GUID, topicFilter string, payload []byte, ts time.Time, seqNum uint64) {
+// writerPartitions is the writer's Partition QoS; only meaningful (and only
+// checked) for same-process delivery — see the comment at the partition check
+// below — so remote callers (handleDataPacket) pass nil.
+//
+// Beyond topic/source matching, this is also the single funnel through which
+// the three delivery-time QoS Enforcement policies apply uniformly to both
+// local (same-process) and remote writers (Milestone 14, "QoS Enforcement —
+// Active Policy"): Partition, Ownership, and the Time-Based Filter. Liveliness
+// is touched here too, since a delivered DATA sample is proof the writer is
+// alive regardless of whether the writer separately sends liveliness pings.
+func (p *participant) dispatchToReaders(source GUID, topicFilter string, payload []byte, ts time.Time, seqNum uint64, writerPartitions []string) {
 	ctx, span := p.tracer.Start(context.Background(), "dds.dispatch",
 		dds.SpanAttribute{Key: "topic", Value: topicFilter},
 	)
@@ -1306,11 +1384,32 @@ func (p *participant) dispatchToReaders(source GUID, topicFilter string, payload
 	}
 	p.mu.Unlock()
 
+	now := time.Now()
 	for _, r := range readers {
 		if topicFilter != "" && r.topic != topicFilter && !TopicMatches(r.topic, topicFilter) {
 			continue
 		}
 		if !r.acceptsSource(source) {
+			continue
+		}
+		r.touchLiveliness(source)
+		// Partition QoS: for a remote writer, acceptsSource already gates on
+		// r.sources, which SEDP only populates for partition-matching pairs
+		// (see sedp.go onRemoteWriter/registerReader) — so writerPartitions is
+		// nil here and this check is skipped. For a same-process writer,
+		// acceptsSource always returns true regardless of partition (own-GUID
+		// bypass, see rtpsReader.acceptsSource), so it must be checked
+		// explicitly here using the caller-supplied writer partitions.
+		if source.Prefix == p.guidPrefix && !partitionsMatch(writerPartitions, r.partitions) {
+			continue
+		}
+		if !p.ownershipAllows(r.topic, source) {
+			continue
+		}
+		if !r.passesTimeBasedFilter(source, now) {
+			tc := p.topicCounterFor(r.topic)
+			tc.drops.Add(1)
+			p.mDrops.Add(1)
 			continue
 		}
 		sample := dds.Sample{
@@ -1445,16 +1544,21 @@ func (p *participant) addWriterLocator(g GUID, l Locator) {
 }
 
 // matchedReaderLocators returns the data-unicast locators for all remote
-// participants that have an active subscription to topicName. Locators are
-// deduplicated so a participant with multiple readers on the same topic
-// receives only one copy of each DATA packet.
-func (p *participant) matchedReaderLocators(topicName string) []Locator {
+// participants that have an active subscription to topicName whose Partition
+// QoS intersects partitions (Milestone 14, "QoS Enforcement — Active
+// Policy"; see partitionsMatch). Locators are deduplicated so a participant
+// with multiple readers on the same topic receives only one copy of each
+// DATA packet.
+func (p *participant) matchedReaderLocators(topicName string, partitions []string) []Locator {
 	p.sedp.mu.RLock()
 	defer p.sedp.mu.RUnlock()
 	var locators []Locator
 	seen := make(map[Locator]bool)
 	for guid, ri := range p.sedp.remoteReaders {
 		if ri.topicName != topicName {
+			continue
+		}
+		if !partitionsMatch(partitions, ri.partitions) {
 			continue
 		}
 		loc, ok := p.sedp.remoteReaderLocs[guid]
@@ -1489,6 +1593,12 @@ type rtpsWriter struct {
 	// TSN fields — nil when not a TSN writer.
 	tsnStream *TSNParams // matching stream descriptor
 	tsnSock   *udpSocket // priority-marked socket (nil = use dataSock)
+
+	// Milestone 14 "QoS Enforcement — Active Policy" fields.
+	partitions          []string      // qos.Partition, cached for dispatch/send-time matching
+	ownershipRegistered bool          // true when this writer registered into an ownershipState (qos.Ownership == ExclusiveOwnership)
+	livelinessDone      chan struct{} // non-nil (and closed on Close) when qos.LivelinessLeaseDuration > 0
+	livelinessSeq       atomic.Uint32 // Count field for liveliness-only HEARTBEATs; independent of history.hbCount
 }
 
 // fragmentSize returns the per-fragment payload cap for this writer.
@@ -1580,10 +1690,10 @@ func (w *rtpsWriter) Write(payload []byte) error {
 	sample := dds.Sample{Topic: w.topic, Payload: localCopy, Timestamp: now}
 	w.p.lastSample.Store(w.topic, &sample)
 	persistFlush(w.p.persistDir, w.topic, localCopy)
-	w.p.dispatchToReaders(GUID{Prefix: w.p.guidPrefix, Entity: w.eid}, w.topic, localCopy, now, w.seq)
+	w.p.dispatchToReaders(GUID{Prefix: w.p.guidPrefix, Entity: w.eid}, w.topic, localCopy, now, w.seq, w.partitions)
 
 	// Deliver to remote peers.
-	locs := w.p.matchedReaderLocators(w.topic)
+	locs := w.p.matchedReaderLocators(w.topic, w.partitions)
 	// Compute scheduled transmit time for TSN streams (nanoseconds since TAI epoch).
 	var txTimeNS uint64
 	if w.tsnStream != nil && w.tsnStream.TxOffset > 0 {
@@ -1645,7 +1755,7 @@ func (w *rtpsWriter) sendHeartbeatLocked() {
 	}
 	msg := wrapInRTPSMessage(w.p.guidPrefix, marshalHeartbeat(hb))
 	sock := w.sendSock()
-	for _, loc := range w.p.matchedReaderLocators(w.topic) {
+	for _, loc := range w.p.matchedReaderLocators(w.topic, w.partitions) {
 		if dst := loc.udpAddr(); dst != nil {
 			w.p.sendUnicast(sock, dst, msg)
 		}
@@ -1731,9 +1841,20 @@ func (w *rtpsWriter) Close() error {
 		close(w.hbDone)
 		w.hbDone = nil // safe: heartbeatLoop captured the channel at startup
 	}
+	if w.livelinessDone != nil {
+		close(w.livelinessDone)
+		w.livelinessDone = nil
+	}
 	if w.deadlineTimer != nil {
 		w.deadlineTimer.Stop()
 		w.deadlineTimer = nil
+	}
+	// Ownership QoS (Milestone 14): step down from arbitration so a
+	// lower-strength writer (or none) can take over — "silenced until primary
+	// fails" applies symmetrically to an orderly Close, not just liveliness
+	// loss or eviction.
+	if w.ownershipRegistered {
+		w.p.ownershipStateFor(w.topic).unregister(GUID{Prefix: w.p.guidPrefix, Entity: w.eid})
 	}
 	return nil
 }
@@ -1756,6 +1877,20 @@ type rtpsReader struct {
 	closed        bool        // true once Close has closed ch; guarded by mu
 	resetDeadline func()      // nil if no deadline configured
 	deadlineTimer *time.Timer // non-nil when QoS.Deadline > 0 and callback set
+
+	// Milestone 14 "QoS Enforcement — Active Policy" fields.
+	partitions    []string      // qos.Partition, cached for dispatch-time matching
+	minSeparation time.Duration // qos.MinSeparation (Time-Based Filter)
+
+	tbfMu         sync.Mutex         // guards lastDelivered
+	lastDelivered map[GUID]time.Time // Time-Based Filter: last delivery time per writer
+
+	livelinessLostCb func(dds.GUID)         // cfg.LivelinessLostCallback; nil = liveliness monitoring disabled
+	monitorDone      chan struct{}          // non-nil (and closed on Close) when livelinessLostCb != nil
+	livelinessMu     sync.Mutex             // guards the three maps below
+	writerLease      map[GUID]time.Duration // matched writer → its QoS.LivelinessLeaseDuration
+	lastSeenAlive    map[GUID]time.Time     // matched writer → last DATA/liveliness-HEARTBEAT time
+	livelinessFired  map[GUID]bool          // matched writer → LivelinessLostCallback already fired for the current silence episode
 }
 
 func (r *rtpsReader) addSourceGUID(g GUID) {
@@ -1829,6 +1964,9 @@ func (r *rtpsReader) Close() error {
 	r.closeOnce.Do(func() {
 		if r.deadlineTimer != nil {
 			r.deadlineTimer.Stop()
+		}
+		if r.monitorDone != nil {
+			close(r.monitorDone)
 		}
 		// Flip closed before closing the channel, both under mu: this is the
 		// same lock deliverToReader holds for the duration of its send, so a
