@@ -8,6 +8,7 @@ package ros2_test
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"runtime"
 	"testing"
 	"time"
@@ -192,17 +193,40 @@ func TestTwoNodes_SeeEachOtherInGraph(t *testing.T) {
 		t.Fatal("timeout: cross-node sample not received")
 	}
 
-	if !hasNode(listener.Nodes(), "/robot1/talker") {
-		t.Errorf("listener.Nodes() = %+v, missing /robot1/talker", listener.Nodes())
-	}
-	if !hasNode(talker.Nodes(), "/robot2/listener") {
-		t.Errorf("talker.Nodes() = %+v, missing /robot2/listener", talker.Nodes())
-	}
-	if !hasTopic(listener.Topics(), "/chatter") {
-		t.Errorf("listener.Topics() = %+v, missing /chatter", listener.Topics())
-	}
-	if !hasTopic(talker.Topics(), "/chatter") {
-		t.Errorf("talker.Topics() = %+v, missing /chatter", talker.Topics())
+	// ros_discovery_info is exchanged over the same best-effort SPDP/SEDP
+	// matching path as any other topic, on a TRANSIENT_LOCAL history-1
+	// writer — matching is asynchronous and its completion isn't ordered
+	// against the /chatter delivery above, so poll rather than assert
+	// immediately (a fixed sleep here was flaky under CI load: matching
+	// can still be in flight even after a user-topic sample has already
+	// been delivered).
+	waitFor(t, 3*time.Second, func() bool { return hasNode(listener.Nodes(), "/robot1/talker") },
+		func() string { return fmt.Sprintf("listener.Nodes() = %+v, missing /robot1/talker", listener.Nodes()) })
+	waitFor(t, 3*time.Second, func() bool { return hasNode(talker.Nodes(), "/robot2/listener") },
+		func() string { return fmt.Sprintf("talker.Nodes() = %+v, missing /robot2/listener", talker.Nodes()) })
+	waitFor(t, 3*time.Second, func() bool { return hasTopic(listener.Topics(), "/chatter") },
+		func() string { return fmt.Sprintf("listener.Topics() = %+v, missing /chatter", listener.Topics()) })
+	waitFor(t, 3*time.Second, func() bool { return hasTopic(talker.Topics(), "/chatter") },
+		func() string { return fmt.Sprintf("talker.Topics() = %+v, missing /chatter", talker.Topics()) })
+}
+
+// waitFor polls cond every 20ms until it returns true or timeout elapses,
+// failing the test with msg() only if cond never became true.
+func waitFor(t *testing.T, timeout time.Duration, cond func() bool, msg func() string) {
+	t.Helper()
+	deadline := time.After(timeout)
+	ticker := time.NewTicker(20 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		if cond() {
+			return
+		}
+		select {
+		case <-ticker.C:
+		case <-deadline:
+			t.Error(msg())
+			return
+		}
 	}
 }
 

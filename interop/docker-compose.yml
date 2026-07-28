@@ -19,6 +19,13 @@ services:
         wait
       "
     restart: unless-stopped
+    # Explicit profile (not the implicit default) so `docker compose
+    # --profile jazzy|rolling up -d` (no explicit service name, used by the
+    # ROS 2 interop job below) doesn't also start this unrelated container.
+    # Naming this service explicitly (`up -d cyclone-peer`, as the
+    # CycloneDDS job above does) still auto-enables its profile, so that
+    # invocation is unaffected.
+    profiles: [cyclonedds]
 
   # Minimal CycloneDDS subscriber that prints received samples to stdout.
   # Used by the interop test to verify that our RTPS writer is compatible.
