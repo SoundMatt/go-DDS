@@ -8,11 +8,13 @@ package security
 //fusa:req REQ-SEC-014
 //fusa:req REQ-SEC-024
 //fusa:req REQ-SEC-025
+//fusa:req REQ-SEC-026
 
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/binary"
 	"encoding/pem"
@@ -143,6 +145,26 @@ func (p *CertPlugin) Open(data []byte) ([]byte, error) {
 		return nil, errors.New("security: ECDSA signature verification failed")
 	}
 	return plaintext, nil
+}
+
+// TLSCertificate returns the plugin's leaf certificate and ECDSA private key
+// as a stdlib crypto/tls.Certificate, and CAPool returns the plugin's trusted
+// CA pool. Together they let the same on-disk certificate identity configure
+// CertPlugin (payload-level Seal/Open) and also the transport-level
+// crypto/tls.Config accepted by rtps.WithTCPTLSConfig (RTPS-over-TCP,
+// Milestone 14) or rtps.WithDTLS (RTPS-over-DTLS, Milestone 14) — one
+// identity, three layers, instead of separate key material for each.
+func (p *CertPlugin) TLSCertificate() tls.Certificate {
+	return tls.Certificate{
+		Certificate: [][]byte{p.cert.Raw},
+		PrivateKey:  p.key,
+		Leaf:        p.cert,
+	}
+}
+
+// CAPool returns the plugin's trusted CA certificate pool. See TLSCertificate.
+func (p *CertPlugin) CAPool() *x509.CertPool {
+	return p.caPool
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────

@@ -2215,6 +2215,38 @@
       "standard": "iso26262",
       "level": "LLR",
       "asil": "ASIL-A"
+    },
+    {
+      "id": "REQ-TRANS-007",
+      "title": "RTPS-over-DTLS mutual certificate authentication default",
+      "text": "When a *tls.Config is supplied to the RTPS-over-DTLS transport via WithDTLS with ClientAuth unset (NoClientCert) and a ClientCAs pool configured, the transport shall upgrade ClientAuth to RequireAndVerifyClientCert so that peer certificate authentication is enforced by default.",
+      "standard": "iso26262",
+      "level": "ASIL-B",
+      "asil": "ASIL-B"
+    },
+    {
+      "id": "REQ-TRANS-008",
+      "title": "RTPS-over-DTLS record boundary and size bound",
+      "text": "The RTPS-over-DTLS transport shall preserve one RTPS message per DTLS record, matching the framing semantics of the existing plain-UDP transport, and shall reject a message exceeding maxUDPSize before attempting to send it.",
+      "standard": "iso26262",
+      "level": "ASIL-A",
+      "asil": "ASIL-A"
+    },
+    {
+      "id": "REQ-TRANS-009",
+      "title": "RTPS-over-DTLS dial handshake timeout",
+      "text": "Outbound RTPS-over-DTLS connection attempts shall enforce a bounded handshake timeout via HandshakeContext, returning an error rather than blocking indefinitely when a peer is unreachable.",
+      "standard": "iec61508",
+      "level": "SIL-2",
+      "asil": "SIL-2"
+    },
+    {
+      "id": "REQ-SEC-026",
+      "title": "CertPlugin TLS material export",
+      "text": "CertPlugin shall expose its leaf certificate and private key as a stdlib tls.Certificate via TLSCertificate, and its CA pool via CAPool, so that the same certificate-based identity can configure the RTPS-over-TCP (WithTCPTLSConfig) and RTPS-over-DTLS (WithDTLS) transports.",
+      "standard": "iso21434",
+      "level": "CAL-3",
+      "asil": "CAL-3"
     }
   ]
 }
