@@ -99,6 +99,37 @@ breaking changes may occur between `v0.x` minor releases. Each submodule's
   fallback. `topic` may itself be an MQTT-style `+`/`#` wildcard pattern,
   composing directly with Milestone 11's wildcard subscriptions.
 
+### Added (root, `bridge`, new `js/dds-client` package)
+
+- WebSocket Transport (ROADMAP.md, Milestone 16 "QUIC + WebSocket
+  Transports", "WebSocket Transport"): `rtps/transport_ws.go` adds a
+  `wsSocket` — the WebSocket analogue of `tcpSocket`/`quicSocket` —
+  implementing the RFC 6455 opening handshake and frame codec with nothing
+  but the standard library. New participant options `rtps.WithWSAddr`,
+  `WithWSTLSConfig` (TLS/`wss://` is optional, unlike QUIC/DTLS), and
+  `WithWSPeers` mirror the existing `WithTCPAddr`/`WithTCPTLSConfig`/
+  `WithTCPPeers` convention; a new `pidWSLocator` SPDP parameter
+  (`LocatorKindWSv4`) lets peers learn each other's WS listen address. Each
+  RTPS message maps to one WebSocket message, sent as either a binary
+  frame (raw bytes, the default) or a JSON text frame
+  (`{"data":"<base64 CDR>"}`, `WithWSFraming`) — inbound decoding always
+  follows the received frame's own opcode regardless of the receiver's own
+  setting, so the two modes interoperate freely. `bridge/ws` adds a second,
+  optional gateway (mirroring `bridge/rest`'s HTTP/SSE gateway) exposing a
+  small JSON subscribe/unsubscribe/publish protocol over one WebSocket
+  connection per client, for clients that would rather not implement RTPS
+  discovery; its token auth accepts a `?token=` query parameter as well as
+  the standard header, since browser JavaScript cannot set arbitrary
+  headers on a WebSocket handshake. New `js/dds-client` npm package is the
+  TypeScript/JavaScript client for that gateway: a dependency-free
+  `DDSClient` (automatic reconnection with resubscription) plus
+  `TypedPublisher<T>`/`TypedSubscriber<T>` with a pluggable `Codec<T>`
+  (JSON by default). `js/dds-client`'s README documents the scope boundary
+  against `rtps.WithWSAddr`: it speaks `bridge/ws`'s gateway protocol, not
+  raw RTPS — a genuine no-bridge browser RTPS participant needs a
+  Wasm-compiled go-DDS build dialling `WithWSAddr` directly, the sibling
+  "WebAssembly Target" sub-phase.
+
 ## [root v0.55.1] / [safety v0.1.1] — Architecture Initiative Phase F — Root cleanup
 
 Docs/repo-hygiene reorganization only — no Go import path, API, or `go.mod`

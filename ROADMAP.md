@@ -1131,12 +1131,71 @@ QUIC) — alongside `quicSocket`-level unit tests covering reliable-stream and
 best-effort-datagram send/receive, the datagram-too-large stream fallback,
 oversized-frame rejection, and dial-handshake timeout.
 
-### WebSocket Transport
+### WebSocket Transport ✅
 
-- RTPS-over-WebSocket (`rtps/transport_ws.go`) — browser and Wasm participants
-- JSON and binary (base64-CDR) framing modes
-- `bridge/ws/` package: HTTP upgrade handler, participant bridge to RTPS domain
-- JavaScript/TypeScript client library (`js/dds-client/`) — TypedPublisher and TypedSubscriber over WebSocket
+- RTPS-over-WebSocket (`rtps/transport_ws.go`) — browser and Wasm participants ✅
+- JSON and binary (base64-CDR) framing modes ✅
+- `bridge/ws/` package: HTTP upgrade handler, participant bridge to RTPS domain ✅
+- JavaScript/TypeScript client library (`js/dds-client/`) — TypedPublisher and TypedSubscriber over WebSocket ✅
+
+**Shipped**. `rtps/transport_ws.go` adds a `wsSocket` — the WebSocket
+analogue of `tcpSocket`/`quicSocket` — implementing the RFC 6455 opening
+handshake and frame codec itself with nothing but the standard library
+(`net/http`'s request/response parsers plus a small frame reader/writer; no
+external dependency, the same choice `transport_tcp.go` makes for its own
+TLS wrapping). Unlike `tcpSocket`, no additional length-prefix framing is
+layered on top: a WebSocket connection is already message-oriented, so one
+RTPS message maps directly to one WebSocket message, sent either as a
+binary frame carrying the raw bytes (`wsFramingBinary`, the default) or a
+text frame carrying `{"data":"<base64 CDR>"}` (`wsFramingJSON`) — the "JSON
+and binary (base64-CDR) framing modes" bullet; a socket's framing setting
+only controls what it *sends*, every inbound message is decoded by its own
+opcode, so the two modes freely interoperate on one connection.
+`WithWSAddr(addr)` binds the listener, `WithWSTLSConfig(cfg)` optionally
+wraps it in TLS 1.3 (`wss://` — unlike QUIC/DTLS, WS does not mandate TLS,
+so this one is optional, matching `WithTCPTLSConfig`'s own optionality
+rather than `WithQUIC`/`WithDTLS`'s required config), and `WithWSPeers(addrs...)`
+seeds static peers for SPDP-over-WS exactly as `WithTCPPeers`/`WithQUICPeers`
+do; a new `pidWSLocator` SPDP parameter (`LocatorKindWSv4`) lets peers learn
+each other's WS listen address for ongoing SEDP/user-data unicast, mirroring
+`pidTCPLocator`/`pidQUICLocator`. In `participant.sendUnicast`'s
+transport-priority chain, WS is checked right after QUIC — unconditionally
+preferred when a peer's WS locator is known, not gated on UDP multicast
+availability, since a browser or Wasm peer's WS locator is very often the
+*only* transport that peer has, not a firewall-traversal fallback — falling
+back to TCP, then relay, then plain UDP if its own send fails. Fully
+additive: with no `WithWSAddr`, `wsSock` is always nil and every send path
+is unchanged from before this sub-phase. Proven end-to-end by
+`TestWS_CrossDomain_DiscoveryAndDelivery` — two participants in different
+RTPS domains, with UDP multicast forced unavailable and user-data multicast
+disabled, discover each other purely via SPDP-over-WS and exchange a
+reliable sample with HEARTBEAT/ACKNACK also flowing over WS — alongside
+`wsSocket`/frame-codec unit tests covering plaintext and TLS send/receive,
+both framing modes (including a socket configured for one mode correctly
+receiving the other), Ping/Pong handling, a raw-client RFC 6455 handshake
+check, and a hostile claimed-frame-length rejection.
+
+`bridge/ws/` adds a second, optional gateway (`ws.Bridge`, mirroring
+`bridge/rest`'s HTTP/SSE gateway) for clients that would rather speak a
+small JSON pub/sub protocol — `{"op":"subscribe"|"unsubscribe"|"publish", ...}`
+in, `{"op":"sample"|"error"|"subscribed"|"unsubscribed", ...}` out, one
+message per WebSocket frame — than implement RTPS discovery themselves; its
+`Bridge.authorize` accepts the token via `?token=` query parameter as well
+as the standard `Authorization: Bearer` header, since a browser's own
+JavaScript cannot set arbitrary headers on a WebSocket handshake.
+`js/dds-client/` is the TypeScript client for that gateway: a
+dependency-free `DDSClient` (automatic reconnection with resubscription,
+a structurally-typed `WebSocketLike` so it runs against any runtime's
+native `WebSocket` — browser, Node ≥ 18, or an injected `webSocketFactory`)
+plus `TypedPublisher<T>`/`TypedSubscriber<T>`, JSON-encoding by default via
+a pluggable `Codec<T>`. Its README documents the scope boundary explicitly:
+`js/dds-client` speaks `bridge/ws`'s gateway protocol, not raw RTPS —
+a Wasm-compiled go-DDS build dialling `WithWSAddr` directly (the sibling
+WebAssembly Target sub-phase, still open) is the no-bridge path this
+milestone's success criterion names for a browser tab that needs to be a
+genuine RTPS participant. Verified end-to-end against a real `bridge/ws`
+Go server from Node (in addition to its own in-memory-fake-WebSocket unit
+suite), including the query-parameter auth path.
 
 ### WebAssembly Target
 

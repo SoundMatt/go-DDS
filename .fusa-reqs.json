@@ -2335,6 +2335,46 @@
       "standard": "iso26262",
       "level": "ASIL-B",
       "asil": "ASIL-B"
+    },
+    {
+      "id": "REQ-TRANS-015",
+      "title": "RTPS-over-WebSocket opening-handshake and frame validation",
+      "text": "The RTPS-over-WebSocket transport shall perform the RFC 6455 opening handshake (validating Sec-WebSocket-Key/Upgrade/Connection headers on the server side, and verifying Sec-WebSocket-Accept on the client side) before exchanging any RTPS message, and shall close the underlying connection for any received WebSocket frame whose claimed payload length exceeds maxWSFrameSize, so that a corrupt or hostile peer cannot force unbounded memory allocation.",
+      "standard": "iso26262",
+      "level": "ASIL-B",
+      "asil": "ASIL-B"
+    },
+    {
+      "id": "REQ-TRANS-016",
+      "title": "RTPS-over-WebSocket JSON and binary framing modes",
+      "text": "The RTPS-over-WebSocket transport shall support sending each RTPS message as either a single WebSocket BINARY frame containing the raw message bytes or a single WebSocket TEXT frame containing a JSON envelope carrying the message as base64-encoded CDR, selected by WithWSFraming, and shall decode an inbound message correctly regardless of which mode the sender used.",
+      "standard": "iso26262",
+      "level": "ASIL-B",
+      "asil": "ASIL-B"
+    },
+    {
+      "id": "REQ-TRANS-017",
+      "title": "RTPS-over-WebSocket client/server frame masking per RFC 6455",
+      "text": "The RTPS-over-WebSocket transport shall mask every WebSocket frame it sends while acting in the client role (a connection it dialled outbound) with a fresh random 32-bit key, shall never mask frames it sends while acting in the server role (a connection accepted on its listener), and shall correctly unmask any masked frame it receives, per RFC 6455 §5.1/§5.3.",
+      "standard": "iso26262",
+      "level": "ASIL-B",
+      "asil": "ASIL-B"
+    },
+    {
+      "id": "REQ-BRIDGE-015",
+      "title": "WebSocket bridge HTTP upgrade and authentication",
+      "text": "The WebSocket gateway (bridge/ws) shall perform the RFC 6455 opening handshake only after validating a configured AuthToken (when set) against the request's Authorization header, rejecting an unauthenticated or malformed upgrade request with 401 Unauthorized before hijacking the connection.",
+      "standard": "iso26262",
+      "level": "ASIL-B",
+      "asil": "ASIL-B"
+    },
+    {
+      "id": "REQ-BRIDGE-016",
+      "title": "WebSocket bridge JSON pub/sub protocol and frame size limit",
+      "text": "The WebSocket gateway (bridge/ws) shall accept subscribe/unsubscribe/publish requests as JSON messages, deliver samples to each subscribed client independently, and reject any inbound WebSocket message exceeding maxFrameBytes to prevent unbounded memory allocation from a hostile or buggy client.",
+      "standard": "iso26262",
+      "level": "ASIL-B",
+      "asil": "ASIL-B"
     }
   ]
 }

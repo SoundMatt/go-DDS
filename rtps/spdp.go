@@ -60,6 +60,11 @@ type participantProxy struct {
 	// decoded from pidQUICLocator (Milestone 16, "QUIC Transport"). Empty
 	// when the peer didn't advertise one, exactly like tcpUnicast.
 	quicUnicast string
+	// wsUnicast is this peer's RTPS-over-WebSocket listen address
+	// ("host:port"), decoded from pidWSLocator (Milestone 16, "WebSocket
+	// Transport"). Empty when the peer didn't advertise one, exactly like
+	// tcpUnicast/quicUnicast.
+	wsUnicast string
 	// relayID is this peer's RTPS-over-Relay registration ID (Milestone 15,
 	// "NAT Traversal / Cloud Gateway"). Populated either by decoding
 	// pidRelayID from an SPDP announcement, or directly by
@@ -211,6 +216,17 @@ func (s *spdpService) sendAnnouncement() {
 		}
 	}
 
+	// Discovery over WebSocket (Milestone 16, "WebSocket Transport"):
+	// additionally unicast the identical announcement to every statically
+	// configured WS peer — the same RTPS-over-TCP/RTPS-over-QUIC discovery
+	// pattern above, one more independent transport a firewalled,
+	// browser-adjacent, or NAT'd peer can be discovered over.
+	if p.wsSock != nil {
+		for _, addr := range p.wsPeers {
+			_ = p.wsSock.send(addr, msg)
+		}
+	}
+
 	// Discovery over Relay (Milestone 15, "NAT Traversal / Cloud Gateway"):
 	// additionally send the identical announcement, over the relay, to
 	// every statically configured relay peer ID (see WithRelayPeers). This
@@ -264,6 +280,15 @@ func (s *spdpService) buildParticipantData() []byte {
 	if p.quicSock != nil {
 		quicLocator := locatorFromQUIC(net.IPv4zero, p.quicSock.port)
 		enc.addLocator(pidQUICLocator, quicLocator)
+	}
+
+	// RTPS-over-WebSocket listen locator (Milestone 16, "WebSocket
+	// Transport"), when the WebSocket transport is enabled. Peers —
+	// including a browser or Wasm participant — use this to reach us over
+	// WebSocket.
+	if p.wsSock != nil {
+		wsLocator := locatorFromWS(net.IPv4zero, p.wsSock.port)
+		enc.addLocator(pidWSLocator, wsLocator)
 	}
 
 	// Relay registration ID (Milestone 15, "NAT Traversal / Cloud Gateway"),
@@ -514,6 +539,18 @@ func parseParticipantData(prefix GuidPrefix, payload []byte, from *net.UDPAddr) 
 				}
 				if hp, ok2 := l.quicHostPort(); ok2 {
 					proxy.quicUnicast = hp
+				}
+			}
+		case pidWSLocator:
+			if l, ok := unmarshalLocator(p.value); ok && l.Kind == LocatorKindWSv4 {
+				if l.Address == ([16]byte{}) {
+					ip4 := from.IP.To4()
+					if ip4 != nil {
+						copy(l.Address[12:], ip4)
+					}
+				}
+				if hp, ok2 := l.wsHostPort(); ok2 {
+					proxy.wsUnicast = hp
 				}
 			}
 		case pidRelayID:

@@ -1,0 +1,36 @@
+{
+  "name": "@go-dds/dds-client",
+  "version": "0.1.0",
+  "description": "TypeScript/JavaScript client for go-DDS's bridge/ws WebSocket gateway (Milestone 16, ROADMAP.md \"WebSocket Transport\"): TypedPublisher and TypedSubscriber over a single WebSocket connection, for browsers, Node.js, and edge/cloud-function runtimes.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test dist/*.test.js",
+    "clean": "rm -rf dist"
+  },
+  "license": "MPL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SoundMatt/go-DDS.git",
+    "directory": "js/dds-client"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "typescript": "^5.6.0"
+  }
+}
