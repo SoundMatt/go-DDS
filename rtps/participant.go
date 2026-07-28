@@ -254,6 +254,69 @@ func WithDTLSPeers(addrs ...string) Option {
 	return func(p *participant) { p.dtlsPeers = append(p.dtlsPeers, addrs...) }
 }
 
+// WithRelayAddr enables the RTPS-over-Relay transport (Milestone 15, "NAT
+// Traversal / Cloud Gateway") and dials a TURN-style relay server at addr
+// ("host:port") at participant creation time, registering this
+// participant's GUID prefix (hex-encoded — see relayIDFromGuidPrefix) as its
+// relay ID. Unlike WithTCPAddr/WithDTLSAddr, which bind a *listener* this
+// participant must be reachable at, WithRelayAddr only ever *dials out* —
+// exactly the property that makes it work from behind a NAT or firewall
+// that blocks all inbound connections. See bridge/relay for the relay
+// server implementation this dials, and WithRelayTLSConfig /
+// WithRelayPeers to secure the channel and announce known peers.
+//
+// A relay server that cannot be reached at participant creation time is a
+// hard error — the same "explicitly requested, must succeed" policy
+// WithTCPAddr/WithDTLSAddr use for their own listeners.
+func WithRelayAddr(addr string) Option {
+	return func(p *participant) { p.relayAddr = addr }
+}
+
+// WithRelayTLSConfig secures the RTPS-over-Relay transport's connection to
+// the relay server (see WithRelayAddr) with TLS 1.3, using only crypto/tls
+// from the standard library — no external dependency, the same as
+// WithTCPTLSConfig. If cfg.MinVersion is zero, TLS 1.3 is enforced. Has no
+// effect unless WithRelayAddr is also supplied. This secures only the
+// participant↔relay transport hop; DDS payload confidentiality end-to-end
+// through the relay still comes from WithSecurity, which the relay never
+// has the keys to undo.
+func WithRelayTLSConfig(cfg *tls.Config) Option {
+	return func(p *participant) { p.relayTLSConfig = cfg }
+}
+
+// WithRelayPeers adds known peer relay IDs (hex-encoded GUID prefixes — see
+// relayIDFromGuidPrefix) that this participant additionally sends its SPDP
+// announcements to over the relay, exactly as WithTCPPeers does for RTPS-
+// over-TCP unicast peers. This is how two participants that each only know
+// the relay's address (not each other's) first discover one another: once
+// discovered — whether via WithRelayPeers or by receiving any relayed
+// traffic at all, see dispatchRelayPacket — subsequent unicast SEDP/DATA
+// traffic to that peer is automatically routed over the relay too (see
+// relayIDForPrefix / sendUnicast), with no further application code
+// involvement. Has no effect unless WithRelayAddr is also supplied.
+func WithRelayPeers(ids ...string) Option {
+	return func(p *participant) { p.relayPeers = append(p.relayPeers, ids...) }
+}
+
+// WithSTUNServer performs a STUN (RFC 5389) Binding Request against addr
+// ("host:port") at participant creation time to discover this
+// participant's server-reflexive (public) address, for cloud↔edge peer
+// pairing: the discovered address is exposed via this participant's
+// PublicAddr method (see dds.PublicAddresser) so it can be shared with a
+// peer out-of-band (e.g. via a signalling channel, or simply logged for
+// manual configuration) and supplied to that peer's own
+// WithPeerLocators/WithTCPPeers/WithDTLSPeers to attempt a direct
+// connection before falling back to WithRelayAddr — the standard
+// STUN-then-TURN pattern this milestone's name reflects. Unlike
+// WithRelayAddr, a STUN server that cannot be reached is a soft failure:
+// discovery is inherently best-effort (the STUN server may be temporarily
+// down, or this participant may not be behind a NAT that needs it at all),
+// so participant creation still succeeds, with PublicAddr left empty. See
+// bridge/relay.Discover for the client implementation.
+func WithSTUNServer(addr string) Option {
+	return func(p *participant) { p.stunServer = addr }
+}
+
 // WithDeadlineCallback sets a function that is called when a publisher has not
 // written for longer than its QoS.Deadline period.
 func WithDeadlineCallback(fn func(topic string)) Option {
@@ -390,6 +453,22 @@ type participant struct {
 	dtlsPeers     []string
 	dtlsSock      *dtlsSocket
 
+	// RTPS-over-Relay transport (Milestone 15, "NAT Traversal / Cloud
+	// Gateway"). relayAddr == "" disables it. See transport_relay.go.
+	relayAddr      string
+	relayTLSConfig *tls.Config
+	relayPeers     []string
+	relaySock      *relaySocket
+
+	// STUN-based public address discovery (Milestone 15). stunServer == ""
+	// disables it. publicAddr is populated at startup (best-effort — see
+	// New) and exposed via this participant's PublicAddr method (see
+	// dds.PublicAddresser) for out-of-band exchange with peers (e.g. as a
+	// WithPeerLocators/WithTCPPeers/WithDTLSPeers argument for a
+	// direct-connection attempt before falling back to the relay).
+	stunServer string
+	publicAddr string
+
 	// udpMulticastAvailable reports whether SPDP multicast bound a genuine
 	// multicast-capable interface at startup (as opposed to the unicast
 	// fallback newMulticastReceiveSocket silently takes when none exists —
@@ -468,6 +547,11 @@ func (p *participant) topicCounterFor(topic string) *topicCounter {
 
 // Domain implements dds.Participant.
 func (p *participant) Domain() dds.Domain { return p.domain }
+
+// PublicAddr implements dds.PublicAddresser: it returns this participant's
+// STUN-discovered server-reflexive address (see WithSTUNServer), or "" if
+// none was discovered.
+func (p *participant) PublicAddr() string { return p.publicAddr }
 
 // New creates an RTPS participant joined to the given DDS domain.
 // It binds UDP sockets, starts SPDP/SEDP, and returns a dds.Participant.
@@ -591,6 +675,41 @@ func newParticipant(domain dds.Domain, opts ...Option) (*participant, error) {
 		p.dtlsSock = dtlsSock
 	}
 
+	// Optional RTPS-over-Relay transport (Milestone 15, "NAT Traversal /
+	// Cloud Gateway"). Same hard-error policy as TCP/DTLS above: an
+	// explicitly requested relay server that cannot be reached (or that
+	// rejects registration) is a caller-visible error.
+	if p.relayAddr != "" {
+		relaySock, err := newRelaySocket(p.relayAddr, relayIDFromGuidPrefix(p.guidPrefix), p.relayTLSConfig)
+		if err != nil {
+			mcastSock.close()
+			metaSock.close()
+			dataSock.close()
+			if p.dataMcastSock != nil {
+				p.dataMcastSock.close()
+			}
+			if p.tcpSock != nil {
+				p.tcpSock.close()
+			}
+			if p.dtlsSock != nil {
+				p.dtlsSock.close()
+			}
+			return nil, fmt.Errorf("rtps: relay transport: %w", err)
+		}
+		p.relaySock = relaySock
+	}
+
+	// Optional STUN public-address discovery (Milestone 15). Best-effort:
+	// a STUN server that cannot be reached must not prevent the
+	// participant from starting — see WithSTUNServer.
+	if p.stunServer != "" {
+		if ap, err := stunDiscover(context.Background(), p.stunServer); err == nil {
+			p.publicAddr = ap.String()
+		} else {
+			p.log.info("rtps: STUN discovery via %s failed (continuing without a public address): %v", p.stunServer, err)
+		}
+	}
+
 	p.log.info("rtps participant starting domain=%d prefix=%x", domain, guidPrefix)
 
 	p.spdp = newSPDPService(p)
@@ -604,6 +723,9 @@ func newParticipant(domain dds.Domain, opts ...Option) (*participant, error) {
 	}
 	if p.dtlsSock != nil {
 		go p.dtlsReceiveLoop()
+	}
+	if p.relaySock != nil {
+		go p.relayReceiveLoop()
 	}
 
 	if p.cancelCtx != nil {
@@ -898,6 +1020,9 @@ func (p *participant) Close() error {
 	if p.dtlsSock != nil {
 		p.dtlsSock.close()
 	}
+	if p.relaySock != nil {
+		p.relaySock.close()
+	}
 	// Close any TSN traffic-class sockets.
 	p.tsnMu.Lock()
 	for _, sock := range p.tsnSocks {
@@ -1062,7 +1187,7 @@ func (p *participant) notifyReliableReaders(writerGUID GUID, seqNum SequenceNumb
 			Count:          tracker.nextAckCount(),
 		}
 		msg := wrapInRTPSMessage(p.guidPrefix, marshalAckNack(an))
-		p.sendUnicast(p.dataSock, writerAddr, msg)
+		p.sendUnicast(p.dataSock, writerAddr, writerGUID.Prefix, msg)
 	}
 }
 
@@ -1108,7 +1233,7 @@ func (p *participant) handleHeartbeat(writerGUID GUID, hb Heartbeat, from *net.U
 			Count:          tracker.nextAckCount(),
 		}
 		msg := wrapInRTPSMessage(p.guidPrefix, marshalAckNack(an))
-		p.sendUnicast(p.dataSock, from, msg)
+		p.sendUnicast(p.dataSock, from, writerGUID.Prefix, msg)
 	}
 }
 
@@ -1137,9 +1262,9 @@ func (p *participant) handleAckNack(an AckNack, from *net.UDPAddr) {
 		if msg == nil {
 			continue
 		}
-		for _, loc := range p.matchedReaderLocators(w.topic, w.partitions) {
-			if dst := loc.udpAddr(); dst != nil {
-				p.sendUnicast(p.dataSock, dst, msg)
+		for _, lm := range p.matchedReaderLocators(w.topic, w.partitions) {
+			if dst := lm.Loc.udpAddr(); dst != nil {
+				p.sendUnicast(p.dataSock, dst, lm.Prefix, msg)
 			}
 		}
 	}
@@ -1162,12 +1287,19 @@ func (p *participant) handleAckNack(an AckNack, from *net.UDPAddr) {
 		gapMsg := wrapInRTPSMessage(p.guidPrefix, marshalGAP(g))
 		// Send directly to the requesting reader if we know its address.
 		if from != nil {
-			p.sendUnicast(p.dataSock, from, gapMsg)
+			// The requester's own GuidPrefix isn't available at this point
+			// (only its raw transport address is; see handleAckNack's
+			// signature) — this send targets a plain net.UDPAddr with a
+			// zero GuidPrefix, skipping relay routing for this one
+			// redundant copy. The loop just below sends the identical GAP
+			// again to every matched reader on the topic, this time with a
+			// known Prefix, so a relay-only peer still receives it there.
+			p.sendUnicast(p.dataSock, from, GuidPrefix{}, gapMsg)
 		}
 		// Also send to all matched readers so any reader on this topic can advance.
-		for _, loc := range p.matchedReaderLocators(w.topic, w.partitions) {
-			if dst := loc.udpAddr(); dst != nil {
-				p.sendUnicast(p.dataSock, dst, gapMsg)
+		for _, lm := range p.matchedReaderLocators(w.topic, w.partitions) {
+			if dst := lm.Loc.udpAddr(); dst != nil {
+				p.sendUnicast(p.dataSock, dst, lm.Prefix, gapMsg)
 			}
 		}
 	}
@@ -1175,23 +1307,36 @@ func (p *participant) handleAckNack(an AckNack, from *net.UDPAddr) {
 
 // ── RTPS-over-TCP transport (Milestone 14) ──────────────────────────────────────
 
-// sendUnicast sends a unicast RTPS message to dst via sock. If dst matches a
-// configured RTPS-over-DTLS peer (see WithDTLSPeers), it is always encrypted
-// over DTLS instead — DTLS is an explicit confidentiality/authentication
-// choice, not a reachability fallback, so it takes priority whenever
-// configured for that peer, regardless of UDP multicast availability.
-// Otherwise, when UDP is considered unreachable (see preferTCP) and a TCP
-// locator is known for dst's host — learned via SPDP, see
-// participantProxy.tcpUnicast — it prefers RTPS-over-TCP instead. Either
-// falls back to plain UDP if its own send fails (DTLS/TCP peer offline,
-// connection reset, ...). This is the automatic UDP→TCP fallback and the
-// DTLS encryption layering described in ROADMAP.md Milestone 14.
+// sendUnicast sends a unicast RTPS message to dst via sock, optionally
+// preferring the destination's known relay ID (see relayIDForPrefix) over
+// dst entirely when prefix identifies a peer only reachable via the relay
+// transport. If dst matches a configured RTPS-over-DTLS peer (see
+// WithDTLSPeers), it is always encrypted over DTLS instead — DTLS is an
+// explicit confidentiality/authentication choice, not a reachability
+// fallback, so it takes priority whenever configured for that peer,
+// regardless of UDP multicast availability. Otherwise, when UDP is
+// considered unreachable (see preferTCP) and a TCP locator is known for
+// dst's host — learned via SPDP, see participantProxy.tcpUnicast — it
+// prefers RTPS-over-TCP instead. Failing (or skipping) both of those, and
+// when prefix identifies a peer that advertised a relay ID (Milestone 15,
+// "NAT Traversal / Cloud Gateway" — see participantProxy.relayID), the
+// message is forwarded through the relay. Any of these falls back to plain
+// UDP if its own send fails (DTLS/TCP peer offline, connection reset, relay
+// unreachable, ...). This is the automatic UDP→TCP fallback and the DTLS
+// encryption layering described in ROADMAP.md Milestone 14, plus the relay
+// fallback added by Milestone 15.
+//
+// prefix may be the zero GuidPrefix when the caller does not know (or does
+// not need) the destination's identity — e.g. a redundant broadcast-style
+// send that is also made, with a known prefix, via another code path. A
+// zero prefix simply skips the relay branch and behaves exactly as before
+// Milestone 15.
 //
 // TSN traffic-class sockets are always sent as plain UDP: their entire
 // purpose is priority-marked, low-latency delivery on a specific socket, so
 // they are excluded from both the DTLS and TCP paths by construction — only
 // sock == dataSock or sock == metaSock are eligible.
-func (p *participant) sendUnicast(sock *udpSocket, dst *net.UDPAddr, msg []byte) {
+func (p *participant) sendUnicast(sock *udpSocket, dst *net.UDPAddr, prefix GuidPrefix, msg []byte) {
 	if dst == nil {
 		return
 	}
@@ -1201,7 +1346,7 @@ func (p *participant) sendUnicast(sock *udpSocket, dst *net.UDPAddr, msg []byte)
 			if err := p.dtlsSock.send(dtlsAddr, msg); err == nil {
 				return
 			}
-			// DTLS send failed; fall through to TCP/UDP as a last resort.
+			// DTLS send failed; fall through to TCP/relay/UDP as a last resort.
 		}
 	}
 	if eligible && p.preferTCP() {
@@ -1210,7 +1355,18 @@ func (p *participant) sendUnicast(sock *udpSocket, dst *net.UDPAddr, msg []byte)
 				return
 			}
 			// TCP send failed (peer offline, reset connection, ...); fall
-			// through and try UDP as a last resort.
+			// through and try relay/UDP as a last resort.
+		}
+	}
+	if eligible && p.relaySock != nil && prefix != (GuidPrefix{}) {
+		if relayID := p.relayIDForPrefix(prefix); relayID != "" {
+			if err := p.relaySock.send(relayID, msg); err == nil {
+				return
+			}
+			// Relay send failed (relay server down, unknown peer, ...); fall
+			// through and try plain UDP as a last resort — it will simply be
+			// dropped en route for a genuinely NATted peer, same as today's
+			// behaviour without the relay transport at all.
 		}
 	}
 	if sock != nil {
@@ -1349,7 +1505,59 @@ func (p *participant) dtlsReceiveLoop() {
 	}
 }
 
-// ── Dispatch ──────────────────────────────────────────────────────────────────
+// ── RTPS-over-Relay transport (Milestone 15) ─────────────────────────────────────
+
+// relayIDForPrefix returns the relay ID to use to reach the peer identified
+// by prefix, or "" if that peer hasn't advertised one (or isn't currently
+// known at all). Unlike tcpLocatorForIP/dtlsLocatorForIP, this is looked up
+// by GuidPrefix directly rather than by IP address: a relay-only peer
+// generally has no real IP address to match on at all (that's the whole
+// point of the relay), so participantProxy.relayID is keyed the same way
+// the SPDP peer table itself already is.
+func (p *participant) relayIDForPrefix(prefix GuidPrefix) string {
+	if p.spdp == nil {
+		return ""
+	}
+	proxy, ok := p.spdp.peerByPrefix(prefix)
+	if !ok {
+		return ""
+	}
+	return proxy.relayID
+}
+
+// relayReceiveLoop dispatches messages arriving over the RTPS-over-Relay
+// transport to the same handlers used for UDP/TCP/DTLS: SPDP, SEDP, or user
+// DATA/HEARTBEAT/ACKNACK — see dispatchRelayPacket.
+func (p *participant) relayReceiveLoop() {
+	for pkt := range p.relaySock.recv {
+		p.dispatchRelayPacket(pkt.data, pkt.fromID)
+	}
+}
+
+// dispatchRelayPacket first reuses dispatchTCPPacket for the actual
+// SPDP/SEDP/data routing exactly as the DTLS transport does — message
+// routing is transport-agnostic once a byte slice and a peer address are in
+// hand — then records the sender's relay ID against its GuidPrefix
+// (recovered directly from fromID via guidPrefixFromRelayID, since this
+// transport's relay IDs are defined to be exactly the hex-encoded GuidPrefix
+// — see relayIDFromGuidPrefix) so future outbound sends to that peer route
+// back over the relay (see relayIDForPrefix). This must run after
+// dispatchTCPPacket, not before: an SPDP announcement's dispatch replaces
+// the peer's whole participantProxy (see spdpService.storePeer), which
+// would otherwise wipe out a relayID set beforehand.
+//
+// The synthetic from address passed to dispatchTCPPacket carries no real IP
+// (relay peers generally don't have one worth recording — see
+// participantProxy.relayID's doc comment), so any locator fields inside the
+// message that would otherwise be filled in from a real observed source IP
+// (see parseParticipantData) are simply left as advertised, exactly like a
+// "from" with no IPv4 address already behaves for the TCP/DTLS transports.
+func (p *participant) dispatchRelayPacket(data []byte, fromID string) {
+	p.dispatchTCPPacket(data, &net.UDPAddr{})
+	if prefix, ok := guidPrefixFromRelayID(fromID); ok {
+		p.spdp.recordRelayID(prefix, fromID)
+	}
+}
 
 // dispatchToReaders delivers payload to all readers whose topic matches and
 // whose accept-list includes source. topicFilter="" disables topic filtering
@@ -1543,16 +1751,28 @@ func (p *participant) addWriterLocator(g GUID, l Locator) {
 	p.mu.Unlock()
 }
 
-// matchedReaderLocators returns the data-unicast locators for all remote
-// participants that have an active subscription to topicName whose Partition
-// QoS intersects partitions (Milestone 14, "QoS Enforcement — Active
-// Policy"; see partitionsMatch). Locators are deduplicated so a participant
-// with multiple readers on the same topic receives only one copy of each
-// DATA packet.
-func (p *participant) matchedReaderLocators(topicName string, partitions []string) []Locator {
+// readerLocator pairs a matched remote reader's data-unicast Locator with
+// the GuidPrefix of the participant that owns it, so callers can route the
+// send over the RTPS-over-Relay transport (Milestone 15, see
+// relayIDForPrefix) when that peer only advertised a relay ID — a Locator
+// alone doesn't carry enough identity for that, unlike TCP/DTLS peers which
+// are matched by IP instead (see tcpLocatorForIP/dtlsLocatorForIP).
+type readerLocator struct {
+	Loc    Locator
+	Prefix GuidPrefix
+}
+
+// matchedReaderLocators returns the data-unicast locators (each paired with
+// its owning participant's GuidPrefix) for all remote participants that have
+// an active subscription to topicName whose Partition QoS intersects
+// partitions (Milestone 14, "QoS Enforcement — Active Policy"; see
+// partitionsMatch). Locators are deduplicated so a participant with
+// multiple readers on the same topic receives only one copy of each DATA
+// packet.
+func (p *participant) matchedReaderLocators(topicName string, partitions []string) []readerLocator {
 	p.sedp.mu.RLock()
 	defer p.sedp.mu.RUnlock()
-	var locators []Locator
+	var locators []readerLocator
 	seen := make(map[Locator]bool)
 	for guid, ri := range p.sedp.remoteReaders {
 		if ri.topicName != topicName {
@@ -1567,7 +1787,7 @@ func (p *participant) matchedReaderLocators(topicName string, partitions []strin
 		}
 		if !seen[loc] {
 			seen[loc] = true
-			locators = append(locators, loc)
+			locators = append(locators, readerLocator{Loc: loc, Prefix: guid.Prefix})
 		}
 	}
 	return locators
@@ -1709,15 +1929,31 @@ func (w *rtpsWriter) Write(payload []byte) error {
 		}
 	}
 
-	if len(locs) > 0 && w.p.dataMcastSock != nil && w.tsnSock == nil {
+	// Multicast can only reach readers on a shared multicast-capable network
+	// segment — never true for a peer only reachable via the relay
+	// transport (Milestone 15, "NAT Traversal / Cloud Gateway"), so any
+	// relay-only matched reader forces the per-reader unicast/relay path
+	// below even when multicast is otherwise available and would normally
+	// be preferred as a single-send optimisation.
+	useMulticast := len(locs) > 0 && w.p.dataMcastSock != nil && w.tsnSock == nil
+	if useMulticast && w.p.relaySock != nil {
+		for _, lm := range locs {
+			if w.p.relayIDForPrefix(lm.Prefix) != "" {
+				useMulticast = false
+				break
+			}
+		}
+	}
+
+	if useMulticast {
 		// Multicast only when not a TSN writer (TSN streams must use per-class socket).
 		dst := &net.UDPAddr{IP: userDataMulticastAddr, Port: userMulticastPort(int(w.p.domain))}
 		for _, msg := range msgs {
 			_ = w.p.dataSock.send(dst, msg)
 		}
 	} else {
-		for _, loc := range locs {
-			dst := loc.udpAddr()
+		for _, lm := range locs {
+			dst := lm.Loc.udpAddr()
 			if dst == nil {
 				continue
 			}
@@ -1725,7 +1961,7 @@ func (w *rtpsWriter) Write(payload []byte) error {
 				if txTimeNS > 0 {
 					_ = scheduledSend(sock.conn, dst, msg, txTimeNS)
 				} else {
-					w.p.sendUnicast(sock, dst, msg)
+					w.p.sendUnicast(sock, dst, lm.Prefix, msg)
 				}
 			}
 		}
@@ -1755,9 +1991,9 @@ func (w *rtpsWriter) sendHeartbeatLocked() {
 	}
 	msg := wrapInRTPSMessage(w.p.guidPrefix, marshalHeartbeat(hb))
 	sock := w.sendSock()
-	for _, loc := range w.p.matchedReaderLocators(w.topic, w.partitions) {
-		if dst := loc.udpAddr(); dst != nil {
-			w.p.sendUnicast(sock, dst, msg)
+	for _, lm := range w.p.matchedReaderLocators(w.topic, w.partitions) {
+		if dst := lm.Loc.udpAddr(); dst != nil {
+			w.p.sendUnicast(sock, dst, lm.Prefix, msg)
 		}
 	}
 }

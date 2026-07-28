@@ -55,6 +55,29 @@ breaking changes may occur between `v0.x` minor releases. Each submodule's
   (`ghcr.io/soundmatt/go-dds-operator`), joins `monitor`/`pub`/`sub` in
   `docker/Dockerfile` and `.github/workflows/docker-publish.yml`.
 
+### Added (root, `bridge`)
+
+- NAT Traversal / Cloud Gateway (ROADMAP.md, Milestone 15 "Cloud-Native
+  Runtime", "NAT Traversal / Cloud Gateway"): a TURN-style relay server,
+  `bridge/relay.Serve`, forwards opaque length-prefixed frames between
+  participants that register under a stable ID — the case RTPS-over-TCP/
+  DTLS (Milestone 14) can't cover, since both of those still require one
+  side to accept an inbound connection. `bridge/relay.Discover` adds a real
+  RFC 5389 STUN Binding Request/Response client for server-reflexive
+  address discovery. On the root module side, new participant options
+  `rtps.WithRelayAddr`, `WithRelayTLSConfig`, `WithRelayPeers`, and
+  `WithSTUNServer` (plus the new `dds.PublicAddresser` optional interface)
+  make the relay transport transparent to application code: once two
+  participants discover each other, every unicast SEDP/DATA/ACKNACK/
+  HEARTBEAT send that needs it is automatically routed over the relay,
+  including bypassing the UDP-multicast fast path for a relay-only matched
+  reader. The relay never parses or decrypts DDS payload — only a 1-byte
+  frame type and a short ID field — so end-to-end payload confidentiality
+  via `WithSecurity` is unaffected by the relay hop. The root module
+  implements the relay client side of the wire protocol independently
+  (no new dependency on the `bridge` submodule), the same precedent
+  `rtps/transport_tcp.go` and `bridge/wan` already set.
+
 ## [root v0.55.1] / [safety v0.1.1] — Architecture Initiative Phase F — Root cleanup
 
 Docs/repo-hygiene reorganization only — no Go import path, API, or `go.mod`

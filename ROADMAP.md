@@ -926,12 +926,59 @@ chart is proven with `helm lint` and `helm template` across the
 generated webhook Secret's `ca.crt` matches the
 `MutatingWebhookConfiguration`'s `caBundle` byte-for-byte.
 
-### NAT Traversal / Cloud Gateway
+### NAT Traversal / Cloud Gateway ✅
 
-- TURN-style relay server (`bridge/relay/`) — participants behind NAT register with relay, relay forwards RTPS frames
-- STUN-based peer discovery for cloud↔edge pairing
-- `WithRelay(relayAddr)` participant option; transparent to application code
-- TLS-secured relay channel; relay never decrypts DDS payload
+- TURN-style relay server (`bridge/relay/`) — participants behind NAT register with relay, relay forwards RTPS frames ✅
+- STUN-based peer discovery for cloud↔edge pairing ✅
+- `WithRelay(relayAddr)` participant option; transparent to application code ✅ (shipped as `rtps.WithRelayAddr`, matching the existing `WithTCPAddr`/`WithDTLSAddr` naming convention rather than a single generic `WithRelay`)
+- TLS-secured relay channel; relay never decrypts DDS payload ✅
+
+**Shipped** (`bridge/relay/` — a new package in the `bridge` module — plus
+`rtps/transport_relay.go` and `rtps/stun.go` in the root module). The relay
+server (`relay.Serve`) is a TURN-style hub: participants make one outbound
+TLS connection, register under a stable ID, and the server forwards opaque
+length-prefixed frames between any two registered IDs, exactly like the
+existing `bridge/wan`/RTPS-over-TCP framing but addressed by ID instead of
+"host:port" — the ID-addressed design needed because a NATted participant
+generally has no reachable address at all, which is the whole problem this
+sub-phase solves. `relay.Discover` implements RFC 5389 STUN Binding
+Request/Response for server-reflexive address discovery, used for
+cloud↔edge pairing alongside (not instead of) the relay — the standard
+STUN-then-TURN pattern.
+- `rtps.WithRelayAddr(addr)` dials the relay and registers this
+  participant's GUID prefix (hex-encoded) as its relay ID;
+  `WithRelayTLSConfig` secures that connection; `WithRelayPeers(ids...)`
+  additionally unicasts SPDP announcements over the relay to known peer IDs
+  (mirroring `WithTCPPeers`); `WithSTUNServer(addr)` performs best-effort
+  STUN discovery at startup, exposed via the new `dds.PublicAddresser`
+  optional interface. Once two participants have discovered each other —
+  via `WithRelayPeers` or from any relayed traffic at all — every unicast
+  SEDP/DATA/ACKNACK/HEARTBEAT send that would otherwise require a directly
+  reachable address instead routes over the relay automatically, including
+  overriding the UDP-multicast fast path for a relay-only matched reader:
+  fully transparent to application code, with no import of `bridge/relay`
+  from the root module (ROADMAP.md's "Architecture Initiative", #71:
+  submodules depend on root, never the reverse — the root module
+  independently reimplements the client side of the same wire protocol,
+  the same precedent `rtps/transport_tcp.go`/`bridge/wan` already set for
+  length-prefixed framing).
+- The relay only ever reads a 1-byte frame type and a short ID field to
+  decide where to forward a frame; it never parses or decrypts the RTPS
+  payload itself, so DDS payload confidentiality end-to-end (via
+  `WithSecurity`) is preserved through the relay hop — the relay operator
+  never gains anything a `WithTCPAddr` operator wouldn't already see at the
+  RTPS-message level.
+
+Proven by `bridge/relay`'s own unit tests (frame forwarding, unknown-target
+errors, re-registration, TLS, and a real RFC 5389 STUN client/server round
+trip against a local fake STUN responder) and `rtps/transport_relay_test.go`
+(`relaySocket` send/receive/TLS/close, `relayID`↔`GuidPrefix` round-tripping,
+and — gated behind `-short` exactly like the existing
+`TestDTLS_TwoParticipants_SameHost`/`TestRTPS_TwoParticipants_SameHost` —
+two real participants publishing/subscribing entirely over a relay with no
+other transport configured, plus a dedicated regression test proving a
+relay-only matched reader still receives samples even when UDP multicast is
+otherwise available).
 
 ### Content-Filtered Topics
 

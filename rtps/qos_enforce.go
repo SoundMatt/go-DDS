@@ -224,9 +224,9 @@ func (w *rtpsWriter) assertLiveliness() {
 	}
 	msg := wrapInRTPSMessage(w.p.guidPrefix, marshalHeartbeat(hb))
 	sock := w.sendSock()
-	for _, loc := range w.p.matchedReaderLocators(w.topic, w.partitions) {
-		if dst := loc.udpAddr(); dst != nil {
-			w.p.sendUnicast(sock, dst, msg)
+	for _, lm := range w.p.matchedReaderLocators(w.topic, w.partitions) {
+		if dst := lm.Loc.udpAddr(); dst != nil {
+			w.p.sendUnicast(sock, dst, lm.Prefix, msg)
 		}
 	}
 

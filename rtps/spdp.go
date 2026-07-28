@@ -56,6 +56,16 @@ type participantProxy struct {
 	// decoded from pidTCPLocator. Empty when the peer didn't advertise one
 	// (TCP transport disabled, or an older go-DDS version). Milestone 14.
 	tcpUnicast string
+	// relayID is this peer's RTPS-over-Relay registration ID (Milestone 15,
+	// "NAT Traversal / Cloud Gateway"). Populated either by decoding
+	// pidRelayID from an SPDP announcement, or directly by
+	// participant.dispatchRelayPacket whenever ANY message (not just SPDP)
+	// arrives via the relay from this peer — the latter is more reliable
+	// for a relay-only peer, since it needs no successful SPDP round trip
+	// first and isn't subject to the usual "unknown/unreachable IP" concerns
+	// that make tcpUnicast/dtlsPeers matching IP-based. Empty when the peer
+	// doesn't use the relay transport at all.
+	relayID string
 }
 
 // spdpService manages discovery announcements and the known-peers table.
@@ -99,6 +109,38 @@ func (s *spdpService) allPeers() []*participantProxy {
 		out = append(out, v)
 	}
 	return out
+}
+
+// peerByPrefix returns the known participantProxy for prefix, if any.
+func (s *spdpService) peerByPrefix(prefix GuidPrefix) (*participantProxy, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	proxy, ok := s.peers[prefix]
+	return proxy, ok
+}
+
+// recordRelayID sets relayID on the known proxy for prefix (Milestone 15,
+// "NAT Traversal / Cloud Gateway" — see participant.dispatchRelayPacket). A
+// no-op if prefix has no known proxy yet (e.g. this relayed message arrived
+// before any SPDP announcement from that peer was ever seen).
+func (s *spdpService) recordRelayID(prefix GuidPrefix, relayID string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	old, ok := s.peers[prefix]
+	if !ok || old.relayID == relayID {
+		return
+	}
+	// Callers elsewhere (allPeers, peerByPrefix) hand out the
+	// *participantProxy pointer itself and read its fields without holding
+	// s.mu for the duration of that read — safe only because every other
+	// writer treats a published proxy as immutable and replaces the whole
+	// map entry with a new value (see storePeer) rather than mutating
+	// fields of a proxy another goroutine may already hold a reference to.
+	// Follow that same copy-on-write discipline here instead of assigning
+	// old.relayID directly.
+	updated := *old
+	updated.relayID = relayID
+	s.peers[prefix] = &updated
 }
 
 func (s *spdpService) announceLoop() {
@@ -152,6 +194,18 @@ func (s *spdpService) sendAnnouncement() {
 			_ = p.tcpSock.send(addr, msg)
 		}
 	}
+
+	// Discovery over Relay (Milestone 15, "NAT Traversal / Cloud Gateway"):
+	// additionally send the identical announcement, over the relay, to
+	// every statically configured relay peer ID (see WithRelayPeers). This
+	// is how two participants that each only know the relay's address (not
+	// each other's — the very case a NAT/firewall boundary that blocks
+	// direct connectivity entirely creates) first discover one another.
+	if p.relaySock != nil {
+		for _, id := range p.relayPeers {
+			_ = p.relaySock.send(id, msg)
+		}
+	}
 }
 
 // buildParticipantData returns PL_CDR_LE-encoded ParticipantProxy data.
@@ -187,6 +241,15 @@ func (s *spdpService) buildParticipantData() []byte {
 	if p.tcpSock != nil {
 		tcpLocator := locatorFromTCP(net.IPv4zero, p.tcpSock.port)
 		enc.addLocator(pidTCPLocator, tcpLocator)
+	}
+
+	// Relay registration ID (Milestone 15, "NAT Traversal / Cloud Gateway"),
+	// when the RTPS-over-Relay transport is enabled. Peers use this to
+	// reach us via the relay when no other transport is reachable — see
+	// pidRelayID's doc comment for why this carries an opaque ID rather
+	// than a Locator.
+	if p.relaySock != nil {
+		enc.addString(pidRelayID, p.relaySock.id)
 	}
 
 	// Participant lease duration: 10 seconds (uint32 sec + uint32 frac = 8 bytes).
@@ -262,7 +325,18 @@ func (s *spdpService) storePeer(proxy *participantProxy) {
 		proxy.leaseDuration = defaultLeaseDuration
 	}
 	s.mu.Lock()
-	_, existed := s.peers[proxy.guid.Prefix]
+	old, existed := s.peers[proxy.guid.Prefix]
+	// A fresh SPDP announcement replaces the whole proxy object. Normally
+	// this new announcement re-advertises pidRelayID itself (see
+	// buildParticipantData) whenever the sender has the relay transport
+	// enabled, so proxy.relayID is already correct here — but preserve the
+	// previous proxy's relayID (Milestone 15) as a fallback whenever it
+	// isn't, so a relayID learned out-of-band (participant.
+	// dispatchRelayPacket's recordRelayID) or from an earlier announcement
+	// survives a later one that happens to omit it.
+	if proxy.relayID == "" && existed {
+		proxy.relayID = old.relayID
+	}
 	s.peers[proxy.guid.Prefix] = proxy
 	s.mu.Unlock()
 	if !existed && s.p.livelinessCb != nil {
@@ -406,6 +480,10 @@ func parseParticipantData(prefix GuidPrefix, payload []byte, from *net.UDPAddr) 
 				if hp, ok2 := l.tcpHostPort(); ok2 {
 					proxy.tcpUnicast = hp
 				}
+			}
+		case pidRelayID:
+			if id, ok := decodeString(p.value); ok && id != "" {
+				proxy.relayID = id
 			}
 		}
 	}

@@ -81,6 +81,16 @@ const (
 	// representation). Present only on publication announcements, and only
 	// when the writer set a non-zero lease.
 	pidLivelinessLeaseDuration = uint16(0x8007)
+	// pidRelayID is a vendor-specific PID (Milestone 15, "NAT Traversal /
+	// Cloud Gateway") carrying the sending participant's relay registration
+	// ID (see WithRelayAddr / transport_relay.go), when the RTPS-over-Relay
+	// transport is enabled. It is a plain CDR string, not a Locator: unlike
+	// pidTCPLocator, a relay peer generally has no directly reachable
+	// network address at all (that is the point of the relay), so there is
+	// no host:port to encode — only an opaque ID the relay server uses to
+	// address this participant. Peers that don't understand it skip it like
+	// any other unrecognised PL_CDR parameter.
+	pidRelayID = uint16(0x8008)
 )
 
 // plCDREncoder builds a PL_CDR_LE encoded parameter list.
