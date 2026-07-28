@@ -61,6 +61,7 @@ have the right to contribute under the existing license.
 | `.` | `dds` package — core interfaces (`Participant`, `Publisher`, `Subscriber`, `QoS`, `WaitSet`, `LoaningPublisher`) |
 | `auto/` | `NewParticipant` factory that auto-selects transport (shmem → RTPS fallback) |
 | `bridge/grpc/` | gRPC bridge — expose a DDS topic over a gRPC stream for WAN connectivity |
+| `cfilter/` | Content-filter predicate language (`Parse`/`Expr`) used by `dds.NewFilteredSubscriber`; zero dependencies, shared by `mock`, `rtps`, and `shmem` |
 | `config/` | `ParticipantConfig` — YAML/TOML-loadable runtime tuning (heartbeat, SPDP, peer locators) |
 | `cyclone/` | CycloneDDS via CGo (`-tags cyclone`) |
 | `examples/` (`go.mod`) | Independent module: `examples/sensor-pipeline`, `examples/command-response`, `examples/secure-topic`, `examples/taprio-stream`, `examples/otel-tracing`, `examples/loaned-samples`, `examples/auto-transport`, `examples/scenario-dsl`, `examples/quickstart/{pub,sub}` — self-contained runnable examples with `go run .`; `examples/cmd/latmon` (continuous rolling-window latency monitor with JSON output) |
@@ -114,6 +115,14 @@ Participants bind UDP sockets on creation. Tests use domain `99` to avoid
 collisions with any real DDS deployment on domain `0`. The two-participant
 test (`TestRTPS_TwoParticipants_SameHost`) requires working multicast loopback
 and is Linux-only; it is skipped with `-short` in CI.
+
+### cfilter
+
+`cfilter.Parse(expr, params)` compiles a DDS-SQL-like predicate; `Expr.Eval`
+JSON-decodes a sample's Payload and evaluates the predicate against its
+fields. A decode failure, an absent field, or a type-mismatched comparison
+all evaluate to `false` (fail closed) rather than erroring. Used via
+`dds.NewFilteredSubscriber`, not directly, in normal application code.
 
 ### security
 

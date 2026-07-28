@@ -104,6 +104,12 @@ var ErrLoanBuffer = fmt.Errorf("dds: loan buffer unavailable or invalid: %w", Er
 // liveness-timeout condition.
 var ErrLivelinessLost = fmt.Errorf("dds: writer liveliness lost: %w", relay.ErrTimeout)
 
+// ErrContentFilterUnsupported is returned by NewFilteredSubscriber when p does
+// not implement ContentFilteredSubscriberFactory (Milestone 15,
+// "Content-Filtered Topics"). Wraps ErrNotConnected per spec §5.2, matching
+// the "capability not available on this backend" pattern used elsewhere.
+var ErrContentFilterUnsupported = fmt.Errorf("dds: participant does not support content-filtered subscribers: %w", ErrNotConnected)
+
 // ── Domain ────────────────────────────────────────────────────────────────────
 
 //fusa:req REQ-PART-001
@@ -599,6 +605,43 @@ func PublicAddr(p Participant) string {
 		return a.PublicAddr()
 	}
 	return ""
+}
+
+// ── ContentFilteredSubscriberFactory ────────────────────────────────────────
+
+//fusa:req REQ-CFILT-006
+//fusa:req REQ-CFILT-007
+//fusa:req REQ-CFILT-008
+
+// ContentFilteredSubscriberFactory is optionally implemented by Participants
+// that support server-side content-filtered subscriptions (Milestone 15,
+// "Content-Filtered Topics"; mock, rtps, and shmem all implement it). Unlike
+// WithFilter — whose func(Sample) bool only discards non-matching samples
+// after they have already been delivered locally or received over the
+// network — a content-filtered subscriber's predicate is propagated to every
+// matched publisher and evaluated there before a sample is transmitted, so
+// non-matching samples never cross the network in the first place.
+type ContentFilteredSubscriberFactory interface {
+	// NewFilteredSubscriber creates a subscriber for topic that additionally
+	// only receives samples for which expr — a small SQL-like predicate, e.g.
+	// "x > 42 AND status = 'active'" (see the cfilter package for the full
+	// grammar) — evaluates true against the sample Payload's JSON object
+	// fields. params binds %0, %1, ... placeholders in expr. topic may itself
+	// be an MQTT-style +/# wildcard pattern, exactly like NewSubscriber.
+	NewFilteredSubscriber(topic, expr string, params []string, qos QoS, opts ...SubscriberOption) (Subscriber, error)
+}
+
+// NewFilteredSubscriber creates a server-side content-filtered subscriber on
+// p (Milestone 15, "Content-Filtered Topics"). It returns
+// ErrContentFilterUnsupported if p does not implement
+// [ContentFilteredSubscriberFactory], and otherwise returns whatever error
+// (e.g. a cfilter.Parse failure) p's own implementation returns.
+func NewFilteredSubscriber(p Participant, topic, expr string, params []string, qos QoS, opts ...SubscriberOption) (Subscriber, error) {
+	f, ok := p.(ContentFilteredSubscriberFactory)
+	if !ok {
+		return nil, ErrContentFilterUnsupported
+	}
+	return f.NewFilteredSubscriber(topic, expr, params, qos, opts...)
 }
 
 // ── Interfaces ────────────────────────────────────────────────────────────────

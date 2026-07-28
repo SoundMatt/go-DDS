@@ -91,6 +91,19 @@ const (
 	// address this participant. Peers that don't understand it skip it like
 	// any other unrecognised PL_CDR parameter.
 	pidRelayID = uint16(0x8008)
+	// pidContentFilterExpr is a vendor-specific PID (Milestone 15,
+	// "Content-Filtered Topics") carrying a NewFilteredSubscriber reader's
+	// predicate expression text (see the cfilter package), present only on
+	// subscription announcements from readers created via
+	// NewFilteredSubscriber. A matched writer compiles it with
+	// cfilter.Parse and evaluates it before transmitting DATA to this
+	// reader — the network-load-reduction mechanism this sub-phase exists
+	// for (see rtpsWriter.Write / matchedReaderLocators).
+	pidContentFilterExpr = uint16(0x8009)
+	// pidContentFilterParam carries one %N parameter binding per occurrence
+	// (in order) for the predicate in pidContentFilterExpr, mirroring
+	// pidPartition's repeated-string encoding.
+	pidContentFilterParam = uint16(0x800A)
 )
 
 // plCDREncoder builds a PL_CDR_LE encoded parameter list.

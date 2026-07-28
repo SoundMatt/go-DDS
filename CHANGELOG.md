@@ -78,6 +78,27 @@ breaking changes may occur between `v0.x` minor releases. Each submodule's
   (no new dependency on the `bridge` submodule), the same precedent
   `rtps/transport_tcp.go` and `bridge/wan` already set.
 
+### Added (root, new `cfilter` package)
+
+- Content-Filtered Topics (ROADMAP.md, Milestone 15 "Cloud-Native Runtime",
+  "Content-Filtered Topics" — completes Milestone 15): `dds.NewFilteredSubscriber(p, topic, expr, params, qos, opts...)`
+  creates a server-side content-filtered subscription using a small
+  DDS-SQL-like predicate (`x > 42 AND status = 'active'`, with `%0`, `%1`,
+  ... parameter placeholders), implemented by a new dependency-free
+  `cfilter` package (`cfilter.Parse`/`cfilter.Expr`) shared identically by
+  `mock`, `rtps`, and `shmem` via the new optional
+  `dds.ContentFilteredSubscriberFactory` interface. Unlike the existing
+  `dds.WithFilter` (a `func(Sample) bool` checked only after a sample has
+  already been delivered or received), the rtps backend propagates the
+  compiled predicate to every matched remote writer over two new SEDP
+  vendor PL_CDR parameters and evaluates it *before* transmitting DATA, so
+  a non-matching sample never crosses the network — the actual
+  network-load reduction this sub-phase targets; RTPS multicast is
+  disabled in favour of per-reader unicast whenever a matched reader has a
+  content filter registered, mirroring the existing relay-only-reader
+  fallback. `topic` may itself be an MQTT-style `+`/`#` wildcard pattern,
+  composing directly with Milestone 11's wildcard subscriptions.
+
 ## [root v0.55.1] / [safety v0.1.1] — Architecture Initiative Phase F — Root cleanup
 
 Docs/repo-hygiene reorganization only — no Go import path, API, or `go.mod`

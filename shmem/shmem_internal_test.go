@@ -27,7 +27,7 @@ import (
 // shmPublish in a goroutine that races with test-cleanup.
 func TestShmListener_ReceivesPublishedData(t *testing.T) {
 	topic := "internal/xproc-test"
-	listener, err := newShmListener(topic, nil, 4)
+	listener, err := newShmListener(topic, nil, nil, 4)
 	if err != nil {
 		t.Skipf("newShmListener: %v (socket setup may be unavailable)", err)
 	}
@@ -55,7 +55,7 @@ func TestShmListener_ReceivesPublishedData(t *testing.T) {
 func TestShmListener_Filter_DropsNonMatching(t *testing.T) {
 	topic := "internal/xproc-filter"
 	filter := func(s dds.Sample) bool { return string(s.Payload) == "keep" }
-	listener, err := newShmListener(topic, filter, 4)
+	listener, err := newShmListener(topic, filter, nil, 4)
 	if err != nil {
 		t.Skipf("newShmListener: %v", err)
 	}
@@ -99,7 +99,7 @@ func TestCloseWithDrain_ShmemParticipant(t *testing.T) {
 // the listener channel rather than through the in-process broker.
 func TestPump_CrossProcessPath(t *testing.T) {
 	topic := "internal/pump-xp"
-	listener, err := newShmListener(topic, nil, 4)
+	listener, err := newShmListener(topic, nil, nil, 4)
 	if err != nil {
 		t.Skipf("newShmListener: %v", err)
 	}
@@ -142,7 +142,7 @@ func TestPump_CrossProcessPath(t *testing.T) {
 // when the listener channel closes (the !ok branch).
 func TestPump_CrossProcessChannel_Closed(t *testing.T) {
 	topic := "internal/pump-xp-close"
-	listener, err := newShmListener(topic, nil, 4)
+	listener, err := newShmListener(topic, nil, nil, 4)
 	if err != nil {
 		t.Skipf("newShmListener: %v", err)
 	}
@@ -302,7 +302,7 @@ func TestReadData_EmptyFile(t *testing.T) {
 // the 100ms read deadline, Read returns an error and the loop continues.
 func TestLoop_ReadTimeout_Continue(t *testing.T) {
 	topic := "internal/loop-timeout"
-	listener, err := newShmListener(topic, nil, 4)
+	listener, err := newShmListener(topic, nil, nil, 4)
 	if err != nil {
 		t.Skipf("newShmListener: %v", err)
 	}
@@ -320,7 +320,7 @@ func TestLoop_ReadDataError_Continue(t *testing.T) {
 	// Remove any stale data file so readData fails.
 	_ = os.Remove(shmDataPath(topic))
 
-	listener, err := newShmListener(topic, nil, 4)
+	listener, err := newShmListener(topic, nil, nil, 4)
 	if err != nil {
 		t.Skipf("newShmListener: %v (socket setup may be unavailable)", err)
 	}
@@ -379,7 +379,7 @@ func TestDeliverSub_DropOldest_FullChannel(t *testing.T) {
 // finds the channel full and is silently dropped.
 func TestLoop_DropOnFull(t *testing.T) {
 	topic := "internal/loop-drop-full"
-	listener, err := newShmListener(topic, nil, 1) // depth 1
+	listener, err := newShmListener(topic, nil, nil, 1) // depth 1
 	if err != nil {
 		t.Skipf("newShmListener: %v", err)
 	}
@@ -426,7 +426,7 @@ func TestNewShmListener_ListenError(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = os.RemoveAll(sockPath) })
 
-	_, err := newShmListener(topic, nil, 4)
+	_, err := newShmListener(topic, nil, nil, 4)
 	if err == nil {
 		t.Error("expected error when socket path is a directory")
 	}

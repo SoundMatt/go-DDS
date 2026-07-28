@@ -30,6 +30,8 @@ package shmem
 //fusa:req REQ-SHMEM-002
 //fusa:req REQ-SHMEM-003
 //fusa:req REQ-SHMEM-004
+//fusa:req REQ-CFILT-006
+//fusa:req REQ-CFILT-008
 
 import (
 	"context"
@@ -45,6 +47,7 @@ import (
 	"time"
 
 	dds "github.com/SoundMatt/go-DDS"
+	"github.com/SoundMatt/go-DDS/cfilter"
 )
 
 // shmDir is the root directory under which per-domain/topic socket and
@@ -99,6 +102,12 @@ type shmSub struct {
 	filter        func(dds.Sample) bool
 	backPressure  dds.BackPressurePolicy
 	resetDeadline func()
+
+	// contentFilter is the compiled predicate for a subscriber created via
+	// NewFilteredSubscriber (Milestone 15, "Content-Filtered Topics"); nil
+	// for a plain NewSubscriber. Checked in shmBroker.publish, mirroring
+	// mock's identical in-process broker.publish check.
+	contentFilter *cfilter.Expr
 }
 
 func brokerFor(d dds.Domain) *shmBroker {
@@ -115,10 +124,14 @@ func brokerFor(d dds.Domain) *shmBroker {
 	return b
 }
 
-func (b *shmBroker) subscribe(topic string, qos dds.QoS, cfg dds.SubscriberConfig, resetDeadline func()) chan dds.Sample {
+// subscribe registers a new subscription and returns its delivery channel.
+// cf is the compiled content-filter predicate from NewFilteredSubscriber
+// (Milestone 15, "Content-Filtered Topics"), or nil for a plain
+// NewSubscriber.
+func (b *shmBroker) subscribe(topic string, qos dds.QoS, cfg dds.SubscriberConfig, resetDeadline func(), cf *cfilter.Expr) chan dds.Sample {
 	depth := cfg.ChanDepth(64)
 	ch := make(chan dds.Sample, depth)
-	sub := shmSub{ch: ch, filter: cfg.Filter, backPressure: cfg.BackPressure, resetDeadline: resetDeadline}
+	sub := shmSub{ch: ch, filter: cfg.Filter, contentFilter: cf, backPressure: cfg.BackPressure, resetDeadline: resetDeadline}
 	b.mu.Lock()
 	b.subs[topic] = append(b.subs[topic], sub)
 	var last *dds.Sample
@@ -127,7 +140,7 @@ func (b *shmBroker) subscribe(topic string, qos dds.QoS, cfg dds.SubscriberConfi
 	}
 	b.mu.Unlock()
 	if last != nil {
-		if cfg.Filter == nil || cfg.Filter(*last) {
+		if (cfg.Filter == nil || cfg.Filter(*last)) && (cf == nil || cf.Eval(last.Payload)) {
 			select {
 			case ch <- *last:
 			default:
@@ -176,6 +189,16 @@ func (b *shmBroker) publish(topic string, payload []byte, qos dds.QoS, seqNum ui
 
 	for _, sub := range subs {
 		if sub.filter != nil && !sub.filter(sample) {
+			continue
+		}
+		// Content-Filtered Topics (Milestone 15): checked here, in the same
+		// broker.publish call Publisher.Write invokes synchronously, so
+		// in-process delivery is filtered before it happens, mirroring
+		// mock's identical contract. Cross-process delivery is filtered in
+		// shmListener.loop (see newShmListener) instead, since it reads the
+		// payload directly from the shared-memory file rather than through
+		// this broker.
+		if sub.contentFilter != nil && !sub.contentFilter.Eval(sample.Payload) {
 			continue
 		}
 		b.deliverSub(sub, sample, tc)
@@ -300,11 +323,16 @@ type shmListener struct {
 	conn   *net.UnixConn
 	ch     chan dds.Sample
 	filter func(dds.Sample) bool
-	done   chan struct{}
-	once   sync.Once
+	// contentFilter mirrors shmSub.contentFilter for cross-process delivery
+	// (Milestone 15, "Content-Filtered Topics"): checked in loop() after
+	// readData, since a cross-process reader has no access to the local
+	// shmBroker that filters in-process subscribers.
+	contentFilter *cfilter.Expr
+	done          chan struct{}
+	once          sync.Once
 }
 
-func newShmListener(topic string, filter func(dds.Sample) bool, depth int) (*shmListener, error) {
+func newShmListener(topic string, filter func(dds.Sample) bool, cf *cfilter.Expr, depth int) (*shmListener, error) {
 	dir := shmTopicDir(topic)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, fmt.Errorf("shmem: mkdir %s: %w", dir, err)
@@ -317,11 +345,12 @@ func newShmListener(topic string, filter func(dds.Sample) bool, depth int) (*shm
 		return nil, fmt.Errorf("shmem: listen %s: %w", sockPath, err)
 	}
 	l := &shmListener{
-		topic:  topic,
-		conn:   conn,
-		ch:     make(chan dds.Sample, depth),
-		filter: filter,
-		done:   make(chan struct{}),
+		topic:         topic,
+		conn:          conn,
+		ch:            make(chan dds.Sample, depth),
+		filter:        filter,
+		contentFilter: cf,
+		done:          make(chan struct{}),
 	}
 	go l.loop()
 	return l, nil
@@ -349,6 +378,9 @@ func (l *shmListener) loop() {
 		}
 		sample := dds.Sample{Topic: l.topic, Payload: payload, Timestamp: time.Now()}
 		if l.filter != nil && !l.filter(sample) {
+			continue
+		}
+		if l.contentFilter != nil && !l.contentFilter.Eval(sample.Payload) {
 			continue
 		}
 		select {
@@ -435,6 +467,34 @@ func (p *participant) NewSubscriber(topic string, qos dds.QoS, opts ...dds.Subsc
 	if p.closed {
 		return nil, fmt.Errorf("shmem: %w", dds.ErrClosed)
 	}
+	return p.newSubscriberLocked(topic, qos, opts, nil)
+}
+
+// NewFilteredSubscriber implements dds.ContentFilteredSubscriberFactory
+// (Milestone 15, "Content-Filtered Topics"): expr is compiled once via
+// cfilter.Parse and evaluated in shmBroker.publish for in-process delivery —
+// the same funnel Publisher.Write invokes synchronously — and in
+// shmListener.loop for cross-process delivery, matching the contract
+// documented on dds.ContentFilteredSubscriberFactory.
+func (p *participant) NewFilteredSubscriber(topic, expr string, params []string, qos dds.QoS, opts ...dds.SubscriberOption) (dds.Subscriber, error) {
+	if topic == "" {
+		return nil, fmt.Errorf("shmem: %w", dds.ErrTopicEmpty)
+	}
+	cf, err := cfilter.Parse(expr, params)
+	if err != nil {
+		return nil, fmt.Errorf("shmem: %w", err)
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.closed {
+		return nil, fmt.Errorf("shmem: %w", dds.ErrClosed)
+	}
+	return p.newSubscriberLocked(topic, qos, opts, cf)
+}
+
+// newSubscriberLocked is the shared implementation behind NewSubscriber and
+// NewFilteredSubscriber. Caller must hold p.mu.
+func (p *participant) newSubscriberLocked(topic string, qos dds.QoS, opts []dds.SubscriberOption, cf *cfilter.Expr) (dds.Subscriber, error) {
 	cfg := dds.ApplySubscriberOpts(opts)
 	depth := cfg.ChanDepth(64)
 
@@ -462,9 +522,9 @@ func (p *participant) NewSubscriber(topic string, qos dds.QoS, opts ...dds.Subsc
 	}
 
 	// In-process channel from the shared broker.
-	sub.inProc = p.broker.subscribe(topic, qos, cfg, resetDeadline)
+	sub.inProc = p.broker.subscribe(topic, qos, cfg, resetDeadline, cf)
 	// Cross-process listener (best-effort; failure is non-fatal).
-	sub.listener, _ = newShmListener(topic, cfg.Filter, depth)
+	sub.listener, _ = newShmListener(topic, cfg.Filter, cf, depth)
 	return sub, nil
 }
 
