@@ -77,6 +77,19 @@ jobs:
   # ── Short fuzz run (seed corpus + a few seconds of engine exploration) ────
   # The full fuzzer is meant to be run locally or in dedicated infra; here we
   # run each fuzz target for 10 seconds to catch obvious regressions.
+  #
+  # `-parallel=2` (default is GOMAXPROCS, 4 on ubuntu-latest runners) and the
+  # one-retry wrapper below are a deliberate fix for go-DDS#136: under CPU
+  # contention right at the -fuzztime cutoff, `go test -fuzz`'s own worker
+  # coordinator can spuriously report "context deadline exceeded" as a test
+  # FAILURE even though nothing in the code under test timed out (reproduces
+  # nowhere near as often locally, where there's far less contention, and
+  # every fuzz target here passes cleanly with a much longer local
+  # -fuzztime). Halving worker count leaves each worker more headroom to
+  # respond to the coordinator before its deadline; retrying once absorbs
+  # whatever residual flake headroom doesn't cover, instead of leaving a red
+  # main HEAD with nothing to automatically clear it (the original #136
+  # failure was never rerun).
   fuzz-short:
     name: Fuzz (short, ubuntu-latest)
     runs-on: ubuntu-latest
@@ -91,32 +104,64 @@ jobs:
         run: go clean -fuzzcache
 
       - name: FuzzPublish
-        run: go test -fuzz=^FuzzPublish$ -fuzztime=10s ./mock/...
+        run: |
+          go test -fuzz=^FuzzPublish$ -fuzztime=10s -parallel=2 ./mock/... || {
+            echo "::warning::FuzzPublish failed once (go-DDS#136 — possible fuzz-coordinator deadline flake under CI contention); retrying"
+            go test -fuzz=^FuzzPublish$ -fuzztime=10s -parallel=2 ./mock/...
+          }
 
       - name: FuzzPublishIsolation
-        run: go test -fuzz=^FuzzPublishIsolation$ -fuzztime=10s ./mock/...
+        run: |
+          go test -fuzz=^FuzzPublishIsolation$ -fuzztime=10s -parallel=2 ./mock/... || {
+            echo "::warning::FuzzPublishIsolation failed once (go-DDS#136 — possible fuzz-coordinator deadline flake under CI contention); retrying"
+            go test -fuzz=^FuzzPublishIsolation$ -fuzztime=10s -parallel=2 ./mock/...
+          }
 
       - name: FuzzTopicName
-        run: go test -fuzz=^FuzzTopicName$ -fuzztime=10s ./mock/...
+        run: |
+          go test -fuzz=^FuzzTopicName$ -fuzztime=10s -parallel=2 ./mock/... || {
+            echo "::warning::FuzzTopicName failed once (go-DDS#136 — possible fuzz-coordinator deadline flake under CI contention); retrying"
+            go test -fuzz=^FuzzTopicName$ -fuzztime=10s -parallel=2 ./mock/...
+          }
 
       - name: FuzzNoRouting
-        run: go test -fuzz=^FuzzNoRouting$ -fuzztime=10s ./mock/...
+        run: |
+          go test -fuzz=^FuzzNoRouting$ -fuzztime=10s -parallel=2 ./mock/... || {
+            echo "::warning::FuzzNoRouting failed once (go-DDS#136 — possible fuzz-coordinator deadline flake under CI contention); retrying"
+            go test -fuzz=^FuzzNoRouting$ -fuzztime=10s -parallel=2 ./mock/...
+          }
 
       - name: FuzzConcurrentPubSub (with race detector)
-        run: go test -race -fuzz=^FuzzConcurrentPubSub$ -fuzztime=10s ./mock/...
+        run: |
+          go test -race -fuzz=^FuzzConcurrentPubSub$ -fuzztime=10s -parallel=2 ./mock/... || {
+            echo "::warning::FuzzConcurrentPubSub failed once (go-DDS#136 — possible fuzz-coordinator deadline flake under CI contention); retrying"
+            go test -race -fuzz=^FuzzConcurrentPubSub$ -fuzztime=10s -parallel=2 ./mock/...
+          }
 
       - name: FuzzDropOnFullChannel
-        run: go test -fuzz=^FuzzDropOnFullChannel$ -fuzztime=10s ./mock/...
+        run: |
+          go test -fuzz=^FuzzDropOnFullChannel$ -fuzztime=10s -parallel=2 ./mock/... || {
+            echo "::warning::FuzzDropOnFullChannel failed once (go-DDS#136 — possible fuzz-coordinator deadline flake under CI contention); retrying"
+            go test -fuzz=^FuzzDropOnFullChannel$ -fuzztime=10s -parallel=2 ./mock/...
+          }
 
       # idl now lives in the tools/ submodule (ROADMAP.md "Architecture
       # Initiative" #71, Phase C) — run its fuzz targets from there.
       - name: FuzzIDLParser
         working-directory: tools
-        run: go test -fuzz=^FuzzIDLParser$ -fuzztime=10s ./idl
+        run: |
+          go test -fuzz=^FuzzIDLParser$ -fuzztime=10s -parallel=2 ./idl || {
+            echo "::warning::FuzzIDLParser failed once (go-DDS#136 — possible fuzz-coordinator deadline flake under CI contention); retrying"
+            go test -fuzz=^FuzzIDLParser$ -fuzztime=10s -parallel=2 ./idl
+          }
 
       - name: FuzzIDLGenerate
         working-directory: tools
-        run: go test -fuzz=^FuzzIDLGenerate$ -fuzztime=10s ./idl
+        run: |
+          go test -fuzz=^FuzzIDLGenerate$ -fuzztime=10s -parallel=2 ./idl || {
+            echo "::warning::FuzzIDLGenerate failed once (go-DDS#136 — possible fuzz-coordinator deadline flake under CI contention); retrying"
+            go test -fuzz=^FuzzIDLGenerate$ -fuzztime=10s -parallel=2 ./idl
+          }
 
   # ── Pure-Go RTPS/UDP implementation ──────────────────────────────────────
   # Wire-format unit tests always pass. Intra-process socket tests skip
