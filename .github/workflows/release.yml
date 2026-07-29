@@ -29,7 +29,7 @@ jobs:
           go-version: "1.25"
 
       - name: Install go-FuSa
-        run: go install github.com/SoundMatt/go-FuSa/cmd/gofusa@v0.36.0
+        run: go install github.com/SoundMatt/go-FuSa/cmd/gofusa@v0.47.0
 
       - name: Regenerate dFMEA table
         run: gofusa fmea -cyber
@@ -40,14 +40,40 @@ jobs:
       - name: Regenerate SBOM, provenance, and artifact manifest
         run: gofusa release
 
-      - name: Regenerate lifecycle evidence (SCI, SAS, coupling, cyber, boundary)
+      - name: Regenerate lifecycle evidence (SCI, TARA, coupling, boundary, cyber, check)
         run: |
           gofusa sci -output sci.json
-          gofusa sas
+          gofusa tara
           gofusa coupling
           gofusa boundary
           gofusa cyber
-          gofusa check --output cyber-plan.json || true
+          gofusa check --output cyber-plan.json
+
+      # `gofusa sas` (DO-178C §11.20 Software Accomplishment Summary) asserts
+      # all 20 lifecycle data items are present and exits 1 if any are
+      # missing. It must run after every other regenerate step above (SCI,
+      # TARA, coupling, boundary, cyber) and after the coverage/gap-report
+      # steps below, since it checks for coverage-report.json/
+      # do178-gap-report.json too — those live at the repo root from the
+      # previous release's commit, so it still passes on a from-scratch
+      # checkout even before this run regenerates them again.
+      #
+      # go-FuSa v0.47.0 added two new required lifecycle items relative to
+      # the v0.36.0 baseline this job used to run: the TARA report
+      # (`gofusa tara`, ISO 21434 Chapter 9 — added above) and the audit
+      # pack (`gofusa audit-pack`, below). Before those two commands were
+      # added, `gofusa sas` always failed with 18/20 items present, and
+      # because it ran mid-chain in a `bash -e` step, that failure silently
+      # aborted the rest of the "Regenerate lifecycle evidence" step too
+      # (coupling/boundary/cyber never ran) — see #105. Both new artifacts
+      # are already covered by /audit-pack.zip and /tara.json in
+      # .gitignore: they are regenerated evidence for this workflow's own
+      # SAS gate, not files this repo tracks in git history.
+      - name: Bundle audit pack (required lifecycle item for SAS)
+        run: gofusa audit-pack
+
+      - name: Regenerate Software Accomplishment Summary (DO-178C §11.20)
+        run: gofusa sas
 
       - name: Regenerate structural coverage report
         run: |
