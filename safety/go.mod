@@ -5,7 +5,7 @@ go 1.25.0
 require github.com/SoundMatt/go-DDS v0.53.0
 
 require (
-	github.com/SoundMatt/RELAY v1.11.1 // indirect
+	github.com/SoundMatt/RELAY v1.14.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
 

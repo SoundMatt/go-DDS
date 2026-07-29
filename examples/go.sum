@@ -1,5 +1,7 @@
 github.com/SoundMatt/RELAY v1.11.1 h1:+bHI6qjEqOVIxwqlAaOwxUf87SrokC/sgC7n/OGpwi0=
 github.com/SoundMatt/RELAY v1.11.1/go.mod h1:8HXkxErdk4pHaM1de9eopm2S8o1aE7tKYkCBBsHxxcg=
+github.com/SoundMatt/RELAY v1.14.0 h1:8tIDWQsXY/QpzlOL7qkCJLeMJfj36HY16O64mUeHklE=
+github.com/SoundMatt/RELAY v1.14.0/go.mod h1:8HXkxErdk4pHaM1de9eopm2S8o1aE7tKYkCBBsHxxcg=
 github.com/SoundMatt/go-DDS/observability v0.1.0 h1:HNmMkvTd8RabeI/kZqhKKRNvD2l7Gu9P2I3wTKkedRg=
 github.com/SoundMatt/go-DDS/observability v0.1.0/go.mod h1:o0XDO5zgpMaKGAvHj8Aa6CZDRLxqI1vuGmgjtkF8c1Y=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
@@ -37,6 +39,7 @@ go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=
 go.uber.org/goleak v1.3.0/go.mod h1:CoHD4mav9JJNrW/WLlf7HGZPjdw8EucARQHekz1X6bE=
 golang.org/x/sys v0.46.0 h1:noSf2Fq6F8DBgS+LysIkx7rIExoNHJsxOAtPp4rthXw=
 golang.org/x/sys v0.46.0/go.mod h1:4GL1E5IUh+htKOUEOaiffhrAeqysfVGipDYzABqnCmw=
+golang.org/x/sys v0.47.0/go.mod h1:4GL1E5IUh+htKOUEOaiffhrAeqysfVGipDYzABqnCmw=
 google.golang.org/protobuf v1.36.11 h1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=
 google.golang.org/protobuf v1.36.11/go.mod h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j23XfzDpco=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=

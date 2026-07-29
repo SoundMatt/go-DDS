@@ -415,7 +415,14 @@ jobs:
   # relay binary (authoritative, unlike hand-rolled JSON asserts), then checks
   # the convert driver is behaviourally interchangeable with the RELAY
   # reference for every DDS golden vector. Pin the relay version so spec bumps
-  # are an explicit upgrade, not a surprise CI break (tracks RELAY v1.11).
+  # are an explicit upgrade, not a surprise CI break (tracks RELAY v1.14).
+  # NOTE: RELAY v2.0.0 (2026-07-29) is the latest tag, but it was cut without
+  # bumping its module path to github.com/SoundMatt/RELAY/v2 as Go's minimal
+  # version selection rules require for a v2+ release, so `go get`/`go install`
+  # against v2.0.0 fails with "module contains a go.mod file, so module path
+  # must match major version" — v2.0.0 is currently unconsumable as a Go
+  # module. v1.14.0 is the newest version that actually installs; re-evaluate
+  # once RELAY publishes a /v2 module path.
   relay-conform:
     name: RELAY conform
     runs-on: ubuntu-latest
@@ -427,7 +434,7 @@ jobs:
           go-version: "1.25"
 
       - name: Install relay CLI
-        run: go install github.com/SoundMatt/RELAY/cmd/relay@v1.11.1
+        run: go install github.com/SoundMatt/RELAY/cmd/relay@v1.14.0
 
       # cmd/go-dds moved into the tools/ submodule (ROADMAP.md "Architecture
       # Initiative" #71, Phase C).
@@ -440,6 +447,30 @@ jobs:
 
       - name: relay interop --protocol DDS --strict
         run: relay interop --protocol DDS --strict /tmp/go-dds
+
+      # v1.13's go:embed fix (spec/vectors/errors/*.json) made this vector
+      # *embedded*, but `relay interop`'s own type→protocol lookup still drops
+      # it before it's ever driven against a binary (upstream bug, tracked as
+      # SoundMatt/RELAY#69 — `typeProtocol` has no entry for the vector's
+      # `"type": "dds.Domain"`). That means the step above currently passes
+      # whether or not this repo's DDS domain-ID reject path actually works,
+      # which is exactly the kind of silent gap §20 conformance is meant to
+      # rule out. Until RELAY#69 lands, fail loudly instead of reporting a
+      # clean, misleading green check: emit a visible warning annotation so
+      # the gap stays visible rather than looking like real coverage. The
+      # same boundary (domain 233 / -1) IS directly unit-tested at the source
+      # level in relay_test.go (ValidateDomain), mock/mock_test.go
+      # (mock.New), and cyclone/cyclone_test.go (NewWithOptions), so the
+      # regression risk itself is covered — only the black-box CLI golden
+      # vector coverage is the gap.
+      - name: Verify DDS reject-path golden vector is actually exercised
+        run: |
+          relay interop --protocol DDS --strict --format json /tmp/go-dds > /tmp/interop.json
+          if grep -q 'dds-domain-out-of-range' /tmp/interop.json; then
+            echo "reject-path golden vector 'errors/dds-domain-out-of-range' was exercised by relay interop"
+          else
+            echo "::warning::relay interop did NOT exercise spec/vectors/errors/dds-domain-out-of-range.json — blocked upstream on SoundMatt/RELAY#69 (typeProtocol map has no entry for vector type 'dds.Domain'). The DDS domain-ID reject path is still covered by this repo's own unit tests (ValidateDomain in relay_test.go; mock.New in mock/mock_test.go; cyclone.NewWithOptions in cyclone/cyclone_test.go), but relay interop's black-box golden-vector coverage of it remains a known gap until RELAY#69 is fixed."
+          fi
 
   # ── CycloneDDS CGo build (Linux only — requires system library) ───────────
   # libcyclonedds-dev is not reliably available in the Ubuntu 22.04 apt repo.
