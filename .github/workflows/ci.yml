@@ -415,7 +415,16 @@ jobs:
   # relay binary (authoritative, unlike hand-rolled JSON asserts), then checks
   # the convert driver is behaviourally interchangeable with the RELAY
   # reference for every DDS golden vector. Pin the relay version so spec bumps
-  # are an explicit upgrade, not a surprise CI break (tracks RELAY v1.11).
+  # are an explicit upgrade, not a surprise CI break (tracks RELAY v1.14).
+  #
+  # v1.14.0 is pinned rather than the newer v2.0.0 because v2.0.0's go.mod
+  # still declares `module github.com/SoundMatt/RELAY` (no `/v2` suffix),
+  # which violates Go's semantic import versioning rule for v2+ modules and
+  # makes it uninstallable via normal `go get`/`go install` — see
+  # SoundMatt/RELAY#68. v1.14.0 is otherwise the latest available and
+  # includes v1.13's `spec/vectors/errors/*.json` go:embed fix that makes
+  # reject-path golden vectors (e.g. dds-domain-out-of-range.json) reachable
+  # through `relay interop --strict`.
   relay-conform:
     name: RELAY conform
     runs-on: ubuntu-latest
@@ -427,7 +436,7 @@ jobs:
           go-version: "1.25"
 
       - name: Install relay CLI
-        run: go install github.com/SoundMatt/RELAY/cmd/relay@v1.11.1
+        run: go install github.com/SoundMatt/RELAY/cmd/relay@v1.14.0
 
       # cmd/go-dds moved into the tools/ submodule (ROADMAP.md "Architecture
       # Initiative" #71, Phase C).
