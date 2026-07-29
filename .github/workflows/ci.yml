@@ -76,7 +76,16 @@ jobs:
 
   # ── Short fuzz run (seed corpus + a few seconds of engine exploration) ────
   # The full fuzzer is meant to be run locally or in dedicated infra; here we
-  # run each fuzz target for 10 seconds to catch obvious regressions.
+  # run each fuzz target for 20 seconds to catch obvious regressions.
+  #
+  # Was 10s per target until #136: Go's fuzzing engine binds its
+  # worker-coordination deadline to -fuzztime, so on a loaded/contended CI
+  # runner a worker that's slow to start can make the coordinator hit that
+  # deadline before any worker reports back — surfacing as a spurious
+  # "context deadline exceeded" failure with no actual bug behind it (see
+  # #136: reproduced clean locally with -fuzztime=30s, never reproduced the
+  # CI failure). Doubling to 20s doubles the deadline headroom relative to
+  # that fixed startup-jitter cost without meaningfully slowing the job.
   fuzz-short:
     name: Fuzz (short, ubuntu-latest)
     runs-on: ubuntu-latest
@@ -91,32 +100,32 @@ jobs:
         run: go clean -fuzzcache
 
       - name: FuzzPublish
-        run: go test -fuzz=^FuzzPublish$ -fuzztime=10s ./mock/...
+        run: go test -fuzz=^FuzzPublish$ -fuzztime=20s ./mock/...
 
       - name: FuzzPublishIsolation
-        run: go test -fuzz=^FuzzPublishIsolation$ -fuzztime=10s ./mock/...
+        run: go test -fuzz=^FuzzPublishIsolation$ -fuzztime=20s ./mock/...
 
       - name: FuzzTopicName
-        run: go test -fuzz=^FuzzTopicName$ -fuzztime=10s ./mock/...
+        run: go test -fuzz=^FuzzTopicName$ -fuzztime=20s ./mock/...
 
       - name: FuzzNoRouting
-        run: go test -fuzz=^FuzzNoRouting$ -fuzztime=10s ./mock/...
+        run: go test -fuzz=^FuzzNoRouting$ -fuzztime=20s ./mock/...
 
       - name: FuzzConcurrentPubSub (with race detector)
-        run: go test -race -fuzz=^FuzzConcurrentPubSub$ -fuzztime=10s ./mock/...
+        run: go test -race -fuzz=^FuzzConcurrentPubSub$ -fuzztime=20s ./mock/...
 
       - name: FuzzDropOnFullChannel
-        run: go test -fuzz=^FuzzDropOnFullChannel$ -fuzztime=10s ./mock/...
+        run: go test -fuzz=^FuzzDropOnFullChannel$ -fuzztime=20s ./mock/...
 
       # idl now lives in the tools/ submodule (ROADMAP.md "Architecture
       # Initiative" #71, Phase C) — run its fuzz targets from there.
       - name: FuzzIDLParser
         working-directory: tools
-        run: go test -fuzz=^FuzzIDLParser$ -fuzztime=10s ./idl
+        run: go test -fuzz=^FuzzIDLParser$ -fuzztime=20s ./idl
 
       - name: FuzzIDLGenerate
         working-directory: tools
-        run: go test -fuzz=^FuzzIDLGenerate$ -fuzztime=10s ./idl
+        run: go test -fuzz=^FuzzIDLGenerate$ -fuzztime=20s ./idl
 
   # ── Pure-Go RTPS/UDP implementation ──────────────────────────────────────
   # Wire-format unit tests always pass. Intra-process socket tests skip
