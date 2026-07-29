@@ -10,7 +10,9 @@ on:
       - "v*"
 
 permissions:
-  contents: write   # needed to push the artifact-update commit
+  contents: write       # needed to push the artifact-update commit + upload release assets
+  attestations: write   # needed to publish the build provenance attestation
+  id-token: write       # needed to mint the attestation's signing identity
 
 jobs:
   regenerate-safety-artifacts:
@@ -122,3 +124,40 @@ jobs:
               echo "::warning::Could not push regenerated artifacts to protected main; update them via PR (see issue #72 for the artifact-in-VCS strategy decision)."
             fi
           fi
+
+      # #137: the SBOM/provenance/manifest were regenerated and committed to
+      # the repo tree above, but were never attached to the GitHub Release or
+      # attested — a consumer had to know to dig through the tagged tree
+      # instead of using the standard release-asset / `gh attestation verify`
+      # UX. Attach them as downloadable assets here.
+      - name: Attach safety-evidence artifacts to the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ github.ref_name }}"
+          # Attaching requires a GitHub Release to already exist for this tag
+          # (this repo's convention creates the Release, with its own
+          # hand-written notes, around the same time the tag is pushed — this
+          # workflow does not create/edit the Release itself). If it hasn't
+          # landed yet, warn rather than fail the whole regenerate job; the
+          # assets can be attached with a re-run once the Release exists.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" --clobber \
+              sbom.json sbom-spdx-3.0.1.json provenance.json artifact-manifest.json \
+              safety-case.json safety-case.md sas.md
+          else
+            echo "::warning::No GitHub Release found for $TAG — SBOM/provenance/manifest assets were not attached. Re-run this workflow (or attach manually with 'gh release upload') once the Release exists."
+          fi
+
+      # Build provenance attestation (SLSA), verifiable with
+      # `gh attestation verify sbom.json --repo SoundMatt/go-DDS` etc. —
+      # independent of whether the Release itself exists yet, so this always
+      # runs on the tag push.
+      - name: Generate build provenance attestation
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            sbom.json
+            sbom-spdx-3.0.1.json
+            provenance.json
+            artifact-manifest.json
