@@ -10,7 +10,9 @@ on:
       - "v*"
 
 permissions:
-  contents: write   # needed to push the artifact-update commit
+  contents: write        # needed to push the artifact-update commit and upload release assets
+  attestations: write    # needed to publish build-provenance attestations
+  id-token: write        # needed to mint the OIDC token attestations are signed with
 
 jobs:
   regenerate-safety-artifacts:
@@ -122,3 +124,33 @@ jobs:
               echo "::warning::Could not push regenerated artifacts to protected main; update them via PR (see issue #72 for the artifact-in-VCS strategy decision)."
             fi
           fi
+
+      # SBOM/provenance were only ever committed to the repo tree at the
+      # release commit — no way to fetch them from the Release page itself,
+      # and no build-provenance attestation existed at all (#137). Attach
+      # them (plus the audit pack, which already bundles every other
+      # evidence artifact for auditors) as downloadable Release assets, and
+      # attest them so `gh attestation verify` works against this exact
+      # release. Guarded on the tag's Release actually existing yet, since
+      # this workflow triggers on the tag push itself, not on release
+      # publication — same "warn, don't fail the workflow" treatment as the
+      # protected-main push above.
+      - name: Attach SBOM, provenance, and audit pack as release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ github.ref_name }}"
+          if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release upload "$TAG" \
+              sbom.json provenance.json audit-pack.zip \
+              --repo "${{ github.repository }}" --clobber
+          else
+            echo "::warning::No GitHub Release found for tag $TAG yet; skipping release-asset upload (see #137). Run this workflow's asset-upload step manually, or re-run it, once the Release exists."
+          fi
+
+      - name: Attest build provenance (SBOM + audit pack)
+        uses: actions/attest-build-provenance@v4.1.1
+        with:
+          subject-path: |
+            sbom.json
+            audit-pack.zip
