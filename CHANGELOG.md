@@ -23,6 +23,42 @@ breaking changes may occur between `v0.x` minor releases. Each submodule's
 
 Nothing yet.
 
+## [v0.65.0] - 2026-07-30
+
+### Fixed (root)
+
+- `rtps.newGuidPrefix` no longer swallows a `crypto/rand.Read` failure and
+  proceeding with a partially-zero GuidPrefix (collision risk across hosts
+  sharing a PID, RTPS 2.3 §9.3.1.5); it now fails closed. The one
+  production call site (`newParticipant`) uses a new `newGuidPrefixSafe`
+  wrapper so the failure surfaces as a returned error, not a process-crashing
+  panic. Removed the dead, byte-identical `EntityIdBuiltinParticipant`
+  duplicate of `EntityIdParticipant`; added `TestWellKnownEntityIds` pinning
+  the RTPS 2.3 Table 9.1 byte values of the well-known EntityIds.
+- ACKNACK `SequenceNumberSet` wire encoding (`rtps/message.go`): serialize/
+  parse a spec-conformant variable-length bitmap (MSB-first words, minimal
+  `numBits`, RTPS 2.3 §9.4.2.6) instead of a hard-coded 32-bit LSB-first
+  word. A caught-up reader's `numBits=0` positive ACK (24-byte body) was
+  previously dropped by a `len<28` guard, so a writer could never learn a
+  slow reader had caught up; a peer's `numBits=64+` multi-word set was
+  previously mis-parsed, reading `Count` out of a bitmap word.
+- `tools/idl` code generator: `Generate` now returns a hard error for an
+  unresolved, cyclic, or unhandled field type instead of silently emitting
+  a `// TODO` comment in the generated `Marshal`/`Unmarshal` body, which
+  desynced the CDR stream for every field after the dropped one.
+
+### Fixed (bridge)
+
+- Migrated the deprecated `grpc.DialContext` to `grpc.NewClient` (SA1019),
+  in both `bridge/grpc/grpc.go` and the five call sites in `grpc_test.go`.
+
+### Fixed (docs / safety artifacts)
+
+- `docs/HARA.md`: corrected the H-03 ASIL derivation — S2+E2+C2 is QM per
+  ISO 26262-3 Table 4, not ASIL A — and updated the ASIL summary table.
+- `safety-case.md`: corrected the requirements-traceability count to 300
+  to match `.fusa-reqs.json`.
+
 ## [v0.64.0] - 2026-07-28
 
 ### Fixed (root)
