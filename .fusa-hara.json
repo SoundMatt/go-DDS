@@ -59,7 +59,7 @@
         "severity": "S2",
         "exposure": "E2",
         "controllability": "C2",
-        "asil": "ASIL-A"
+        "asil": "QM"
       },
       "safetyGoals": [
         "SG-03"
@@ -148,7 +148,7 @@
       "hazards": [
         "H-03"
       ],
-      "asil": "ASIL-A",
+      "asil": "QM",
       "safeState": "Application-level: integrator registers a DeadlineQoS missed-deadline callback and asserts a defined safe state on trigger (AoU-03, docs/HARA.md §5)",
       "fssrRefs": [
         "REQ-SUB-006",

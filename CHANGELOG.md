@@ -57,6 +57,39 @@ breaking changes may occur between `v0.x` minor releases. Each submodule's
 - Corrected stale "RELAY spec (currently v1.11)" references in `README.md`
   and `CLAUDE.md`'s CI matrix table to v2.0.
 
+### Changed (CI)
+
+- Bumped the pinned `go-FuSa` CLI from v0.47.0 to v0.48.0 in
+  `.github/workflows/ci.yml`'s `gofusa` §20 lifecycle job and
+  `.github/workflows/release.yml`'s safety-artifact regeneration job.
+  Installed both versions locally and ran the full gating sequence (`check
+  ./...`, `trace`, `cyber`, `vuln`, `qualify`) against go-DDS's tree under
+  each: identical results — 0 errors, 300/300 requirements traced and
+  tested, same 5 warning/183 info cyber findings, same single pre-existing
+  `golang.org/x/crypto` vuln finding (GO-2026-5932, present under both
+  versions — a live OSV database entry, not something the pin bump
+  introduces), 46/46 qualify cases passing. No new CI-gate finding from the
+  version jump itself. Also corrected a stale `CLAUDE.md` CI-matrix row
+  that still described the `gofusa` job as v0.36.0 (three pin bumps
+  behind).
+
+### Fixed (docs / safety artifacts)
+
+- `.fusa-hara.json`: H-03's stored risk ASIL (`ASIL-A`) never matched
+  `docs/HARA.md`'s already-corrected `QM` derivation for S2+E2+C2 (fixed
+  there in v0.65.0, per the entry below) — the machine-readable HARA file
+  was missed when that fix landed. go-FuSa v0.48.0 fixed a critical defect
+  in its own `hara asil` ISO 26262-3 Table 4 lookup (inflated ASIL in most
+  S2/S3 cells); re-deriving all six go-DDS hazards against the corrected
+  tool confirms H-03 is the only one affected, and that `QM` is correct —
+  verified independently against ISO 26262-3:2018 Table 4 by hand, not
+  just against the tool. Corrected both `hazards[].risk.asil` (H-03) and
+  `safetyGoals[].asil` (SG-03) from `ASIL-A` to `QM` to match `docs/
+  HARA.md` and the standard. `.fusa-reqs.json` requirement-level ASIL tags
+  are unaffected: REQ-SUB-006 and REQ-MOCK-004 are also referenced by
+  SG-01 (ASIL-B), which is unchanged, so no requirement's applicable ASIL
+  tier changes.
+
 ## [v0.65.0] - 2026-07-30
 
 ### Fixed (root)
