@@ -31,7 +31,7 @@ import (
 	"sync"
 	"time"
 
-	relay "github.com/SoundMatt/RELAY"
+	relay "github.com/SoundMatt/RELAY/v2"
 	"google.golang.org/protobuf/proto"
 )
 

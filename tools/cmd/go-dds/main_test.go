@@ -15,7 +15,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	relay "github.com/SoundMatt/RELAY"
+	relay "github.com/SoundMatt/RELAY/v2"
 )
 
 // schemaShape is the subset of JSON Schema we enforce here.

@@ -15,7 +15,7 @@ import (
 	"encoding/hex"
 	"sync"
 
-	relay "github.com/SoundMatt/RELAY"
+	relay "github.com/SoundMatt/RELAY/v2"
 )
 
 // ── canonical type conversion (§15.7) ──────────────────────────────────────────

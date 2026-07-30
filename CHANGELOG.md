@@ -21,7 +21,41 @@ breaking changes may occur between `v0.x` minor releases. Each submodule's
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed (root, `bridge`, `examples`, `observability`, `safety`, `tools`)
+
+- Bumped the `github.com/SoundMatt/RELAY` dependency from v1.11.1 to
+  `github.com/SoundMatt/RELAY/v2 v2.0.4` in every module that requires it
+  (root, `bridge`, `examples`, `observability`, `safety`, `tools`) — a real
+  multi-version jump (v1.12 through v2.0) that RELAY's own v2.0.4 fixed
+  `go.mod`'s module path to `.../RELAY/v2`, restoring normal `go get`/
+  `go install` installability (RELAY#70). Updated the `relay "github.com/
+  SoundMatt/RELAY"` import alias to `relay "github.com/SoundMatt/RELAY/v2"`
+  in every Go source file that uses it (`dds.go`, `adapt.go`,
+  `tools/cmd/go-dds/main.go`, and their `_test.go` files); updated the
+  pinned `relay` CLI install in `.github/workflows/ci.yml`'s
+  `relay-conform` job from v1.11.1 to v2.0.4.
+- Reviewed RELAY's v1.12/v1.13/v1.14/v2.0 changelog entries for anything
+  applicable beyond the version string: v1.12 (`"c"` as a CLI `language`
+  value) and v1.14 (RCP module-name registry) don't apply to go-DDS; v2.0's
+  breaking RCP canonical-type replacement is RCP-specific and doesn't touch
+  DDS; v1.13's fix to `relay`'s embedded golden-vector loader (a bare
+  `*.json` glob wasn't recursing into `spec/vectors/errors/`) makes
+  reject-path vectors reachable through `relay interop` for the first
+  time — verified this has no practical effect for DDS specifically, since
+  the only DDS error vector (`dds-domain-out-of-range.json`) is typed
+  `dds.Domain`, which isn't in `relay interop`'s convert-drivable
+  `typeProtocol` map and so is correctly excluded rather than newly
+  exercised; go-DDS's own `ErrDomainOutOfRange` validation already has
+  direct unit-test coverage regardless.
+- `relay_test.go`'s `TestSpecVersion_TracksRelay` hardcoded the expected
+  spec version as `"1.11"`; updated to `"2.0"` to match the bumped
+  dependency (this assertion would otherwise fail against any RELAY release
+  past v1.11).
+- Verified with the built RELAY v2.0.4 CLI: `relay conform --strict` and
+  `relay interop --strict --protocol DDS` both PASS against the built
+  `go-dds` CLI — no new conformance gap from the version jump.
+- Corrected stale "RELAY spec (currently v1.11)" references in `README.md`
+  and `CLAUDE.md`'s CI matrix table to v2.0.
 
 ## [v0.65.0] - 2026-07-30
 
