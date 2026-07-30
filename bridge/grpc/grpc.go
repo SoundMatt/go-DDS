@@ -185,8 +185,10 @@ func NewClient(ctx context.Context, addr string, extra ...grpc.DialOption) (DDSB
 	opts := append([]grpc.DialOption{
 		grpc.WithDefaultCallOptions(grpc.ForceCodec(JSONCodec{})),
 	}, extra...)
-	//nolint:staticcheck // grpc.Dial deprecated in v1.63 but NewClientConn API differs by version
-	conn, err := grpc.DialContext(ctx, addr, opts...)
+	// grpc.NewClient replaces the deprecated grpc.DialContext (SA1019). It
+	// creates a lazy connection; per-RPC deadlines use the caller's context.
+	_ = ctx
+	conn, err := grpc.NewClient(addr, opts...)
 	if err != nil {
 		return nil, nil, err
 	}

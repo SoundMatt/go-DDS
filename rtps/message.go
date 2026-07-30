@@ -23,6 +23,7 @@ package rtps
 import (
 	"encoding/binary"
 	"fmt"
+	"math/bits"
 	"time"
 )
 
@@ -233,8 +234,10 @@ func parseHeartbeat(body []byte) (Heartbeat, bool) {
 
 // ── ACKNACK submessage (§9.4.5.1) ────────────────────────────────────────────
 
-// AckNack holds the parsed fields of an ACKNACK submessage.
-// We use a fixed 32-bit bitmap (NumBits always 32, one bitmap word).
+// AckNack holds the parsed fields of an ACKNACK submessage. Internally the
+// bitmap is a single LSB-first 32-bit word (bit N → Base+N); the wire encoding
+// is a variable-length, MSB-first SequenceNumberSet handled by
+// marshalAckNack/parseAckNack (RTPS 2.3 §9.4.2.6).
 type AckNack struct {
 	ReaderEntityId EntityId
 	WriterEntityId EntityId
@@ -243,17 +246,27 @@ type AckNack struct {
 	Count          int32
 }
 
-// marshalAckNack builds an ACKNACK submessage.
-// Body layout: readerEID(4) + writerEID(4) + base(8) + numBits(4) + bitmap(4) + count(4) = 28 bytes.
+// marshalAckNack builds an ACKNACK submessage with a spec-conformant
+// SequenceNumberSet (RTPS 2.3 §9.4.2.6): the bitmap is MSB-first (delta N is
+// bit 31-N of word N/32) and numBits is the minimal count covering the set
+// deltas. A caught-up reader (Bitmap==0) emits numBits=0 and no bitmap words
+// (positive ACK), a 24-byte body.
+// Body layout: readerEID(4) + writerEID(4) + base(8) + numBits(4) + M*bitmap(4) + count(4).
 func marshalAckNack(an AckNack) []byte {
-	body := make([]byte, 28)
+	// numBits = position of the highest set delta + 1 (0 when no deltas set).
+	numBits := uint32(bits.Len32(an.Bitmap))
+	numWords := (numBits + 31) / 32
+	body := make([]byte, 20+numWords*4+4)
 	copy(body[0:4], an.ReaderEntityId[:])
 	copy(body[4:8], an.WriterEntityId[:])
 	binary.LittleEndian.PutUint32(body[8:], uint32(an.Base.High))
 	binary.LittleEndian.PutUint32(body[12:], an.Base.Low)
-	binary.LittleEndian.PutUint32(body[16:], 32) // numBits
-	binary.LittleEndian.PutUint32(body[20:], an.Bitmap)
-	binary.LittleEndian.PutUint32(body[24:], uint32(an.Count))
+	binary.LittleEndian.PutUint32(body[16:], numBits)
+	if numWords > 0 {
+		// Serialize delta N at bit 31-N of the first (only) word: MSB-first.
+		binary.LittleEndian.PutUint32(body[20:], bits.Reverse32(an.Bitmap))
+	}
+	binary.LittleEndian.PutUint32(body[20+numWords*4:], uint32(an.Count))
 	hdr := make([]byte, 4)
 	hdr[0] = submsgACKNACK
 	hdr[1] = flagEndianness
@@ -261,9 +274,20 @@ func marshalAckNack(an AckNack) []byte {
 	return append(hdr, body...)
 }
 
-// parseAckNack extracts an AckNack from an ACKNACK submessage body.
+// parseAckNack extracts an AckNack from an ACKNACK submessage body. It accepts
+// a variable-length SequenceNumberSet: numBits=0 (positive ACK, 24-byte body)
+// and numBits>32 (multi-word set) are both handled. Only the first 32 deltas
+// are retained internally; the bitmap is de-serialized MSB-first.
 func parseAckNack(body []byte) (AckNack, bool) {
-	if len(body) < 28 {
+	if len(body) < 20 {
+		return AckNack{}, false
+	}
+	numBits := binary.LittleEndian.Uint32(body[16:20])
+	if numBits > 256 { // §9.4.2.6 caps a SequenceNumberSet at 256 bits.
+		return AckNack{}, false
+	}
+	numWords := (numBits + 31) / 32
+	if len(body) < int(20+numWords*4+4) {
 		return AckNack{}, false
 	}
 	var an AckNack
@@ -273,9 +297,11 @@ func parseAckNack(body []byte) (AckNack, bool) {
 		High: int32(binary.LittleEndian.Uint32(body[8:])),
 		Low:  binary.LittleEndian.Uint32(body[12:]),
 	}
-	// body[16:20] = numBits (we ignore, always treat as 32)
-	an.Bitmap = binary.LittleEndian.Uint32(body[20:])
-	an.Count = int32(binary.LittleEndian.Uint32(body[24:]))
+	if numWords > 0 {
+		// De-serialize the first word MSB-first back to LSB-first deltas.
+		an.Bitmap = bits.Reverse32(binary.LittleEndian.Uint32(body[20:]))
+	}
+	an.Count = int32(binary.LittleEndian.Uint32(body[20+numWords*4:]))
 	return an, true
 }
 

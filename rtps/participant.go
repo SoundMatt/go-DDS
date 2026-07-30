@@ -698,7 +698,10 @@ func newParticipant(domain dds.Domain, opts ...Option) (*participant, error) {
 		return nil, fmt.Errorf("rtps: domain %d: %w", domain, err)
 	}
 	d := int(domain)
-	guidPrefix := newGuidPrefix()
+	guidPrefix, err := newGuidPrefixSafe()
+	if err != nil {
+		return nil, fmt.Errorf("rtps: cannot generate GuidPrefix: %w", err)
+	}
 
 	// Allocate ports — try participant index 0..15.
 	var metaSock, dataSock *udpSocket
