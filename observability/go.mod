@@ -10,9 +10,15 @@ require (
 )
 
 require (
-	github.com/SoundMatt/RELAY v1.11.1 // indirect
+	github.com/SoundMatt/RELAY/v2 v2.0.4 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	golang.org/x/sys v0.46.0 // indirect
+	github.com/pion/dtls/v3 v3.1.5 // indirect
+	github.com/pion/logging v0.2.4 // indirect
+	github.com/pion/transport/v4 v4.0.2 // indirect
+	github.com/quic-go/quic-go v0.61.0 // indirect
+	golang.org/x/crypto v0.54.0 // indirect
+	golang.org/x/net v0.56.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
 

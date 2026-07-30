@@ -144,7 +144,7 @@ history expansion on `%`, `!`, and `(`.
 | lint           | golangci-lint |
 | static-analysis | deadcode + gocyclo (informational, non-blocking) |
 | gofusa         | go-FuSa v0.36.0 full lifecycle (§20): check + 100% trace (traced AND tested) + cyber + vuln + qualify |
-| relay-conform  | RELAY v1.11 conform --strict + interop --protocol DDS --strict |
+| relay-conform  | RELAY v2.0 conform --strict + interop --protocol DDS --strict |
 | dco            | DCO sign-off check |
 | test-interop   | Docker probe-and-skip |
 

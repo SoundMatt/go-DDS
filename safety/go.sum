@@ -1,5 +1,5 @@
-github.com/SoundMatt/RELAY v1.11.1 h1:+bHI6qjEqOVIxwqlAaOwxUf87SrokC/sgC7n/OGpwi0=
-github.com/SoundMatt/RELAY v1.11.1/go.mod h1:8HXkxErdk4pHaM1de9eopm2S8o1aE7tKYkCBBsHxxcg=
+github.com/SoundMatt/RELAY/v2 v2.0.4 h1:e64zaug7jFfFCgTq6PDdUWwyiwxUF0ypg4u360PDs3M=
+github.com/SoundMatt/RELAY/v2 v2.0.4/go.mod h1:v/KbXSnTFSl4M44p0xLYyIH2eZ9rZ16CJCCbAropi24=
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
 github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=
 google.golang.org/protobuf v1.36.11 h1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=

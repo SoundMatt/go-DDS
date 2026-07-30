@@ -11,7 +11,7 @@ package dds
 import (
 	"testing"
 
-	relay "github.com/SoundMatt/RELAY"
+	relay "github.com/SoundMatt/RELAY/v2"
 )
 
 func newTestNode() *ddsNode { return &ddsNode{done: make(chan struct{})} }

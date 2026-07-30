@@ -372,7 +372,7 @@ go run github.com/SoundMatt/go-DDS/tools/cmd/ddstool discover -wait 5s
 ## RELAY conformance
 
 go-DDS conforms to the [RELAY](https://github.com/SoundMatt/RELAY) cross-protocol
-spec (currently **v1.11**). `dds.SpecVersion` tracks `relay.SpecVersion`
+spec (currently **v2.0**). `dds.SpecVersion` tracks `relay.SpecVersion`
 automatically; the RELAY adapter module (`adapt.go`, spec §13.7) maps
 `Sample.ToMessage()` / `FromMessage()` to the canonical `relay.Message` envelope
 (spec §15.7).

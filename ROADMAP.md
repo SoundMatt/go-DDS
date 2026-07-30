@@ -1660,7 +1660,7 @@ and safety each depend only on core; observability depends on core plus
   boundary itself is a `go.mod` structural change.
 - **CI and any script assuming a single `go.mod`/`go.sum` at repo root**
   (see CI section below).
-- **RELAY's own `go.mod` dependency on `github.com/SoundMatt/RELAY` is the
+- **RELAY's own `go.mod` dependency on `github.com/SoundMatt/RELAY/v2` is the
   other direction** (go-DDS depends on RELAY, not vice versa) so this does
   not, by itself, force a RELAY-side change — but RELAY's `relay conform`
   and `relay interop` CI gates invoke the built `cmd/go-dds` binary, which
