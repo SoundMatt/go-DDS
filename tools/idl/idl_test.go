@@ -665,21 +665,17 @@ func TestGenerate_NamedModule(t *testing.T) {
 // ── searchStruct nil return ───────────────────────────────────────────────────
 
 // TestGenerate_UnknownStructRef covers the searchStruct nil return path. When
-// a struct field references a qualified type that doesn't exist, Generate
-// emits a // TODO: comment rather than panicking.
+// a struct field references a qualified type that doesn't exist, Generate must
+// return a hard error rather than emitting partial (field-dropping) code.
 func TestGenerate_UnknownStructRef(t *testing.T) {
 	src := `struct Ghost { Unknown::Phantom field; };`
 	m, err := idl.ParseString(src)
 	if err != nil {
 		t.Fatalf("ParseString: %v", err)
 	}
-	out, err := idl.Generate(m)
-	if err != nil {
-		t.Fatalf("Generate: %v", err)
-	}
-	// The unknown reference must produce a TODO rather than a panic.
-	if !strings.Contains(out, "TODO") {
-		t.Errorf("expected // TODO comment for unknown struct ref, got:\n%s", out)
+	// The unknown reference must fail generation, never silently drop the field.
+	if _, err := idl.Generate(m); err == nil {
+		t.Errorf("expected error for unknown struct ref, got nil")
 	}
 }
 
@@ -1252,13 +1248,9 @@ func TestGenerate_QualifiedStructNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseString: %v", err)
 	}
-	// Generate should produce a TODO comment for the unknown struct reference.
-	out, err := idl.Generate(m)
-	if err != nil {
-		t.Fatalf("Generate: %v", err)
-	}
-	if !strings.Contains(out, "TODO") {
-		t.Errorf("expected TODO for unknown qualified struct, got:\n%s", out)
+	// Generate must return a hard error for the unknown struct reference.
+	if _, err := idl.Generate(m); err == nil {
+		t.Errorf("expected error for unknown qualified struct, got nil")
 	}
 }
 
@@ -1270,12 +1262,8 @@ func TestGenerate_BareUnknownStructRef(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseString: %v", err)
 	}
-	out, err := idl.Generate(m)
-	if err != nil {
-		t.Fatalf("Generate: %v", err)
-	}
-	if !strings.Contains(out, "TODO") {
-		t.Errorf("expected TODO for unknown bare struct ref, got:\n%s", out)
+	if _, err := idl.Generate(m); err == nil {
+		t.Errorf("expected error for unknown bare struct ref, got nil")
 	}
 }
 
@@ -1296,10 +1284,9 @@ func TestGenerate_ArrayNilElemType(t *testing.T) {
 		}},
 	}
 	out, err := idl.Generate(m)
-	if err != nil {
-		t.Fatalf("Generate: %v", err)
+	if err == nil {
+		t.Errorf("expected error for nil array element type, got:\n%s", out)
 	}
-	_ = out // output may contain TODO or []byte — the key is no panic
 }
 
 // TestGenerate_UnknownTypeKind covers the default case in goType (gen.go:230-231),
@@ -1316,11 +1303,8 @@ func TestGenerate_UnknownTypeKind(t *testing.T) {
 		}},
 	}
 	out, err := idl.Generate(m)
-	if err != nil {
-		t.Fatalf("Generate: %v", err)
-	}
-	if !strings.Contains(out, "interface{}") {
-		t.Errorf("expected interface{} for unknown TypeKind, got:\n%s", out)
+	if err == nil {
+		t.Errorf("expected error for unknown TypeKind, got:\n%s", out)
 	}
 }
 

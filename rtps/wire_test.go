@@ -35,6 +35,7 @@ package rtps
 
 import (
 	"bytes"
+	"encoding/binary"
 	"math/rand"
 	"net"
 	"testing"
@@ -430,6 +431,68 @@ func TestRTPS_AckNack_TooShort(t *testing.T) {
 	_ = ignoredRet
 	if ok {
 		t.Error("parseAckNack should fail on short body")
+	}
+}
+
+// TestRTPS_AckNack_ConformanceVector pins the RTPS 2.3 §9.4.2.6 wire encoding:
+// deltas are MSB-first (delta N at bit 31-N of the first bitmap word) and
+// numBits is the minimal covering count. Base=5, missing 5 and 7 → deltas 0
+// and 2 → numBits=3, wire word bit31 and bit29 set = 0xA0000000.
+func TestRTPS_AckNack_ConformanceVector(t *testing.T) {
+	an := AckNack{
+		Base:   SequenceNumber{High: 0, Low: 5},
+		Bitmap: 0b101, // deltas 0 and 2 missing (SN 5 and 7)
+		Count:  1,
+	}
+	body := marshalAckNack(an)[4:]
+	if got := binary.LittleEndian.Uint32(body[16:20]); got != 3 {
+		t.Errorf("numBits: got %d want 3", got)
+	}
+	if got := binary.LittleEndian.Uint32(body[20:24]); got != 0xA0000000 {
+		t.Errorf("bitmap word: got 0x%08X want 0xA0000000 (MSB-first)", got)
+	}
+}
+
+// TestRTPS_AckNack_PositiveAck verifies a caught-up reader (no missing deltas)
+// serializes numBits=0 with no bitmap words (24-byte body) and round-trips —
+// a conformant peer's positive ACK must not be dropped.
+func TestRTPS_AckNack_PositiveAck(t *testing.T) {
+	an := AckNack{Base: SequenceNumber{Low: 10}, Bitmap: 0, Count: 7}
+	body := marshalAckNack(an)[4:]
+	if len(body) != 24 {
+		t.Fatalf("positive-ACK body: got %d bytes want 24", len(body))
+	}
+	if got := binary.LittleEndian.Uint32(body[16:20]); got != 0 {
+		t.Errorf("numBits: got %d want 0", got)
+	}
+	got, ok := parseAckNack(body)
+	if !ok {
+		t.Fatal("parseAckNack rejected a valid numBits=0 positive ACK")
+	}
+	if got != an {
+		t.Errorf("positive-ACK round-trip mismatch:\n  got  %+v\n  want %+v", got, an)
+	}
+}
+
+// TestRTPS_AckNack_MultiWord verifies a conformant peer's numBits=64 set (two
+// bitmap words) parses without mis-reading Count from a bitmap word.
+func TestRTPS_AckNack_MultiWord(t *testing.T) {
+	body := make([]byte, 20+8+4)                         // 8 EID + base + numBits + 2 words + count
+	binary.LittleEndian.PutUint32(body[8:], 0)           // base.High
+	binary.LittleEndian.PutUint32(body[12:], 3)          // base.Low
+	binary.LittleEndian.PutUint32(body[16:], 64)         // numBits = 64 → 2 words
+	binary.LittleEndian.PutUint32(body[20:], 0x80000000) // delta 0 missing
+	binary.LittleEndian.PutUint32(body[24:], 0)
+	binary.LittleEndian.PutUint32(body[28:], 42) // Count after both words
+	got, ok := parseAckNack(body)
+	if !ok {
+		t.Fatal("parseAckNack rejected a valid numBits=64 set")
+	}
+	if got.Count != 42 {
+		t.Errorf("Count: got %d want 42 (mis-read from a bitmap word?)", got.Count)
+	}
+	if got.Bitmap != 0b1 {
+		t.Errorf("Bitmap: got %b want 1 (delta 0 from MSB-first word)", got.Bitmap)
 	}
 }
 

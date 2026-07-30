@@ -13,7 +13,7 @@ argued by demonstrating compliance with the safety development lifecycle.
 | ID | Description | Status | Detail |
 |---|---|---|---|
 | Sn1 | Coding standard and static analysis checks | ✅ present | 747 findings (0 errors, 441 warnings) |
-| Sn2 | Requirements traceability matrix | ✅ present | 274 requirements |
+| Sn2 | Requirements traceability matrix | ✅ present | 300 requirements |
 | Sn3 | Test evidence bundle | ✅ present | 832/875 tests passed |
 | Sn4 | Tool qualification report | ✅ present | 44/44 cases passed |
 | Sn5 | SBOM (SPDX 3.0.1) | ✅ present |  |

@@ -106,7 +106,7 @@ The subscriber continues reading the last cached sample indefinitely.
 | Exposure (E) | E2 | Software crashes are infrequent but possible under workload |
 | Controllability (C) | C2 | Fusion algorithm can detect frozen timestamps |
 
-**ASIL derivation:** S2 + E2 + C2 → **ASIL A**
+**ASIL derivation:** S2 + E2 + C2 → **QM** (ISO 26262-3 Table 4)
 
 **Mitigation:** `dds.DeadlineQoS` triggers a missed-deadline callback when a
 publisher stops writing within the configured period. The fusion application
@@ -168,7 +168,7 @@ backlog per writer. Integrator shall set this value (AoU-04 below).
 |---|---|---|
 | H-01 — Late delivery | **ASIL B** | Timing budget met (measured); GC pause < 146 µs |
 | H-02 — Corrupt payload | ASIL A | HMAC/AES-GCM security plugin available |
-| H-03 — Stream loss | ASIL A | DeadlineQoS callback; integrator safe-state |
+| H-03 — Stream loss | QM | DeadlineQoS callback; integrator safe-state |
 | H-04 — Wrong routing | QM | Integration test coverage |
 | H-05 — Back-pressure | ASIL A | DeterministicQueue for hot path |
 | H-06 — Memory exhaustion | ASIL A | MaxSamples resource limit |

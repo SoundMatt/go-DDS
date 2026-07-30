@@ -18,6 +18,19 @@ type generator struct {
 	root    *Module
 	sb      strings.Builder
 	visited map[string]bool // cycle guard for encodeExpr/decodeExpr struct expansion
+	err     error           // first unresolved/cyclic/unhandled type encountered
+}
+
+// fail records the first fatal codegen error (an unresolved, cyclic, or
+// unhandled type) so generate() can refuse to emit partial marshalling code.
+// It returns a placeholder comment purely to keep the string-building callers
+// simple; the recorded error causes generate() to fail before that placeholder
+// is ever used.
+func (g *generator) fail(msg string) string {
+	if g.err == nil {
+		g.err = fmt.Errorf("idl: %s", msg)
+	}
+	return "// " + msg
 }
 
 func newGenerator(m *Module) *generator {
@@ -43,6 +56,9 @@ func (g *generator) generate() (string, error) {
 	g.line("")
 
 	g.emitModule(g.root)
+	if g.err != nil {
+		return "", g.err
+	}
 	formatted, err := format.Source([]byte(g.sb.String()))
 	if err != nil {
 		return "", fmt.Errorf("idl: format generated source: %w", err)
@@ -273,7 +289,7 @@ func (g *generator) encodeExpr(ts TypeSpec, ref string) string {
 	case KindArray:
 		// CDR arrays have no length prefix — write each element contiguously.
 		if ts.ElemType == nil {
-			return "// TODO: encode " + ref + " (nil array elem type)"
+			return g.fail("encode " + ref + ": nil array element type")
 		}
 		return fmt.Sprintf("for _i := range %s { %s }", ref, g.encodeExpr(*ts.ElemType, ref+"[_i]"))
 	case KindStruct:
@@ -285,11 +301,11 @@ func (g *generator) encodeExpr(ts TypeSpec, ref string) string {
 		// header. Recursively expand the referenced struct's fields at the call site.
 		s := g.findStruct(ts.RefName)
 		if s == nil {
-			return "// TODO: encode " + ref + " (unknown struct " + ts.RefName + ")"
+			return g.fail("encode " + ref + ": unknown struct " + ts.RefName)
 		}
 		// Cycle guard: a self-referential struct cannot be CDR-encoded.
 		if g.visited[ts.RefName] {
-			return "// TODO: encode " + ref + " (cyclic struct " + ts.RefName + ")"
+			return g.fail("encode " + ref + ": cyclic struct " + ts.RefName)
 		}
 		g.visited[ts.RefName] = true
 		defer delete(g.visited, ts.RefName)
@@ -301,7 +317,7 @@ func (g *generator) encodeExpr(ts TypeSpec, ref string) string {
 	case KindEnum:
 		return "e.WriteInt32(int32(" + ref + "))"
 	default:
-		return "// TODO: encode " + ref
+		return g.fail("encode " + ref + ": unhandled type kind")
 	}
 }
 
@@ -346,7 +362,7 @@ func (g *generator) decodeExpr(ts TypeSpec, dest string) string {
 	case KindArray:
 		// CDR arrays have no length prefix — read each element contiguously.
 		if ts.ElemType == nil {
-			return fmt.Sprintf("// TODO: decode %s (nil array elem type)", dest)
+			return g.fail(fmt.Sprintf("decode %s: nil array element type", dest))
 		}
 		return fmt.Sprintf("for _i := range %s { %s }", dest, g.decodeExpr(*ts.ElemType, dest+"[_i]"))
 	case KindStruct:
@@ -359,11 +375,11 @@ func (g *generator) decodeExpr(ts TypeSpec, dest string) string {
 		// fields at the call site, sharing the parent's decoder and err variable.
 		s := g.findStruct(ts.RefName)
 		if s == nil {
-			return fmt.Sprintf("// TODO: decode %s (unknown struct %s)", dest, ts.RefName)
+			return g.fail(fmt.Sprintf("decode %s: unknown struct %s", dest, ts.RefName))
 		}
 		// Cycle guard: a self-referential struct cannot be CDR-decoded.
 		if g.visited[ts.RefName] {
-			return fmt.Sprintf("// TODO: decode %s (cyclic struct %s)", dest, ts.RefName)
+			return g.fail(fmt.Sprintf("decode %s: cyclic struct %s", dest, ts.RefName))
 		}
 		g.visited[ts.RefName] = true
 		defer delete(g.visited, ts.RefName)
@@ -376,7 +392,7 @@ func (g *generator) decodeExpr(ts TypeSpec, dest string) string {
 		return fmt.Sprintf("{ var _ev int32; if _ev, err = d.ReadInt32(); err != nil { return v, err }; %s = %s(_ev) }",
 			dest, toGoName(bareRefName(ts.RefName)))
 	default:
-		return fmt.Sprintf("// TODO: decode %s", dest)
+		return g.fail(fmt.Sprintf("decode %s: unhandled type kind", dest))
 	}
 }
 

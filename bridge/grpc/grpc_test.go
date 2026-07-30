@@ -45,9 +45,7 @@ func listenLocal(t *testing.T) net.Listener {
 // dialJSON returns a gRPC client conn to addr using the JSON codec.
 func dialJSON(t *testing.T, addr string) *grpc.ClientConn {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	conn, err := grpc.DialContext(ctx, addr, //nolint:staticcheck
+	conn, err := grpc.NewClient(addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(grpc.ForceCodec(grpcbridge.JSONCodec{})),
 	)
@@ -311,7 +309,7 @@ func TestBridge_Auth_CorrectToken_Passes(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	conn, err := grpc.DialContext(ctx, lis.Addr().String(), //nolint:staticcheck
+	conn, err := grpc.NewClient(lis.Addr().String(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(grpc.ForceCodec(grpcbridge.JSONCodec{})),
 		grpc.WithPerRPCCredentials(bearerToken("secret")),
@@ -698,7 +696,7 @@ func TestBridge_Auth_Stream_CorrectToken_Passes(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	conn, dialErr := grpc.DialContext(ctx, lis.Addr().String(), //nolint:staticcheck
+	conn, dialErr := grpc.NewClient(lis.Addr().String(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(grpc.ForceCodec(grpcbridge.JSONCodec{})),
 		grpc.WithPerRPCCredentials(bearerToken("secret")),
@@ -983,7 +981,7 @@ func TestBridge_Auth_WrongToken_Unauthenticated(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	conn, dialErr := grpc.DialContext(ctx, lis.Addr().String(), //nolint:staticcheck
+	conn, dialErr := grpc.NewClient(lis.Addr().String(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(grpc.ForceCodec(grpcbridge.JSONCodec{})),
 		grpc.WithPerRPCCredentials(bearerToken("wrong")), // non-empty but wrong
@@ -1193,9 +1191,7 @@ func FuzzBridge_Publish(f *testing.F) {
 	go func() { _ = b.Server().Serve(lis) }()
 	f.Cleanup(func() { b.Close() })
 
-	fCtx, fCancel := context.WithTimeout(context.Background(), 30*time.Second)
-	f.Cleanup(fCancel)
-	conn, err := grpc.DialContext(fCtx, lis.Addr().String(), //nolint:staticcheck
+	conn, err := grpc.NewClient(lis.Addr().String(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(grpc.ForceCodec(grpcbridge.JSONCodec{})),
 	)

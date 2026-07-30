@@ -698,19 +698,22 @@ func newParticipant(domain dds.Domain, opts ...Option) (*participant, error) {
 		return nil, fmt.Errorf("rtps: domain %d: %w", domain, err)
 	}
 	d := int(domain)
-	guidPrefix := newGuidPrefix()
+	guidPrefix, err := newGuidPrefixSafe()
+	if err != nil {
+		return nil, fmt.Errorf("rtps: cannot generate GuidPrefix: %w", err)
+	}
 
 	// Allocate ports — try participant index 0..15.
 	var metaSock, dataSock *udpSocket
 	var participantIdx int
 	for i := 0; i < 16; i++ {
-		var err error
-		metaSock, err = newUnicastSocket(metaUnicastPort(d, i))
-		if err != nil {
+		var sockErr error
+		metaSock, sockErr = newUnicastSocket(metaUnicastPort(d, i))
+		if sockErr != nil {
 			continue
 		}
-		dataSock, err = newUnicastSocket(userUnicastPort(d, i))
-		if err != nil {
+		dataSock, sockErr = newUnicastSocket(userUnicastPort(d, i))
+		if sockErr != nil {
 			metaSock.close()
 			continue
 		}

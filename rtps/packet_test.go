@@ -2767,3 +2767,28 @@ func TestAnnounceLoop_WithJitter(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 	_ = p.Close()
 }
+
+// TestWellKnownEntityIds asserts the canonical RTPS 2.3 Table 9.1 byte values
+// of the well-known EntityIds, guarding against accidental mutation of these
+// protocol-fixed package vars (which cannot be declared const in Go).
+func TestWellKnownEntityIds(t *testing.T) {
+	cases := []struct {
+		name string
+		got  EntityId
+		want EntityId
+	}{
+		{"Participant", EntityIdParticipant, EntityId{0x00, 0x00, 0x01, 0xC1}},
+		{"SPDPWriter", EntityIdSPDPWriter, EntityId{0x00, 0x01, 0x00, 0xC2}},
+		{"SPDPReader", EntityIdSPDPReader, EntityId{0x00, 0x01, 0x00, 0xC7}},
+		{"SEDPPubWriter", EntityIdSEDPPubWriter, EntityId{0x00, 0x00, 0x03, 0xC2}},
+		{"SEDPPubReader", EntityIdSEDPPubReader, EntityId{0x00, 0x00, 0x03, 0xC7}},
+		{"SEDPSubWriter", EntityIdSEDPSubWriter, EntityId{0x00, 0x00, 0x04, 0xC2}},
+		{"SEDPSubReader", EntityIdSEDPSubReader, EntityId{0x00, 0x00, 0x04, 0xC7}},
+		{"Unknown", EntityIdUnknown, EntityId{0x00, 0x00, 0x00, 0x00}},
+	}
+	for _, c := range cases {
+		if c.got != c.want {
+			t.Errorf("%s = %v, want %v", c.name, c.got, c.want)
+		}
+	}
+}
