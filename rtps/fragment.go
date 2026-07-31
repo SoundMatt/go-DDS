@@ -113,14 +113,21 @@ type fragmentAssembler struct {
 	buffers map[fragKey]*fragBuffer
 }
 
+// fragKey keys reassembly buffers on the full 64-bit writer sequence number
+// (RTPS 2.3 sequence numbers are {High int32; Low uint32}, packed via
+// snToU64 — the same convention reliable.go's history/tracking bookkeeping
+// already uses). Keying on Low alone would alias two distinct reassemblies
+// that share the same low 32 bits after a writer's sequence number wraps
+// past 2^32.
 type fragKey struct {
 	writer EntityId
-	seqLo  uint32
+	seq    uint64
 }
 
 type fragBuffer struct {
 	data     []byte
-	received uint32    // count of fragments received so far
+	seen     []bool    // seen[i] true once fragment index i has been stored
+	received uint32    // count of distinct fragments received so far
 	total    uint32    // total number of fragments expected
 	created  time.Time // wall time when the first fragment was received
 }
@@ -131,13 +138,18 @@ func (fa *fragmentAssembler) receive(f DataFrag) []byte {
 	if f.FragmentSize == 0 || f.DataSize == 0 || f.FragmentsInSubmsg == 0 {
 		return nil
 	}
+	// FragmentStartingNum is 1-based (§8.3.7.3); 0 is malformed and would
+	// underflow the 0-based index below.
+	if f.FragmentStartingNum == 0 {
+		return nil
+	}
 	// Reject implausibly large payloads before allocating any memory.
 	if uint64(f.DataSize) > maxReassemblyBytes {
 		return nil
 	}
 	total := (uint32(f.DataSize) + uint32(f.FragmentSize) - 1) / uint32(f.FragmentSize)
 
-	key := fragKey{writer: f.WriterEntityId, seqLo: f.WriterSeqNum.Low}
+	key := fragKey{writer: f.WriterEntityId, seq: snToU64(f.WriterSeqNum)}
 	now := time.Now()
 	fa.mu.Lock()
 	defer fa.mu.Unlock()
@@ -155,6 +167,7 @@ func (fa *fragmentAssembler) receive(f DataFrag) []byte {
 	if !ok {
 		fb = &fragBuffer{
 			data:    make([]byte, f.DataSize),
+			seen:    make([]bool, total),
 			total:   total,
 			created: now,
 		}
@@ -164,7 +177,17 @@ func (fa *fragmentAssembler) receive(f DataFrag) []byte {
 	// Copy each fragment's bytes into the correct position.
 	fragIdx := f.FragmentStartingNum - 1 // convert to 0-based
 	for i := uint16(0); i < f.FragmentsInSubmsg; i++ {
-		offset := (fragIdx + uint32(i)) * uint32(f.FragmentSize)
+		gi := fragIdx + uint32(i)
+		if gi >= fb.total {
+			break
+		}
+		// Ignore duplicate fragments: counting them would let a retransmitted
+		// or replayed DATA_FRAG push received past total and deliver a
+		// partially-filled buffer as if complete.
+		if fb.seen[gi] {
+			continue
+		}
+		offset := gi * uint32(f.FragmentSize)
 		if offset >= uint32(f.DataSize) {
 			break
 		}
@@ -178,6 +201,7 @@ func (fa *fragmentAssembler) receive(f DataFrag) []byte {
 			end = uint32(f.DataSize)
 		}
 		copy(fb.data[offset:end], f.Payload[fragStart:fragEnd])
+		fb.seen[gi] = true
 		fb.received++
 	}
 

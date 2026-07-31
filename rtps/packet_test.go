@@ -48,6 +48,7 @@ package rtps
 //fusa:test REQ-PART-008
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"errors"
@@ -727,6 +728,29 @@ func TestMarshalGAP_Format(t *testing.T) {
 	}
 }
 
+// TestMarshalGAP_BaseCarriesAcross32BitBoundary is a regression test for the
+// gapList.bitmapBase carry bug: the base is GapEnd+1 as a full 64-bit
+// sequence number, and a carry out of the Low word must propagate into
+// High. When GapEnd.Low == 0xFFFFFFFF, computing Low+1 in isolation wraps to
+// 0 without incrementing High, mis-declaring the covered gap range across
+// the 32-bit boundary (e.g. claiming base = {High:0, Low:0} instead of the
+// correct {High:1, Low:0}).
+func TestMarshalGAP_BaseCarriesAcross32BitBoundary(t *testing.T) {
+	g := Gap{
+		ReaderEntityId: entityIdForReader(1),
+		WriterEntityId: entityIdForWriter(2),
+		GapStart:       SequenceNumber{High: 0, Low: 0xFFFFFFF0},
+		GapEnd:         SequenceNumber{High: 0, Low: 0xFFFFFFFF},
+	}
+	b := marshalGAP(g)
+	body := b[4:]
+	baseHigh := binary.LittleEndian.Uint32(body[16:20])
+	baseLow := binary.LittleEndian.Uint32(body[20:24])
+	if baseHigh != 1 || baseLow != 0 {
+		t.Errorf("gapList base after carry: got {High:%d Low:%d}, want {High:1 Low:0}", baseHigh, baseLow)
+	}
+}
+
 func TestHandleAckNack_EvictedHistory_SendsGAP(t *testing.T) {
 	p := testPart(t)
 	pub, err := p.NewPublisher("gap/evict", dds.ReliableQoS)
@@ -1246,7 +1270,7 @@ func TestFragmentAssembler_StaleEviction(t *testing.T) {
 
 	// The stale buffer for seq 1 must have been evicted.
 	fa.mu.Lock()
-	_, stillPresent := fa.buffers[fragKey{writer: eid, seqLo: 1}]
+	_, stillPresent := fa.buffers[fragKey{writer: eid, seq: snToU64(SequenceNumber{Low: 1})}]
 	fa.mu.Unlock()
 	if stillPresent {
 		t.Error("stale incomplete reassembly was not evicted")
@@ -1353,6 +1377,139 @@ func TestFragmentAssembler_EndClamp(t *testing.T) {
 	}
 	if len(result) != 250 {
 		t.Errorf("result length: got %d, want 250", len(result))
+	}
+}
+
+// TestFragmentAssembler_DuplicateFragment_DoesNotCompletePrematurely is a
+// regression test for the reassembly-completeness bug fixed per RTPS 2.3
+// §8.3.7.3: completeness must be judged over the set of *distinct* fragment
+// starting numbers received, not a scalar arrival count. Before the fix,
+// fragBuffer.received was incremented once per arriving fragment with no
+// per-index dedup, so a retransmitted/duplicated fragment (routine under
+// reliable retransmission or multicast+unicast duplication) could push
+// received >= total while a distinct fragment was never actually delivered
+// — handing the application a sample that is partially zero-filled instead
+// of the real payload.
+//
+// This test builds a 3-fragment payload, delivers fragment 1 twice (as a
+// duplicate/retransmission would) and never delivers fragment 3. Before the
+// fix this returns a "complete" 250-byte result whose last fragment's bytes
+// are the zero-value from make([]byte, DataSize) rather than the real
+// payload — the wrong output that motivates this test. After the fix, the
+// assembler must correctly recognize the reassembly is still incomplete.
+func TestFragmentAssembler_DuplicateFragment_DoesNotCompletePrematurely(t *testing.T) {
+	eid := entityIdForWriter(79)
+	var fa fragmentAssembler
+
+	mk := func(pos uint32, payload []byte) DataFrag {
+		return DataFrag{
+			WriterEntityId:      eid,
+			WriterSeqNum:        SequenceNumber{Low: 9},
+			FragmentStartingNum: pos,
+			FragmentsInSubmsg:   1,
+			FragmentSize:        100,
+			DataSize:            250,
+			Payload:             payload,
+		}
+	}
+
+	frag1 := make([]byte, 100)
+	for i := range frag1 {
+		frag1[i] = 0xAA
+	}
+	frag2 := make([]byte, 100)
+	for i := range frag2 {
+		frag2[i] = 0xBB
+	}
+
+	if result := fa.receive(mk(1, frag1)); result != nil {
+		t.Fatal("first fragment alone must not complete reassembly")
+	}
+	// Duplicate/retransmitted delivery of fragment 1 — must not advance
+	// completeness a second time.
+	if result := fa.receive(mk(1, frag1)); result != nil {
+		t.Fatal("duplicate fragment must not complete reassembly")
+	}
+	if result := fa.receive(mk(2, frag2)); result != nil {
+		t.Fatal("two distinct fragments (of three) must not complete reassembly; " +
+			"got a non-nil result, meaning a duplicate fragment was miscounted " +
+			"toward completeness")
+	}
+	// Fragment 3 (the real remaining distinct fragment) was never sent — the
+	// buffer must still be pending, not evicted-as-complete.
+	fa.mu.Lock()
+	_, pending := fa.buffers[fragKey{writer: eid, seq: snToU64(SequenceNumber{Low: 9})}]
+	fa.mu.Unlock()
+	if !pending {
+		t.Fatal("reassembly buffer must still be pending awaiting the real third fragment")
+	}
+}
+
+// TestFragmentAssembler_FragmentStartingNumZero_Rejected is a regression
+// test for the FragmentStartingNum==0 underflow: FragmentStartingNum is
+// 1-based per RTPS 2.3 §8.3.7.3, so `fragIdx := f.FragmentStartingNum - 1`
+// underflows uint32(0) to 0xFFFFFFFF for a malformed FragmentStartingNum==0,
+// which must be rejected up front rather than fed into index arithmetic.
+func TestFragmentAssembler_FragmentStartingNumZero_Rejected(t *testing.T) {
+	f := DataFrag{
+		WriterEntityId:      entityIdForWriter(80),
+		WriterSeqNum:        SequenceNumber{Low: 10},
+		FragmentStartingNum: 0, // malformed: must be >= 1
+		FragmentsInSubmsg:   1,
+		FragmentSize:        100,
+		DataSize:            200,
+		Payload:             make([]byte, 100),
+	}
+	var fa fragmentAssembler
+	// Must not panic (no underflowed huge index access) and must reject.
+	if result := fa.receive(f); result != nil {
+		t.Error("FragmentStartingNum==0 must be rejected, not accepted")
+	}
+}
+
+// TestFragmentAssembler_NoAliasAcross32BitSeqNumWrap is a regression test
+// for fragKey keying reassembly buffers on the full 64-bit writer sequence
+// number rather than just the low 32 bits. RTPS 2.3 sequence numbers are
+// 64-bit ({High int32; Low uint32}); a reassembly key derived from only the
+// low word would alias two distinct in-flight reassemblies for the same
+// writer whose sequence numbers share a low word after a 2^32 wrap (e.g.
+// {High:0,Low:5} and {High:1,Low:5}), corrupting one with fragments meant
+// for the other.
+func TestFragmentAssembler_NoAliasAcross32BitSeqNumWrap(t *testing.T) {
+	eid := entityIdForWriter(81)
+	var fa fragmentAssembler
+
+	mk := func(high int32, low uint32) DataFrag {
+		return DataFrag{
+			WriterEntityId:      eid,
+			WriterSeqNum:        SequenceNumber{High: high, Low: low},
+			FragmentStartingNum: 1,
+			FragmentsInSubmsg:   1,
+			FragmentSize:        4,
+			DataSize:            8, // 2 fragments total; fragment 1 alone leaves it incomplete
+			Payload:             []byte{0, 0, 0, 0},
+		}
+	}
+
+	if result := fa.receive(mk(0, 5)); result != nil {
+		t.Fatal("partial delivery for {High:0,Low:5} must return nil")
+	}
+	if result := fa.receive(mk(1, 5)); result != nil {
+		t.Fatal("partial delivery for {High:1,Low:5} must return nil")
+	}
+
+	// Both writer-sequence streams share the same low 32 bits (5) but differ
+	// in High; a key derived from Low alone would alias them into a single
+	// buffer, so only one pending entry would exist here instead of two
+	// independent ones.
+	fa.mu.Lock()
+	n := len(fa.buffers)
+	_, hasA := fa.buffers[fragKey{writer: eid, seq: snToU64(SequenceNumber{High: 0, Low: 5})}]
+	_, hasB := fa.buffers[fragKey{writer: eid, seq: snToU64(SequenceNumber{High: 1, Low: 5})}]
+	fa.mu.Unlock()
+	if n != 2 || !hasA || !hasB {
+		t.Errorf("expected 2 independent pending buffers for {High:0,Low:5} and {High:1,Low:5}, "+
+			"got %d (hasA=%v hasB=%v) — the reassembly key ignored the High word", n, hasA, hasB)
 	}
 }
 
@@ -2394,9 +2551,48 @@ func TestWrite_FragmentedPath_LargePayload(t *testing.T) {
 
 // ── CDR/locator error-path coverage ──────────────────────────────────────────
 
+// TestCdrWrapPayload_WireBytesMatchOMGSpec is a golden-vector regression test
+// for the CDR encapsulation header byte order (OMG DDSI-RTPS / DDS
+// Interoperability Protocol §10.2.1, Table 10.1, and the worked example in
+// §10.2.2.1). The representation_identifier is `typedef octet Identifier[2]`
+// — a fixed 2-octet array transmitted first-octet-0x00, second-octet-scheme,
+// in that order, regardless of which endianness the scheme selects for the
+// payload that follows. It is NOT a little-endian uint16 encoding of the
+// scheme constant.
+//
+// This previously shipped byte-swapped ({0x01,0x00,...} instead of
+// {0x00,0x01,...}), which is internally self-consistent (go-DDS round-trips
+// against itself) but wire-nonconformant: every DATA sample and every
+// SPDP/SEDP discovery announcement was silently dropped by any spec-
+// conformant peer (CycloneDDS, Fast DDS, ROS 2 rmw, OpenDDS, RTI Connext).
+// This test pins the exact wire bytes so that regression is caught by the
+// always-on unit-test suite, independent of the Docker-gated interop CI job
+// (test-interop / test-interop-ros2 in .github/workflows/ci.yml), which
+// silently no-ops when its container image isn't available.
+func TestCdrWrapPayload_WireBytesMatchOMGSpec(t *testing.T) {
+	wrapped := cdrWrapPayload([]byte{0xAA, 0xBB})
+	want := []byte{0x00, 0x01, 0x00, 0x00, 0xAA, 0xBB} // CDR_LE per §10.2.2.1
+	if !bytes.Equal(wrapped[:4], want[:4]) {
+		t.Fatalf("CDR_LE encapsulation header: got %#v, want %#v (OMG DDSI-RTPS §10.2.1 Table 10.1)", wrapped[:4], want[:4])
+	}
+}
+
+// TestNewPLCDREncoder_WireBytesMatchOMGSpec is the PL_CDR_LE counterpart of
+// TestCdrWrapPayload_WireBytesMatchOMGSpec — see that test's doc comment.
+func TestNewPLCDREncoder_WireBytesMatchOMGSpec(t *testing.T) {
+	enc := newPLCDREncoder()
+	got := enc.buf
+	want := []byte{0x00, 0x03, 0x00, 0x00} // PL_CDR_LE per §10.2.1 Table 10.1
+	if !bytes.Equal(got, want) {
+		t.Fatalf("PL_CDR_LE encapsulation header: got %#v, want %#v (OMG DDSI-RTPS §10.2.1 Table 10.1)", got, want)
+	}
+}
+
 func TestNewPLCDRDecoder_NonLEScheme(t *testing.T) {
-	// scheme = 0x0001 (CDR_LE), not 0x0003 (PL_CDR_LE) → returns false
-	b := []byte{0x01, 0x00, 0x00, 0x00}
+	// scheme = 0x0001 (CDR_LE), not 0x0003 (PL_CDR_LE) → returns false.
+	// Wire order per RTPS 2.3 §10.2.1 Table 10.1: representation_identifier
+	// is a fixed-order 2-octet array {0x00, <scheme>}, so CDR_LE = {0x00, 0x01}.
+	b := []byte{0x00, 0x01, 0x00, 0x00}
 	_, ok := newPLCDRDecoder(b)
 	if ok {
 		t.Fatal("expected false for non-PL_CDR_LE scheme")
@@ -2407,7 +2603,7 @@ func TestPLCDRDecoder_Next_PidPad(t *testing.T) {
 	// pidPad (0x0000) entry followed by pidSentinel (0x0001); next() recurses
 	// past the pad and returns false at the sentinel.
 	b := []byte{
-		0x03, 0x00, 0x00, 0x00, // PL_CDR_LE header
+		0x00, 0x03, 0x00, 0x00, // PL_CDR_LE header (fixed-order id {0x00,0x03})
 		0x00, 0x00, 0x00, 0x00, // pidPad, length=0
 		0x01, 0x00, 0x00, 0x00, // pidSentinel
 	}
@@ -2455,6 +2651,50 @@ func TestParseSubmessages_LengthExceedsBody(t *testing.T) {
 	err := parseSubmessages(body, func(_, _ byte, _ []byte) error { return nil })
 	if err == nil {
 		t.Fatal("expected error for submessage length exceeding body")
+	}
+}
+
+// TestParseSubmessages_BigEndianLength_DecodedCorrectly is a regression test
+// for the E (endianness) flag (RTPS 2.3 §9.4.5.1.1, bit 0 of the flags
+// octet): octetsToNextHeader must be decoded per that submessage's own E
+// flag, not unconditionally as little-endian. This constructs a submessage
+// whose length field, if misread as little-endian, would produce a
+// different (and here, out-of-range) value than reading it correctly as
+// big-endian.
+func TestParseSubmessages_BigEndianLength_DecodedCorrectly(t *testing.T) {
+	// length = 0x0004, encoded big-endian = {0x00, 0x04}. Misread as
+	// little-endian this is 0x0400 = 1024, which exceeds the 4 remaining
+	// body bytes and would (wrongly) trigger the "length exceeds body"
+	// error path instead of successfully framing a 4-byte submessage.
+	body := []byte{
+		0x09, 0x00, // id=INFO_TS, flags=0x00 (E=0: big-endian)
+		0x00, 0x04, // length=4, big-endian
+		0xAA, 0xBB, 0xCC, 0xDD, // 4-byte body
+	}
+	if err := parseSubmessages(body, func(_, _ byte, _ []byte) error { return nil }); err != nil {
+		t.Fatalf("parseSubmessages: unexpected error, length field was not decoded per its own E flag: %v", err)
+	}
+}
+
+// TestParseSubmessages_BigEndianBody_Rejected proves that a submessage
+// declaring big-endian (E=0) is not handed to this package's little-endian-
+// only body decoders (parseDataSubmessage, parseInfoTS, etc. — see the doc
+// comment on parseSubmessages) — it is skipped rather than misparsed.
+func TestParseSubmessages_BigEndianBody_Rejected(t *testing.T) {
+	body := []byte{
+		0x09, 0x00, // id=INFO_TS, flags=0x00 (E=0: big-endian)
+		0x00, 0x08, // length=8, big-endian
+		0, 0, 0, 0, 0, 0, 0, 0, // 8-byte body
+	}
+	called := false
+	if err := parseSubmessages(body, func(_, _ byte, _ []byte) error {
+		called = true
+		return nil
+	}); err != nil {
+		t.Fatalf("parseSubmessages: unexpected error: %v", err)
+	}
+	if called {
+		t.Error("a big-endian (E=0) submessage must not be passed to the little-endian-only body callback")
 	}
 }
 
@@ -2511,10 +2751,10 @@ func TestWaitDrain_NilDrainCh_ReturnsNil(t *testing.T) {
 func TestPLCDRDecoder_Next_LengthOverflow(t *testing.T) {
 	// A parameter whose declared length exceeds remaining buffer bytes.
 	buf := make([]byte, 8)
-	binary.LittleEndian.PutUint16(buf[0:], plCDRLE) // PL_CDR_LE header
-	binary.LittleEndian.PutUint16(buf[2:], 0)       // options
-	binary.LittleEndian.PutUint16(buf[4:], 0x0002)  // some valid pid (not pad, not sentinel)
-	binary.LittleEndian.PutUint16(buf[6:], 100)     // length=100 but no data follows
+	binary.BigEndian.PutUint16(buf[0:], plCDRLE)   // PL_CDR_LE header (fixed-order id)
+	binary.LittleEndian.PutUint16(buf[2:], 0)      // options
+	binary.LittleEndian.PutUint16(buf[4:], 0x0002) // some valid pid (not pad, not sentinel)
+	binary.LittleEndian.PutUint16(buf[6:], 100)    // length=100 but no data follows
 	dec, ok := newPLCDRDecoder(buf)
 	if !ok {
 		t.Fatal("expected valid decoder")
@@ -2538,6 +2778,44 @@ func TestParseInfoTS_TooShort(t *testing.T) {
 	_, ok := parseInfoTS([]byte{0x01, 0x02, 0x03})
 	if ok {
 		t.Fatal("expected false for buffer shorter than 8 bytes")
+	}
+}
+
+// TestNTPEraDisambiguate_RoundTrip_NoRollover covers the ordinary pre-2036
+// case: encoding "now" and decoding it back (with ref == now) must recover
+// the original instant to within one second (the NTP-seconds resolution).
+func TestNTPEraDisambiguate_RoundTrip_NoRollover(t *testing.T) {
+	now := time.Now().UTC()
+	msg := marshalInfoTS(now)
+	got, ok := parseInfoTS(msg[4:]) // strip the 4-byte submessage header
+	if !ok {
+		t.Fatal("parseInfoTS failed on well-formed INFO_TS body")
+	}
+	if diff := got.Sub(now); diff > time.Second || diff < -time.Second {
+		t.Errorf("round-tripped timestamp: got %v, want ~%v (diff %v)", got, now, diff)
+	}
+}
+
+// TestNTPEraDisambiguate_Rollover is a regression test for the NTP era
+// rollover at 7 Feb 2036 (RTPS 2.3 §9.3.2 Time_t is a 32-bit-seconds wire
+// field; era 0 ends and era 1 begins at 1900 + 2^32 seconds). A raw secs
+// value that has wrapped past 2036 must decode to the correct post-2036
+// date when disambiguated against a reference time near the true instant —
+// not to the bogus 1900-era date a naive `int64(secs) - ntpDelta` produces.
+func TestNTPEraDisambiguate_Rollover(t *testing.T) {
+	const ntpDelta = 2208988800
+	// A timestamp shortly after the era-1 rollover: 2036-03-01, expressed as
+	// wrapped 32-bit NTP seconds (era 1: the true NTP-seconds count exceeds
+	// 2^32, but the wire field only carries the low 32 bits).
+	want := time.Date(2036, 3, 1, 12, 0, 0, 0, time.UTC)
+	trueNTPSec := want.Unix() + ntpDelta
+	wrappedSecs := uint32(trueNTPSec) // simulates the spec-mandated wire wrap
+
+	// A receiver with a correct local clock near the sender's true time
+	// (era 1) must recover `want`, not an era-0 (1900s) date.
+	got := ntpEraDisambiguate(wrappedSecs, 0, want.Add(time.Hour))
+	if !got.Equal(want) {
+		t.Errorf("era-disambiguated timestamp: got %v, want %v", got, want)
 	}
 }
 

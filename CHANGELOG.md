@@ -73,6 +73,87 @@ breaking changes may occur between `v0.x` minor releases. Each submodule's
   that still described the `gofusa` job as v0.36.0 (three pin bumps
   behind).
 
+### Fixed (root)
+
+- **CDR/PL_CDR encapsulation header byte order (critical — cross-vendor
+  interop)**: `cdrWrapPayload`/`newPLCDREncoder` (`rtps/message.go`,
+  `rtps/cdr.go`) and `tools/cdr.NewEncoder` (`tools/cdr/cdr.go`) wrote the
+  4-byte CDR encapsulation header's 2-octet `representation_identifier` as a
+  little-endian `uint16` of the scheme constant (e.g. `CDR_LE` = `0x0001`
+  emitted as wire bytes `{0x01,0x00}`). Per OMG DDSI-RTPS / DDS
+  Interoperability Protocol §10.2.1 Table 10.1, that field is `typedef
+  octet Identifier[2]` — a fixed 2-octet array transmitted first-octet-
+  `0x00`, second-octet-scheme-selector, in that order, *regardless* of
+  which endianness the scheme itself selects for the payload that follows
+  (confirmed against the OMG spec PDF's §10.2.1 definition and the
+  §10.2.2.1 worked example, not just internal self-consistency). The
+  correct wire bytes are `{0x00,0x01}` for `CDR_LE` and `{0x00,0x03}` for
+  `PL_CDR_LE`. The previous encoding was internally self-consistent (go-DDS
+  round-trips against itself) but wire-nonconformant: every DATA sample and
+  every SPDP/SEDP discovery announcement go-DDS emitted was silently
+  dropped by any spec-conformant peer (CycloneDDS, Fast DDS, ROS 2 rmw,
+  OpenDDS, RTI Connext). Fixed the encoder/decoder pairs symmetrically
+  (`cdrWrapPayload`/`cdrUnwrapPayload`, `newPLCDREncoder`/
+  `newPLCDRDecoder`, `tools/cdr.NewEncoder`/`NewDecoder`), corrected the
+  hard-coded swapped-byte golden vectors in `rtps/packet_test.go`, and
+  added `TestCdrWrapPayload_WireBytesMatchOMGSpec` /
+  `TestNewPLCDREncoder_WireBytesMatchOMGSpec` golden-vector regression
+  tests that pin the exact spec-mandated wire bytes independently of the
+  Docker-gated `test-interop`/`test-interop-ros2` CI jobs (which silently
+  no-op — by design, per their own doc comments — when their container
+  image isn't available in the runner's registry, so were not actually
+  gating this regression).
+- DATA_FRAG reassembly (`rtps/fragment.go`) counted duplicate fragments
+  toward completeness: `fragBuffer` tracked only a scalar `received uint32`
+  incremented once per arriving fragment with no per-index dedup, so under
+  reliable retransmission or multicast+unicast duplication (RTPS 2.3
+  §8.3.7.3) the same fragment re-arriving could push `received >= total`
+  true while a distinct fragment was never delivered, handing the
+  application a partially zero-filled sample. Added a per-fragment-index
+  `seen []bool` so only not-yet-seen indices advance `received`; also
+  guarded `FragmentStartingNum == 0` (malformed; previously underflowed the
+  0-based index to `0xFFFFFFFF`) and bounded the global index against
+  `fb.total`. Added
+  `TestFragmentAssembler_DuplicateFragment_DoesNotCompletePrematurely` and
+  `TestFragmentAssembler_FragmentStartingNumZero_Rejected` regression
+  tests.
+- Fragment reassembly key (`fragKey`, `rtps/fragment.go`) used only the low
+  32 bits of the writer sequence number (`WriterSeqNum.Low`), aliasing two
+  distinct in-flight reassemblies for the same writer whose sequence
+  numbers share a low word after a 2^32 wrap. Now keys on the full 64-bit
+  sequence number via the existing `snToU64` helper (already used for
+  reliability bookkeeping in `reliable.go`). Added
+  `TestFragmentAssembler_NoAliasAcross32BitSeqNumWrap`.
+- GAP submessage `gapList.base` (`marshalGAP`, `rtps/message.go`) computed
+  `GapEnd.Low + 1` independently of `GapEnd.High`, so a carry out of the Low
+  word (`GapEnd.Low == 0xFFFFFFFF`) wrapped to `0` without incrementing
+  `High`, mis-declaring the covered gap range across the 32-bit boundary.
+  Now computes the base as a full 64-bit `GapEnd + 1` via `snToU64`/
+  `u64ToSN` so the carry propagates. Added
+  `TestMarshalGAP_BaseCarriesAcross32BitBoundary`.
+- `parseSubmessages` (`rtps/message.go`) ignored each submessage's own E
+  (endianness) flag (RTPS 2.3 §9.4.5.1.1, bit 0 of the flags octet),
+  unconditionally decoding `octetsToNextHeader` as little-endian. Now
+  decodes that framing field per its own E flag. This package's submessage
+  body decoders (`parseDataSubmessage`, `parseInfoTS`, etc.) remain
+  little-endian-only, matching the LE-only CDR/PL_CDR support already
+  documented in `cdr.go`; a submessage that declares big-endian (E=0) is
+  now explicitly skipped rather than silently misparsed by those decoders.
+  Added `TestParseSubmessages_BigEndianLength_DecodedCorrectly` and
+  `TestParseSubmessages_BigEndianBody_Rejected`.
+- INFO_TS timestamp decoding (`parseInfoTS`, `rtps/message.go`) naively
+  computed `int64(secs) - ntpDelta`, which only ever decodes to a date
+  within the 1900–2036 NTP era — RTPS 2.3 §9.3.2's `Time_t` is genuinely a
+  32-bit-seconds wire field (not a go-DDS design choice), so the encoder's
+  `uint32(t.Unix()+ntpDelta)` correctly wraps modulo 2^32 at the era
+  boundary (7 Feb 2036), but the old decoder had no way to recover the
+  correct post-2036 date from a wrapped value. Added `ntpEraDisambiguate`,
+  the standard NTP era-disambiguation technique (RFC 5905 §7.2): picks the
+  era whose decoded value lands nearest the receiver's local clock, correct
+  as long as sender and receiver clocks are within half an era (~68 years)
+  of each other. Added `TestNTPEraDisambiguate_RoundTrip_NoRollover` and
+  `TestNTPEraDisambiguate_Rollover`.
+
 ### Fixed (docs / safety artifacts)
 
 - `.fusa-hara.json`: H-03's stored risk ASIL (`ASIL-A`) never matched

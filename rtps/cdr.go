@@ -126,8 +126,13 @@ type plCDREncoder struct {
 // newPLCDREncoder returns an encoder pre-seeded with the PL_CDR_LE header.
 func newPLCDREncoder() *plCDREncoder {
 	e := &plCDREncoder{}
-	// Encapsulation header: scheme (2 bytes) + options (2 bytes, zero).
-	e.buf = append(e.buf, byte(plCDRLE), byte(plCDRLE>>8), 0x00, 0x00)
+	// Encapsulation header: representation_identifier (2 bytes) + options
+	// (2 bytes, zero). Per RTPS 2.3 §10.2.1 Table 10.1, the identifier is a
+	// fixed-order 2-octet array (first octet 0x00, second octet the scheme
+	// selector) — not a little-endian uint16 of the scheme constant.
+	hdr := make([]byte, 4)
+	binary.BigEndian.PutUint16(hdr[0:2], plCDRLE) // wire bytes {0x00, 0x03}
+	e.buf = append(e.buf, hdr...)
 	return e
 }
 
@@ -203,7 +208,8 @@ func newPLCDRDecoder(b []byte) (*plCDRDecoder, bool) {
 	if len(b) < 4 {
 		return nil, false
 	}
-	scheme := binary.LittleEndian.Uint16(b[0:2])
+	// Fixed-order 2-octet identifier (§10.2.1) — decode BigEndian, not LE.
+	scheme := binary.BigEndian.Uint16(b[0:2])
 	if scheme != plCDRLE {
 		return nil, false
 	}
