@@ -137,14 +137,45 @@ type DataSubmessage struct {
 // parseSubmessages iterates over all submessages in an RTPS message body
 // (the bytes after the 20-byte Header). It calls fn for each submessage,
 // passing (submessageId, flags, body). Returns an error on malformed input.
+//
+// Per RTPS 2.3 §9.4.5.1.1, bit 0 of the flags octet is the E (endianness)
+// flag: it governs the byte order of every multi-octet field within that
+// submessage — including octetsToNextHeader — independent of any other
+// submessage in the same message. octetsToNextHeader is therefore decoded
+// per-submessage according to its own E flag, not unconditionally as
+// little-endian.
+//
+// This package's submessage body decoders (parseDataSubmessage, parseInfoTS,
+// parseGAP, parseHeartbeat, parseAckNack, parseDataFrag, the PL_CDR
+// parameter-list decoder, etc.) only implement little-endian field decoding,
+// matching the little-endian-only CDR/PL_CDR support documented in cdr.go.
+// A submessage that declares big-endian (E=0) cannot be safely handed to
+// those decoders — doing so would silently misinterpret its fields rather
+// than reject them — so such a submessage is rejected here rather than
+// parsed. This enforces (and makes explicit) an all-little-endian-peer
+// restriction, per go-DDS's documented LE-only CDR support.
 func parseSubmessages(body []byte, fn func(id, flags byte, body []byte) error) error {
 	for len(body) >= 4 {
 		id := body[0]
 		flags := body[1]
-		length := int(binary.LittleEndian.Uint16(body[2:4]))
+		little := flags&flagEndianness != 0
+		var length int
+		if little {
+			length = int(binary.LittleEndian.Uint16(body[2:4]))
+		} else {
+			length = int(binary.BigEndian.Uint16(body[2:4]))
+		}
 		body = body[4:]
 		if length > len(body) {
 			return fmt.Errorf("rtps: submessage length %d exceeds remaining bytes %d", length, len(body))
+		}
+		if !little {
+			// Big-endian submessage body: framing (this length field) is
+			// endianness-correct above, but the body decoders below this
+			// point are little-endian only — see the doc comment. Skip this
+			// submessage rather than misparse its fields.
+			body = body[length:]
+			continue
 		}
 		if err := fn(id, flags, body[:length]); err != nil {
 			return err
@@ -327,9 +358,14 @@ func marshalGAP(g Gap) []byte {
 	copy(body[4:8], g.WriterEntityId[:])
 	binary.LittleEndian.PutUint32(body[8:], uint32(g.GapStart.High))
 	binary.LittleEndian.PutUint32(body[12:], g.GapStart.Low)
-	// gapList.bitmapBase = first SN *after* the gap = GapEnd.Low + 1.
-	binary.LittleEndian.PutUint32(body[16:], uint32(g.GapEnd.High))
-	binary.LittleEndian.PutUint32(body[20:], g.GapEnd.Low+1)
+	// gapList.bitmapBase = first SN *after* the gap = GapEnd + 1, computed
+	// as a full 64-bit sequence number so a carry out of the Low word
+	// propagates into High (when GapEnd.Low == 0xFFFFFFFF, Low+1 alone
+	// wraps to 0 without incrementing High, mis-declaring the covered gap
+	// range across the 32-bit boundary).
+	base := u64ToSN(snToU64(g.GapEnd) + 1)
+	binary.LittleEndian.PutUint32(body[16:], uint32(base.High))
+	binary.LittleEndian.PutUint32(body[20:], base.Low)
 	binary.LittleEndian.PutUint32(body[24:], 0) // numBits = 0, no bitmap words
 	hdr := make([]byte, 4)
 	hdr[0] = submsgGAP
@@ -346,6 +382,14 @@ func marshalGAP(g Gap) []byte {
 //
 // The resulting submessage should be prepended to DATA so that readers can
 // associate the source timestamp with the immediately following DATA.
+//
+// RTPS 2.3 §9.3.2's Time_t is genuinely a 32-bit-seconds wire format (this
+// is not a go-DDS design choice; it is what conformant peers expect on the
+// wire), so the NTP era rolls over every 2^32 seconds (~136 years) —
+// starting with 1 Jan 1900 + 2^32s = 7 Feb 2036. The uint32 conversion below
+// wraps modulo 2^32 at that boundary, which is the spec-correct wire
+// encoding for post-2036 timestamps, not a bug in itself: era disambiguation
+// on receipt is a decoder-side concern, handled in parseInfoTS below.
 func marshalInfoTS(t time.Time) []byte {
 	// NTP epoch is 1 Jan 1900; Unix epoch is 1 Jan 1970. Delta = 70 years.
 	const ntpDelta = 2208988800
@@ -367,12 +411,42 @@ func parseInfoTS(body []byte) (time.Time, bool) {
 	if len(body) < 8 {
 		return time.Time{}, false
 	}
-	const ntpDelta = 2208988800
 	secs := binary.LittleEndian.Uint32(body[0:])
 	frac := binary.LittleEndian.Uint32(body[4:])
-	unixSec := int64(secs) - ntpDelta
 	ns := int64(uint64(frac) * 1e9 >> 32)
-	return time.Unix(unixSec, ns).UTC(), true
+	return ntpEraDisambiguate(secs, ns, time.Now()), true
+}
+
+// ntpEraDisambiguate reconstructs a full timestamp from a bare 32-bit NTP
+// seconds-since-1900 field (RTPS 2.3 §9.3.2 Time_t) that carries no explicit
+// era number, by choosing the era — a multiple of 2^32 seconds, the NTP
+// rollover period (era 0 ends, era 1 begins, at 7 Feb 2036) — whose decoded
+// value lands nearest to ref.
+//
+// This is the standard NTP era-disambiguation technique (RFC 5905 §7.2):
+// it recovers the sender's intended instant correctly as long as the
+// sender's clock and ref are within half an era (~68 years) of each other,
+// which holds for any real deployment. Without it, any secs value produced
+// by marshalInfoTS's spec-mandated 2^32 wraparound after 2036-02-07 decodes
+// back to a bogus 1900-era date instead of the correct post-2036 date.
+func ntpEraDisambiguate(secs uint32, ns int64, ref time.Time) time.Time {
+	const ntpDelta = 2208988800 // NTP epoch (1900) to Unix epoch (1970), seconds.
+	const era = int64(1) << 32  // NTP seconds field rollover period.
+
+	refNTPSec := ref.Unix() + ntpDelta
+	diff := refNTPSec - int64(secs)
+	// eraCount = round(diff / era), computed without float64 to avoid any
+	// precision concern at these magnitudes; era/2 is exact since era is a
+	// power of two.
+	var eraCount int64
+	if diff >= 0 {
+		eraCount = (diff + era/2) / era
+	} else {
+		eraCount = -((-diff + era/2) / era)
+	}
+	ntpSec := int64(secs) + eraCount*era
+	unixSec := ntpSec - ntpDelta
+	return time.Unix(unixSec, ns).UTC()
 }
 
 // wrapInRTPSMessage wraps submessage bytes in an RTPS Header.
@@ -386,8 +460,16 @@ func wrapInRTPSMessage(prefix GuidPrefix, submessages []byte) []byte {
 }
 
 // cdrWrapPayload prepends the CDR_LE encapsulation header to a raw payload.
+//
+// Per RTPS 2.3 / DDS-XTypes §10.2.1 Table 10.1, the 2-octet
+// representation_identifier is `typedef octet Identifier[2]` — a fixed
+// octet array transmitted in the same wire order (first octet 0x00, second
+// octet the scheme selector) regardless of which endianness the scheme
+// itself selects for the payload that follows. It is NOT a little-endian
+// uint16 encoding of the scheme constant.
 func cdrWrapPayload(payload []byte) []byte {
-	hdr := []byte{byte(cdrLE), byte(cdrLE >> 8), 0x00, 0x00}
+	hdr := make([]byte, 4)
+	binary.BigEndian.PutUint16(hdr[0:2], cdrLE) // wire bytes {0x00, 0x01}
 	result := make([]byte, 4+len(payload))
 	copy(result, hdr)
 	copy(result[4:], payload)
@@ -400,7 +482,10 @@ func cdrUnwrapPayload(b []byte) ([]byte, bool) {
 	if len(b) < 4 {
 		return nil, false
 	}
-	scheme := binary.LittleEndian.Uint16(b[0:2])
+	// The representation_identifier is a fixed-order 2-octet array (§10.2.1),
+	// not an endianness-dependent uint16 — decode with BigEndian regardless
+	// of the scheme it names.
+	scheme := binary.BigEndian.Uint16(b[0:2])
 	if scheme != cdrLE && scheme != plCDRLE {
 		return nil, false
 	}

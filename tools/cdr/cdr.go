@@ -43,12 +43,17 @@ import (
 
 const (
 	// encapHeader is the CDR_LE encapsulation header (§10.2 Table 10.1).
-	// Bytes 0–1: scheme 0x0001 (CDR little-endian), bytes 2–3: options (0).
+	// Bytes 0–1: representation_identifier, bytes 2–3: options (0).
 	encapHeaderLen = 4
 )
 
-// encapHeader is CDR_LE: scheme 0x0001 written little-endian = bytes {0x01,0x00}.
-var encapHeader = [4]byte{0x01, 0x00, 0x00, 0x00}
+// encapHeader is CDR_LE. Per RTPS 2.3 §10.2.1 Table 10.1, the 2-octet
+// representation_identifier is `typedef octet Identifier[2]` — a fixed
+// octet array transmitted in the same wire order (first octet always
+// 0x00, second octet the scheme selector: 0x01 = CDR_LE) regardless of
+// the endianness that scheme selects for the payload. It is NOT a
+// little-endian uint16 encoding of the scheme constant 0x0001.
+var encapHeader = [4]byte{0x00, 0x01, 0x00, 0x00}
 
 // Encoder writes CDR/XCDR1 little-endian bytes to an internal buffer.
 // Call Bytes() to retrieve the complete encoded message including the
@@ -176,7 +181,9 @@ func NewDecoder(data []byte) (*Decoder, error) {
 		return nil, fmt.Errorf("cdr: data too short for encapsulation header (%d bytes)", len(data))
 	}
 	// Accept CDR_LE (0x0001) and CDR_BE (0x0000); we decode LE only.
-	scheme := binary.LittleEndian.Uint16(data[0:2])
+	// The representation_identifier is a fixed-order 2-octet array
+	// (§10.2.1) — decode BigEndian, not LE.
+	scheme := binary.BigEndian.Uint16(data[0:2])
 	if scheme != 0x0001 && scheme != 0x0000 {
 		return nil, fmt.Errorf("cdr: unsupported encapsulation scheme 0x%04x", scheme)
 	}
