@@ -493,8 +493,8 @@ jobs:
 
   # ── RTPS interop against CycloneDDS (optional, service-gated) ───────────────
   # Starts a CycloneDDS container, waits for SPDP discovery, then runs the
-  # bidirectional echo test. The job is skipped if the cyclonedds Docker image
-  # is unavailable in the runner's registry.
+  # bidirectional echo test. The job is skipped if the CycloneDDS peer image
+  # fails to build.
   test-interop:
     name: RTPS interop (CycloneDDS, ubuntu-latest)
     runs-on: ubuntu-latest
@@ -505,14 +505,24 @@ jobs:
         with:
           go-version: "1.25"
 
-      - name: Probe Docker and CycloneDDS image
+      # There is no published `eclipse-cyclonedds/cyclonedds` image on Docker
+      # Hub or ghcr.io to `docker pull` (verified against the upstream org's
+      # empty container-package list and its own scripts/docker/README.md,
+      # which documents that name as a locally-built-only image) — see
+      # interop/Dockerfile.cyclonedds's doc comment. The probe therefore
+      # actually builds the real peer image from CycloneDDS's own upstream
+      # source instead of pulling a nonexistent tag, so this job's
+      # `available=false` branch now means "the build genuinely failed"
+      # rather than "the tag was never real". Mirrors cpp-DDS's own fix for
+      # the identical bug (SoundMatt/RELAY THEME-K #125).
+      - name: Probe Docker and build the CycloneDDS peer image
         id: probe
         run: |
-          if docker pull eclipse-cyclonedds/cyclonedds:latest 2>/dev/null; then
+          if docker compose -f interop/docker-compose.yml build cyclone-peer; then
             echo "available=true" >> "$GITHUB_OUTPUT"
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::CycloneDDS Docker image not available — skipping interop tests"
+            echo "::warning::Building the CycloneDDS peer image failed — skipping interop tests"
           fi
 
       - name: Start CycloneDDS peer
