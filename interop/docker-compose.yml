@@ -1,14 +1,28 @@
 # Interop test environment: go-DDS (host) ↔ CycloneDDS (container)
 #
 # Usage:
+#   docker compose build              # first run / after a CYCLONEDDS_VERSION bump
 #   docker compose up -d cyclone-peer
 #   go test -tags interop -v ./interop/...
 #   docker compose down
+#
+# `image:`/`build:` on every cyclone-* service below name and build the SAME
+# image (see Dockerfile.cyclonedds's own doc comment for why this is built
+# from eclipse-cyclonedds/cyclonedds's source rather than pulled: no
+# published `eclipse-cyclonedds/cyclonedds` image exists anywhere). Compose
+# builds it once (tagged `godds-interop-cyclonedds:local`) and every service
+# reuses that tag rather than triggering three independent builds.
+
+x-cyclonedds-image: &cyclonedds-image
+  image: godds-interop-cyclonedds:local
+  build:
+    context: .
+    dockerfile: Dockerfile.cyclonedds
 
 services:
   # CycloneDDS peer — publishes and subscribes on the DDS_DOMAIN.
   cyclone-peer:
-    image: eclipse-cyclonedds/cyclonedds:latest
+    <<: *cyclonedds-image
     network_mode: host            # shares the host network stack for multicast
     environment:
       - DDS_DOMAIN=0
@@ -30,7 +44,7 @@ services:
   # Minimal CycloneDDS subscriber that prints received samples to stdout.
   # Used by the interop test to verify that our RTPS writer is compatible.
   cyclone-sub:
-    image: eclipse-cyclonedds/cyclonedds:latest
+    <<: *cyclonedds-image
     network_mode: host
     environment:
       - DDS_DOMAIN=0
@@ -39,7 +53,7 @@ services:
 
   # Minimal CycloneDDS publisher for the go-DDS subscriber to receive from.
   cyclone-pub:
-    image: eclipse-cyclonedds/cyclonedds:latest
+    <<: *cyclonedds-image
     network_mode: host
     environment:
       - DDS_DOMAIN=0

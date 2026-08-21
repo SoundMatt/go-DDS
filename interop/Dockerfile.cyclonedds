@@ -1,0 +1,41 @@
+# interop/Dockerfile.cyclonedds — builds a real, runnable CycloneDDS peer
+# (specifically `ddsperf`, used by docker-compose.yml's cyclone-peer/
+# cyclone-sub/cyclone-pub services) from eclipse-cyclonedds/cyclonedds's own
+# upstream source, via its own documented CMake build.
+#
+# Why this exists instead of `image: eclipse-cyclonedds/cyclonedds:latest`:
+# no such image was ever published under that path (or any equivalent path)
+# on Docker Hub or ghcr.io — verified directly against the upstream
+# eclipse-cyclonedds GitHub org (empty container package list) and its own
+# scripts/docker/README.md, which documents `cyclonedds:latest` as a name
+# for a *locally built* image only, never a registry-published one. The
+# previous docker-compose.yml referenced that nonexistent tag, so
+# `docker pull` always failed and the CI `test-interop` job's real-UDP RTPS
+# interop steps never actually ran despite reporting green
+# (silent skip-on-unresolvable-image).
+#
+# CYCLONEDDS_VERSION pins to a specific released tag (not `main`). Ported
+# verbatim from cpp-DDS's interop/Dockerfile.cyclonedds, which fixed the
+# same bug first — see github.com/SoundMatt/cpp-DDS/interop/Dockerfile.cyclonedds
+# and SoundMatt/RELAY THEME-K (#125) / docs/INTEROP-ARCHITECTURE.md.
+FROM ubuntu:22.04 AS build
+ARG CYCLONEDDS_VERSION=11.0.1
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+        ca-certificates git cmake ninja-build build-essential \
+    && rm -rf /var/lib/apt/lists/*
+RUN git clone --depth 1 --branch "${CYCLONEDDS_VERSION}" \
+        https://github.com/eclipse-cyclonedds/cyclonedds.git /src
+RUN cmake -B /src/build -S /src -G Ninja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/opt/cyclonedds \
+        -DBUILD_DDSPERF=ON \
+        -DBUILD_TESTING=OFF \
+    && cmake --build /src/build --parallel \
+    && cmake --install /src/build
+
+FROM ubuntu:22.04
+RUN apt-get update -qq && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=build /opt/cyclonedds /opt/cyclonedds
+ENV PATH="/opt/cyclonedds/bin:${PATH}"
+ENV LD_LIBRARY_PATH="/opt/cyclonedds/lib"
